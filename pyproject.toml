@@ -1,0 +1,75 @@
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    # directories
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | migrations
+  | OLD_CODE
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 88
+skip_glob = ["*/migrations/*", "OLD_CODE/*"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+exclude = [
+    "migrations/",
+    "OLD_CODE/",
+    "venv/",
+    "build/",
+    "dist/"
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "django.*",
+    "redis.*",
+    "channels.*",
+    "rest_framework.*"
+]
+ignore_missing_imports = true
+
+
+[tool.djlint]
+profile = "django"
+indent = 2
+max_line_length = 88
+format_attribute_template_tags = true
+exclude = "OLD_CODE"
+
+[tool.bandit]
+exclude_dirs = ["OLD_CODE", "migrations", "venv", "tests"]
+skips = ["B101", "B601"]  # Skip assert_used and shell_injection_process_communication in tests

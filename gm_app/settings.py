@@ -10,8 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
+
 from .secrets import SECRET_KEY
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -117,6 +118,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
+
 # Get local timezone, fallback to UTC
 def get_local_timezone():
     """Get the local timezone, with UTC as fallback."""
@@ -124,7 +126,7 @@ def get_local_timezone():
     tz = os.environ.get("TZ")
     if tz:
         return tz
-    
+
     # Try to read from /etc/timezone (Linux/Unix)
     try:
         with open("/etc/timezone", "r") as f:
@@ -133,7 +135,7 @@ def get_local_timezone():
                 return tz
     except (FileNotFoundError, PermissionError, OSError):
         pass
-    
+
     # Try to detect from symlink /etc/localtime (Linux/Unix)
     try:
         if os.path.islink("/etc/localtime"):
@@ -143,9 +145,10 @@ def get_local_timezone():
                 return tz
     except (FileNotFoundError, PermissionError, OSError):
         pass
-    
+
     # Fallback to UTC
     return "UTC"
+
 
 TIME_ZONE = get_local_timezone()
 

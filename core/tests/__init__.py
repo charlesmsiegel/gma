@@ -1,11 +1,11 @@
 from .test_health_check import (
     HealthCheckCommandTest,
+    HealthCheckLogAdminTest,
     HealthCheckLogModelTest,
-    HealthCheckLogAdminTest
 )
 
 __all__ = [
-    'HealthCheckCommandTest',
-    'HealthCheckLogModelTest',
-    'HealthCheckLogAdminTest'
+    "HealthCheckCommandTest",
+    "HealthCheckLogModelTest",
+    "HealthCheckLogAdminTest",
 ]

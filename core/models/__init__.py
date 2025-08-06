@@ -1,3 +1,3 @@
 from .health_check import HealthCheckLog
 
-__all__ = ['HealthCheckLog']
+__all__ = ["HealthCheckLog"]

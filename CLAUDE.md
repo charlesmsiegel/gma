@@ -56,10 +56,22 @@ python manage.py test
 # or use Makefile
 make test
 
-# Linting and formatting
-black .
-flake8
-mypy .
+# Code formatting and linting
+isort --profile black .          # Sort imports with black profile
+black .                          # Format code with black
+flake8                          # Check for linting issues
+mypy .                          # Type checking
+
+# Check formatting without changes
+isort --profile black --check-only --diff .  # Check import formatting
+black --check --diff .                        # Check code formatting
+
+# Additional code quality tools
+mypy .                                        # Type checking
+flake8 .                                      # Python linting
+djlint --check templates/                     # Django template linting
+djlint --reformat templates/                  # Format Django templates
+bandit -r . -f json                          # Security scanning
 
 # Create new Django app
 python manage.py startapp <app_name>
