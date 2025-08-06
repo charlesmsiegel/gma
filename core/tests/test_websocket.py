@@ -36,7 +36,9 @@ class ASGIApplicationTest(TestCase):
         # Check that websocket app is configured and uses authentication
         self.assertIsNotNone(websocket_app)
         # Verify it has the expected structure (AllowedHostsOriginValidator wrapping AuthMiddlewareStack)
-        self.assertTrue(hasattr(websocket_app, "application"))  # Should have inner application
+        self.assertTrue(
+            hasattr(websocket_app, "application")
+        )  # Should have inner application
 
 
 class ChannelLayerConfigurationTest(TestCase):
@@ -97,7 +99,9 @@ class WebSocketConsumerTest(TransactionTestCase):
         from core.consumers import TestWebSocketConsumer
 
         # Create a test consumer instance
-        communicator = WebsocketCommunicator(TestWebSocketConsumer.as_asgi(), "/ws/test/")
+        communicator = WebsocketCommunicator(
+            TestWebSocketConsumer.as_asgi(), "/ws/test/"
+        )
 
         # Test connection
         connected, _ = await communicator.connect()
@@ -110,7 +114,9 @@ class WebSocketConsumerTest(TransactionTestCase):
         """Test WebSocket echo functionality."""
         from core.consumers import TestWebSocketConsumer
 
-        communicator = WebsocketCommunicator(TestWebSocketConsumer.as_asgi(), "/ws/test/")
+        communicator = WebsocketCommunicator(
+            TestWebSocketConsumer.as_asgi(), "/ws/test/"
+        )
 
         # Connect
         connected, _ = await communicator.connect()
@@ -132,7 +138,9 @@ class WebSocketConsumerTest(TransactionTestCase):
         """Test WebSocket handling of invalid JSON."""
         from core.consumers import TestWebSocketConsumer
 
-        communicator = WebsocketCommunicator(TestWebSocketConsumer.as_asgi(), "/ws/test/")
+        communicator = WebsocketCommunicator(
+            TestWebSocketConsumer.as_asgi(), "/ws/test/"
+        )
 
         # Connect
         connected, _ = await communicator.connect()
@@ -188,12 +196,16 @@ class ChannelsRoutingTest(TestCase):
         # The websocket app should have nested structure:
         # AllowedHostsOriginValidator -> AuthMiddlewareStack -> URLRouter
         # Check it has the expected nested structure
-        self.assertTrue(hasattr(websocket_app, "application"))  # AllowedHostsOriginValidator has inner app
-        
+        self.assertTrue(
+            hasattr(websocket_app, "application")
+        )  # AllowedHostsOriginValidator has inner app
+
         # Check the middleware stack exists and has an inner router
         auth_stack = websocket_app.application
-        self.assertTrue(hasattr(auth_stack, "inner"))  # AuthMiddlewareStack has inner URLRouter
-        
+        self.assertTrue(
+            hasattr(auth_stack, "inner")
+        )  # AuthMiddlewareStack has inner URLRouter
+
         # Verify the URLRouter exists
         url_router = auth_stack.inner
         self.assertIsNotNone(url_router)
@@ -208,7 +220,9 @@ class WebSocketIntegrationTest(TransactionTestCase):
         from core.consumers import TestWebSocketConsumer
 
         # Create communicator with test consumer
-        communicator = WebsocketCommunicator(TestWebSocketConsumer.as_asgi(), "/ws/test/")
+        communicator = WebsocketCommunicator(
+            TestWebSocketConsumer.as_asgi(), "/ws/test/"
+        )
 
         # Connect
         connected, _ = await communicator.connect()

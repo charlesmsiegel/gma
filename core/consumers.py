@@ -23,23 +23,28 @@ class TestWebSocketConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         """
         Receive message from WebSocket.
-        
+
         Echo back messages with a response type.
         """
         try:
             data = json.loads(text_data)
             response_type = data.get("type", "unknown") + ".response"
-            
+
             # Echo the message back with response type
-            await self.send(text_data=json.dumps({
-                "type": response_type,
-                "message": f"Echo: {data.get('message', '')}"
-            }))
-            
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        "type": response_type,
+                        "message": f"Echo: {data.get('message', '')}",
+                    }
+                )
+            )
+
         except json.JSONDecodeError as e:
             # Send error response for invalid JSON
-            await self.send(text_data=json.dumps({
-                "type": "error",
-                "error": f"Invalid JSON: {str(e)}"
-            }))
+            await self.send(
+                text_data=json.dumps(
+                    {"type": "error", "error": f"Invalid JSON: {str(e)}"}
+                )
+            )
             logger.error(f"Received invalid JSON: {text_data}")
