@@ -28,7 +28,8 @@ class TestWebSocketConsumer(AsyncWebsocketConsumer):
         """
         try:
             data = json.loads(text_data)
-            response_type = data.get("type", "unknown") + ".response"
+            message_type = data.get("type") or "unknown"
+            response_type = message_type + ".response"
 
             # Echo the message back with response type
             await self.send(

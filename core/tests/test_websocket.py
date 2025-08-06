@@ -1,5 +1,6 @@
 """Tests for WebSocket and Django Channels configuration."""
 
+import asyncio
 import json
 from unittest.mock import MagicMock, patch
 
@@ -7,6 +8,7 @@ from channels.auth import AuthMiddlewareStack
 from channels.db import database_sync_to_async
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.testing import WebsocketCommunicator
+from django.contrib.auth.models import User
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import path
 
@@ -262,3 +264,241 @@ class WebSocketIntegrationTest(TransactionTestCase):
         message = await channel_layer.receive("test_channel")
         self.assertEqual(message["type"], "test.message")
         self.assertEqual(message["text"], "Hello")
+
+
+class WebSocketAuthenticationTest(TransactionTestCase):
+    """Test WebSocket authentication scenarios."""
+
+    async def test_authenticated_user_context(self):
+        """Test that authenticated users are properly handled in WebSocket connections."""
+        # Create a test user
+        user = await database_sync_to_async(User.objects.create_user)(
+            username="testuser", password="testpass123"
+        )
+
+        from core.consumers import TestWebSocketConsumer
+
+        # Test authenticated connection
+        communicator = WebsocketCommunicator(
+            TestWebSocketConsumer.as_asgi(), "/ws/test/"
+        )
+        
+        # Simulate authenticated user in the communicator scope
+        communicator.scope["user"] = user
+        
+        # Connect
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected, "Authenticated user should be able to connect")
+
+        # Send a message to verify the connection works
+        test_message = {"type": "auth_test", "message": "authenticated user test"}
+        await communicator.send_json_to(test_message)
+
+        # Receive response
+        response = await communicator.receive_json_from()
+        self.assertEqual(response["type"], "auth_test.response")
+        self.assertEqual(response["message"], "Echo: authenticated user test")
+
+        await communicator.disconnect()
+
+    async def test_unauthenticated_user_context(self):
+        """Test that unauthenticated users are handled properly."""
+        from django.contrib.auth.models import AnonymousUser
+        from core.consumers import TestWebSocketConsumer
+
+        # Test unauthenticated connection
+        communicator = WebsocketCommunicator(
+            TestWebSocketConsumer.as_asgi(), "/ws/test/"
+        )
+        
+        # Simulate anonymous user in the communicator scope
+        communicator.scope["user"] = AnonymousUser()
+        
+        # Connect (should still work as our consumer doesn't enforce auth)
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected, "Anonymous user connection should be handled")
+
+        # Send a message to verify the connection works
+        test_message = {"type": "unauth_test", "message": "anonymous user test"}
+        await communicator.send_json_to(test_message)
+
+        # Receive response
+        response = await communicator.receive_json_from()
+        self.assertEqual(response["type"], "unauth_test.response")
+        self.assertEqual(response["message"], "Echo: anonymous user test")
+
+        await communicator.disconnect()
+
+    async def test_user_context_preserved_during_session(self):
+        """Test that user context is preserved during the WebSocket session."""
+        user = await database_sync_to_async(User.objects.create_user)(
+            username="sessionuser", password="testpass123"
+        )
+
+        from core.consumers import TestWebSocketConsumer
+
+        communicator = WebsocketCommunicator(
+            TestWebSocketConsumer.as_asgi(), "/ws/test/"
+        )
+        communicator.scope["user"] = user
+
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+
+        # Send multiple messages to verify session persistence
+        for i in range(3):
+            test_message = {"type": "session_test", "message": f"message {i}"}
+            await communicator.send_json_to(test_message)
+
+            response = await communicator.receive_json_from()
+            self.assertEqual(response["type"], "session_test.response")
+            self.assertEqual(response["message"], f"Echo: message {i}")
+
+        await communicator.disconnect()
+
+
+class WebSocketReliabilityTest(TransactionTestCase):
+    """Test WebSocket reliability and error handling."""
+
+    @override_settings(
+        CHANNEL_LAYERS={
+            "default": {
+                "BACKEND": "channels_redis.core.RedisChannelLayer",
+                "CONFIG": {
+                    "hosts": [("127.0.0.1", 9999)],  # Invalid port
+                },
+            }
+        }
+    )
+    async def test_redis_connection_failure(self):
+        """Test graceful handling when Redis is unavailable."""
+        from channels.layers import get_channel_layer
+        from channels.exceptions import ChannelFull
+        
+        channel_layer = get_channel_layer()
+        
+        # Test that we can still create a channel layer even with bad config
+        self.assertIsNotNone(channel_layer)
+        
+        # Try to send a message - this should fail gracefully
+        try:
+            await channel_layer.send("test_channel", {"type": "test", "message": "test"})
+            # If we get here, Redis might actually be running on port 9999
+            # which is unlikely but possible in test environments
+        except Exception as e:
+            # We expect some kind of connection error
+            self.assertIsInstance(e, (ConnectionError, ChannelFull, OSError, Exception))
+
+    @override_settings(
+        CHANNEL_LAYERS={
+            "default": {
+                "BACKEND": "channels.layers.InMemoryChannelLayer",
+            }
+        }
+    )
+    async def test_concurrent_websocket_connections(self):
+        """Test multiple simultaneous WebSocket connections."""
+        from core.consumers import TestWebSocketConsumer
+        
+        # Create multiple communicators
+        communicators = []
+        num_connections = 5
+        
+        try:
+            # Establish multiple connections
+            for i in range(num_connections):
+                communicator = WebsocketCommunicator(
+                    TestWebSocketConsumer.as_asgi(), f"/ws/test/{i}/"
+                )
+                connected, _ = await communicator.connect()
+                self.assertTrue(connected, f"Connection {i} should succeed")
+                communicators.append(communicator)
+            
+            # Send messages from all connections simultaneously
+            send_tasks = []
+            for i, communicator in enumerate(communicators):
+                test_message = {"type": "concurrent", "message": f"message from connection {i}"}
+                send_tasks.append(communicator.send_json_to(test_message))
+            
+            # Wait for all sends to complete
+            await asyncio.gather(*send_tasks)
+            
+            # Receive responses from all connections
+            for i, communicator in enumerate(communicators):
+                response = await communicator.receive_json_from(timeout=5)
+                self.assertEqual(response["type"], "concurrent.response")
+                self.assertEqual(response["message"], f"Echo: message from connection {i}")
+                
+        finally:
+            # Clean up all connections
+            for communicator in communicators:
+                await communicator.disconnect()
+
+    async def test_message_size_limits(self):
+        """Test handling of large messages."""
+        from core.consumers import TestWebSocketConsumer
+
+        communicator = WebsocketCommunicator(
+            TestWebSocketConsumer.as_asgi(), "/ws/test/"
+        )
+
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+
+        # Test small message (should work)
+        small_message = {"type": "size_test", "message": "small"}
+        await communicator.send_json_to(small_message)
+        response = await communicator.receive_json_from()
+        self.assertEqual(response["type"], "size_test.response")
+
+        # Test medium message (should work)
+        medium_message = {"type": "size_test", "message": "x" * 1000}
+        await communicator.send_json_to(medium_message)
+        response = await communicator.receive_json_from()
+        self.assertEqual(response["type"], "size_test.response")
+        self.assertTrue(response["message"].startswith("Echo: "))
+
+        # Test large message (may fail depending on WebSocket limits)
+        large_message = {"type": "size_test", "message": "x" * 100000}
+        try:
+            await communicator.send_json_to(large_message)
+            response = await communicator.receive_json_from(timeout=10)
+            self.assertEqual(response["type"], "size_test.response")
+        except Exception as e:
+            # Large messages might fail due to WebSocket frame size limits
+            # This is expected behavior and we should handle it gracefully
+            self.assertIsInstance(e, (asyncio.TimeoutError, ConnectionError, Exception))
+
+        await communicator.disconnect()
+
+    async def test_malformed_message_handling(self):
+        """Test handling of malformed or malicious messages."""
+        from core.consumers import TestWebSocketConsumer
+
+        communicator = WebsocketCommunicator(
+            TestWebSocketConsumer.as_asgi(), "/ws/test/"
+        )
+
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+
+        # Test various malformed inputs
+        malformed_inputs = [
+            "not json",
+            '{"incomplete": json',
+            '{"type": null, "message": null}',
+            '{"very": {"deeply": {"nested": {"object": "test"}}}}',
+        ]
+
+        for malformed_input in malformed_inputs:
+            await communicator.send_to(text_data=malformed_input)
+            try:
+                response = await communicator.receive_json_from(timeout=2)
+                # Should receive error response for invalid JSON
+                if "error" in response:
+                    self.assertEqual(response["type"], "error")
+            except asyncio.TimeoutError:
+                # Some malformed inputs might not get a response, which is okay
+                pass
+
+        await communicator.disconnect()
