@@ -1,0 +1,63 @@
+name: gma
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # Python
+  - python=3.11
+  
+  # Django and related packages
+  - django=5.0
+  - djangorestframework=3.15
+  - django-cors-headers
+  - django-extensions
+  - django-debug-toolbar
+  
+  # Django Channels for WebSocket support
+  - channels=4.0
+  - channels-redis=4.2
+  - daphne
+  
+  # Database
+  - postgresql=16
+  - psycopg2
+  - redis=7.2
+  
+  # Python utilities
+  - python-dotenv
+  - pyyaml
+  - requests
+  
+  # Development tools
+  - black
+  - flake8
+  - mypy
+  - pytest
+  - pytest-django
+  - pytest-asyncio
+  - coverage
+  
+  # Frontend development
+  - nodejs=20
+  - npm
+  
+  # Additional tools
+  - git
+  - curl
+  - make
+  
+  # Pip dependencies (for packages not in conda)
+  - pip
+  - pip:
+    # Django polymorphic for character model inheritance
+    - django-polymorphic==3.1
+    # Additional Django packages
+    - django-filter
+    - drf-spectacular  # API documentation
+    - django-redis
+    # Development tools
+    - django-stubs
+    - djangorestframework-stubs
+    # Testing
+    - factory-boy
+    - faker
