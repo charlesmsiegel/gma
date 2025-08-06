@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "core",
 ]
 
 MIDDLEWARE = [
@@ -128,7 +129,6 @@ def get_local_timezone():
     
     # Try to detect from symlink /etc/localtime (Linux/Unix)
     try:
-        import os.path
         if os.path.islink("/etc/localtime"):
             link_target = os.readlink("/etc/localtime")
             if "zoneinfo" in link_target:

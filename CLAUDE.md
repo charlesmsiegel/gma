@@ -63,6 +63,15 @@ mypy .
 
 # Create new Django app
 python manage.py startapp <app_name>
+
+# Health check commands
+python manage.py health_check              # Test both database and Redis
+python manage.py health_check --database   # Test database only
+python manage.py health_check --redis      # Test Redis only
+python manage.py health_check --log        # Log results to database
+
+# Database shell access
+python manage.py dbshell                   # Open PostgreSQL shell
 ```
 
 ### Database Commands
@@ -90,6 +99,9 @@ The project follows a domain-driven monolithic architecture with these Django ap
 - **items**: Equipment and treasure management
 - **api**: DRF views, serializers, WebSocket routing
 - **core**: Front page, utilities, base templates
+
+#### Internal Structure
+The models, views, urls, and tests modules in every app should be managed as python modules rather than individual files.
 
 ### Character Model Hierarchy
 Uses django-polymorphic for game system inheritance:

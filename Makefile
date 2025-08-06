@@ -1,4 +1,4 @@
-.PHONY: help runserver start-postgres start-redis stop-postgres stop-redis setup-env migrate clean
+.PHONY: help runserver start-postgres start-redis stop-postgres stop-redis setup-env migrate clean health-check
 
 # Environment paths
 GMA_ENV_PATH = /home/janothar/miniconda3/envs/gma
@@ -14,6 +14,7 @@ help:
 	@echo "  stop-redis     - Stop Redis server"
 	@echo "  setup-env      - Create conda environment from environment.yml"
 	@echo "  migrate        - Run Django migrations"
+	@echo "  health-check   - Test database and Redis connections"
 	@echo "  clean          - Stop all services"
 
 runserver: start-postgres start-redis migrate
@@ -63,6 +64,12 @@ setup-env:
 migrate:
 	@echo "Running Django migrations..."
 	$(GMA_ENV_PATH)/bin/python manage.py migrate
+
+health-check: start-postgres start-redis
+	@echo "Running health checks..."
+	$(GMA_ENV_PATH)/bin/python manage.py health_check
+	@echo "Testing dbshell access..."
+	@echo "SELECT 'Database shell access: OK' as test;" | PATH="$(PG_BIN):$$PATH" $(GMA_ENV_PATH)/bin/python manage.py dbshell
 
 clean: stop-postgres stop-redis
 	@echo "All services stopped"
