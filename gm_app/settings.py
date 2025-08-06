@@ -109,7 +109,38 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+# Get local timezone, fallback to UTC
+def get_local_timezone():
+    """Get the local timezone, with UTC as fallback."""
+    # First try TZ environment variable
+    tz = os.environ.get("TZ")
+    if tz:
+        return tz
+    
+    # Try to read from /etc/timezone (Linux/Unix)
+    try:
+        with open("/etc/timezone", "r") as f:
+            tz = f.read().strip()
+            if tz:
+                return tz
+    except (FileNotFoundError, PermissionError, OSError):
+        pass
+    
+    # Try to detect from symlink /etc/localtime (Linux/Unix)
+    try:
+        import os.path
+        if os.path.islink("/etc/localtime"):
+            link_target = os.readlink("/etc/localtime")
+            if "zoneinfo" in link_target:
+                tz = link_target.split("zoneinfo/")[-1]
+                return tz
+    except (FileNotFoundError, PermissionError, OSError):
+        pass
+    
+    # Fallback to UTC
+    return "UTC"
+
+TIME_ZONE = get_local_timezone()
 
 USE_I18N = True
 
