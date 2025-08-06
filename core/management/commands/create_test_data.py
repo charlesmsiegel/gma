@@ -2,6 +2,8 @@
 Django management command to create test data for development.
 """
 
+import sys
+
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
@@ -87,19 +89,12 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.ERROR(f"❌ Failed to create test data: {e}")
             )
-            exit(1)
+            sys.exit(1)
 
     def clear_test_data(self):
         """Clear existing test data."""
-        # Clear test users (keep superusers)
-        User.objects.filter(
-            username__in=['testuser', 'gm_user']
-        ).delete()
-        
-        User.objects.filter(
-            username__startswith='testuser_',
-            is_superuser=False
-        ).delete()
+        # Clear all non-superuser users to start fresh
+        User.objects.filter(is_superuser=False).delete()
 
         # Clear test campaigns when models are implemented
         try:

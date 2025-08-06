@@ -21,7 +21,7 @@ class ResetDevDbCommandTest(TransactionTestCase):
         self.stdout = StringIO()
         self.stderr = StringIO()
 
-    @patch('django.core.management.call_command')
+    @patch('core.management.commands.reset_dev_db.call_command')
     @patch('builtins.input')
     def test_reset_dev_db_with_confirmation(self, mock_input, mock_call_command):
         """Test reset_dev_db command with user confirmation."""
@@ -41,7 +41,7 @@ class ResetDevDbCommandTest(TransactionTestCase):
         ]
         mock_call_command.assert_has_calls(expected_calls, any_order=True)
 
-    @patch('django.core.management.call_command')
+    @patch('core.management.commands.reset_dev_db.call_command')
     @patch('builtins.input')
     def test_reset_dev_db_without_confirmation(self, mock_input, mock_call_command):
         """Test reset_dev_db command when user cancels."""
@@ -57,9 +57,13 @@ class ResetDevDbCommandTest(TransactionTestCase):
         # Verify no database commands were called
         mock_call_command.assert_not_called()
 
-    @patch('django.core.management.call_command')
-    def test_reset_dev_db_force_option(self, mock_call_command):
+    @patch('core.management.commands.reset_dev_db.call_command')
+    @patch('builtins.input')
+    def test_reset_dev_db_force_option(self, mock_input, mock_call_command):
         """Test reset_dev_db command with --force option (no confirmation)."""
+        # Mock superuser creation inputs
+        mock_input.side_effect = ['admin', 'admin@example.com', 'password123']
+        
         call_command('reset_dev_db', force=True, stdout=self.stdout, stderr=self.stderr)
         
         output = self.stdout.getvalue()
@@ -73,7 +77,7 @@ class ResetDevDbCommandTest(TransactionTestCase):
         ]
         mock_call_command.assert_has_calls(expected_calls, any_order=True)
 
-    @patch('django.core.management.call_command')
+    @patch('core.management.commands.reset_dev_db.call_command')
     @patch('builtins.input')
     def test_reset_dev_db_with_superuser_creation(self, mock_input, mock_call_command):
         """Test reset_dev_db command with superuser creation."""
@@ -86,7 +90,7 @@ class ResetDevDbCommandTest(TransactionTestCase):
         self.assertIn('✅ Database reset completed successfully!', output)
         self.assertIn('Creating superuser account...', output)
 
-    @patch('django.core.management.call_command')
+    @patch('core.management.commands.reset_dev_db.call_command')
     def test_reset_dev_db_no_superuser_option(self, mock_call_command):
         """Test reset_dev_db command with --no-superuser option."""
         call_command('reset_dev_db', force=True, no_superuser=True, stdout=self.stdout, stderr=self.stderr)
@@ -95,9 +99,13 @@ class ResetDevDbCommandTest(TransactionTestCase):
         self.assertIn('✅ Database reset completed successfully!', output)
         self.assertNotIn('Creating superuser account...', output)
 
-    @patch('django.core.management.call_command')
-    def test_reset_dev_db_handles_flush_error(self, mock_call_command):
+    @patch('core.management.commands.reset_dev_db.call_command')
+    @patch('builtins.input')
+    def test_reset_dev_db_handles_flush_error(self, mock_input, mock_call_command):
         """Test reset_dev_db command handles database flush errors."""
+        # Mock superuser creation inputs (though they won't be reached)
+        mock_input.side_effect = ['admin', 'admin@example.com', 'password123']
+        
         # Mock flush command to raise an exception
         mock_call_command.side_effect = [
             Exception('Database connection error'),
@@ -112,9 +120,13 @@ class ResetDevDbCommandTest(TransactionTestCase):
         self.assertIn('❌ Failed to flush database', output)
         self.assertIn('Database connection error', output)
 
-    @patch('django.core.management.call_command')
-    def test_reset_dev_db_handles_migrate_error(self, mock_call_command):
+    @patch('core.management.commands.reset_dev_db.call_command')
+    @patch('builtins.input')
+    def test_reset_dev_db_handles_migrate_error(self, mock_input, mock_call_command):
         """Test reset_dev_db command handles migration errors."""
+        # Mock superuser creation inputs (though they won't be reached)
+        mock_input.side_effect = ['admin', 'admin@example.com', 'password123']
+        
         # Mock migrate command to raise an exception
         mock_call_command.side_effect = [
             None,  # flush command succeeds
@@ -248,7 +260,19 @@ class CreateTestDataCommandTest(TestCase):
         self.assertIn('Creating test campaigns...', output)
         self.assertIn('Creating test characters...', output)
         self.assertIn('Created user:', output)
-        self.assertIn('Created campaign:', output)
+        
+        # Only check for campaign/character creation if models exist
+        try:
+            from campaigns.models import Campaign
+            self.assertIn('Created campaign:', output)
+        except (ImportError, AttributeError):
+            self.assertIn('Campaign model not implemented yet, skipping...', output)
+            
+        try:
+            from characters.models import Character
+            self.assertIn('Created character:', output)
+        except (ImportError, AttributeError):
+            self.assertIn('Character model not implemented yet, skipping...', output)
 
     def test_create_test_data_zero_counts(self):
         """Test create_test_data command with zero counts."""

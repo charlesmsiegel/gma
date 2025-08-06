@@ -2,6 +2,8 @@
 Django management command to reset development database.
 """
 
+import sys
+
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
@@ -69,7 +71,7 @@ class Command(BaseCommand):
                 self.stdout.write(
                     self.style.ERROR(f"❌ Database reset failed: {e}")
                 )
-            exit(1)
+            sys.exit(1)
 
     def create_superuser(self):
         """Create a superuser account."""
