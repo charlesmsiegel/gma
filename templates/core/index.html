@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Game Master Application{% endblock %}
+
+{% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1>Welcome to Game Master Application</h1>
+    <p>Your ultimate tool for managing World of Darkness tabletop RPG campaigns</p>
+    <a href="#" class="btn btn-primary">Get Started</a>
+</div>
+
+<div class="features-grid">
+    <div class="feature-card">
+        <div class="feature-icon">🎭</div>
+        <h3>Campaign Management</h3>
+        <p>Create and manage multiple campaigns with ease. Track storylines, NPCs, and campaign progression across your World of Darkness games.</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">👤</div>
+        <h3>Character Sheets</h3>
+        <p>Comprehensive character management with support for Mage: the Ascension and other World of Darkness game lines. Digital character sheets that sync in real-time.</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">🗣️</div>
+        <h3>Real-time Chat</h3>
+        <p>Integrated chat system for seamless in-character and out-of-character communication during your gaming sessions.</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">🎲</div>
+        <h3>Dice Rolling</h3>
+        <p>Built-in dice rolling system with support for World of Darkness mechanics. Roll dice, track successes, and handle botches automatically.</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">🗺️</div>
+        <h3>Scene Management</h3>
+        <p>Organize your game sessions into scenes with participant tracking, location management, and scene-specific chat channels.</p>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>Mobile Friendly</h3>
+        <p>Access your campaigns on the go with our responsive design. Play from your desktop, tablet, or mobile device seamlessly.</p>
+    </div>
+</div>
+
+<div class="cta-section">
+    <h2>Ready to Transform Your Storytelling?</h2>
+    <p>Join the growing community of Storytellers using GMA to enhance their World of Darkness campaigns.</p>
+    <div class="mt-3">
+        <a href="#" class="btn btn-primary mr-2">Create Campaign</a>
+        <a href="#" class="btn btn-success">Join Campaign</a>
+    </div>
+</div>
+{% endblock %}
