@@ -52,9 +52,9 @@ python manage.py runserver
 daphne -b 0.0.0.0 -p 8000 gma.asgi:application
 
 # Run tests
-pytest
-# or
 python manage.py test
+# or use Makefile
+make test
 
 # Linting and formatting
 black .
@@ -63,6 +63,19 @@ mypy .
 
 # Create new Django app
 python manage.py startapp <app_name>
+
+# Health check commands
+python manage.py health_check              # Test both database and Redis
+python manage.py health_check --database   # Test database only
+python manage.py health_check --redis      # Test Redis only
+python manage.py health_check --log        # Log results to database
+
+# Database shell access
+python manage.py dbshell                   # Open PostgreSQL shell
+
+# Admin interface
+python manage.py createsuperuser           # Create admin user (if not exists)
+# Then access http://localhost:8080/admin/ to view health check logs
 ```
 
 ### Database Commands
@@ -90,6 +103,9 @@ The project follows a domain-driven monolithic architecture with these Django ap
 - **items**: Equipment and treasure management
 - **api**: DRF views, serializers, WebSocket routing
 - **core**: Front page, utilities, base templates
+
+#### Internal Structure
+The models, views, urls, and tests modules in every app should be managed as python modules rather than individual files.
 
 ### Character Model Hierarchy
 Uses django-polymorphic for game system inheritance:

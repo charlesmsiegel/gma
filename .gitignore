@@ -160,3 +160,4 @@ yarn-error.log*
 /media/
 gm_app/secrets.py
 OLD_CODE/
+*/migrations/0*.py

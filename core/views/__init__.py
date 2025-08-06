@@ -1,0 +1,1 @@
+# Views for core app will be added here as needed
