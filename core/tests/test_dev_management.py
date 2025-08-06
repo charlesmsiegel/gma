@@ -150,8 +150,21 @@ class CreateTestDataCommandTest(TestCase):
         self.assertTrue(User.objects.filter(username='testuser').exists())
         self.assertTrue(User.objects.filter(username='gm_user').exists())
         
-        # Campaign and Character models are not implemented yet, so we can't test them
-        # These tests will be updated when the models are available
+        # Test campaign creation if models are available
+        try:
+            from campaigns.models import Campaign
+            self.assertTrue(Campaign.objects.filter(name='Test Campaign').exists())
+        except (ImportError, AttributeError):
+            # Campaign model not implemented yet, skip this check
+            pass
+        
+        # Test character creation if models are available
+        try:
+            from characters.models import Character
+            self.assertTrue(Character.objects.count() > 0)
+        except (ImportError, AttributeError):
+            # Character model not implemented yet, skip this check
+            pass
 
     def test_create_test_data_custom_counts(self):
         """Test create_test_data command with custom counts."""
@@ -170,7 +183,22 @@ class CreateTestDataCommandTest(TestCase):
         
         # Verify correct counts (including the specific test users)
         self.assertEqual(User.objects.count(), 5)  # 3 custom + testuser + gm_user
-        # Campaign and Character models are not implemented yet, so we can't test them
+        
+        # Test campaign counts if models are available
+        try:
+            from campaigns.models import Campaign
+            self.assertEqual(Campaign.objects.count(), 3)  # 2 custom + Test Campaign
+        except (ImportError, AttributeError):
+            # Campaign model not implemented yet, skip this check
+            pass
+        
+        # Test character counts if models are available
+        try:
+            from characters.models import Character
+            self.assertEqual(Character.objects.count(), 5)
+        except (ImportError, AttributeError):
+            # Character model not implemented yet, skip this check
+            pass
 
     def test_create_test_data_clear_option(self):
         """Test create_test_data command with --clear option."""
@@ -239,3 +267,43 @@ class CreateTestDataCommandTest(TestCase):
         
         # Only the default testuser and gm_user should be created
         self.assertEqual(User.objects.count(), 2)
+        
+        # Test campaign counts if models are available
+        try:
+            from campaigns.models import Campaign
+            self.assertEqual(Campaign.objects.count(), 1)  # Just Test Campaign
+        except (ImportError, AttributeError):
+            # Campaign model not implemented yet, skip this check
+            pass
+        
+        # Test character counts if models are available
+        try:
+            from characters.models import Character
+            self.assertEqual(Character.objects.count(), 0)
+        except (ImportError, AttributeError):
+            # Character model not implemented yet, skip this check
+            pass
+
+    def test_create_test_data_handles_missing_models(self):
+        """Test create_test_data command gracefully handles missing models."""
+        # This test verifies that the command works even when Campaign/Character models don't exist
+        call_command('create_test_data', verbosity=2, stdout=self.stdout, stderr=self.stderr)
+        
+        output = self.stdout.getvalue()
+        self.assertIn('Creating test data...', output)
+        self.assertIn('✅ Test data created successfully!', output)
+        
+        # Users should always be created (using Django's built-in User model)
+        self.assertTrue(User.objects.filter(username='testuser').exists())
+        self.assertTrue(User.objects.filter(username='gm_user').exists())
+        
+        # Check that appropriate messages are shown for missing models
+        try:
+            from campaigns.models import Campaign
+        except (ImportError, AttributeError):
+            self.assertIn('Campaign model not implemented yet, skipping...', output)
+            
+        try:
+            from characters.models import Character
+        except (ImportError, AttributeError):
+            self.assertIn('Character model not implemented yet, skipping...', output)
