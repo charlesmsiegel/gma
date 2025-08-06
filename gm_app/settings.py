@@ -39,6 +39,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "core",
+    "users",
+    "campaigns",
+    "characters",
+    "scenes",
+    "locations",
+    "items",
+    "api",
 ]
 
 MIDDLEWARE = [
