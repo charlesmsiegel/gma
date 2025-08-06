@@ -68,6 +68,11 @@ body {
     color: white;
 }
 
+.nav-links a:focus {
+    background-color: #34495e;
+    outline: 2px solid #3498db;
+}
+
 /* Main content */
 .main-content {
     flex: 1;
