@@ -3,6 +3,7 @@ Django management command to reset development database.
 """
 
 import sys
+from getpass import getpass
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
@@ -92,10 +93,10 @@ class Command(BaseCommand):
             while not email:
                 email = input("Email is required. Enter superuser email: ").strip()
             
-            password = input("Enter superuser password: ").strip()
+            password = getpass("Enter superuser password: ").strip()
             
             while not password:
-                password = input("Password is required. Enter superuser password: ").strip()
+                password = getpass("Password is required. Enter superuser password: ").strip()
 
             # Create superuser
             User.objects.create_superuser(

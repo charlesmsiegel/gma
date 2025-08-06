@@ -22,11 +22,13 @@ class ResetDevDbCommandTest(TransactionTestCase):
         self.stderr = StringIO()
 
     @patch('core.management.commands.reset_dev_db.call_command')
+    @patch('core.management.commands.reset_dev_db.getpass')
     @patch('builtins.input')
-    def test_reset_dev_db_with_confirmation(self, mock_input, mock_call_command):
+    def test_reset_dev_db_with_confirmation(self, mock_input, mock_getpass, mock_call_command):
         """Test reset_dev_db command with user confirmation."""
-        # Mock user confirmation
-        mock_input.return_value = 'yes'
+        # Mock user confirmation and password input
+        mock_input.side_effect = ['yes', 'admin', 'admin@example.com']  # confirmation, username, email
+        mock_getpass.return_value = 'password123'  # password
         
         call_command('reset_dev_db', stdout=self.stdout, stderr=self.stderr)
         
@@ -58,11 +60,13 @@ class ResetDevDbCommandTest(TransactionTestCase):
         mock_call_command.assert_not_called()
 
     @patch('core.management.commands.reset_dev_db.call_command')
+    @patch('core.management.commands.reset_dev_db.getpass')
     @patch('builtins.input')
-    def test_reset_dev_db_force_option(self, mock_input, mock_call_command):
+    def test_reset_dev_db_force_option(self, mock_input, mock_getpass, mock_call_command):
         """Test reset_dev_db command with --force option (no confirmation)."""
         # Mock superuser creation inputs
-        mock_input.side_effect = ['admin', 'admin@example.com', 'password123']
+        mock_input.side_effect = ['admin', 'admin@example.com']  # username, email
+        mock_getpass.return_value = 'password123'  # password
         
         call_command('reset_dev_db', force=True, stdout=self.stdout, stderr=self.stderr)
         
@@ -78,11 +82,13 @@ class ResetDevDbCommandTest(TransactionTestCase):
         mock_call_command.assert_has_calls(expected_calls, any_order=True)
 
     @patch('core.management.commands.reset_dev_db.call_command')
+    @patch('core.management.commands.reset_dev_db.getpass')
     @patch('builtins.input')
-    def test_reset_dev_db_with_superuser_creation(self, mock_input, mock_call_command):
+    def test_reset_dev_db_with_superuser_creation(self, mock_input, mock_getpass, mock_call_command):
         """Test reset_dev_db command with superuser creation."""
         # Mock user confirmation and superuser details
-        mock_input.side_effect = ['yes', 'admin', 'admin@example.com', 'password123']
+        mock_input.side_effect = ['yes', 'admin', 'admin@example.com']  # confirmation, username, email
+        mock_getpass.return_value = 'password123'  # password
         
         call_command('reset_dev_db', stdout=self.stdout, stderr=self.stderr)
         
@@ -100,11 +106,13 @@ class ResetDevDbCommandTest(TransactionTestCase):
         self.assertNotIn('Creating superuser account...', output)
 
     @patch('core.management.commands.reset_dev_db.call_command')
+    @patch('core.management.commands.reset_dev_db.getpass')
     @patch('builtins.input')
-    def test_reset_dev_db_handles_flush_error(self, mock_input, mock_call_command):
+    def test_reset_dev_db_handles_flush_error(self, mock_input, mock_getpass, mock_call_command):
         """Test reset_dev_db command handles database flush errors."""
         # Mock superuser creation inputs (though they won't be reached)
-        mock_input.side_effect = ['admin', 'admin@example.com', 'password123']
+        mock_input.side_effect = ['admin', 'admin@example.com']  # username, email
+        mock_getpass.return_value = 'password123'  # password
         
         # Mock flush command to raise an exception
         mock_call_command.side_effect = [
@@ -121,11 +129,13 @@ class ResetDevDbCommandTest(TransactionTestCase):
         self.assertIn('Database connection error', output)
 
     @patch('core.management.commands.reset_dev_db.call_command')
+    @patch('core.management.commands.reset_dev_db.getpass')
     @patch('builtins.input')
-    def test_reset_dev_db_handles_migrate_error(self, mock_input, mock_call_command):
+    def test_reset_dev_db_handles_migrate_error(self, mock_input, mock_getpass, mock_call_command):
         """Test reset_dev_db command handles migration errors."""
         # Mock superuser creation inputs (though they won't be reached)
-        mock_input.side_effect = ['admin', 'admin@example.com', 'password123']
+        mock_input.side_effect = ['admin', 'admin@example.com']  # username, email
+        mock_getpass.return_value = 'password123'  # password
         
         # Mock migrate command to raise an exception
         mock_call_command.side_effect = [
