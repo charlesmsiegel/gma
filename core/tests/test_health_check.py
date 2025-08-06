@@ -361,3 +361,77 @@ class HealthCheckLogModelTest(TestCase):
         status_choices = dict(log._meta.get_field('status').choices)
         self.assertEqual(status_choices['success'], 'Success')
         self.assertEqual(status_choices['failure'], 'Failure')
+
+
+class HealthCheckLogAdminTest(TestCase):
+    """Test the HealthCheckLog admin interface."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        from django.contrib.admin.sites import site
+        from core.admin import HealthCheckLogAdmin
+        from core.models import HealthCheckLog
+        
+        self.admin_class = HealthCheckLogAdmin
+        self.admin_instance = self.admin_class(HealthCheckLog, site)
+
+    def test_admin_registration(self):
+        """Test that HealthCheckLog is properly registered in admin."""
+        from django.contrib.admin.sites import site
+        from core.models import HealthCheckLog
+        
+        # Check that the model is registered
+        self.assertIn(HealthCheckLog, site._registry)
+
+    def test_list_display_configuration(self):
+        """Test admin list display configuration."""
+        expected_list_display = ['timestamp', 'service', 'status', 'short_details']
+        self.assertEqual(list(self.admin_instance.list_display), expected_list_display)
+
+    def test_list_filter_configuration(self):
+        """Test admin list filter configuration."""
+        expected_list_filter = ['service', 'status', 'timestamp']
+        self.assertEqual(list(self.admin_instance.list_filter), expected_list_filter)
+
+    def test_search_fields_configuration(self):
+        """Test admin search fields configuration."""
+        expected_search_fields = ['details']
+        self.assertEqual(list(self.admin_instance.search_fields), expected_search_fields)
+
+    def test_readonly_fields_configuration(self):
+        """Test admin readonly fields configuration."""
+        expected_readonly_fields = ['timestamp']
+        self.assertEqual(list(self.admin_instance.readonly_fields), expected_readonly_fields)
+
+    def test_ordering_configuration(self):
+        """Test admin ordering configuration."""
+        expected_ordering = ['-timestamp']
+        self.assertEqual(list(self.admin_instance.ordering), expected_ordering)
+
+    def test_short_details_method_long_text(self):
+        """Test short_details method with long text."""
+        log = HealthCheckLog.objects.create(
+            service='database',
+            status='success',
+            details='This is a very long details text that should be truncated in the admin interface because it exceeds fifty characters'
+        )
+        
+        result = self.admin_instance.short_details(log)
+        self.assertEqual(len(result), 50)  # 47 chars + "..."
+        self.assertTrue(result.endswith('...'))
+        self.assertEqual(result, 'This is a very long details text that should be...')
+
+    def test_short_details_method_short_text(self):
+        """Test short_details method with short text."""
+        log = HealthCheckLog.objects.create(
+            service='redis',
+            status='failure',
+            details='Short details text'
+        )
+        
+        result = self.admin_instance.short_details(log)
+        self.assertEqual(result, 'Short details text')
+
+    def test_short_details_description(self):
+        """Test short_details method description."""
+        self.assertEqual(self.admin_instance.short_details.short_description, 'Details')

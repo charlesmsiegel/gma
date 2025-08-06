@@ -72,6 +72,10 @@ python manage.py health_check --log        # Log results to database
 
 # Database shell access
 python manage.py dbshell                   # Open PostgreSQL shell
+
+# Admin interface
+python manage.py createsuperuser           # Create admin user (if not exists)
+# Then access http://localhost:8080/admin/ to view health check logs
 ```
 
 ### Database Commands
