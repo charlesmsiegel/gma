@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Game Master Application{% endblock %}</title>
+    
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <nav class="main-nav">
+                <h1><a href="{% url 'core:index' %}">Game Master Application</a></h1>
+                <ul class="nav-links">
+                    <li><a href="{% url 'core:index' %}">Home</a></li>
+                    {% if user.is_authenticated %}
+                        <li><a href="#">Campaigns</a></li>
+                        <li><a href="#">Characters</a></li>
+                        <li><a href="{% url 'admin:index' %}">Admin</a></li>
+                        <li><a href="#">Logout</a></li>
+                    {% else %}
+                        <li><a href="#">Login</a></li>
+                        <li><a href="#">Register</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; {% now "Y" %} Game Master Application. A World of Darkness campaign management system.</p>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/base.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

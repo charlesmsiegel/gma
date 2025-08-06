@@ -1,5 +1,7 @@
-# URL patterns for core app will be added here as needed
 from django.urls import path
+from ..views import index
 
 app_name = 'core'
-urlpatterns = []
+urlpatterns = [
+    path('', index, name='index'),
+]
