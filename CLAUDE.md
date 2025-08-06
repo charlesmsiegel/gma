@@ -9,7 +9,7 @@ Game Master Application (GMA) - A web-based tabletop RPG campaign management sys
 ## Technology Stack
 
 ### Backend
-- **Django 5.0** with Django REST Framework for API development
+- **Django 5.2.4+** with Django REST Framework for API development
 - **Django Channels** for WebSocket support (real-time chat)
 - **PostgreSQL 16** as primary database
 - **Redis 7.2** for caching and Channels layer
