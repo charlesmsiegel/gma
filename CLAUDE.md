@@ -138,3 +138,4 @@ Character (base)
 2. **Polymorphic Models**: Game system flexibility through inheritance
 3. **Permission-Based**: Hierarchical roles (Owner → GM → Player → Observer)
 4. **Mobile-Responsive**: Desktop-first with mobile adaptation
+5. **Test Driven Design**: All code will be created after tests are. Any subjob will consist of writing tests, then writing code, on a feature branch, and committing at each functional improvement.
