@@ -8,6 +8,7 @@ on:
 
 jobs:
   format:
+    if: false  # Temporarily disabled
     runs-on: ubuntu-latest
     
     steps:
