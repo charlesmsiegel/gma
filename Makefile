@@ -1,4 +1,4 @@
-.PHONY: help runserver start-postgres start-redis stop-postgres stop-redis setup-env migrate clean health-check test
+.PHONY: help runserver start-postgres start-redis stop-postgres stop-redis setup-env migrate clean health-check test test-coverage
 
 # Environment paths
 GMA_ENV_PATH = /home/janothar/miniconda3/envs/gma
@@ -16,6 +16,7 @@ help:
 	@echo "  migrate        - Run Django migrations"
 	@echo "  health-check   - Test database and Redis connections"
 	@echo "  test           - Run all tests"
+	@echo "  test-coverage  - Run tests with coverage report"
 	@echo "  clean          - Stop all services"
 
 runserver: start-postgres start-redis migrate
@@ -75,6 +76,15 @@ health-check: start-postgres start-redis
 test:
 	@echo "Running all tests..."
 	$(GMA_ENV_PATH)/bin/python manage.py test
+
+test-coverage:
+	@echo "Running tests with coverage..."
+	$(GMA_ENV_PATH)/bin/python -m coverage run manage.py test
+	$(GMA_ENV_PATH)/bin/python -m coverage combine
+	$(GMA_ENV_PATH)/bin/python -m coverage report --precision=2 --show-missing --skip-covered
+	$(GMA_ENV_PATH)/bin/python -m coverage html
+	@echo "HTML coverage report generated at htmlcov/index.html"
+	$(GMA_ENV_PATH)/bin/python -m coverage report --fail-under=80
 
 clean: stop-postgres stop-redis
 	@echo "All services stopped"

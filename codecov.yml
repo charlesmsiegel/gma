@@ -1,0 +1,31 @@
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 1%
+        if_ci_failed: error
+    patch:
+      default:
+        target: 80%
+        if_ci_failed: error
+
+ignore:
+  - "*/migrations/*"
+  - "*/OLD_CODE/*"
+  - "manage.py"
+  - "*/settings.py"
+  - "*/secrets.py"
+  - "*/urls.py"
+  - "*/wsgi.py"
+  - "*/asgi.py"
+  - "*/tests/*"
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false

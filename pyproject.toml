@@ -73,3 +73,42 @@ exclude = "OLD_CODE"
 [tool.bandit]
 exclude_dirs = ["OLD_CODE", "migrations", "venv", "tests"]
 skips = ["B101", "B601"]  # Skip assert_used and shell_injection_process_communication in tests
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "*/migrations/*",
+    "*/venv/*",
+    "*/OLD_CODE/*",
+    "manage.py",
+    "*/settings.py",
+    "*/secrets.py",
+    "*/urls.py",
+    "*/wsgi.py",
+    "*/asgi.py",
+    "*/tests/*",
+    "*/.venv/*",
+    "*/build/*",
+    "*/dist/*"
+]
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod"
+]
+show_missing = true
+skip_covered = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"

@@ -56,6 +56,14 @@ python manage.py test
 # or use Makefile
 make test
 
+# Run tests with coverage
+make test-coverage                            # Complete coverage workflow
+python -m coverage run manage.py test        # Run tests with coverage
+python -m coverage combine                   # Combine coverage data files
+python -m coverage report                    # Show coverage report
+python -m coverage html                      # Generate HTML coverage report
+python -m coverage report --fail-under=80    # Enforce 80% coverage minimum
+
 # Code formatting and linting
 isort --profile black .          # Sort imports with black profile
 black .                          # Format code with black
