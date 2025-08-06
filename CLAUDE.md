@@ -9,7 +9,7 @@ Game Master Application (GMA) - A web-based tabletop RPG campaign management sys
 ## Technology Stack
 
 ### Backend
-- **Django 5.0** with Django REST Framework for API development
+- **Django 5.2.4+** with Django REST Framework for API development
 - **Django Channels** for WebSocket support (real-time chat)
 - **PostgreSQL 16** as primary database
 - **Redis 7.2** for caching and Channels layer
@@ -138,3 +138,4 @@ Character (base)
 2. **Polymorphic Models**: Game system flexibility through inheritance
 3. **Permission-Based**: Hierarchical roles (Owner → GM → Player → Observer)
 4. **Mobile-Responsive**: Desktop-first with mobile adaptation
+5. **Test Driven Design**: All code will be created after tests are. Any subjob will consist of writing tests, then writing code, on a feature branch, and committing at each functional improvement.
