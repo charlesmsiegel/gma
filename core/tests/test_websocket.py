@@ -1,16 +1,12 @@
 """Tests for WebSocket and Django Channels configuration."""
 
 import asyncio
-import json
-from unittest.mock import MagicMock, patch
 
-from channels.auth import AuthMiddlewareStack
 from channels.db import database_sync_to_async
-from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.routing import ProtocolTypeRouter
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth.models import User
 from django.test import TestCase, TransactionTestCase, override_settings
-from django.urls import path
 
 
 class ASGIApplicationTest(TestCase):
@@ -37,7 +33,8 @@ class ASGIApplicationTest(TestCase):
         websocket_app = asgi.application.application_mapping.get("websocket")
         # Check that websocket app is configured and uses authentication
         self.assertIsNotNone(websocket_app)
-        # Verify it has the expected structure (AllowedHostsOriginValidator wrapping AuthMiddlewareStack)
+        # Verify it has the expected structure
+        # (AllowedHostsOriginValidator wrapping AuthMiddlewareStack)
         self.assertTrue(
             hasattr(websocket_app, "application")
         )  # Should have inner application
@@ -270,7 +267,7 @@ class WebSocketAuthenticationTest(TransactionTestCase):
     """Test WebSocket authentication scenarios."""
 
     async def test_authenticated_user_context(self):
-        """Test that authenticated users are properly handled in WebSocket connections."""
+        """Test authenticated users are properly handled in WebSocket connections."""
         # Create a test user
         user = await database_sync_to_async(User.objects.create_user)(
             username="testuser", password="testpass123"
@@ -282,10 +279,10 @@ class WebSocketAuthenticationTest(TransactionTestCase):
         communicator = WebsocketCommunicator(
             TestWebSocketConsumer.as_asgi(), "/ws/test/"
         )
-        
+
         # Simulate authenticated user in the communicator scope
         communicator.scope["user"] = user
-        
+
         # Connect
         connected, _ = await communicator.connect()
         self.assertTrue(connected, "Authenticated user should be able to connect")
@@ -304,16 +301,17 @@ class WebSocketAuthenticationTest(TransactionTestCase):
     async def test_unauthenticated_user_context(self):
         """Test that unauthenticated users are handled properly."""
         from django.contrib.auth.models import AnonymousUser
+
         from core.consumers import TestWebSocketConsumer
 
         # Test unauthenticated connection
         communicator = WebsocketCommunicator(
             TestWebSocketConsumer.as_asgi(), "/ws/test/"
         )
-        
+
         # Simulate anonymous user in the communicator scope
         communicator.scope["user"] = AnonymousUser()
-        
+
         # Connect (should still work as our consumer doesn't enforce auth)
         connected, _ = await communicator.connect()
         self.assertTrue(connected, "Anonymous user connection should be handled")
@@ -372,17 +370,19 @@ class WebSocketReliabilityTest(TransactionTestCase):
     )
     async def test_redis_connection_failure(self):
         """Test graceful handling when Redis is unavailable."""
-        from channels.layers import get_channel_layer
         from channels.exceptions import ChannelFull
-        
+        from channels.layers import get_channel_layer
+
         channel_layer = get_channel_layer()
-        
+
         # Test that we can still create a channel layer even with bad config
         self.assertIsNotNone(channel_layer)
-        
+
         # Try to send a message - this should fail gracefully
         try:
-            await channel_layer.send("test_channel", {"type": "test", "message": "test"})
+            await channel_layer.send(
+                "test_channel", {"type": "test", "message": "test"}
+            )
             # If we get here, Redis might actually be running on port 9999
             # which is unlikely but possible in test environments
         except Exception as e:
@@ -399,11 +399,11 @@ class WebSocketReliabilityTest(TransactionTestCase):
     async def test_concurrent_websocket_connections(self):
         """Test multiple simultaneous WebSocket connections."""
         from core.consumers import TestWebSocketConsumer
-        
+
         # Create multiple communicators
         communicators = []
         num_connections = 5
-        
+
         try:
             # Establish multiple connections
             for i in range(num_connections):
@@ -413,22 +413,27 @@ class WebSocketReliabilityTest(TransactionTestCase):
                 connected, _ = await communicator.connect()
                 self.assertTrue(connected, f"Connection {i} should succeed")
                 communicators.append(communicator)
-            
+
             # Send messages from all connections simultaneously
             send_tasks = []
             for i, communicator in enumerate(communicators):
-                test_message = {"type": "concurrent", "message": f"message from connection {i}"}
+                test_message = {
+                    "type": "concurrent",
+                    "message": f"message from connection {i}",
+                }
                 send_tasks.append(communicator.send_json_to(test_message))
-            
+
             # Wait for all sends to complete
             await asyncio.gather(*send_tasks)
-            
+
             # Receive responses from all connections
             for i, communicator in enumerate(communicators):
                 response = await communicator.receive_json_from(timeout=5)
                 self.assertEqual(response["type"], "concurrent.response")
-                self.assertEqual(response["message"], f"Echo: message from connection {i}")
-                
+                self.assertEqual(
+                    response["message"], f"Echo: message from connection {i}"
+                )
+
         finally:
             # Clean up all connections
             for communicator in communicators:

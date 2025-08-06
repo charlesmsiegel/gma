@@ -351,7 +351,7 @@ Campaign
 
 **Milestone**: Campaign creation locked to WoD, basic WoD dice mechanics work, character sheets have WoD structure
 
-#### Phase 3: Mage Character Implementation  
+#### Phase 3: Mage Character Implementation
 **Goal**: Full Mage: the Ascension character creation and play mechanics
 - **characters**: MageCharacter subclass inheriting from WoDCharacter
   - Spheres, Arete, Paradox, Resonance, Avatar
@@ -366,7 +366,7 @@ Campaign
 #### Phase 4: Polish & Production Readiness
 **Goal**: Production deployment and user experience refinement
 - **scenes**: Scene closure workflow with XP distribution
-- **campaigns**: Campaign analytics and progression tracking  
+- **campaigns**: Campaign analytics and progression tracking
 - **all apps**: Error handling, validation, performance optimization
 - **core**: Production deployment configuration
 - **api**: Rate limiting, security hardening

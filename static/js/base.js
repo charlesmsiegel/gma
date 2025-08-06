@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mobile menu toggle (for future mobile menu implementation)
     const navToggle = document.querySelector('.nav-toggle');
     const navLinks = document.querySelector('.nav-links');
-    
+
     if (navToggle && navLinks) {
         navToggle.addEventListener('click', function() {
             navLinks.classList.toggle('nav-open');
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add active class to current page link
     const currentPath = window.location.pathname;
     const navLinkElements = document.querySelectorAll('.nav-links a');
-    
+
     navLinkElements.forEach(function(link) {
         if (link.getAttribute('href') === currentPath) {
             link.classList.add('active');

@@ -108,7 +108,7 @@ Now implementing with current best practices...
 ### Efficient QuerySet Usage
 ```python
 from django.db.models import (
-    F, Q, Count, Sum, Avg, Max, Min, 
+    F, Q, Count, Sum, Avg, Max, Min,
     Prefetch, OuterRef, Subquery, Exists,
     Window, Value, Case, When, ExpressionWrapper,
     DateTimeField, DecimalField
@@ -123,7 +123,7 @@ from decimal import Decimal
 
 class ProductQueryOptimizer:
     """Optimized queries for product operations"""
-    
+
     @staticmethod
     def get_products_with_stats():
         """Get products with calculated statistics"""
@@ -131,14 +131,14 @@ class ProductQueryOptimizer:
         latest_review = Review.objects.filter(
             product=OuterRef('pk')
         ).order_by('-created_at').values('rating')[:1]
-        
+
         # Subquery for order count
         order_count = OrderItem.objects.filter(
             product=OuterRef('pk')
         ).values('product').annotate(
             count=Count('*')
         ).values('count')
-        
+
         return Product.objects.select_related(
             'category',
             'brand'
@@ -153,21 +153,21 @@ class ProductQueryOptimizer:
             avg_rating=Avg('reviews__rating'),
             review_count=Count('reviews'),
             latest_rating=Subquery(latest_review),
-            
+
             # Sales statistics
             total_sold=Coalesce(Subquery(order_count), 0),
             revenue=Sum(
                 F('orderitem__quantity') * F('orderitem__price'),
                 output_field=DecimalField()
             ),
-            
+
             # Inventory status
             is_low_stock=Case(
                 When(stock__lte=10, then=True),
                 default=False,
                 output_field=BooleanField()
             ),
-            
+
             # Popularity score
             popularity_score=ExpressionWrapper(
                 (F('avg_rating') * F('review_count')) + (F('total_sold') * 2),
@@ -176,14 +176,14 @@ class ProductQueryOptimizer:
         ).filter(
             is_published=True
         ).order_by('-popularity_score')
-    
+
     @staticmethod
     def search_products_optimized(query):
         """Optimized full-text search with ranking"""
         from django.contrib.postgres.search import (
             SearchVector, SearchQuery, SearchRank, TrigramSimilarity
         )
-        
+
         search_vector = SearchVector(
             'name', weight='A'
         ) + SearchVector(
@@ -191,9 +191,9 @@ class ProductQueryOptimizer:
         ) + SearchVector(
             'category__name', weight='C'
         )
-        
+
         search_query = SearchQuery(query)
-        
+
         return Product.objects.annotate(
             search=search_vector,
             rank=SearchRank(search_vector, search_query),
@@ -201,7 +201,7 @@ class ProductQueryOptimizer:
         ).filter(
             Q(search=search_query) | Q(similarity__gt=0.3)
         ).order_by('-rank', '-similarity')
-    
+
     @staticmethod
     def get_category_statistics():
         """Complex aggregation for category statistics"""
@@ -234,7 +234,7 @@ class ProductQueryOptimizer:
 
 class OrderQueryOptimizer:
     """Optimized queries for order operations"""
-    
+
     @staticmethod
     def get_orders_with_details(user=None):
         """Get orders with all related data in minimal queries"""
@@ -267,12 +267,12 @@ class OrderQueryOptimizer:
                 frame=RowRange(start=None, end=0)
             )
         )
-        
+
         if user:
             queryset = queryset.filter(user=user)
-        
+
         return queryset
-    
+
     @staticmethod
     def get_sales_report_by_period(start_date, end_date):
         """Generate sales report with multiple aggregations"""
@@ -286,11 +286,11 @@ class OrderQueryOptimizer:
             unique_customers=Count('user', distinct=True),
             total_revenue=Sum('total'),
             avg_order_value=Avg('total'),
-            
+
             # Product statistics
             products_sold=Sum('items__quantity'),
             unique_products=Count('items__product', distinct=True),
-            
+
             # Category breakdown
             category_breakdown=JSONObject(
                 electronics=Sum(
@@ -318,7 +318,7 @@ from django.db.models.functions import Lag, Lead, Rank, DenseRank
 
 class AnalyticsQueries:
     """Complex analytics queries"""
-    
+
     @staticmethod
     def product_sales_ranking():
         """Rank products by sales with window functions"""
@@ -346,7 +346,7 @@ class AnalyticsQueries:
             growth_pct=Case(
                 When(prev_month_revenue=0, then=None),
                 default=ExpressionWrapper(
-                    (F('total_revenue') - F('prev_month_revenue')) * 100.0 / 
+                    (F('total_revenue') - F('prev_month_revenue')) * 100.0 /
                     F('prev_month_revenue'),
                     output_field=DecimalField()
                 )
@@ -354,15 +354,15 @@ class AnalyticsQueries:
         ).filter(
             total_quantity_sold__gt=0
         ).order_by('revenue_rank')
-    
+
     @staticmethod
     def customer_lifetime_value():
         """Calculate customer lifetime value with RFM analysis"""
         from django.db.models import Max, Min, Q
         from datetime import datetime, timedelta
-        
+
         now = timezone.now()
-        
+
         return User.objects.annotate(
             # Recency - days since last order
             last_order_date=Max('orders__created_at'),
@@ -370,26 +370,26 @@ class AnalyticsQueries:
                 now - F('last_order_date'),
                 output_field=DurationField()
             ),
-            
+
             # Frequency - number of orders
             order_count=Count('orders'),
-            
+
             # Monetary - total spent
             total_spent=Sum('orders__total'),
-            
+
             # Average order value
             avg_order_value=Avg('orders__total'),
-            
+
             # Customer segment
             segment=Case(
                 When(
-                    Q(recency__lte=timedelta(days=30)) & 
-                    Q(order_count__gte=5) & 
+                    Q(recency__lte=timedelta(days=30)) &
+                    Q(order_count__gte=5) &
                     Q(total_spent__gte=1000),
                     then=Value('VIP')
                 ),
                 When(
-                    Q(recency__lte=timedelta(days=90)) & 
+                    Q(recency__lte=timedelta(days=90)) &
                     Q(order_count__gte=2),
                     then=Value('Active')
                 ),
@@ -400,7 +400,7 @@ class AnalyticsQueries:
                 default=Value('Lost'),
                 output_field=CharField()
             ),
-            
+
             # Predicted lifetime value
             predicted_ltv=ExpressionWrapper(
                 F('avg_order_value') * F('order_count') * 2.5,
@@ -421,26 +421,26 @@ class OptimizedProduct(models.Model):
     sku = models.CharField(max_length=50, unique=True, db_index=True)
     name = models.CharField(max_length=200, db_index=True)
     slug = models.SlugField(max_length=200, unique=True)
-    
+
     # Use decimal for precise calculations
     price = models.DecimalField(
-        max_digits=10, 
+        max_digits=10,
         decimal_places=2,
         db_index=True  # Index for price filtering
     )
-    
+
     # Denormalized fields for performance
     review_count = models.PositiveIntegerField(default=0, db_index=True)
     avg_rating = models.DecimalField(
-        max_digits=3, 
-        decimal_places=2, 
+        max_digits=3,
+        decimal_places=2,
         null=True,
         db_index=True
     )
-    
+
     # JSON field for flexible attributes
     attributes = models.JSONField(default=dict, db_index=True)
-    
+
     # Use select_related by default
     category = models.ForeignKey(
         'Category',
@@ -448,21 +448,21 @@ class OptimizedProduct(models.Model):
         related_name='products',
         db_index=True
     )
-    
+
     # Timestamps with indexes
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
-    
+
     class Meta:
         indexes = [
             # Composite indexes for common queries
             models.Index(fields=['category', '-created_at']),
             models.Index(fields=['is_published', '-avg_rating']),
             models.Index(fields=['category', 'price']),
-            
+
             # GIN index for JSON field (PostgreSQL)
             GinIndex(fields=['attributes']),
-            
+
             # Full text search index
             GinIndex(
                 name='product_search_idx',
@@ -470,7 +470,7 @@ class OptimizedProduct(models.Model):
                 opclasses=['gin_trgm_ops', 'gin_trgm_ops'],
             ),
         ]
-        
+
         constraints = [
             models.CheckConstraint(
                 check=models.Q(price__gte=0),
@@ -485,12 +485,12 @@ class OptimizedProduct(models.Model):
 class OptimizedOrder(models.Model):
     """Order model with partitioning support"""
     # ... standard fields ...
-    
+
     class Meta:
         # Partition by date for large datasets
         db_table = 'orders'
         managed = False  # Handle partitioning manually
-        
+
         indexes = [
             models.Index(fields=['user', '-created_at']),
             models.Index(fields=['status', 'created_at']),
@@ -516,19 +516,19 @@ def create_order_partitions():
                 PRIMARY KEY (id, created_at)
             ) PARTITION BY RANGE (created_at);
         """)
-        
+
         # Create monthly partitions
         for month in range(1, 13):
             cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS orders_2024_{month:02d} 
+                CREATE TABLE IF NOT EXISTS orders_2024_{month:02d}
                 PARTITION OF orders
-                FOR VALUES FROM ('2024-{month:02d}-01') 
+                FOR VALUES FROM ('2024-{month:02d}-01')
                 TO ('2024-{(month%12)+1:02d}-01');
             """)
-            
+
             # Create indexes on partition
             cursor.execute(f"""
-                CREATE INDEX idx_orders_2024_{month:02d}_user 
+                CREATE INDEX idx_orders_2024_{month:02d}_user
                 ON orders_2024_{month:02d}(user_id);
             """)
 ```
@@ -544,7 +544,7 @@ logger = logging.getLogger(__name__)
 
 class QueryProfiler:
     """Profile and debug ORM queries"""
-    
+
     @staticmethod
     def profile_query(queryset):
         """Profile query execution time and explain plan"""
@@ -552,21 +552,21 @@ class QueryProfiler:
         start_time = time.time()
         list(queryset)
         execution_time = time.time() - start_time
-        
+
         # Get SQL
         sql = str(queryset.query)
-        
+
         # Get query plan (PostgreSQL)
         with connection.cursor() as cursor:
             cursor.execute(f"EXPLAIN ANALYZE {sql}")
             plan = cursor.fetchall()
-        
+
         return {
             'sql': sql,
             'execution_time': execution_time,
             'query_plan': plan
         }
-    
+
     @staticmethod
     def analyze_n_plus_one(func):
         """Decorator to detect N+1 queries"""
@@ -574,55 +574,55 @@ class QueryProfiler:
             queries_before = len(connection.queries)
             result = func(*args, **kwargs)
             queries_after = len(connection.queries)
-            
+
             query_count = queries_after - queries_before
-            
+
             if query_count > 10:
                 logger.warning(
                     f"Potential N+1 detected in {func.__name__}: "
                     f"{query_count} queries executed"
                 )
-                
+
                 # Log queries for debugging
                 if settings.DEBUG:
                     for query in connection.queries[queries_before:queries_after]:
                         logger.debug(f"Query: {query['sql'][:100]}...")
-            
+
             return result
         return wrapper
 
 class QueryOptimizationMiddleware:
     """Middleware to track slow queries"""
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         queries_before = len(connection.queries)
-        
+
         response = self.get_response(request)
-        
+
         # Analyze queries
         total_queries = len(connection.queries) - queries_before
         slow_queries = []
-        
+
         for query in connection.queries[queries_before:]:
             if float(query['time']) > 0.1:  # Queries over 100ms
                 slow_queries.append({
                     'sql': query['sql'],
                     'time': query['time']
                 })
-        
+
         if slow_queries:
             logger.warning(
                 f"Slow queries detected on {request.path}: "
                 f"{len(slow_queries)} queries over 100ms"
             )
-        
+
         # Add debug headers
         if settings.DEBUG:
             response['X-DB-Query-Count'] = str(total_queries)
-            
+
         return response
 ```
 
@@ -633,12 +633,12 @@ from django.db.models import F
 
 class BulkOperations:
     """Efficient bulk database operations"""
-    
+
     @staticmethod
     def bulk_create_with_batch(objects, batch_size=1000):
         """Bulk create with batching for large datasets"""
         created_count = 0
-        
+
         for i in range(0, len(objects), batch_size):
             batch = objects[i:i + batch_size]
             Product.objects.bulk_create(
@@ -647,9 +647,9 @@ class BulkOperations:
                 ignore_conflicts=True
             )
             created_count += len(batch)
-            
+
         return created_count
-    
+
     @staticmethod
     @transaction.atomic
     def bulk_update_prices(category_id, percentage_change):
@@ -660,18 +660,18 @@ class BulkOperations:
             price=F('price') * (1 + percentage_change / 100),
             updated_at=timezone.now()
         )
-    
+
     @staticmethod
     def bulk_update_from_csv(csv_data):
         """Efficient bulk update from CSV data"""
         updates = []
-        
+
         for row in csv_data:
             product = Product(id=row['id'])
             product.price = row['price']
             product.stock = row['stock']
             updates.append(product)
-        
+
         Product.objects.bulk_update(
             updates,
             ['price', 'stock'],
@@ -685,14 +685,14 @@ from django.db import connection
 
 class RawSQLQueries:
     """Raw SQL for complex operations"""
-    
+
     @staticmethod
     def get_sales_heatmap():
         """Complex query that's easier in raw SQL"""
         with connection.cursor() as cursor:
             cursor.execute("""
                 WITH hourly_sales AS (
-                    SELECT 
+                    SELECT
                         EXTRACT(DOW FROM created_at) as day_of_week,
                         EXTRACT(HOUR FROM created_at) as hour_of_day,
                         COUNT(*) as order_count,
@@ -703,11 +703,11 @@ class RawSQLQueries:
                     GROUP BY 1, 2
                 ),
                 day_names AS (
-                    SELECT 
+                    SELECT
                         generate_series(0, 6) as day_num,
                         ARRAY['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as names
                 )
-                SELECT 
+                SELECT
                     d.names[h.day_of_week + 1] as day_name,
                     h.hour_of_day,
                     h.order_count,
@@ -717,24 +717,24 @@ class RawSQLQueries:
                 CROSS JOIN day_names d
                 ORDER BY h.day_of_week, h.hour_of_day
             """, [timezone.now() - timedelta(days=30)])
-            
+
             columns = [col[0] for col in cursor.description]
             return [
                 dict(zip(columns, row))
                 for row in cursor.fetchall()
             ]
-    
+
     @staticmethod
     def update_denormalized_fields():
         """Update denormalized fields efficiently"""
         with connection.cursor() as cursor:
             cursor.execute("""
                 UPDATE products p
-                SET 
+                SET
                     review_count = r.count,
                     avg_rating = r.avg_rating
                 FROM (
-                    SELECT 
+                    SELECT
                         product_id,
                         COUNT(*) as count,
                         AVG(rating) as avg_rating
@@ -742,10 +742,10 @@ class RawSQLQueries:
                     GROUP BY product_id
                 ) r
                 WHERE p.id = r.product_id
-                    AND (p.review_count != r.count 
+                    AND (p.review_count != r.count
                          OR p.avg_rating != r.avg_rating)
             """)
-            
+
             return cursor.rowcount
 ```
 
@@ -759,14 +759,14 @@ from django.test import TestCase
 
 class QueryPerformanceTest(TransactionTestCase):
     """Test query performance"""
-    
+
     def setUp(self):
         # Create test data
         categories = Category.objects.bulk_create([
             Category(name=f'Category {i}')
             for i in range(10)
         ])
-        
+
         products = []
         for cat in categories:
             products.extend([
@@ -778,7 +778,7 @@ class QueryPerformanceTest(TransactionTestCase):
                 for i in range(100)
             ])
         Product.objects.bulk_create(products)
-    
+
     def test_n_plus_one_prevention(self):
         """Test that queries don't have N+1 problem"""
         with self.assertNumQueries(2):  # 1 for products, 1 for categories
@@ -786,40 +786,40 @@ class QueryPerformanceTest(TransactionTestCase):
             for product in products:
                 # This should not trigger additional queries
                 _ = product.category.name
-    
+
     def test_complex_aggregation_performance(self):
         """Test complex aggregation query performance"""
         import time
-        
+
         start = time.time()
         result = Category.objects.annotate(
             product_count=Count('products'),
             avg_price=Avg('products__price')
         ).filter(product_count__gt=0)
-        
+
         list(result)  # Force evaluation
         duration = time.time() - start
-        
+
         self.assertLess(duration, 0.1)  # Should complete in under 100ms
-    
+
     @override_settings(DEBUG=True)
     def test_query_count(self):
         """Test that view doesn't execute too many queries"""
         from django.db import reset_queries
-        
+
         reset_queries()
-        
+
         # Simulate view logic
         orders = Order.objects.select_related(
             'user'
         ).prefetch_related(
             'items__product'
         )[:10]
-        
+
         for order in orders:
             for item in order.items.all():
                 _ = item.product.name
-        
+
         self.assertLess(len(connection.queries), 5)
 ```
 

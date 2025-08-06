@@ -71,14 +71,14 @@ Critical patterns to review:
 ```
 # Common outage causes:
 - Maximum pool size too low → connection starvation
-- Connection acquisition timeout too low → false failures  
+- Connection acquisition timeout too low → false failures
 - Idle timeout misconfigured → excessive connection churn
 - Connection lifetime exceeding database timeout → stale connections
 - Pool size not accounting for concurrent workers → resource contention
 ```
 Key formula: `pool_size >= (threads_per_worker × worker_count)`
 
-#### Security Configuration  
+#### Security Configuration
 High-risk patterns:
 ```
 # CRITICAL misconfigurations:
@@ -113,7 +113,7 @@ For EVERY configuration change, require answers to:
 
 - Code is simple and readable
 - Functions and variables are well-named
-- No duplicated code  
+- No duplicated code
 - Proper error handling with specific error types
 - No exposed secrets, API keys, or credentials
 - Input validation and sanitization implemented
