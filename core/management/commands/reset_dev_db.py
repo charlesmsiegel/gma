@@ -43,35 +43,48 @@ class Command(BaseCommand):
         try:
             # Flush database (delete all data)
             self.stdout.write("Flushing database...")
-            call_command("flush", "--noinput")
-            self.stdout.write(self.style.SUCCESS("  ✅ Database flushed"))
+            try:
+                call_command("flush", "--noinput")
+                self.stdout.write(self.style.SUCCESS("  ✅ Database flushed"))
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f"❌ Failed to flush database: {e}")
+                )
+                sys.exit(1)
 
             # Run migrations
             self.stdout.write("Running migrations...")
-            call_command("migrate")
-            self.stdout.write(self.style.SUCCESS("  ✅ Migrations completed"))
+            try:
+                call_command("migrate")
+                self.stdout.write(self.style.SUCCESS("  ✅ Migrations completed"))
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f"❌ Failed to run migrations: {e}")
+                )
+                sys.exit(1)
 
             # Create superuser if requested
             if create_superuser:
-                self.create_superuser()
+                try:
+                    self.create_superuser()
+                except Exception as e:
+                    # Don't exit for superuser creation failures, just warn
+                    self.stdout.write(
+                        self.style.WARNING(f"⚠️  Failed to create superuser: {e}")
+                    )
+                    self.stdout.write(
+                        self.style.WARNING("Database reset completed, but superuser creation failed")
+                    )
 
             self.stdout.write(
                 self.style.SUCCESS("✅ Database reset completed successfully!")
             )
 
         except Exception as e:
-            if "flush" in str(e).lower() or "database" in str(e).lower():
-                self.stdout.write(
-                    self.style.ERROR(f"❌ Failed to flush database: {e}")
-                )
-            elif "migrat" in str(e).lower():
-                self.stdout.write(
-                    self.style.ERROR(f"❌ Failed to run migrations: {e}")
-                )
-            else:
-                self.stdout.write(
-                    self.style.ERROR(f"❌ Database reset failed: {e}")
-                )
+            # Catch-all for any other unexpected errors
+            self.stdout.write(
+                self.style.ERROR(f"❌ Unexpected error during database reset: {e}")
+            )
             sys.exit(1)
 
     def create_superuser(self):

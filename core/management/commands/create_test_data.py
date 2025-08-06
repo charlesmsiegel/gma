@@ -8,6 +8,19 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 
+# Default counts for built-in test data
+DEFAULT_USERS_COUNT = 2  # testuser and gm_user
+DEFAULT_CAMPAIGNS_COUNT = 1  # Test Campaign
+DEFAULT_CHARACTERS_COUNT = 0  # No built-in test characters
+
+# Default test data names
+DEFAULT_TEST_USERNAME = 'testuser'
+DEFAULT_GM_USERNAME = 'gm_user'
+DEFAULT_CAMPAIGN_NAME = 'Test Campaign'
+ADDITIONAL_USER_PREFIX = 'testuser_'
+ADDITIONAL_CHARACTER_PREFIX = 'Test Character '
+
+
 class Command(BaseCommand):
     help = "Create test data for development - users, campaigns, characters, etc."
 
@@ -54,8 +67,8 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.WARNING("DRY RUN: Would create test data with:")
             )
-            self.stdout.write(f"  👥 Users: {users_count + 2} (includes testuser and gm_user)")
-            self.stdout.write(f"  🎲 Campaigns: {campaigns_count + 1} (includes Test Campaign)")
+            self.stdout.write(f"  👥 Users: {users_count + DEFAULT_USERS_COUNT} (includes {DEFAULT_TEST_USERNAME} and {DEFAULT_GM_USERNAME})")
+            self.stdout.write(f"  🎲 Campaigns: {campaigns_count + DEFAULT_CAMPAIGNS_COUNT} (includes {DEFAULT_CAMPAIGN_NAME})")
             self.stdout.write(f"  🎭 Characters: {characters_count}")
             self.stdout.write(self.style.SUCCESS("✅ Dry run completed!"))
             return
@@ -99,7 +112,7 @@ class Command(BaseCommand):
         # Clear test campaigns when models are implemented
         try:
             from campaigns.models import Campaign
-            Campaign.objects.filter(name__startswith='Test Campaign').delete()
+            Campaign.objects.filter(name__startswith=DEFAULT_CAMPAIGN_NAME).delete()
         except (ImportError, AttributeError):
             # Campaign model not implemented yet
             pass
@@ -122,14 +135,14 @@ class Command(BaseCommand):
         # Create default test users
         default_users = [
             {
-                'username': 'testuser',
+                'username': DEFAULT_TEST_USERNAME,
                 'email': 'testuser@example.com',
                 'first_name': 'Test',
                 'last_name': 'User',
                 'password': 'testpass123'
             },
             {
-                'username': 'gm_user',
+                'username': DEFAULT_GM_USERNAME,
                 'email': 'gm@example.com',
                 'first_name': 'Game',
                 'last_name': 'Master',
@@ -152,7 +165,7 @@ class Command(BaseCommand):
 
         # Create additional test users
         for i in range(1, count + 1):
-            username = f'testuser_{i}'
+            username = f'{ADDITIONAL_USER_PREFIX}{i}'
             if not User.objects.filter(username=username).exists():
                 user = User.objects.create_user(
                     username=username,
@@ -178,9 +191,9 @@ class Command(BaseCommand):
             from campaigns.models import Campaign
 
             # Create default test campaign
-            if not Campaign.objects.filter(name='Test Campaign').exists():
+            if not Campaign.objects.filter(name=DEFAULT_CAMPAIGN_NAME).exists():
                 campaign = Campaign.objects.create(
-                    name='Test Campaign',
+                    name=DEFAULT_CAMPAIGN_NAME,
                     description='A test campaign for development',
                     game_system='wod'  # Assuming World of Darkness as default
                 )
@@ -190,7 +203,7 @@ class Command(BaseCommand):
 
             # Create additional test campaigns
             for i in range(1, count + 1):
-                campaign_name = f'Test Campaign {i}'
+                campaign_name = f'{DEFAULT_CAMPAIGN_NAME} {i}'
                 if not Campaign.objects.filter(name=campaign_name).exists():
                     campaign = Campaign.objects.create(
                         name=campaign_name,
@@ -220,7 +233,7 @@ class Command(BaseCommand):
 
             # Create test characters
             for i in range(1, count + 1):
-                character_name = f'Test Character {i}'
+                character_name = f'{ADDITIONAL_CHARACTER_PREFIX}{i}'
                 if not Character.objects.filter(name=character_name).exists():
                     character = Character.objects.create(
                         name=character_name,

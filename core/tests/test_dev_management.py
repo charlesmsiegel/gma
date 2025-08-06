@@ -115,10 +115,7 @@ class ResetDevDbCommandTest(TransactionTestCase):
         mock_getpass.return_value = 'password123'  # password
         
         # Mock flush command to raise an exception
-        mock_call_command.side_effect = [
-            Exception('Database connection error'),
-            None,  # migrate command succeeds
-        ]
+        mock_call_command.side_effect = Exception('Database connection error')
         
         with self.assertRaises(SystemExit) as cm:
             call_command('reset_dev_db', force=True, stdout=self.stdout, stderr=self.stderr)
@@ -137,11 +134,14 @@ class ResetDevDbCommandTest(TransactionTestCase):
         mock_input.side_effect = ['admin', 'admin@example.com']  # username, email
         mock_getpass.return_value = 'password123'  # password
         
-        # Mock migrate command to raise an exception
-        mock_call_command.side_effect = [
-            None,  # flush command succeeds
-            Exception('Migration error'),
-        ]
+        # Mock migrate command to raise an exception on second call
+        def mock_side_effect(*args, **kwargs):
+            if args[0] == 'flush':
+                return None  # flush succeeds
+            elif args[0] == 'migrate':
+                raise Exception('Migration error')
+        
+        mock_call_command.side_effect = mock_side_effect
         
         with self.assertRaises(SystemExit) as cm:
             call_command('reset_dev_db', force=True, stdout=self.stdout, stderr=self.stderr)
