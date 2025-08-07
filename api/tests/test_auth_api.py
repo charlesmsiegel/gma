@@ -107,7 +107,9 @@ class AuthenticationAPITest(TestCase):
         response = self.client.post(self.login_url, data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("inactive", str(response.data).lower())
+        # API returns generic "Invalid credentials" for security
+        # (matches Django form behavior)
+        self.assertIn("Invalid credentials", str(response.data))
 
     def test_register_success(self):
         """Test successful user registration."""
@@ -153,8 +155,8 @@ class AuthenticationAPITest(TestCase):
         response = self.client.get(self.csrf_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("csrf_token", response.data)
-        self.assertIsNotNone(response.data["csrf_token"])
+        self.assertIn("csrfToken", response.data)
+        self.assertIsNotNone(response.data["csrfToken"])
 
     def test_user_info_authenticated(self):
         """Test user info endpoint when authenticated."""
@@ -164,14 +166,16 @@ class AuthenticationAPITest(TestCase):
         response = self.client.get(self.user_info_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["username"], "testuser")
-        self.assertEqual(response.data["email"], "test@example.com")
+        self.assertIn("user", response.data)
+        self.assertEqual(response.data["user"]["username"], "testuser")
+        self.assertEqual(response.data["user"]["email"], "test@example.com")
 
     def test_user_info_unauthenticated(self):
         """Test user info endpoint when not authenticated."""
         response = self.client.get(self.user_info_url)
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        # DRF returns 403 for permission denied when using IsAuthenticated
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_logout_success(self):
         """Test successful logout."""

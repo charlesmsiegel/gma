@@ -43,6 +43,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "last_name",
         )
 
+    def validate_email(self, value):
+        """Validate email is unique (case-insensitive)."""
+        if value and User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
     def validate(self, attrs):
         """Validate passwords match."""
         if attrs.get("password") != attrs.get("password_confirm"):
