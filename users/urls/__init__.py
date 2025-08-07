@@ -10,6 +10,8 @@ from ..views import (
     PasswordResetDoneView,
     PasswordResetView,
     RegisterView,
+    UserProfileEditView,
+    UserProfileView,
 )
 
 app_name = "users"
@@ -20,6 +22,9 @@ urlpatterns = [
     # Authentication
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
+    # Profile management
+    path("profile/", UserProfileView.as_view(), name="profile"),
+    path("profile/edit/", UserProfileEditView.as_view(), name="profile_edit"),
     # Password change
     path("password/change/", PasswordChangeView.as_view(), name="password_change"),
     path(
