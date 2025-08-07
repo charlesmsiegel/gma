@@ -104,6 +104,24 @@ class RegisterViewTest(TestCase):
         self.assertContains(response, "username")
         self.assertEqual(User.objects.filter(username="testuser").count(), 1)
 
+    def test_register_duplicate_email_case_insensitive(self):
+        """Test registration fails with duplicate email (case-insensitive)."""
+        User.objects.create_user("testuser1", "Test@Example.com", "TestPass123!")
+
+        data = {
+            "username": "testuser2",
+            "email": "test@example.com",  # Different case
+            "password1": "TestPass123!",
+            "password2": "TestPass123!",
+        }
+        response = self.client.post(reverse("users:register"), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "A user with this email already exists")
+        self.assertEqual(
+            User.objects.filter(email__icontains="test@example.com").count(), 1
+        )
+
 
 class LoginViewTest(TestCase):
     """Test user login view."""
@@ -141,6 +159,17 @@ class LoginViewTest(TestCase):
         """Test login with email instead of username."""
         data = {
             "username": "test@example.com",
+            "password": "TestPass123!",
+        }
+        response = self.client.post(reverse("users:login"), data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("_auth_user_id", self.client.session)
+
+    def test_login_with_email_case_insensitive(self):
+        """Test login with email case-insensitive."""
+        data = {
+            "username": "TEST@EXAMPLE.COM",  # Different case
             "password": "TestPass123!",
         }
         response = self.client.post(reverse("users:login"), data)

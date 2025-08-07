@@ -1,5 +1,14 @@
 """
 Forms for user authentication and registration.
+
+Security Notes:
+- For production deployment, consider implementing rate limiting for login attempts
+  to prevent brute force attacks. Recommended options:
+  * django-ratelimit: https://django-ratelimit.readthedocs.io/
+  * django-axes: https://django-axes.readthedocs.io/
+  * Cloudflare or nginx-based rate limiting
+- Current implementation uses secure error messages that don't reveal whether
+  a username/email exists, following security best practices
 """
 
 from django import forms
@@ -40,9 +49,9 @@ class CustomUserCreationForm(UserCreationForm):
         self.fields["password2"].widget.attrs["class"] = "form-control"
 
     def clean_email(self):
-        """Validate email is unique."""
+        """Validate email is unique (case-insensitive)."""
         email = self.cleaned_data.get("email")
-        if email and User.objects.filter(email=email).exists():
+        if email and User.objects.filter(email__iexact=email).exists():
             raise ValidationError("A user with this email already exists.")
         return email
 
@@ -101,20 +110,24 @@ class EmailAuthenticationForm(forms.Form):
         password = self.cleaned_data.get("password")
 
         if username is not None and password:
-            # Try authenticating with username first
-            self.user_cache = authenticate(
-                self.request, username=username, password=password
-            )
-
-            # If that fails and username looks like email, try finding user by email
-            if self.user_cache is None and "@" in username:
+            # Check if input looks like email and try to get user by email first
+            if "@" in username:
                 try:
-                    user = User.objects.get(email=username)
+                    user = User.objects.get(email__iexact=username)
+                    # Use the found user's username for authentication
                     self.user_cache = authenticate(
                         self.request, username=user.username, password=password
                     )
                 except User.DoesNotExist:
-                    pass
+                    # Fall back to regular username authentication
+                    self.user_cache = authenticate(
+                        self.request, username=username, password=password
+                    )
+            else:
+                # Input is likely a username, authenticate directly
+                self.user_cache = authenticate(
+                    self.request, username=username, password=password
+                )
 
             if self.user_cache is None:
                 raise ValidationError(
