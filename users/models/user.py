@@ -6,7 +6,28 @@ from django.db import models
 
 
 def validate_timezone(value):
-    """Validate that the timezone string is a valid timezone identifier."""
+    """
+    Validate that the timezone string is a valid timezone identifier.
+
+    Uses Python's zoneinfo module to validate timezone identifiers according to
+    the IANA Time Zone Database. Accepts standard timezone names such as:
+    - 'UTC'
+    - 'America/New_York'
+    - 'Europe/London'
+    - 'Asia/Tokyo'
+
+    Args:
+        value (str): The timezone identifier string to validate.
+
+    Raises:
+        ValidationError: If the value is empty or not a valid timezone identifier.
+
+    Examples:
+        >>> validate_timezone('UTC')  # Valid - passes silently
+        >>> validate_timezone('America/New_York')  # Valid - passes silently
+        >>> validate_timezone('Invalid/Timezone')  # Raises ValidationError
+        >>> validate_timezone('')  # Raises ValidationError
+    """
     if not value:
         raise ValidationError("Timezone cannot be empty.")
 
@@ -29,6 +50,8 @@ class User(AbstractUser):
     class Meta:
         db_table = "users_user"
         ordering = ["username"]
+        verbose_name = "User"
+        verbose_name_plural = "Users"
 
     def get_display_name(self):
         """Return display_name if set, otherwise fall back to username."""
