@@ -3,6 +3,7 @@ from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages.storage.fallback import FallbackStorage
+from django.db import transaction
 from django.test import RequestFactory, TestCase
 
 from users.admin import UserAdmin
@@ -18,29 +19,36 @@ class UserAdminTest(TestCase):
         self.site = AdminSite()
         self.user_admin = UserAdmin(self.User, self.site)
 
-        # Create test users
-        self.regular_user = self.User.objects.create_user(
-            username="regularuser",
-            email="regular@example.com",
-            password="testpass123",
-            display_name="Regular User",
-            timezone="America/New_York",
-        )
+        # Create test users with explicit transaction handling
+        with transaction.atomic():
+            self.regular_user = self.User.objects.create_user(
+                username="regularuser",
+                email="regular@example.com",
+                password="testpass123",
+                display_name="Regular User",
+                timezone="America/New_York",
+            )
 
-        self.staff_user = self.User.objects.create_user(
-            username="staffuser",
-            email="staff@example.com",
-            password="testpass123",
-            is_staff=True,
-            display_name="Staff User",
-        )
+            self.staff_user = self.User.objects.create_user(
+                username="staffuser",
+                email="staff@example.com",
+                password="testpass123",
+                is_staff=True,
+                display_name="Staff User",
+            )
 
-        self.superuser = self.User.objects.create_superuser(
-            username="superuser",
-            email="super@example.com",
-            password="testpass123",
-            display_name="Super User",
-        )
+            self.superuser = self.User.objects.create_superuser(
+                username="superuser",
+                email="super@example.com",
+                password="testpass123",
+                display_name="Super User",
+            )
+
+    def tearDown(self):
+        """Clean up test data."""
+        # Ensure all database connections are properly closed
+        with transaction.atomic():
+            self.User.objects.all().delete()
 
     def _get_request(self, user=None):
         """Create a mock request with user."""
@@ -119,10 +127,11 @@ class UserAdminTest(TestCase):
     def test_activate_users_bulk_action(self):
         """Test activate_users bulk action functionality."""
         # Deactivate users first
-        self.regular_user.is_active = False
-        self.regular_user.save()
-        self.staff_user.is_active = False
-        self.staff_user.save()
+        with transaction.atomic():
+            self.regular_user.is_active = False
+            self.regular_user.save()
+            self.staff_user.is_active = False
+            self.staff_user.save()
 
         # Create queryset
         queryset = self.User.objects.filter(
@@ -131,7 +140,8 @@ class UserAdminTest(TestCase):
 
         # Execute bulk action
         request = self._get_request(self.superuser)
-        self.user_admin.activate_users(request, queryset)
+        with transaction.atomic():
+            self.user_admin.activate_users(request, queryset)
 
         # Check users are activated
         self.regular_user.refresh_from_db()
@@ -142,10 +152,11 @@ class UserAdminTest(TestCase):
     def test_deactivate_users_bulk_action(self):
         """Test deactivate_users bulk action functionality."""
         # Ensure users are active first
-        self.regular_user.is_active = True
-        self.regular_user.save()
-        self.staff_user.is_active = True
-        self.staff_user.save()
+        with transaction.atomic():
+            self.regular_user.is_active = True
+            self.regular_user.save()
+            self.staff_user.is_active = True
+            self.staff_user.save()
 
         # Create queryset
         queryset = self.User.objects.filter(
@@ -154,7 +165,8 @@ class UserAdminTest(TestCase):
 
         # Execute bulk action
         request = self._get_request(self.superuser)
-        self.user_admin.deactivate_users(request, queryset)
+        with transaction.atomic():
+            self.user_admin.deactivate_users(request, queryset)
 
         # Check users are deactivated
         self.regular_user.refresh_from_db()
@@ -165,13 +177,15 @@ class UserAdminTest(TestCase):
     def test_deactivate_users_protects_superusers(self):
         """Test that deactivate_users protects superusers from being deactivated."""
         # Ensure superuser is active
-        self.superuser.is_active = True
-        self.superuser.save()
+        with transaction.atomic():
+            self.superuser.is_active = True
+            self.superuser.save()
 
         # Try to deactivate superuser
         queryset = self.User.objects.filter(id=self.superuser.id)
         request = self._get_request(self.superuser)
-        self.user_admin.deactivate_users(request, queryset)
+        with transaction.atomic():
+            self.user_admin.deactivate_users(request, queryset)
 
         # Check superuser is still active
         self.superuser.refresh_from_db()
