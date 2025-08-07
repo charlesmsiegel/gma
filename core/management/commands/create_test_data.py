@@ -196,32 +196,41 @@ class Command(BaseCommand):
         try:
             from campaigns.models import Campaign
 
-            # Create default test campaign
-            if not Campaign.objects.filter(name=DEFAULT_CAMPAIGN_NAME).exists():
-                campaign = Campaign.objects.create(
-                    name=DEFAULT_CAMPAIGN_NAME,
-                    description="A test campaign for development",
-                    game_system="wod",  # Assuming World of Darkness as default
-                )
-                campaigns.append(campaign)
-                if verbosity >= 2:
-                    self.stdout.write(f"  Created campaign: {campaign.name}")
+            # Get the first available user as owner
+            owner = User.objects.filter(
+                username__in=[DEFAULT_TEST_USERNAME, DEFAULT_GM_USERNAME]
+            ).first()
+            if not owner:
+                owner = User.objects.first()
 
-            # Create additional test campaigns
-            for i in range(1, count + 1):
-                campaign_name = f"{DEFAULT_CAMPAIGN_NAME} {i}"
-                if not Campaign.objects.filter(name=campaign_name).exists():
+            if owner:
+                # Create default test campaign
+                if not Campaign.objects.filter(name=DEFAULT_CAMPAIGN_NAME).exists():
                     campaign = Campaign.objects.create(
-                        name=campaign_name,
-                        description=f"Test campaign #{i} for development",
-                        game_system="wod",
+                        name=DEFAULT_CAMPAIGN_NAME,
+                        description="A test campaign for development",
+                        game_system="generic_wod",
+                        owner=owner,
                     )
                     campaigns.append(campaign)
                     if verbosity >= 2:
                         self.stdout.write(f"  Created campaign: {campaign.name}")
 
+                # Create additional test campaigns
+                for i in range(1, count + 1):
+                    campaign_name = f"{DEFAULT_CAMPAIGN_NAME} {i}"
+                    if not Campaign.objects.filter(name=campaign_name).exists():
+                        campaign = Campaign.objects.create(
+                            name=campaign_name,
+                            description=f"Test campaign #{i} for development",
+                            game_system="generic_wod",
+                            owner=owner,
+                        )
+                        campaigns.append(campaign)
+                        if verbosity >= 2:
+                            self.stdout.write(f"  Created campaign: {campaign.name}")
+
         except (ImportError, AttributeError):
-            # Campaign model not implemented yet
             if verbosity >= 2:
                 self.stdout.write("  Campaign model not implemented yet, skipping...")
 

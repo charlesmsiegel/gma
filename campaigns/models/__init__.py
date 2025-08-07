@@ -1,3 +1,3 @@
-from django.db import models
+from .campaign import Campaign, CampaignMembership
 
-# Campaigns app models will be defined here
+__all__ = ["Campaign", "CampaignMembership"]
