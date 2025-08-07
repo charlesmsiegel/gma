@@ -90,6 +90,17 @@ python manage.py health_check --database   # Test database only
 python manage.py health_check --redis      # Test Redis only
 python manage.py health_check --log        # Log results to database
 
+# Development database management commands
+python manage.py reset_dev_db               # Reset database with confirmation
+python manage.py reset_dev_db --force       # Reset database without confirmation
+python manage.py reset_dev_db --no-superuser # Reset database without creating superuser
+
+# Test data creation commands
+python manage.py create_test_data           # Create default test data
+python manage.py create_test_data --users=5 --campaigns=3 --characters=10  # Custom counts
+python manage.py create_test_data --clear   # Clear existing test data first
+python manage.py create_test_data --dry-run # Preview what would be created
+
 # Database shell access
 python manage.py dbshell                   # Open PostgreSQL shell
 
