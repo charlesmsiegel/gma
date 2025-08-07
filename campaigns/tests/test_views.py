@@ -7,7 +7,7 @@ including form handling, redirects, and authentication requirements.
 
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 
 from campaigns.models import Campaign
@@ -167,6 +167,198 @@ class CampaignCreateViewTest(TestCase):
         self.assertTrue(any("created successfully" in str(m) for m in messages))
 
 
+class CampaignDetailViewEnhancedTest(TestCase):
+    """Enhanced tests for the CampaignDetailView with public/private campaigns."""
+
+    def setUp(self):
+        """Set up test data."""
+        # Create test users
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player = User.objects.create_user(
+            username="player", email="player@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        # Create campaigns
+        self.public_campaign = Campaign.objects.create(
+            name="Public Campaign",
+            description="A public campaign",
+            owner=self.owner,
+            game_system="D&D 5e",
+            is_public=True,
+        )
+
+        self.private_campaign = Campaign.objects.create(
+            name="Private Campaign",
+            description="A private campaign",
+            owner=self.owner,
+            game_system="Pathfinder",
+            is_public=False,
+        )
+
+        # Set up memberships
+        from campaigns.models import CampaignMembership
+
+        CampaignMembership.objects.create(
+            campaign=self.private_campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.private_campaign, user=self.player, role="PLAYER"
+        )
+
+    def test_public_campaign_accessible_to_anyone(self):
+        """Test that public campaigns are accessible to anyone."""
+        # Unauthenticated user
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.public_campaign.slug})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["campaign"], self.public_campaign)
+
+        # Non-member authenticated user
+        self.client.login(username="nonmember", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.public_campaign.slug})
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_private_campaign_returns_404_for_non_members(self):
+        """Test that private campaigns return 404 for non-members."""
+        # Unauthenticated user
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertEqual(response.status_code, 404)
+
+        # Non-member authenticated user
+        self.client.login(username="nonmember", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_private_campaign_accessible_to_members(self):
+        """Test that private campaigns are accessible to members."""
+        # Owner
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["campaign"], self.private_campaign)
+
+        # GM
+        self.client.login(username="gm", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # Player
+        self.client.login(username="player", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_role_based_information_display(self):
+        """Test that different information is displayed based on user role."""
+        # Owner sees management options
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertContains(response, "Edit Campaign")
+        self.assertContains(response, "Manage Members")
+        self.assertContains(response, "Campaign Settings")
+
+        # GM sees GM-specific options
+        self.client.login(username="gm", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertContains(response, "Create Scene")
+        self.assertContains(response, "Manage NPCs")
+        self.assertNotContains(response, "Edit Campaign")
+
+        # Player sees limited options
+        self.client.login(username="player", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertContains(response, "View Scenes")
+        self.assertContains(response, "My Character")
+        self.assertNotContains(response, "Create Scene")
+        self.assertNotContains(response, "Edit Campaign")
+
+        # Non-member of public campaign sees very limited info
+        self.client.login(username="nonmember", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.public_campaign.slug})
+        )
+        self.assertContains(response, "Request to Join")
+        self.assertNotContains(response, "View Scenes")
+        self.assertNotContains(response, "Edit Campaign")
+
+    def test_campaign_detail_displays_all_fields(self):
+        """Test that campaign detail view displays all expected fields."""
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+
+        # Basic campaign info
+        self.assertContains(response, self.private_campaign.name)
+        self.assertContains(response, self.private_campaign.description)
+        self.assertContains(response, self.private_campaign.game_system)
+
+        # Membership info
+        self.assertContains(response, "Members")
+        self.assertContains(response, self.gm.username)
+        self.assertContains(response, self.player.username)
+
+        # Activity info
+        self.assertContains(response, "Created")
+        self.assertContains(response, "Last Updated")
+
+    def test_user_role_displayed_in_context(self):
+        """Test that the user's role is included in the template context."""
+        # Owner
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertEqual(response.context["user_role"], "OWNER")
+
+        # GM
+        self.client.login(username="gm", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertEqual(response.context["user_role"], "GM")
+
+        # Player
+        self.client.login(username="player", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.private_campaign.slug})
+        )
+        self.assertEqual(response.context["user_role"], "PLAYER")
+
+        # Non-member on public campaign
+        self.client.login(username="nonmember", password="testpass123")
+        response = self.client.get(
+            reverse("campaigns:detail", kwargs={"slug": self.public_campaign.slug})
+        )
+        self.assertIsNone(response.context["user_role"])
+
+
 class CampaignDetailViewTest(TestCase):
     """Test the campaign detail view."""
 
@@ -299,3 +491,420 @@ class CampaignFormTest(TestCase):
         self.assertEqual(campaign.description, "Testing form save method")
         self.assertEqual(campaign.game_system, "Test System")
         self.assertIsNotNone(campaign.slug)
+
+
+class CampaignListViewTest(TestCase):
+    """Tests for the CampaignListView."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.factory = RequestFactory()
+
+        # Create test users
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player = User.objects.create_user(
+            username="player", email="player@test.com", password="testpass123"
+        )
+        self.observer = User.objects.create_user(
+            username="observer", email="observer@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        # Create campaigns with different visibility
+        self.public_campaign = Campaign.objects.create(
+            name="Public Campaign",
+            description="A public campaign anyone can see",
+            owner=self.owner,
+            game_system="D&D 5e",
+            is_public=True,
+        )
+
+        self.private_campaign = Campaign.objects.create(
+            name="Private Campaign",
+            description="A private campaign for members only",
+            owner=self.owner,
+            game_system="Pathfinder",
+            is_public=False,
+        )
+
+        self.inactive_campaign = Campaign.objects.create(
+            name="Inactive Campaign",
+            description="An inactive campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+            is_active=False,
+            is_public=True,
+        )
+
+        # Create additional campaigns for pagination testing
+        for i in range(30):
+            Campaign.objects.create(
+                name=f"Test Campaign {i}",
+                description=f"Test description {i}",
+                owner=self.owner,
+                game_system="Various",
+                is_public=(i % 2 == 0),  # Half public, half private
+            )
+
+        # Set up memberships
+        from campaigns.models import CampaignMembership
+
+        CampaignMembership.objects.create(
+            campaign=self.private_campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.private_campaign, user=self.player, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.private_campaign, user=self.observer, role="OBSERVER"
+        )
+
+    def test_unauthenticated_user_sees_only_public_campaigns(self):
+        """Test that unauthenticated users can only see public campaigns."""
+        response = self.client.get(reverse("campaigns:list"))
+        self.assertEqual(response.status_code, 200)
+        campaigns = response.context["campaigns"]
+
+        # Should see only public campaigns
+        for campaign in campaigns:
+            self.assertTrue(campaign.is_public)
+
+        # Should not see private campaign
+        self.assertNotIn(self.private_campaign, campaigns)
+
+    def test_authenticated_user_sees_public_and_member_campaigns(self):
+        """Test authenticated users see public campaigns and member campaigns."""
+        self.client.login(username="player", password="testpass123")
+        response = self.client.get(reverse("campaigns:list"))
+        self.assertEqual(response.status_code, 200)
+
+        campaigns = list(response.context["campaigns"])
+
+        # Player should see the private campaign they're a member of
+        self.assertIn(self.private_campaign, campaigns)
+
+        # Should also see public campaigns
+        public_campaigns = [c for c in campaigns if c.is_public]
+        self.assertTrue(len(public_campaigns) > 0)
+
+    def test_member_campaigns_appear_first(self):
+        """Test that campaigns user is a member of appear before public campaigns."""
+        self.client.login(username="player", password="testpass123")
+        response = self.client.get(reverse("campaigns:list"))
+
+        campaigns = list(response.context["campaigns"])
+
+        # Find index of member campaign and first public non-member campaign
+        member_campaign_index = campaigns.index(self.private_campaign)
+
+        # Find first public campaign that player is not a member of
+        non_member_public_index = None
+        for i, campaign in enumerate(campaigns):
+            if campaign.is_public and not campaign.is_member(self.player):
+                non_member_public_index = i
+                break
+
+        if non_member_public_index is not None:
+            self.assertLess(member_campaign_index, non_member_public_index)
+
+    def test_role_filtering(self):
+        """Test filtering campaigns by user role."""
+        self.client.login(username="owner", password="testpass123")
+
+        # Test owner filter
+        response = self.client.get(reverse("campaigns:list"), {"role": "owner"})
+        campaigns = response.context["campaigns"]
+        for campaign in campaigns:
+            self.assertEqual(campaign.owner, self.owner)
+
+        # Test GM filter
+        self.client.login(username="gm", password="testpass123")
+        response = self.client.get(reverse("campaigns:list"), {"role": "gm"})
+        campaigns = response.context["campaigns"]
+        for campaign in campaigns:
+            self.assertTrue(campaign.is_gm(self.gm))
+
+        # Test player filter
+        self.client.login(username="player", password="testpass123")
+        response = self.client.get(reverse("campaigns:list"), {"role": "player"})
+        campaigns = response.context["campaigns"]
+        for campaign in campaigns:
+            self.assertTrue(campaign.is_player(self.player))
+
+    def test_search_functionality(self):
+        """Test searching campaigns by name, description, and game system."""
+        self.client.login(username="owner", password="testpass123")
+
+        # Search by name
+        response = self.client.get(reverse("campaigns:list"), {"q": "Public"})
+        campaigns = response.context["campaigns"]
+        self.assertIn(self.public_campaign, campaigns)
+        self.assertNotIn(self.private_campaign, campaigns)
+
+        # Search by description
+        response = self.client.get(reverse("campaigns:list"), {"q": "members only"})
+        campaigns = response.context["campaigns"]
+        self.assertIn(self.private_campaign, campaigns)
+        self.assertNotIn(self.public_campaign, campaigns)
+
+        # Search by game system
+        response = self.client.get(reverse("campaigns:list"), {"q": "Pathfinder"})
+        campaigns = response.context["campaigns"]
+        self.assertIn(self.private_campaign, campaigns)
+        self.assertNotIn(self.public_campaign, campaigns)
+
+    def test_pagination_default(self):
+        """Test default pagination of 25 items per page."""
+        response = self.client.get(reverse("campaigns:list"))
+        self.assertEqual(response.status_code, 200)
+
+        paginator = response.context["paginator"]
+        page = response.context["page_obj"]
+
+        self.assertEqual(paginator.per_page, 25)
+        self.assertEqual(len(page.object_list), 25)
+
+    def test_pagination_user_configurable(self):
+        """Test user-configurable pagination."""
+        # Test different page sizes
+        for page_size in [10, 20, 50]:
+            response = self.client.get(
+                reverse("campaigns:list"), {"per_page": page_size}
+            )
+            paginator = response.context["paginator"]
+            self.assertEqual(paginator.per_page, page_size)
+
+        # Test invalid page size defaults to 25
+        response = self.client.get(reverse("campaigns:list"), {"per_page": "invalid"})
+        paginator = response.context["paginator"]
+        self.assertEqual(paginator.per_page, 25)
+
+        # Test excessive page size is capped (e.g., at 100)
+        response = self.client.get(reverse("campaigns:list"), {"per_page": 1000})
+        paginator = response.context["paginator"]
+        self.assertLessEqual(paginator.per_page, 100)
+
+    def test_inactive_campaigns_excluded_by_default(self):
+        """Test that inactive campaigns are excluded by default."""
+        response = self.client.get(reverse("campaigns:list"))
+        campaigns = response.context["campaigns"]
+
+        self.assertNotIn(self.inactive_campaign, campaigns)
+
+        # Test including inactive campaigns
+        response = self.client.get(reverse("campaigns:list"), {"show_inactive": "true"})
+        campaigns = response.context["campaigns"]
+        self.assertIn(self.inactive_campaign, campaigns)
+
+    def test_campaign_list_displays_correct_fields(self):
+        """Test that campaign list displays the correct fields."""
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(reverse("campaigns:list"))
+
+        self.assertContains(response, self.public_campaign.name)
+        self.assertContains(response, self.public_campaign.game_system)
+        # Check for member count display
+        self.assertContains(response, "members")
+        # Check for last activity/updated date
+        self.assertContains(response, self.public_campaign.updated_at.strftime("%Y"))
+
+
+class CampaignListAPIViewTest(TestCase):
+    """Tests for the Campaign API list endpoint."""
+
+    def setUp(self):
+        """Set up test data."""
+        # Create test users
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.player = User.objects.create_user(
+            username="player", email="player@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        # Create campaigns
+        self.public_campaign = Campaign.objects.create(
+            name="Public Campaign",
+            description="A public campaign",
+            owner=self.owner,
+            game_system="D&D 5e",
+            is_public=True,
+        )
+
+        self.private_campaign = Campaign.objects.create(
+            name="Private Campaign",
+            description="A private campaign",
+            owner=self.owner,
+            game_system="Pathfinder",
+            is_public=False,
+        )
+
+        from campaigns.models import CampaignMembership
+
+        CampaignMembership.objects.create(
+            campaign=self.private_campaign, user=self.player, role="PLAYER"
+        )
+
+    def test_api_list_returns_json(self):
+        """Test that API list endpoint returns JSON."""
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(reverse("api:campaign-list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
+
+    def test_api_list_filtering(self):
+        """Test API list endpoint filtering."""
+        self.client.login(username="owner", password="testpass123")
+
+        # Filter by role
+        response = self.client.get(reverse("api:campaign-list"), {"role": "owner"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(all(c["owner"]["id"] == self.owner.id for c in data["results"]))
+
+        # Filter by search query
+        response = self.client.get(reverse("api:campaign-list"), {"q": "Public"})
+        data = response.json()
+        self.assertTrue(any(c["name"] == "Public Campaign" for c in data["results"]))
+
+    def test_api_list_pagination(self):
+        """Test API list endpoint pagination."""
+        # Create more campaigns for pagination
+        for i in range(30):
+            Campaign.objects.create(
+                name=f"Campaign {i}", owner=self.owner, is_public=True
+            )
+
+        response = self.client.get(reverse("api:campaign-list"), {"page_size": 10})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertEqual(len(data["results"]), 10)
+        self.assertIn("next", data)
+        self.assertIn("previous", data)
+        self.assertIn("count", data)
+
+    def test_api_includes_user_role(self):
+        """Test that API response includes user's role in each campaign."""
+        self.client.login(username="player", password="testpass123")
+        response = self.client.get(reverse("api:campaign-list"))
+        data = response.json()
+
+        # Find the private campaign in results
+        private_campaign_data = None
+        for campaign in data["results"]:
+            if campaign["id"] == self.private_campaign.id:
+                private_campaign_data = campaign
+                break
+
+        self.assertIsNotNone(private_campaign_data)
+        self.assertEqual(private_campaign_data["user_role"], "PLAYER")
+
+    def test_api_real_time_search(self):
+        """Test that API supports real-time search with partial matching."""
+        self.client.login(username="owner", password="testpass123")
+
+        # Partial name match
+        response = self.client.get(reverse("api:campaign-list"), {"q": "Pub"})
+        data = response.json()
+        self.assertTrue(any(c["name"] == "Public Campaign" for c in data["results"]))
+
+        # Case-insensitive search
+        response = self.client.get(reverse("api:campaign-list"), {"q": "PUBLIC"})
+        data = response.json()
+        self.assertTrue(any(c["name"] == "Public Campaign" for c in data["results"]))
+
+
+class CampaignDetailAPIViewTest(TestCase):
+    """Tests for the Campaign API detail endpoint."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.member = User.objects.create_user(
+            username="member", email="member@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        self.public_campaign = Campaign.objects.create(
+            name="Public Campaign", owner=self.owner, is_public=True
+        )
+
+        self.private_campaign = Campaign.objects.create(
+            name="Private Campaign", owner=self.owner, is_public=False
+        )
+
+        from campaigns.models import CampaignMembership
+
+        CampaignMembership.objects.create(
+            campaign=self.private_campaign, user=self.member, role="PLAYER"
+        )
+
+    def test_api_detail_returns_json(self):
+        """Test that API detail endpoint returns JSON."""
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(
+            reverse("api:campaign-detail", kwargs={"pk": self.public_campaign.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
+
+    def test_api_detail_permissions(self):
+        """Test API detail endpoint permissions."""
+        # Public campaign accessible to anyone
+        self.client.login(username="nonmember", password="testpass123")
+        response = self.client.get(
+            reverse("api:campaign-detail", kwargs={"pk": self.public_campaign.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # Private campaign returns 404 for non-members
+        response = self.client.get(
+            reverse("api:campaign-detail", kwargs={"pk": self.private_campaign.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+        # Private campaign accessible to members
+        self.client.login(username="member", password="testpass123")
+        response = self.client.get(
+            reverse("api:campaign-detail", kwargs={"pk": self.private_campaign.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_api_detail_includes_role_specific_data(self):
+        """Test that API detail includes role-specific data."""
+        # Owner sees full data
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(
+            reverse("api:campaign-detail", kwargs={"pk": self.private_campaign.pk})
+        )
+        data = response.json()
+
+        self.assertIn("members", data)
+        self.assertIn("settings", data)  # Owner-only field
+        self.assertEqual(data["user_role"], "OWNER")
+
+        # Member sees limited data
+        self.client.login(username="member", password="testpass123")
+        response = self.client.get(
+            reverse("api:campaign-detail", kwargs={"pk": self.private_campaign.pk})
+        )
+        data = response.json()
+
+        self.assertIn("members", data)
+        self.assertNotIn("settings", data)  # Owner-only field
+        self.assertEqual(data["user_role"], "PLAYER")
