@@ -84,61 +84,65 @@ class Campaign(models.Model):
         if not self.name:
             raise ValidationError("Campaign name is required.")
 
-    def is_owner(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is the campaign owner."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.owner == user
-
-    def is_gm(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is a GM of this campaign."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.memberships.filter(user=user, role="GM").exists()
-
-    def is_player(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is a player in this campaign."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.memberships.filter(user=user, role="PLAYER").exists()
-
-    def is_observer(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is an observer of this campaign."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.memberships.filter(user=user, role="OBSERVER").exists()
-
-    def is_member(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user has any membership in this campaign."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.memberships.filter(user=user).exists()
-
     def get_user_role(self, user: Optional[AbstractUser]) -> Optional[str]:
-        """Get the highest role for a user in this campaign.
+        """Get user's role in this campaign.
 
         Args:
             user: The user to check permissions for
 
         Returns:
-            The user's role ('OWNER', 'GM', 'PLAYER', 'OBSERVER') or None
+            The user's role ('OWNER', 'GM', 'PLAYER', 'OBSERVER') or None if not member
         """
         if not user or not user.is_authenticated:
             return None
 
-        # Check membership roles (includes OWNER role)
-        membership = self.memberships.filter(user=user).first()
-        if membership:
-            return membership.role
+        # Check direct ownership first (fastest check, no DB query)
+        if self.owner == user:
+            return "OWNER"
 
-        return None
+        # Single database query to get user's membership role
+        membership = self.memberships.filter(user=user).first()
+        return membership.role if membership else None
+
+    def has_role(self, user: Optional[AbstractUser], *roles: str) -> bool:
+        """Check if user has any of the specified roles in this campaign.
+
+        Args:
+            user: The user to check permissions for
+            roles: One or more role names to check ('OWNER', 'GM', 'PLAYER', 'OBSERVER')
+
+        Returns:
+            True if user has any of the specified roles, False otherwise
+        """
+        user_role = self.get_user_role(user)
+        return user_role in roles if user_role else False
+
+    # Convenience methods for backward compatibility
+    def is_owner(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user is the campaign owner."""
+        return self.has_role(user, "OWNER")
+
+    def is_gm(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user is a GM of this campaign."""
+        return self.has_role(user, "GM")
+
+    def is_player(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user is a player in this campaign."""
+        return self.has_role(user, "PLAYER")
+
+    def is_observer(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user is an observer of this campaign."""
+        return self.has_role(user, "OBSERVER")
+
+    def is_member(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user has any membership in this campaign."""
+        return self.has_role(user, "OWNER", "GM", "PLAYER", "OBSERVER")
 
 
 class CampaignMembership(models.Model):
     """Membership relationship between users and campaigns."""
 
     ROLE_CHOICES = [
-        ("OWNER", "Owner"),
         ("GM", "Game Master"),
         ("PLAYER", "Player"),
         ("OBSERVER", "Observer"),
@@ -169,11 +173,6 @@ class CampaignMembership(models.Model):
             models.UniqueConstraint(
                 fields=["campaign", "user"], name="unique_campaign_user_membership"
             ),
-            models.UniqueConstraint(
-                fields=["campaign"],
-                condition=models.Q(role="OWNER"),
-                name="unique_campaign_owner",
-            ),
         ]
         ordering = ["campaign", "role", "user__username"]
         verbose_name = "Campaign Membership"
@@ -187,25 +186,9 @@ class CampaignMembership(models.Model):
         """Validate the membership data."""
         super().clean()
         if self.campaign and self.user:
-            # Ensure only one OWNER per campaign
-            if self.role == "OWNER":
-                existing_owner = (
-                    CampaignMembership.objects.filter(
-                        campaign=self.campaign, role="OWNER"
-                    )
-                    .exclude(pk=self.pk)
-                    .first()
-                )
-
-                if existing_owner:
-                    raise ValidationError(
-                        f"Campaign '{self.campaign.name}' already has an "
-                        f"owner: {existing_owner.user.username}. "
-                        "Only one owner is allowed per campaign."
-                    )
-
-            # Validate that campaign owner has OWNER role in membership
-            if self.campaign.owner == self.user and self.role != "OWNER":
+            # Prevent owner from having membership (handled by Campaign.owner field)
+            if self.campaign.owner == self.user:
                 raise ValidationError(
-                    "Campaign owner must have OWNER role in membership."
+                    "Campaign owner cannot have a membership role. "
+                    "Ownership is handled automatically."
                 )

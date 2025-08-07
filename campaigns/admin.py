@@ -63,8 +63,8 @@ class CampaignMembershipAdmin(admin.ModelAdmin):
             "Membership",
             {
                 "fields": ["campaign", "user", "role"],
-                "description": "Users can have one membership per campaign. "
-                "Campaign owners can also be members with any role.",
+                "description": "Users can have one membership per campaign. Campaign "
+                "owners are handled automatically and cannot have membership roles.",
             },
         ),
         (

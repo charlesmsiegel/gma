@@ -164,14 +164,17 @@ class CampaignMembershipModelTest(TestCase):
         ).count()
         self.assertEqual(gm_count, 2)
 
-    def test_owner_has_owner_membership(self):
-        """Test that the campaign owner automatically has OWNER membership."""
-        # Owner should automatically have OWNER membership due to signal
-        owner_membership = CampaignMembership.objects.get(
-            campaign=self.campaign, user=self.owner
+    def test_owner_role_handled_automatically(self):
+        """Test that the campaign owner role is handled automatically."""
+        # Owner should NOT have a membership - they're handled via Campaign.owner field
+        self.assertFalse(
+            CampaignMembership.objects.filter(
+                campaign=self.campaign, user=self.owner
+            ).exists()
         )
-        self.assertEqual(owner_membership.user, self.campaign.owner)
-        self.assertEqual(owner_membership.role, "OWNER")
+        # But they should still be recognized as owner through Campaign methods
+        self.assertTrue(self.campaign.is_owner(self.owner))
+        self.assertEqual(self.campaign.get_user_role(self.owner), "OWNER")
 
     def test_all_role_types(self):
         """Test creating memberships with all role types."""
@@ -206,22 +209,29 @@ class CampaignMembershipModelTest(TestCase):
 
         self.assertFalse(CampaignMembership.objects.filter(user_id=user_id).exists())
 
-    def test_owner_membership_auto_created(self):
-        """Test that owner membership is automatically created."""
-        # Check that owner has OWNER membership
-        owner_membership = CampaignMembership.objects.get(
-            campaign=self.campaign, user=self.owner, role="OWNER"
-        )
-        self.assertIsNotNone(owner_membership.joined_at)
-
-    def test_owner_role_validation(self):
-        """Test that only one OWNER role is allowed per campaign."""
-        # Try to create another OWNER - should fail
+    def test_owner_cannot_have_membership(self):
+        """Test that owner cannot have a membership role."""
+        # Owners should not be able to have membership roles
         with self.assertRaises(ValidationError):
-            duplicate_owner = CampaignMembership(
-                campaign=self.campaign, user=self.player, role="OWNER"
+            membership = CampaignMembership(
+                campaign=self.campaign, user=self.owner, role="GM"
             )
-            duplicate_owner.full_clean()
+            membership.clean()
+
+    def test_membership_role_validation(self):
+        """Test that membership roles are properly validated."""
+        # Valid roles should work
+        for role in ["GM", "PLAYER", "OBSERVER"]:
+            user = User.objects.create_user(
+                username=f"test_{role.lower()}",
+                email=f"{role.lower()}@test.com",
+                password="pass123",
+            )
+            membership = CampaignMembership(
+                campaign=self.campaign, user=user, role=role
+            )
+            # Should not raise ValidationError
+            membership.full_clean()
 
 
 class CampaignQueryMethodsTest(TestCase):
