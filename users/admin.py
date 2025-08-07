@@ -16,6 +16,7 @@ class UserAdmin(BaseUserAdmin):
         "is_staff",
         "is_active",
         "created_at",
+        "updated_at",
     )
     list_filter = ("is_staff", "is_superuser", "is_active", "timezone")
     search_fields = ("username", "email", "display_name", "first_name", "last_name")

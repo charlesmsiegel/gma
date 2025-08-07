@@ -105,11 +105,38 @@ class CustomUserModelTest(TestCase):
             timezone="x" * 50,  # Exactly 50 characters
         )
         user.set_password("testpass123")
-        # Should not raise ValidationError
-        user.full_clean()
+        # Should raise ValidationError due to invalid timezone
+        with self.assertRaises(ValidationError):
+            user.full_clean()
 
         # Test exceeding max length
         user.timezone = "x" * 51  # 51 characters
+        with self.assertRaises(ValidationError):
+            user.full_clean()
+
+    def test_timezone_validation(self):
+        """Test timezone field validates against valid timezone names."""
+        # Test valid timezone
+        user = self.User(
+            username="testuser",
+            email="test@example.com",
+            timezone="America/New_York",
+        )
+        user.set_password("testpass123")
+        # Should not raise ValidationError
+        user.full_clean()
+
+        # Test another valid timezone
+        user.timezone = "Europe/London"
+        user.full_clean()  # Should pass
+
+        # Test invalid timezone
+        user.timezone = "Invalid/Timezone"
+        with self.assertRaises(ValidationError):
+            user.full_clean()
+
+        # Test empty timezone (should fail since field is not blank)
+        user.timezone = ""
         with self.assertRaises(ValidationError):
             user.full_clean()
 
@@ -211,3 +238,38 @@ class CustomUserModelTest(TestCase):
         # Test failed authentication
         failed_auth = authenticate(username="testuser", password="wrongpass")
         self.assertIsNone(failed_auth)
+
+    def test_get_display_name_with_display_name_set(self):
+        """Test get_display_name returns display_name when set."""
+        user = self.User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            display_name="Test User Display",
+        )
+
+        self.assertEqual(user.get_display_name(), "Test User Display")
+
+    def test_get_display_name_fallback_to_username(self):
+        """Test get_display_name falls back to username when display_name is empty."""
+        user = self.User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            display_name="",  # Empty display name
+        )
+
+        self.assertEqual(user.get_display_name(), "testuser")
+
+    def test_get_display_name_fallback_to_username_when_none(self):
+        """Test get_display_name falls back to username when display_name is None."""
+        user = self.User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        # Explicitly set display_name to None (should be empty by default)
+        user.display_name = None
+        user.save()
+
+        self.assertEqual(user.get_display_name(), "testuser")
