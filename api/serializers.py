@@ -42,11 +42,58 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
         )
+        extra_kwargs = {
+            "username": {"validators": []},  # Remove default unique validator
+            "email": {"validators": []},  # Remove default unique validator
+        }
 
     def validate_email(self, value):
         """Validate email is unique (case-insensitive)."""
         if value and User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
+            # Generic error to prevent email enumeration
+            raise serializers.ValidationError(
+                "Registration failed. Please try different information."
+            )
+        return value
+
+    def validate_username(self, value):
+        """Validate username is unique."""
+        if value and User.objects.filter(username=value).exists():
+            # Generic error to prevent username enumeration
+            raise serializers.ValidationError(
+                "Registration failed. Please try different information."
+            )
+        return value
+
+    def validate_password(self, value):
+        """Validate password strength requirements."""
+        import re
+
+        errors = []
+
+        # Check minimum length (8 characters)
+        if len(value) < 8:
+            errors.append("Password must be at least 8 characters long.")
+
+        # Check for uppercase letter
+        if not re.search(r"[A-Z]", value):
+            errors.append("Password must contain at least one uppercase letter.")
+
+        # Check for lowercase letter
+        if not re.search(r"[a-z]", value):
+            errors.append("Password must contain at least one lowercase letter.")
+
+        # Check for digit
+        if not re.search(r"\d", value):
+            errors.append("Password must contain at least one number.")
+
+        # Check for special character
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
+            errors.append("Password must contain at least one special character.")
+
+        if errors:
+            raise serializers.ValidationError(" ".join(errors))
+
         return value
 
     def validate(self, attrs):
