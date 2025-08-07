@@ -7,7 +7,6 @@ and management using Django REST Framework.
 
 from django.db.models import Q
 from rest_framework import generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from api.serializers import (
@@ -83,61 +82,6 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
         # Write permissions are only allowed to the owner of the campaign
         return obj.owner == request.user
-
-
-@api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
-def create_campaign_api(request):
-    """
-    Function-based API view for creating campaigns.
-
-    This provides an alternative to the class-based view for scenarios
-    where more control is needed.
-    """
-    serializer = CampaignSerializer(data=request.data)
-    if serializer.is_valid():
-        campaign = serializer.save(owner=request.user)
-        return Response(
-            CampaignSerializer(campaign).data, status=status.HTTP_201_CREATED
-        )
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(["GET"])
-@permission_classes([permissions.IsAuthenticated])
-def campaign_list_api(request):
-    """
-    Function-based API view for listing campaigns.
-
-    This provides an alternative to the class-based view.
-    """
-    campaigns = Campaign.objects.filter(is_active=True).select_related("owner")
-    serializer = CampaignSerializer(campaigns, many=True)
-
-    return Response({"count": campaigns.count(), "results": serializer.data})
-
-
-@api_view(["GET"])
-@permission_classes([permissions.IsAuthenticated])
-def campaign_detail_api(request, pk):
-    """
-    Function-based API view for campaign detail.
-
-    This provides an alternative to the class-based view.
-    """
-    try:
-        campaign = (
-            Campaign.objects.select_related("owner")
-            .prefetch_related("memberships__user")
-            .get(pk=pk)
-        )
-    except Campaign.DoesNotExist:
-        return Response(
-            {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
-        )
-
-    serializer = CampaignDetailSerializer(campaign)
-    return Response(serializer.data)
 
 
 class CampaignMembershipListAPIView(generics.ListCreateAPIView):

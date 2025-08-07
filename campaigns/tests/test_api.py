@@ -25,7 +25,7 @@ class CampaignCreateAPITest(TestCase):
         self.user = User.objects.create_user(
             username="testuser", email="test@example.com", password="TestPass123!"
         )
-        self.create_url = reverse("api:campaigns:create")
+        self.create_url = reverse("api:campaigns:list_create")
 
     def test_create_campaign_requires_authentication(self):
         """Test that unauthenticated users get 403 error (DRF default)."""
@@ -237,7 +237,7 @@ class CampaignListAPITest(TestCase):
             owner=self.user2,
         )
 
-        self.list_url = reverse("api:campaigns:list")
+        self.list_url = reverse("api:campaigns:list_create")
 
     def test_list_campaigns_requires_authentication(self):
         """Test that unauthenticated users get 403 error (DRF default)."""
@@ -253,8 +253,7 @@ class CampaignListAPITest(TestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("results", response.data)  # DRF pagination
-        self.assertTrue(len(response.data["results"]) >= 2)
+        self.assertTrue(len(response.data) >= 2)  # Direct list, not paginated
 
     def test_campaign_list_includes_owned_campaigns(self):
         """Test that user can see campaigns they own."""
@@ -265,7 +264,7 @@ class CampaignListAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Find user1's campaign in results
-        campaign_names = [c["name"] for c in response.data["results"]]
+        campaign_names = [c["name"] for c in response.data]
         self.assertIn("User 1 Campaign", campaign_names)
 
     def test_campaign_list_response_structure(self):
@@ -276,13 +275,9 @@ class CampaignListAPITest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Check pagination structure
-        self.assertIn("count", response.data)
-        self.assertIn("results", response.data)
-
         # Check campaign data structure
-        if response.data["results"]:
-            campaign = response.data["results"][0]
+        if response.data:
+            campaign = response.data[0]
             required_fields = [
                 "id",
                 "name",

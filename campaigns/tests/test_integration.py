@@ -58,7 +58,7 @@ class CampaignCreationIntegrationTest(TestCase):
         }
 
         api_response = self.api_client.post(
-            reverse("api:campaigns:create"), api_data, format="json"
+            reverse("api:campaigns:list_create"), api_data, format="json"
         )
         self.assertEqual(api_response.status_code, status.HTTP_201_CREATED)
 
@@ -109,7 +109,7 @@ class CampaignCreationIntegrationTest(TestCase):
             }
 
             response = self.api_client.post(
-                reverse("api:campaigns:create"), campaign_data, format="json"
+                reverse("api:campaigns:list_create"), campaign_data, format="json"
             )
 
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -140,7 +140,7 @@ class CampaignCreationIntegrationTest(TestCase):
         }
 
         response1 = self.api_client.post(
-            reverse("api:campaigns:create"), campaign_data1, format="json"
+            reverse("api:campaigns:list_create"), campaign_data1, format="json"
         )
 
         self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
@@ -154,7 +154,7 @@ class CampaignCreationIntegrationTest(TestCase):
         }
 
         response2 = self.api_client.post(
-            reverse("api:campaigns:create"), campaign_data2, format="json"
+            reverse("api:campaigns:list_create"), campaign_data2, format="json"
         )
 
         self.assertEqual(response2.status_code, status.HTTP_201_CREATED)
@@ -168,7 +168,7 @@ class CampaignCreationIntegrationTest(TestCase):
         }
 
         response3 = self.api_client.post(
-            reverse("api:campaigns:create"), campaign_data3, format="json"
+            reverse("api:campaigns:list_create"), campaign_data3, format="json"
         )
 
         self.assertEqual(response3.status_code, status.HTTP_201_CREATED)
@@ -210,7 +210,7 @@ class CampaignCreationIntegrationTest(TestCase):
         }
 
         api_response = self.api_client.post(
-            reverse("api:campaigns:create"), api_data, format="json"
+            reverse("api:campaigns:list_create"), api_data, format="json"
         )
 
         self.assertEqual(api_response.status_code, status.HTTP_201_CREATED)
@@ -224,7 +224,7 @@ class CampaignCreationIntegrationTest(TestCase):
         }
 
         alt_response = self.api_client.post(
-            reverse("api:campaigns:create"), alt_api_data, format="json"
+            reverse("api:campaigns:list_create"), alt_api_data, format="json"
         )
 
         self.assertEqual(alt_response.status_code, status.HTTP_201_CREATED)
@@ -243,7 +243,7 @@ class CampaignCreationIntegrationTest(TestCase):
         }
 
         create_response = self.api_client.post(
-            reverse("api:campaigns:create"), campaign_data, format="json"
+            reverse("api:campaigns:list_create"), campaign_data, format="json"
         )
 
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
@@ -306,7 +306,7 @@ class CampaignCreationIntegrationTest(TestCase):
         }
 
         response = self.api_client.post(
-            reverse("api:campaigns:create"), campaign_data, format="json"
+            reverse("api:campaigns:list_create"), campaign_data, format="json"
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

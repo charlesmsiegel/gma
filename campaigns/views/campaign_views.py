@@ -6,9 +6,8 @@ through the web interface, including proper authentication and permission checks
 """
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect
 from django.views.generic import CreateView, DetailView, ListView
 
 from ..forms import CampaignForm
@@ -83,60 +82,3 @@ class CampaignCreateView(LoginRequiredMixin, CreateView):
         """Handle invalid form submission."""
         messages.error(self.request, "Please correct the errors below and try again.")
         return super().form_invalid(form)
-
-
-@login_required
-def campaign_create_function_view(request):
-    """
-    Function-based view for campaign creation.
-
-    This provides an alternative to the class-based view for scenarios
-    where more control over the request handling is needed.
-    """
-    if request.method == "POST":
-        form = CampaignForm(request.POST)
-        if form.is_valid():
-            campaign = form.save(owner=request.user)
-            messages.success(
-                request, f'Campaign "{campaign.name}" was created successfully!'
-            )
-            return redirect("campaigns:detail", slug=campaign.slug)
-        else:
-            messages.error(request, "Please correct the errors below and try again.")
-    else:
-        form = CampaignForm()
-
-    return render(
-        request,
-        "campaigns/campaign_create.html",
-        {"form": form, "title": "Create New Campaign"},
-    )
-
-
-def campaign_detail_function_view(request, slug):
-    """
-    Function-based view for campaign detail.
-
-    This provides an alternative to the class-based view for scenarios
-    where more control over the request handling is needed.
-    """
-    campaign = get_object_or_404(Campaign, slug=slug)
-
-    # Get user role and permissions
-    user_role = None
-    is_owner = False
-    is_member = False
-
-    if request.user.is_authenticated:
-        user_role = campaign.get_user_role(request.user)
-        is_owner = campaign.is_owner(request.user)
-        is_member = campaign.is_member(request.user)
-
-    context = {
-        "campaign": campaign,
-        "user_role": user_role,
-        "is_owner": is_owner,
-        "is_member": is_member,
-    }
-
-    return render(request, "campaigns/campaign_detail.html", context)

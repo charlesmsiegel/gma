@@ -165,29 +165,6 @@ class CampaignSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id", "slug", "created_at", "updated_at", "owner")
 
-    def validate_name(self, value):
-        """Validate campaign name."""
-        if not value or not value.strip():
-            raise serializers.ValidationError("Campaign name is required.")
-
-        # Trim whitespace
-        value = value.strip()
-
-        if len(value) > 200:
-            raise serializers.ValidationError(
-                "Campaign name must not exceed 200 characters."
-            )
-
-        return value
-
-    def validate_description(self, value):
-        """Clean description field."""
-        return value.strip() if value else ""
-
-    def validate_game_system(self, value):
-        """Clean game system field."""
-        return value.strip() if value else ""
-
     def create(self, validated_data):
         """Create campaign with owner from request."""
         # Owner should be passed via save(owner=user) in the view
