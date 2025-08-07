@@ -66,33 +66,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def validate_password(self, value):
-        """Validate password strength requirements."""
-        import re
+        """Validate password using Django's built-in password validators."""
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
 
-        errors = []
-
-        # Check minimum length (8 characters)
-        if len(value) < 8:
-            errors.append("Password must be at least 8 characters long.")
-
-        # Check for uppercase letter
-        if not re.search(r"[A-Z]", value):
-            errors.append("Password must contain at least one uppercase letter.")
-
-        # Check for lowercase letter
-        if not re.search(r"[a-z]", value):
-            errors.append("Password must contain at least one lowercase letter.")
-
-        # Check for digit
-        if not re.search(r"\d", value):
-            errors.append("Password must contain at least one number.")
-
-        # Check for special character
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
-            errors.append("Password must contain at least one special character.")
-
-        if errors:
-            raise serializers.ValidationError(" ".join(errors))
+        try:
+            validate_password(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
 
         return value
 
