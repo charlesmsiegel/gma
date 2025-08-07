@@ -52,6 +52,12 @@
     </footer>
 
     <script src="{% static 'js/base.js' %}"></script>
+
+    <!-- React Components (only load in development for now) -->
+    {% if debug %}
+        <script src="http://localhost:3000/static/js/bundle.js"></script>
+    {% endif %}
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

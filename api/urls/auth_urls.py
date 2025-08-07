@@ -1,0 +1,17 @@
+from django.urls import path
+
+from ..views.auth_views import (
+    csrf_token_view,
+    login_view,
+    logout_view,
+    register_view,
+    user_info_view,
+)
+
+urlpatterns = [
+    path("register/", register_view, name="api_register"),
+    path("login/", login_view, name="api_login"),
+    path("logout/", logout_view, name="api_logout"),
+    path("user/", user_info_view, name="api_user_info"),
+    path("csrf/", csrf_token_view, name="api_csrf_token"),
+]
