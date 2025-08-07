@@ -166,3 +166,6 @@ package-lock.json
 gm_app/secrets.py
 OLD_CODE/
 */migrations/0*.py
+
+# Development TODO tracking
+TODO.md
