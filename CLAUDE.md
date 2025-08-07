@@ -42,14 +42,27 @@ npm install
 # Run migrations
 python manage.py migrate
 
+# Reset all migrations (drops database, deletes migrations, recreates everything)
+make reset-migrations
+
+# Complete development reset (migrations + optional superuser)
+make reset-dev
+
 # Create superuser
+make create-superuser
+# OR
 python manage.py createsuperuser
 
-# Run development server
-python manage.py runserver
+# Run FULL development environment (PostgreSQL + Redis + Django + React)
+make runserver
+
+# Run only Django server with backend services
+make runserver-django
+# OR
+python manage.py runserver 0.0.0.0:8080
 
 # Run with Channels/WebSocket support
-daphne -b 0.0.0.0 -p 8000 gma.asgi:application
+daphne -b 0.0.0.0 -p 8080 gma.asgi:application
 
 # Run tests
 make test
@@ -105,6 +118,28 @@ python manage.py dbshell                   # Open PostgreSQL shell
 # Admin interface
 python manage.py createsuperuser           # Create admin user (if not exists)
 # Then access http://localhost:8080/admin/ to view health check logs
+
+# Stop all services
+make stop-all                              # Stop PostgreSQL, Redis, and any React servers
+```
+
+### React Frontend Commands
+```bash
+# Start React development server (port 3000)
+make start-frontend
+# OR
+cd frontend && npm start
+
+# Build React components for production
+make build-frontend
+# OR
+cd frontend && npm run build:django
+
+# Run frontend tests
+cd frontend && npm test
+
+# Build frontend for development (with React DevTools)
+cd frontend && npm run build
 ```
 
 ### Database Commands
@@ -206,6 +241,53 @@ from django_ratelimit.decorators import ratelimit
 def login_view(request):
     # Login logic
 ```
+
+## React Frontend Integration
+
+The project now includes React authentication components that enhance the existing Django templates:
+
+### Architecture
+- **Hybrid approach**: React components are embedded into Django templates for enhanced functionality
+- **Fallback support**: Django forms remain as fallbacks if React fails to load
+- **API integration**: React components use Django REST API endpoints
+- **CSRF protection**: Automatic CSRF token handling for secure form submissions
+
+### Component Structure
+```
+frontend/src/
+├── components/
+│   ├── LoginForm.tsx          # Enhanced login with validation
+│   ├── RegisterForm.tsx       # User registration form
+│   ├── ProfileView.tsx        # Profile display component
+│   ├── ProfileEditForm.tsx    # Profile editing interface
+│   └── DjangoIntegration.tsx  # Django template integration
+├── contexts/
+│   └── AuthContext.tsx        # Authentication state management
+├── services/
+│   └── api.ts                 # API client with CSRF support
+└── types/
+    └── user.ts                # TypeScript interfaces
+```
+
+### Usage in Django Templates
+React components can be embedded using data attributes:
+```html
+<div
+    id="react-login-form"
+    data-react-component="login-form-redirect"
+    data-react-props='{"redirectUrl": "/dashboard/"}'
+></div>
+```
+
+### Development Workflow
+1. **Start everything**: `make runserver` - Starts PostgreSQL, Redis, Django (8080), and React (3000)
+2. **Access application**: Visit `http://localhost:8080` for Django with React components
+3. **Stop everything**: `make stop-all` - Stops all services
+
+**Alternative (separate terminals)**:
+1. **Start Django backend**: `make runserver-django` (port 8080)
+2. **Start React frontend**: `make start-frontend` (port 3000)
+3. **Access application**: Visit `http://localhost:8080` for Django with React components
 
 # Workflow
 
