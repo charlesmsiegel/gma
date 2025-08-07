@@ -43,6 +43,13 @@
                             {% if form.timezone.help_text %}
                                 <div class="form-text">{{ form.timezone.help_text }}</div>
                             {% endif %}
+                            <div class="form-text text-info">
+                                <small>
+                                    <i class="bi bi-info-circle"></i>
+                                    Note: If your current timezone isn't listed, it will be preserved as a custom option.
+                                    The system supports all IANA timezone identifiers.
+                                </small>
+                            </div>
                             {% if form.timezone.errors %}
                                 <div class="text-danger">
                                     {{ form.timezone.errors }}

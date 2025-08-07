@@ -219,3 +219,4 @@ Whenever we start a session, unless resuming a previous workflow, we use the fol
 6) Implement features/fixes/etc testing after each unit of work with `make test`
 7) Whenever there is an improvement in `make test` (errots converted to failures, failures converted to passing tests) we commit to our branch
 8) Once all tests pass, we open a pull request
+9)

@@ -60,8 +60,8 @@ class CustomUserCreationForm(UserCreationForm):
         user = super().save(commit=False)
         user.email = self.cleaned_data["email"]
         display_name = self.cleaned_data.get("display_name")
-        if display_name:
-            user.display_name = display_name
+        # Set display_name to None if empty (for unique constraint)
+        user.display_name = display_name if display_name else None
         if commit:
             user.save()
         return user
@@ -225,9 +225,9 @@ class UserProfileForm(forms.ModelForm):
         """Validate display_name uniqueness (case-insensitive, excluding self)."""
         display_name = self.cleaned_data.get("display_name")
 
-        # Allow empty display_name
+        # Convert empty string to None for database unique constraint
         if not display_name:
-            return display_name
+            return None
 
         # Check for uniqueness, excluding current user
         queryset = User.objects.filter(display_name__iexact=display_name)
@@ -249,5 +249,6 @@ class UserProfileForm(forms.ModelForm):
             try:
                 validate_timezone(timezone)
             except ValidationError as e:
-                raise ValidationError(str(e.message))
+                # Re-raise the validation error with proper message handling
+                raise ValidationError(str(e))
         return timezone

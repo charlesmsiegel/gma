@@ -145,7 +145,8 @@ class UserProfileEditViewTest(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.user.refresh_from_db()
-        self.assertEqual(self.user.display_name, "")
+        # Empty display_name is stored as None for unique constraint
+        self.assertIsNone(self.user.display_name)
         self.assertEqual(self.user.timezone, "Europe/London")
 
     def test_profile_edit_invalid_timezone(self):

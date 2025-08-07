@@ -40,7 +40,13 @@ def validate_timezone(value):
 class User(AbstractUser):
     """Custom User model extending Django's AbstractUser."""
 
-    display_name = models.CharField(max_length=100, blank=True)
+    display_name = models.CharField(
+        max_length=100,
+        blank=True,
+        unique=True,
+        null=True,  # Allow NULL for empty names (unique constraint ignores NULL)
+        help_text="Optional unique display name for your profile",
+    )
     timezone = models.CharField(
         max_length=50, default="UTC", validators=[validate_timezone]
     )
