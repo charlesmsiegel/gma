@@ -10,8 +10,7 @@ class CampaignAdmin(admin.ModelAdmin):
     list_display = ["name", "owner", "game_system", "is_active", "created_at"]
     list_filter = ["game_system", "is_active", "created_at"]
     search_fields = ["name", "description", "owner__username", "owner__email"]
-    readonly_fields = ["slug", "created_at", "updated_at"]
-    prepopulated_fields = {"slug": ("name",)}
+    readonly_fields = ["created_at", "updated_at"]
     date_hierarchy = "created_at"
     raw_id_fields = ["owner"]  # Better UX with many users
 
@@ -25,7 +24,7 @@ class CampaignAdmin(admin.ModelAdmin):
             {
                 "fields": ["owner"],
                 "description": "Campaign owner has full access to the campaign. "
-                "Owner can be null if the user account is deleted.",
+                "Campaigns are deleted if the owner is deleted.",
             },
         ),
         (

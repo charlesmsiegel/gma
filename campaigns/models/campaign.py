@@ -10,16 +10,7 @@ from django.utils.text import slugify
 class Campaign(models.Model):
     """Campaign model for tabletop RPG campaigns."""
 
-    GAME_SYSTEM_CHOICES = [
-        ("mage", "Mage: The Ascension"),
-        ("vampire", "Vampire: The Masquerade"),
-        ("werewolf", "Werewolf: The Apocalypse"),
-        ("changeling", "Changeling: The Dreaming"),
-        ("wraith", "Wraith: The Oblivion"),
-        ("hunter", "Hunter: The Reckoning"),
-        ("demon", "Demon: The Fallen"),
-        ("generic_wod", "Generic World of Darkness"),
-    ]
+    GAME_SYSTEM_CHOICES = []
 
     name = models.CharField(max_length=200, help_text="Campaign name")
     slug = models.SlugField(
@@ -32,16 +23,16 @@ class Campaign(models.Model):
 
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
+        on_delete=models.CASCADE,
         related_name="owned_campaigns",
-        help_text="Campaign owner (can be null if owner is deleted)",
+        help_text="Campaign owner",
     )
 
     game_system = models.CharField(
-        max_length=20,
+        max_length=100,
         choices=GAME_SYSTEM_CHOICES,
-        help_text="The game system being used",
+        blank=True,
+        help_text="The game system being used (free text entry)",
     )
 
     is_active = models.BooleanField(

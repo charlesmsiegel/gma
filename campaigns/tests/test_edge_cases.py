@@ -236,26 +236,22 @@ class CampaignMembershipEdgeCasesTest(TestCase):
             )
 
     def test_campaign_membership_when_owner_deleted(self):
-        """Test campaign membership behavior when owner is deleted."""
+        """Test campaign membership behavior when owner is deleted (CASCADE)."""
         # Create membership for a regular user
         membership = CampaignMembership.objects.create(
             campaign=self.campaign, user=self.user1, role="player"
         )
+        campaign_id = self.campaign.id
+        membership_id = membership.id
 
         # Delete the campaign owner
         self.owner.delete()
 
-        # Campaign should still exist but owner should be null
-        self.campaign.refresh_from_db()
-        self.assertIsNone(self.campaign.owner)
+        # Campaign should be deleted due to CASCADE relationship
+        self.assertFalse(Campaign.objects.filter(id=campaign_id).exists())
 
-        # Membership should still exist
-        membership.refresh_from_db()
-        self.assertTrue(membership.is_active)
-
-        # Permission checks should handle null owner gracefully
-        self.assertFalse(self.campaign.is_owner(self.user1))
-        self.assertTrue(self.campaign.is_player(self.user1))
+        # Membership should also be deleted since campaign is deleted
+        self.assertFalse(CampaignMembership.objects.filter(id=membership_id).exists())
 
     def test_campaign_deletion_cascades_memberships(self):
         """Test that deleting campaign removes all memberships."""
@@ -356,26 +352,24 @@ class CampaignModelEdgeCasesTest(TestCase):
             username="owner", email="owner@test.com", password="testpass123"
         )
 
-    def test_campaign_with_null_owner_permissions(self):
-        """Test permission checks when campaign owner is null."""
-        campaign = Campaign.objects.create(
-            name="Orphaned Campaign", owner=None, game_system="generic_wod"
-        )
-
-        # No one should be owner of an orphaned campaign
-        self.assertFalse(campaign.is_owner(self.owner))
-        self.assertIsNone(campaign.get_user_role(self.owner))
+    def test_campaign_requires_owner(self):
+        """Test that campaigns require an owner (cannot be null)."""
+        # Attempting to create a campaign without owner should raise IntegrityError
+        with self.assertRaises(Exception):  # Could be IntegrityError or ValidationError
+            Campaign.objects.create(
+                name="Orphaned Campaign", owner=None, game_system="Custom System"
+            )
 
     def test_campaign_clean_method_empty_name(self):
         """Test campaign clean method with empty name."""
-        campaign = Campaign(name="", owner=self.owner, game_system="generic_wod")
+        campaign = Campaign(name="", owner=self.owner, game_system="Custom System")
 
         with self.assertRaises(ValidationError):
             campaign.clean()
 
     def test_campaign_clean_method_none_name(self):
         """Test campaign clean method with None name."""
-        campaign = Campaign(name=None, owner=self.owner, game_system="generic_wod")
+        campaign = Campaign(name=None, owner=self.owner, game_system="Custom System")
 
         with self.assertRaises(ValidationError):
             campaign.clean()

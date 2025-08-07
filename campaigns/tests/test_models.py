@@ -26,12 +26,12 @@ class CampaignModelTest(TestCase):
             name="Test Campaign",
             owner=self.owner,
             description="A test campaign",
-            game_system="mage",
+            game_system="Mage: The Ascension",
         )
         self.assertEqual(campaign.name, "Test Campaign")
         self.assertEqual(campaign.owner, self.owner)
         self.assertEqual(campaign.description, "A test campaign")
-        self.assertEqual(campaign.game_system, "mage")
+        self.assertEqual(campaign.game_system, "Mage: The Ascension")
         self.assertTrue(campaign.is_active)
         self.assertIsNotNone(campaign.created_at)
         self.assertIsNotNone(campaign.updated_at)
@@ -39,42 +39,49 @@ class CampaignModelTest(TestCase):
     def test_campaign_str(self):
         """Test the campaign string representation."""
         campaign = Campaign.objects.create(
-            name="My Campaign", owner=self.owner, game_system="mage"
+            name="My Campaign", owner=self.owner, game_system="Vampire: The Masquerade"
         )
         self.assertEqual(str(campaign), "My Campaign")
 
     def test_campaign_owner_deletion_cascade(self):
-        """Test that deleting owner doesn't delete campaign (SET_NULL)."""
+        """Test that deleting owner deletes campaign (CASCADE)."""
         campaign = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner, game_system="mage"
+            name="Test Campaign", owner=self.owner, game_system="Custom System"
         )
+        campaign_id = campaign.id
         self.owner.delete()
-        campaign.refresh_from_db()
-        self.assertIsNone(campaign.owner)
+        # Campaign should be deleted along with the owner
+        self.assertFalse(Campaign.objects.filter(id=campaign_id).exists())
 
     def test_campaign_unique_slug(self):
         """Test that campaign slugs are unique."""
         Campaign.objects.create(
             name="Test Campaign",
             owner=self.owner,
-            game_system="mage",
+            game_system="World of Darkness",
             slug="test-campaign",
         )
         with self.assertRaises(IntegrityError):
             Campaign.objects.create(
                 name="Another Campaign",
                 owner=self.user,
-                game_system="mage",
+                game_system="World of Darkness",
                 slug="test-campaign",
             )
 
-    def test_campaign_game_system_choices(self):
-        """Test that game_system is limited to valid choices."""
-        campaign = Campaign(
-            name="Test Campaign", owner=self.owner, game_system="invalid"
+    def test_campaign_game_system_free_text(self):
+        """Test that game_system accepts any free text."""
+        campaign = Campaign.objects.create(
+            name="Test Campaign", owner=self.owner, game_system="My Custom Game System"
         )
-        with self.assertRaises(ValidationError):
-            campaign.full_clean()
+        self.assertEqual(campaign.game_system, "My Custom Game System")
+
+    def test_campaign_game_system_can_be_blank(self):
+        """Test that game_system can be blank (empty)."""
+        campaign = Campaign.objects.create(
+            name="Test Campaign", owner=self.owner, game_system=""
+        )
+        self.assertEqual(campaign.game_system, "")
 
     def test_campaign_default_values(self):
         """Test default values for campaign fields."""
