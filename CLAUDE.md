@@ -184,3 +184,16 @@ Character (base)
 3. **Permission-Based**: Hierarchical roles (Owner → GM → Player → Observer)
 4. **Mobile-Responsive**: Desktop-first with mobile adaptation
 5. **Test Driven Design**: All code will be created after tests are. Any subjob will consist of writing tests, then writing code, on a feature branch, and committing at each functional improvement.
+
+# Workflow
+
+Whenever we start a session, unless resuming a previous workflow, we use the following:
+
+1) Create a branch for the work we're doing
+2) Determine our success criteria.
+3) Ask clarifying questions about our goals to the user
+4) write tests that will be satisfied if and only if we are successful.
+5) Commit the tests to the branch
+6) Implement features/fixes/etc testing after each unit of work with `make test`
+7) Whenever there is an improvement in `make test` (errots converted to failures, failures converted to passing tests) we commit to our branch
+8) Once all tests pass, we open a pull request

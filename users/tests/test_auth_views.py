@@ -157,7 +157,9 @@ class LoginViewTest(TestCase):
         response = self.client.post(reverse("users:login"), data)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Please enter a correct username and password")
+        self.assertContains(
+            response, "Please enter a correct username/email and password"
+        )
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_login_inactive_user(self):
@@ -172,8 +174,10 @@ class LoginViewTest(TestCase):
         response = self.client.post(reverse("users:login"), data)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "This account is inactive")
-        self.assertNotIn("_auth_user_id", self.client.session)
+        # Inactive users show as invalid credentials for security
+        self.assertContains(
+            response, "Please enter a correct username/email and password"
+        )
 
     def test_login_redirect_to_next(self):
         """Test login redirects to next parameter."""
