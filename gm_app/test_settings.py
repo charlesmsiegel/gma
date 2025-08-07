@@ -44,6 +44,7 @@ DEBUG = False
 # Set login URL to our custom view
 LOGIN_URL = "users:login"
 
+
 # Faster password hashing for tests
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
