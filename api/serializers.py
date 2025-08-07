@@ -2,7 +2,7 @@
 API serializers for the GMA application.
 """
 
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 User = get_user_model()
@@ -120,37 +120,17 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         """Validate credentials and authenticate user with email/username support."""
+        from users.utils import authenticate_by_email_or_username
+
         username = attrs.get("username")
         password = attrs.get("password")
 
         if username and password:
-            # Handle email authentication like EmailAuthenticationForm
-            # Check if input looks like email and try to get user by email first
-            if "@" in username:
-                try:
-                    # Look up user by email (case-insensitive)
-                    User = get_user_model()
-                    user_obj = User.objects.get(email__iexact=username)
-                    # Use the found user's username for authentication
-                    user = authenticate(
-                        request=self.context.get("request"),
-                        username=user_obj.username,
-                        password=password,
-                    )
-                except User.DoesNotExist:
-                    # Fall back to regular username authentication
-                    user = authenticate(
-                        request=self.context.get("request"),
-                        username=username,
-                        password=password,
-                    )
-            else:
-                # Input is likely a username, authenticate directly
-                user = authenticate(
-                    request=self.context.get("request"),
-                    username=username,
-                    password=password,
-                )
+            user = authenticate_by_email_or_username(
+                request=self.context.get("request"),
+                username=username,
+                password=password,
+            )
 
             if not user:
                 raise serializers.ValidationError("Invalid credentials.")

@@ -12,7 +12,7 @@ Security Notes:
 """
 
 from django import forms
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 
@@ -106,28 +106,15 @@ class EmailAuthenticationForm(forms.Form):
 
     def clean(self):
         """Authenticate user with email or username."""
+        from users.utils import authenticate_by_email_or_username
+
         username = self.cleaned_data.get("username")
         password = self.cleaned_data.get("password")
 
         if username is not None and password:
-            # Check if input looks like email and try to get user by email first
-            if "@" in username:
-                try:
-                    user = User.objects.get(email__iexact=username)
-                    # Use the found user's username for authentication
-                    self.user_cache = authenticate(
-                        self.request, username=user.username, password=password
-                    )
-                except User.DoesNotExist:
-                    # Fall back to regular username authentication
-                    self.user_cache = authenticate(
-                        self.request, username=username, password=password
-                    )
-            else:
-                # Input is likely a username, authenticate directly
-                self.user_cache = authenticate(
-                    self.request, username=username, password=password
-                )
+            self.user_cache = authenticate_by_email_or_username(
+                self.request, username, password
+            )
 
             if self.user_cache is None:
                 raise ValidationError(
