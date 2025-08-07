@@ -1,0 +1,125 @@
+/* Profile Styles */
+
+.profile-container,
+.profile-edit-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.profile-header,
+.profile-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #eee;
+}
+
+.profile-header h2,
+.profile-edit-header h2 {
+  color: #333;
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.profile-section {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-section h3 {
+  margin: 0 0 1rem 0;
+  color: #4a90e2;
+  font-size: 1.3rem;
+  font-weight: 600;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.profile-field {
+  display: flex;
+  margin-bottom: 0.75rem;
+  align-items: flex-start;
+}
+
+.profile-field:last-child {
+  margin-bottom: 0;
+}
+
+.profile-field label {
+  font-weight: 600;
+  color: #555;
+  min-width: 120px;
+  margin-right: 1rem;
+}
+
+.profile-field span {
+  color: #333;
+  flex: 1;
+  word-break: break-word;
+}
+
+.profile-edit-form {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.form-actions .btn {
+  min-width: 120px;
+}
+
+@media (max-width: 600px) {
+  .profile-container,
+  .profile-edit-container {
+    padding: 1rem;
+  }
+
+  .profile-header,
+  .profile-edit-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .profile-field {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-field label {
+    min-width: auto;
+    margin-right: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+}
