@@ -10,17 +10,6 @@ from django.utils.text import slugify
 class Campaign(models.Model):
     """Campaign model for tabletop RPG campaigns."""
 
-    GAME_SYSTEM_CHOICES = [
-        ("mage", "Mage: The Ascension"),
-        ("vampire", "Vampire: The Masquerade"),
-        ("werewolf", "Werewolf: The Apocalypse"),
-        ("changeling", "Changeling: The Dreaming"),
-        ("wraith", "Wraith: The Oblivion"),
-        ("hunter", "Hunter: The Reckoning"),
-        ("demon", "Demon: The Fallen"),
-        ("generic_wod", "Generic World of Darkness"),
-    ]
-
     name = models.CharField(max_length=200, help_text="Campaign name")
     slug = models.SlugField(
         max_length=200,
@@ -32,16 +21,15 @@ class Campaign(models.Model):
 
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
+        on_delete=models.CASCADE,
         related_name="owned_campaigns",
-        help_text="Campaign owner (can be null if owner is deleted)",
+        help_text="Campaign owner",
     )
 
     game_system = models.CharField(
-        max_length=20,
-        choices=GAME_SYSTEM_CHOICES,
-        help_text="The game system being used",
+        max_length=100,
+        blank=True,
+        help_text="The game system being used (free text entry)",
     )
 
     is_active = models.BooleanField(
@@ -63,29 +51,9 @@ class Campaign(models.Model):
 
     def save(self, *args, **kwargs):
         """Save the campaign with auto-generated slug."""
-        from django.db import IntegrityError
-
-        slug_was_auto_generated = not self.slug
-
-        if slug_was_auto_generated:
+        if not self.slug:
             self.slug = self._generate_unique_slug()
-
-        # Only retry slug generation for auto-generated slugs
-        if slug_was_auto_generated:
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    super().save(*args, **kwargs)
-                    break
-                except IntegrityError as e:
-                    if "slug" in str(e) and attempt < max_retries - 1:
-                        # Regenerate slug and try again
-                        self.slug = self._generate_unique_slug()
-                    else:
-                        raise
-        else:
-            # For explicitly set slugs, let Django handle the IntegrityError
-            super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def _generate_unique_slug(self) -> str:
         """Generate a unique slug for the campaign."""
@@ -94,22 +62,19 @@ class Campaign(models.Model):
         base_slug = slugify(self.name) or "campaign"
 
         # Truncate to fit in slug field (200 chars max)
-        max_base_length = 190  # Leave room for counter suffix
-        if len(base_slug) > max_base_length:
-            base_slug = base_slug[:max_base_length]
+        if len(base_slug) > 190:  # Leave room for suffix
+            base_slug = base_slug[:190]
 
-        # Try the base slug first
+        # Simple uniqueness check
+        counter = 0
         slug = base_slug
-        counter = 1
-
-        # Keep trying until we find a unique slug
-        # The unique=True constraint on the slug field will prevent race conditions
         while Campaign.objects.filter(slug=slug).exists():
-            if counter > 999:  # Fallback to UUID after reasonable attempts
+            counter += 1
+            if counter > 999:
+                # Fallback to UUID after many attempts
                 slug = f"{base_slug[:180]}-{uuid.uuid4().hex[:8]}"
                 break
             slug = f"{base_slug}-{counter}"
-            counter += 1
 
         return slug
 

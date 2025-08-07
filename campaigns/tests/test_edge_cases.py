@@ -34,17 +34,17 @@ class SlugGenerationTest(TransactionTestCase):
     def test_basic_slug_generation(self):
         """Test basic slug generation from campaign name."""
         campaign = Campaign.objects.create(
-            name="My Test Campaign", owner=self.owner1, game_system="generic_wod"
+            name="My Test Campaign", owner=self.owner1, game_system="World of Darkness"
         )
         self.assertEqual(campaign.slug, "my-test-campaign")
 
     def test_slug_uniqueness_sequential(self):
         """Test that duplicate names get unique slugs when created sequentially."""
         campaign1 = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner1, game_system="generic_wod"
+            name="Test Campaign", owner=self.owner1, game_system="World of Darkness"
         )
         campaign2 = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner2, game_system="generic_wod"
+            name="Test Campaign", owner=self.owner2, game_system="World of Darkness"
         )
 
         self.assertEqual(campaign1.slug, "test-campaign")
@@ -57,7 +57,7 @@ class SlugGenerationTest(TransactionTestCase):
             campaign = Campaign.objects.create(
                 name="Duplicate Name",
                 owner=self.owner1 if i % 2 == 0 else self.owner2,
-                game_system="generic_wod",
+                game_system="World of Darkness",
             )
             campaigns.append(campaign)
 
@@ -75,7 +75,7 @@ class SlugGenerationTest(TransactionTestCase):
     def test_slug_with_unicode_characters(self):
         """Test slug generation with unicode characters."""
         campaign = Campaign.objects.create(
-            name="Café & Dragons 🐉", owner=self.owner1, game_system="generic_wod"
+            name="Café & Dragons 🐉", owner=self.owner1, game_system="World of Darkness"
         )
         # Django's slugify should handle unicode properly
         self.assertEqual(campaign.slug, "cafe-dragons")
@@ -91,27 +91,36 @@ class SlugGenerationTest(TransactionTestCase):
 
         for name, expected_slug in test_cases:
             campaign = Campaign.objects.create(
-                name=name, owner=self.owner1, game_system="generic_wod"
+                name=name, owner=self.owner1, game_system="World of Darkness"
             )
             self.assertEqual(campaign.slug, expected_slug)
             campaign.delete()  # Clean up for next iteration
 
     def test_very_long_campaign_name(self):
         """Test slug generation with very long campaign names."""
-        long_name = "A" * 250  # Longer than slug field max_length
+        # Test with name at max length (200 chars)
+        long_name = "A" * 200
         campaign = Campaign.objects.create(
-            name=long_name, owner=self.owner1, game_system="generic_wod"
+            name=long_name, owner=self.owner1, game_system="Custom System"
         )
-        # Slug should be truncated to fit max_length (200)
+        # Slug should be truncated to fit slug max_length (200)
         self.assertLessEqual(len(campaign.slug), 200)
         self.assertTrue(campaign.slug.startswith("a" * 50))  # Check it starts correctly
+
+        # Test full_clean validation for truly too-long names
+        very_long_name = "A" * 250
+        campaign_invalid = Campaign(
+            name=very_long_name, owner=self.owner1, game_system="Custom System"
+        )
+        with self.assertRaises(ValidationError):
+            campaign_invalid.full_clean()
 
     def test_empty_slug_after_processing(self):
         """Test handling of names that result in empty slugs."""
         campaign = Campaign.objects.create(
             name="!@#$%^&*()",  # Only special characters
             owner=self.owner1,
-            game_system="generic_wod",
+            game_system="Custom System",
         )
         # Should generate some fallback slug
         self.assertIsNotNone(campaign.slug)
@@ -128,7 +137,7 @@ class SlugGenerationTest(TransactionTestCase):
             campaign = Campaign.objects.create(
                 name="Race Condition Test",
                 owner=self.owner1 if i % 2 == 0 else self.owner2,
-                game_system="generic_wod",
+                game_system="World of Darkness",
             )
             campaigns.append(campaign)
 
@@ -154,7 +163,7 @@ class SlugGenerationTest(TransactionTestCase):
         campaign = Campaign(
             name="Test Campaign",
             owner=self.owner1,
-            game_system="generic_wod",
+            game_system="World of Darkness",
             slug="custom-slug",
         )
         campaign.save()
@@ -163,7 +172,7 @@ class SlugGenerationTest(TransactionTestCase):
     def test_slug_update_on_name_change(self):
         """Test that slug is not regenerated when name changes after creation."""
         campaign = Campaign.objects.create(
-            name="Original Name", owner=self.owner1, game_system="generic_wod"
+            name="Original Name", owner=self.owner1, game_system="World of Darkness"
         )
         original_slug = campaign.slug
 
@@ -190,7 +199,7 @@ class CampaignMembershipEdgeCasesTest(TestCase):
         )
 
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner, game_system="generic_wod"
+            name="Test Campaign", owner=self.owner, game_system="World of Darkness"
         )
 
     def test_membership_clean_method_owner_as_gm(self):
@@ -236,26 +245,22 @@ class CampaignMembershipEdgeCasesTest(TestCase):
             )
 
     def test_campaign_membership_when_owner_deleted(self):
-        """Test campaign membership behavior when owner is deleted."""
+        """Test campaign membership behavior when owner is deleted (CASCADE)."""
         # Create membership for a regular user
         membership = CampaignMembership.objects.create(
             campaign=self.campaign, user=self.user1, role="player"
         )
+        campaign_id = self.campaign.id
+        membership_id = membership.id
 
         # Delete the campaign owner
         self.owner.delete()
 
-        # Campaign should still exist but owner should be null
-        self.campaign.refresh_from_db()
-        self.assertIsNone(self.campaign.owner)
+        # Campaign should be deleted due to CASCADE relationship
+        self.assertFalse(Campaign.objects.filter(id=campaign_id).exists())
 
-        # Membership should still exist
-        membership.refresh_from_db()
-        self.assertTrue(membership.is_active)
-
-        # Permission checks should handle null owner gracefully
-        self.assertFalse(self.campaign.is_owner(self.user1))
-        self.assertTrue(self.campaign.is_player(self.user1))
+        # Membership should also be deleted since campaign is deleted
+        self.assertFalse(CampaignMembership.objects.filter(id=membership_id).exists())
 
     def test_campaign_deletion_cascades_memberships(self):
         """Test that deleting campaign removes all memberships."""
@@ -356,44 +361,45 @@ class CampaignModelEdgeCasesTest(TestCase):
             username="owner", email="owner@test.com", password="testpass123"
         )
 
-    def test_campaign_with_null_owner_permissions(self):
-        """Test permission checks when campaign owner is null."""
-        campaign = Campaign.objects.create(
-            name="Orphaned Campaign", owner=None, game_system="generic_wod"
-        )
-
-        # No one should be owner of an orphaned campaign
-        self.assertFalse(campaign.is_owner(self.owner))
-        self.assertIsNone(campaign.get_user_role(self.owner))
+    def test_campaign_requires_owner(self):
+        """Test that campaigns require an owner (cannot be null)."""
+        # Attempting to create a campaign without owner should raise IntegrityError
+        with self.assertRaises(Exception):  # Could be IntegrityError or ValidationError
+            Campaign.objects.create(
+                name="Orphaned Campaign", owner=None, game_system="Custom System"
+            )
 
     def test_campaign_clean_method_empty_name(self):
         """Test campaign clean method with empty name."""
-        campaign = Campaign(name="", owner=self.owner, game_system="generic_wod")
+        campaign = Campaign(name="", owner=self.owner, game_system="Custom System")
 
         with self.assertRaises(ValidationError):
             campaign.clean()
 
     def test_campaign_clean_method_none_name(self):
         """Test campaign clean method with None name."""
-        campaign = Campaign(name=None, owner=self.owner, game_system="generic_wod")
+        campaign = Campaign(name=None, owner=self.owner, game_system="Custom System")
 
         with self.assertRaises(ValidationError):
             campaign.clean()
 
-    def test_campaign_game_system_validation(self):
-        """Test that invalid game systems are rejected."""
+    def test_campaign_game_system_free_text(self):
+        """Test that game system accepts any free text."""
         campaign = Campaign(
-            name="Test Campaign", owner=self.owner, game_system="invalid_system"
+            name="Test Campaign", owner=self.owner, game_system="My Custom Game System"
         )
-
-        with self.assertRaises(ValidationError):
-            campaign.full_clean()
+        # Should not raise validation error since free text is allowed
+        campaign.full_clean()
+        campaign.save()
+        self.assertEqual(campaign.game_system, "My Custom Game System")
 
     def test_campaign_max_length_fields(self):
         """Test field max length validation."""
         # Test name max length (200 chars)
         long_name = "A" * 201
-        campaign = Campaign(name=long_name, owner=self.owner, game_system="generic_wod")
+        campaign = Campaign(
+            name=long_name, owner=self.owner, game_system="World of Darkness"
+        )
 
         with self.assertRaises(ValidationError):
             campaign.full_clean()
@@ -405,7 +411,7 @@ class CampaignModelEdgeCasesTest(TestCase):
             name="Test Campaign",
             description=long_description,
             owner=self.owner,
-            game_system="generic_wod",
+            game_system="World of Darkness",
         )
 
         self.assertEqual(len(campaign.description), 5000)
@@ -413,7 +419,7 @@ class CampaignModelEdgeCasesTest(TestCase):
     def test_campaign_timestamps(self):
         """Test that timestamps are set correctly."""
         campaign = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner, game_system="generic_wod"
+            name="Test Campaign", owner=self.owner, game_system="World of Darkness"
         )
 
         self.assertIsNotNone(campaign.created_at)
@@ -430,13 +436,13 @@ class CampaignModelEdgeCasesTest(TestCase):
     def test_campaign_ordering(self):
         """Test campaign ordering by updated_at DESC, then name."""
         campaign1 = Campaign.objects.create(
-            name="Alpha Campaign", owner=self.owner, game_system="generic_wod"
+            name="Alpha Campaign", owner=self.owner, game_system="World of Darkness"
         )
 
         time.sleep(0.01)  # Ensure different timestamps
 
         campaign2 = Campaign.objects.create(
-            name="Beta Campaign", owner=self.owner, game_system="generic_wod"
+            name="Beta Campaign", owner=self.owner, game_system="World of Darkness"
         )
 
         campaigns = list(Campaign.objects.all())
