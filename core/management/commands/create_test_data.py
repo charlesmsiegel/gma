@@ -4,8 +4,10 @@ Django management command to create test data for development.
 
 import sys
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+
+User = get_user_model()
 
 
 # Default counts for built-in test data
@@ -14,11 +16,11 @@ DEFAULT_CAMPAIGNS_COUNT = 1  # Test Campaign
 DEFAULT_CHARACTERS_COUNT = 0  # No built-in test characters
 
 # Default test data names
-DEFAULT_TEST_USERNAME = 'testuser'
-DEFAULT_GM_USERNAME = 'gm_user'
-DEFAULT_CAMPAIGN_NAME = 'Test Campaign'
-ADDITIONAL_USER_PREFIX = 'testuser_'
-ADDITIONAL_CHARACTER_PREFIX = 'Test Character '
+DEFAULT_TEST_USERNAME = "testuser"
+DEFAULT_GM_USERNAME = "gm_user"
+DEFAULT_CAMPAIGN_NAME = "Test Campaign"
+ADDITIONAL_USER_PREFIX = "testuser_"
+ADDITIONAL_CHARACTER_PREFIX = "Test Character "
 
 
 class Command(BaseCommand):
@@ -67,8 +69,14 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.WARNING("DRY RUN: Would create test data with:")
             )
-            self.stdout.write(f"  👥 Users: {users_count + DEFAULT_USERS_COUNT} (includes {DEFAULT_TEST_USERNAME} and {DEFAULT_GM_USERNAME})")
-            self.stdout.write(f"  🎲 Campaigns: {campaigns_count + DEFAULT_CAMPAIGNS_COUNT} (includes {DEFAULT_CAMPAIGN_NAME})")
+            self.stdout.write(
+                f"  👥 Users: {users_count + DEFAULT_USERS_COUNT} "
+                f"(includes {DEFAULT_TEST_USERNAME} and {DEFAULT_GM_USERNAME})"
+            )
+            self.stdout.write(
+                f"  🎲 Campaigns: {campaigns_count + DEFAULT_CAMPAIGNS_COUNT} "
+                f"(includes {DEFAULT_CAMPAIGN_NAME})"
+            )
             self.stdout.write(f"  🎭 Characters: {characters_count}")
             self.stdout.write(self.style.SUCCESS("✅ Dry run completed!"))
             return
@@ -84,24 +92,20 @@ class Command(BaseCommand):
 
             # Create test users
             test_users = self.create_test_users(users_count, verbosity)
-            
+
             # Create test campaigns (when campaign models are implemented)
             test_campaigns = self.create_test_campaigns(campaigns_count, verbosity)
-            
+
             # Create test characters (when character models are implemented)
             test_characters = self.create_test_characters(characters_count, verbosity)
 
-            self.stdout.write(
-                self.style.SUCCESS("✅ Test data created successfully!")
-            )
+            self.stdout.write(self.style.SUCCESS("✅ Test data created successfully!"))
             self.stdout.write(f"  👥 Created {len(test_users)} users")
             self.stdout.write(f"  🎲 Created {len(test_campaigns)} campaigns")
             self.stdout.write(f"  🎭 Created {len(test_characters)} characters")
 
         except Exception as e:
-            self.stdout.write(
-                self.style.ERROR(f"❌ Failed to create test data: {e}")
-            )
+            self.stdout.write(self.style.ERROR(f"❌ Failed to create test data: {e}"))
             sys.exit(1)
 
     def clear_test_data(self):
@@ -112,6 +116,7 @@ class Command(BaseCommand):
         # Clear test campaigns when models are implemented
         try:
             from campaigns.models import Campaign
+
             Campaign.objects.filter(name__startswith=DEFAULT_CAMPAIGN_NAME).delete()
         except (ImportError, AttributeError):
             # Campaign model not implemented yet
@@ -120,7 +125,8 @@ class Command(BaseCommand):
         # Clear test characters when models are implemented
         try:
             from characters.models import Character
-            Character.objects.filter(name__startswith='Test Character').delete()
+
+            Character.objects.filter(name__startswith="Test Character").delete()
         except (ImportError, AttributeError):
             # Character model not implemented yet
             pass
@@ -135,29 +141,29 @@ class Command(BaseCommand):
         # Create default test users
         default_users = [
             {
-                'username': DEFAULT_TEST_USERNAME,
-                'email': 'testuser@example.com',
-                'first_name': 'Test',
-                'last_name': 'User',
-                'password': 'testpass123'
+                "username": DEFAULT_TEST_USERNAME,
+                "email": "testuser@example.com",
+                "first_name": "Test",
+                "last_name": "User",
+                "password": "testpass123",
             },
             {
-                'username': DEFAULT_GM_USERNAME,
-                'email': 'gm@example.com',
-                'first_name': 'Game',
-                'last_name': 'Master',
-                'password': 'gmpass123'
-            }
+                "username": DEFAULT_GM_USERNAME,
+                "email": "gm@example.com",
+                "first_name": "Game",
+                "last_name": "Master",
+                "password": "gmpass123",
+            },
         ]
 
         for user_data in default_users:
-            if not User.objects.filter(username=user_data['username']).exists():
+            if not User.objects.filter(username=user_data["username"]).exists():
                 user = User.objects.create_user(
-                    username=user_data['username'],
-                    email=user_data['email'],
-                    password=user_data['password'],
-                    first_name=user_data['first_name'],
-                    last_name=user_data['last_name']
+                    username=user_data["username"],
+                    email=user_data["email"],
+                    password=user_data["password"],
+                    first_name=user_data["first_name"],
+                    last_name=user_data["last_name"],
                 )
                 users.append(user)
                 if verbosity >= 2:
@@ -165,14 +171,14 @@ class Command(BaseCommand):
 
         # Create additional test users
         for i in range(1, count + 1):
-            username = f'{ADDITIONAL_USER_PREFIX}{i}'
+            username = f"{ADDITIONAL_USER_PREFIX}{i}"
             if not User.objects.filter(username=username).exists():
                 user = User.objects.create_user(
                     username=username,
-                    email=f'testuser{i}@example.com',
-                    password=f'testpass{i}123',
-                    first_name=f'Test{i}',
-                    last_name='User'
+                    email=f"testuser{i}@example.com",
+                    password=f"testpass{i}123",
+                    first_name=f"Test{i}",
+                    last_name="User",
                 )
                 users.append(user)
                 if verbosity >= 2:
@@ -194,8 +200,8 @@ class Command(BaseCommand):
             if not Campaign.objects.filter(name=DEFAULT_CAMPAIGN_NAME).exists():
                 campaign = Campaign.objects.create(
                     name=DEFAULT_CAMPAIGN_NAME,
-                    description='A test campaign for development',
-                    game_system='wod'  # Assuming World of Darkness as default
+                    description="A test campaign for development",
+                    game_system="wod",  # Assuming World of Darkness as default
                 )
                 campaigns.append(campaign)
                 if verbosity >= 2:
@@ -203,12 +209,12 @@ class Command(BaseCommand):
 
             # Create additional test campaigns
             for i in range(1, count + 1):
-                campaign_name = f'{DEFAULT_CAMPAIGN_NAME} {i}'
+                campaign_name = f"{DEFAULT_CAMPAIGN_NAME} {i}"
                 if not Campaign.objects.filter(name=campaign_name).exists():
                     campaign = Campaign.objects.create(
                         name=campaign_name,
-                        description=f'Test campaign #{i} for development',
-                        game_system='wod'
+                        description=f"Test campaign #{i} for development",
+                        game_system="wod",
                     )
                     campaigns.append(campaign)
                     if verbosity >= 2:
@@ -233,11 +239,11 @@ class Command(BaseCommand):
 
             # Create test characters
             for i in range(1, count + 1):
-                character_name = f'{ADDITIONAL_CHARACTER_PREFIX}{i}'
+                character_name = f"{ADDITIONAL_CHARACTER_PREFIX}{i}"
                 if not Character.objects.filter(name=character_name).exists():
                     character = Character.objects.create(
                         name=character_name,
-                        description=f'Test character #{i} for development'
+                        description=f"Test character #{i} for development",
                     )
                     characters.append(character)
                     if verbosity >= 2:

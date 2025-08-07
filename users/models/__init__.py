@@ -1,3 +1,3 @@
-from django.db import models
+from .user import User
 
-# Users app models will be defined here
+__all__ = ["User"]

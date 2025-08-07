@@ -5,8 +5,10 @@ import asyncio
 from channels.db import database_sync_to_async
 from channels.routing import ProtocolTypeRouter
 from channels.testing import WebsocketCommunicator
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.test import TestCase, TransactionTestCase, override_settings
+
+User = get_user_model()
 
 
 class ASGIApplicationTest(TestCase):
