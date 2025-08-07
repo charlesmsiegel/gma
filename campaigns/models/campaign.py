@@ -84,71 +84,68 @@ class Campaign(models.Model):
         if not self.name:
             raise ValidationError("Campaign name is required.")
 
-    def is_owner(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is the campaign owner."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.owner == user
-
-    def is_gm(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is a GM of this campaign."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.memberships.filter(user=user, role="gm", is_active=True).exists()
-
-    def is_player(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is a player in this campaign."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.memberships.filter(
-            user=user, role="player", is_active=True
-        ).exists()
-
-    def is_observer(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is an observer of this campaign."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.memberships.filter(
-            user=user, role="observer", is_active=True
-        ).exists()
-
-    def is_member(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user has any membership in this campaign."""
-        if not user or not user.is_authenticated:
-            return False
-        return self.memberships.filter(user=user, is_active=True).exists()
-
     def get_user_role(self, user: Optional[AbstractUser]) -> Optional[str]:
-        """Get the highest role for a user in this campaign.
+        """Get user's role in this campaign.
 
         Args:
             user: The user to check permissions for
 
         Returns:
-            The user's role ('owner', 'gm', 'player', 'observer') or None
+            The user's role ('OWNER', 'GM', 'PLAYER', 'OBSERVER') or None if not member
         """
         if not user or not user.is_authenticated:
             return None
 
-        # Owner has the highest permission level
-        if self.is_owner(user):
-            return "owner"
+        # Check direct ownership first (fastest check, no DB query)
+        if self.owner == user:
+            return "OWNER"
 
-        # Check membership roles
-        membership = self.memberships.filter(user=user, is_active=True).first()
-        if membership:
-            return membership.role
+        # Single database query to get user's membership role
+        membership = self.memberships.filter(user=user).first()
+        return membership.role if membership else None
 
-        return None
+    def has_role(self, user: Optional[AbstractUser], *roles: str) -> bool:
+        """Check if user has any of the specified roles in this campaign.
+
+        Args:
+            user: The user to check permissions for
+            roles: One or more role names to check ('OWNER', 'GM', 'PLAYER', 'OBSERVER')
+
+        Returns:
+            True if user has any of the specified roles, False otherwise
+        """
+        user_role = self.get_user_role(user)
+        return user_role in roles if user_role else False
+
+    # Convenience methods for backward compatibility
+    def is_owner(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user is the campaign owner."""
+        return self.has_role(user, "OWNER")
+
+    def is_gm(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user is a GM of this campaign."""
+        return self.has_role(user, "GM")
+
+    def is_player(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user is a player in this campaign."""
+        return self.has_role(user, "PLAYER")
+
+    def is_observer(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user is an observer of this campaign."""
+        return self.has_role(user, "OBSERVER")
+
+    def is_member(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user has any membership in this campaign."""
+        return self.has_role(user, "OWNER", "GM", "PLAYER", "OBSERVER")
 
 
 class CampaignMembership(models.Model):
     """Membership relationship between users and campaigns."""
 
     ROLE_CHOICES = [
-        ("gm", "Game Master"),
-        ("player", "Player"),
-        ("observer", "Observer"),
+        ("GM", "Game Master"),
+        ("PLAYER", "Player"),
+        ("OBSERVER", "Observer"),
     ]
 
     campaign = models.ForeignKey(
@@ -164,18 +161,19 @@ class CampaignMembership(models.Model):
         help_text="The user",
     )
     role = models.CharField(
-        max_length=20,
+        max_length=10,
         choices=ROLE_CHOICES,
         help_text="The user's role in the campaign",
-    )
-    is_active = models.BooleanField(
-        default=True, help_text="Whether this membership is currently active"
     )
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "campaigns_membership"
-        unique_together = [["campaign", "user"]]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["campaign", "user"], name="unique_campaign_user_membership"
+            ),
+        ]
         ordering = ["campaign", "role", "user__username"]
         verbose_name = "Campaign Membership"
         verbose_name_plural = "Campaign Memberships"
@@ -188,15 +186,9 @@ class CampaignMembership(models.Model):
         """Validate the membership data."""
         super().clean()
         if self.campaign and self.user:
-            # Validate campaign owner membership logic
+            # Prevent owner from having membership (handled by Campaign.owner field)
             if self.campaign.owner == self.user:
-                # Campaign owners can have any role, but we recommend GM
-                if self.role not in ["gm", "player", "observer"]:
-                    raise ValidationError(
-                        "Campaign owner must have a valid role "
-                        "(gm, player, or observer)."
-                    )
-                # Note: We could add a warning here for non-GM roles, but
-                # Django's clean method doesn't have a standard way to issue
-                # warnings. This could be handled in the admin interface or
-                # view layer.
+                raise ValidationError(
+                    "Campaign owner cannot have a membership role. "
+                    "Ownership is handled automatically."
+                )

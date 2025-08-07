@@ -116,12 +116,11 @@ class CampaignMembershipModelTest(TestCase):
     def test_create_membership(self):
         """Test creating a campaign membership."""
         membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
+            campaign=self.campaign, user=self.player, role="PLAYER"
         )
         self.assertEqual(membership.campaign, self.campaign)
         self.assertEqual(membership.user, self.player)
-        self.assertEqual(membership.role, "player")
-        self.assertTrue(membership.is_active)
+        self.assertEqual(membership.role, "PLAYER")
         self.assertIsNotNone(membership.joined_at)
 
     def test_membership_role_choices(self):
@@ -135,47 +134,51 @@ class CampaignMembershipModelTest(TestCase):
     def test_membership_unique_constraint(self):
         """Test that a user can only have one membership per campaign."""
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
+            campaign=self.campaign, user=self.player, role="PLAYER"
         )
         with self.assertRaises(IntegrityError):
             CampaignMembership.objects.create(
-                campaign=self.campaign, user=self.player, role="gm"
+                campaign=self.campaign, user=self.player, role="GM"
             )
 
     def test_membership_str(self):
         """Test the membership string representation."""
         membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
+            campaign=self.campaign, user=self.player, role="PLAYER"
         )
-        expected = f"{self.player.username} - {self.campaign.name} (player)"
+        expected = f"{self.player.username} - {self.campaign.name} (PLAYER)"
         self.assertEqual(str(membership), expected)
 
     def test_multiple_gms(self):
         """Test that a campaign can have multiple GMs."""
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.gm, role="gm"
+            campaign=self.campaign, user=self.gm, role="GM"
         )
         gm2 = User.objects.create_user(
             username="gm2", email="gm2@test.com", password="testpass123"
         )
-        CampaignMembership.objects.create(campaign=self.campaign, user=gm2, role="gm")
+        CampaignMembership.objects.create(campaign=self.campaign, user=gm2, role="GM")
 
         gm_count = CampaignMembership.objects.filter(
-            campaign=self.campaign, role="gm"
+            campaign=self.campaign, role="GM"
         ).count()
         self.assertEqual(gm_count, 2)
 
-    def test_owner_can_be_gm(self):
-        """Test that the campaign owner can also be a GM."""
-        membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.owner, role="gm"
+    def test_owner_role_handled_automatically(self):
+        """Test that the campaign owner role is handled automatically."""
+        # Owner should NOT have a membership - they're handled via Campaign.owner field
+        self.assertFalse(
+            CampaignMembership.objects.filter(
+                campaign=self.campaign, user=self.owner
+            ).exists()
         )
-        self.assertEqual(membership.user, self.campaign.owner)
-        self.assertEqual(membership.role, "gm")
+        # But they should still be recognized as owner through Campaign methods
+        self.assertTrue(self.campaign.is_owner(self.owner))
+        self.assertEqual(self.campaign.get_user_role(self.owner), "OWNER")
 
     def test_all_role_types(self):
         """Test creating memberships with all role types."""
-        roles = ["gm", "player", "observer"]
+        roles = ["GM", "PLAYER", "OBSERVER"]
         users = [self.gm, self.player, self.observer]
 
         for user, role in zip(users, roles):
@@ -187,7 +190,7 @@ class CampaignMembershipModelTest(TestCase):
     def test_cascade_delete_campaign(self):
         """Test that deleting a campaign deletes its memberships."""
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
+            campaign=self.campaign, user=self.player, role="PLAYER"
         )
         campaign_id = self.campaign.id
         self.campaign.delete()
@@ -199,30 +202,36 @@ class CampaignMembershipModelTest(TestCase):
     def test_cascade_delete_user(self):
         """Test that deleting a user deletes their memberships."""
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
+            campaign=self.campaign, user=self.player, role="PLAYER"
         )
         user_id = self.player.id
         self.player.delete()
 
         self.assertFalse(CampaignMembership.objects.filter(user_id=user_id).exists())
 
-    def test_membership_is_active_default(self):
-        """Test that membership is_active defaults to True."""
-        membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
-        )
-        self.assertTrue(membership.is_active)
+    def test_owner_cannot_have_membership(self):
+        """Test that owner cannot have a membership role."""
+        # Owners should not be able to have membership roles
+        with self.assertRaises(ValidationError):
+            membership = CampaignMembership(
+                campaign=self.campaign, user=self.owner, role="GM"
+            )
+            membership.clean()
 
-    def test_deactivate_membership(self):
-        """Test deactivating a membership."""
-        membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
-        )
-        membership.is_active = False
-        membership.save()
-
-        membership.refresh_from_db()
-        self.assertFalse(membership.is_active)
+    def test_membership_role_validation(self):
+        """Test that membership roles are properly validated."""
+        # Valid roles should work
+        for role in ["GM", "PLAYER", "OBSERVER"]:
+            user = User.objects.create_user(
+                username=f"test_{role.lower()}",
+                email=f"{role.lower()}@test.com",
+                password="pass123",
+            )
+            membership = CampaignMembership(
+                campaign=self.campaign, user=user, role=role
+            )
+            # Should not raise ValidationError
+            membership.full_clean()
 
 
 class CampaignQueryMethodsTest(TestCase):
@@ -252,13 +261,13 @@ class CampaignQueryMethodsTest(TestCase):
 
         # Create memberships
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.gm, role="gm"
+            campaign=self.campaign, user=self.gm, role="GM"
         )
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
+            campaign=self.campaign, user=self.player, role="PLAYER"
         )
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.observer, role="observer"
+            campaign=self.campaign, user=self.observer, role="OBSERVER"
         )
 
     def test_is_owner(self):
@@ -296,9 +305,9 @@ class CampaignQueryMethodsTest(TestCase):
 
     def test_is_member(self):
         """Test the is_member method (any role)."""
-        self.assertFalse(
+        self.assertTrue(
             self.campaign.is_member(self.owner)
-        )  # Owner without membership
+        )  # Owner has automatic OWNER membership
         self.assertTrue(self.campaign.is_member(self.gm))
         self.assertTrue(self.campaign.is_member(self.player))
         self.assertTrue(self.campaign.is_member(self.observer))
@@ -306,30 +315,25 @@ class CampaignQueryMethodsTest(TestCase):
 
     def test_get_user_role(self):
         """Test the get_user_role method."""
-        self.assertEqual(self.campaign.get_user_role(self.owner), "owner")
-        self.assertEqual(self.campaign.get_user_role(self.gm), "gm")
-        self.assertEqual(self.campaign.get_user_role(self.player), "player")
-        self.assertEqual(self.campaign.get_user_role(self.observer), "observer")
+        self.assertEqual(self.campaign.get_user_role(self.owner), "OWNER")
+        self.assertEqual(self.campaign.get_user_role(self.gm), "GM")
+        self.assertEqual(self.campaign.get_user_role(self.player), "PLAYER")
+        self.assertEqual(self.campaign.get_user_role(self.observer), "OBSERVER")
         self.assertIsNone(self.campaign.get_user_role(self.non_member))
 
-    def test_owner_with_gm_membership(self):
-        """Test that owner with GM membership is recognized as both."""
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.owner, role="gm"
-        )
+    def test_owner_membership_permissions(self):
+        """Test that owner has all necessary permissions through OWNER role."""
         self.assertTrue(self.campaign.is_owner(self.owner))
-        self.assertTrue(self.campaign.is_gm(self.owner))
         self.assertTrue(self.campaign.is_member(self.owner))
-        # get_user_role should return 'owner' as it's the highest permission
-        self.assertEqual(self.campaign.get_user_role(self.owner), "owner")
+        # get_user_role should return 'OWNER' as it's the highest permission
+        self.assertEqual(self.campaign.get_user_role(self.owner), "OWNER")
 
-    def test_inactive_membership_not_counted(self):
-        """Test that inactive memberships are not counted."""
+    def test_membership_deletion_removes_permissions(self):
+        """Test that deleting membership removes permissions."""
         membership = CampaignMembership.objects.get(
             campaign=self.campaign, user=self.player
         )
-        membership.is_active = False
-        membership.save()
+        membership.delete()
 
         self.assertFalse(self.campaign.is_player(self.player))
         self.assertFalse(self.campaign.is_member(self.player))
