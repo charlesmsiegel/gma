@@ -1,7 +1,8 @@
-from django.urls import path
+from django.urls import include, path
 
 app_name = "api"
 
 urlpatterns = [
-    # API endpoints will be added here
+    path("auth/", include("api.urls.auth_urls")),
+    path("profile/", include("api.urls.profile_urls")),
 ]

@@ -1,3 +1,6 @@
-from django.shortcuts import render
+"""
+API views for the GMA application.
+"""
 
-# Create your views here.
+from .auth_views import *  # noqa: F401,F403
+from .profile_views import *  # noqa: F401,F403
