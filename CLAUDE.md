@@ -301,4 +301,16 @@ Whenever we start a session, unless resuming a previous workflow, we use the fol
 6) Implement features/fixes/etc testing after each unit of work with `make test`
 7) Whenever there is an improvement in `make test` (errots converted to failures, failures converted to passing tests) we commit to our branch
 8) Once all tests pass, we open a pull request
-9)
+
+## Responsibilities
+
+Use the following agents for specific tasks:
+
+- @agent-architect-review before creating pull request to review all changes for consistent architecture
+- @agent-django-api-developer when creating API endpoints
+- @agent-django-backend-expert for building models, views, ervices, etc. in django
+- @agent-django-orm-expert for optimizing queries
+- @agent-docs-architect should run before commits to update documents
+- @agent-frontend-developer for building react frontned elements
+- @agent-simplify should run before PR to ensure the design doesn't get too complex
+- @agent-test-automator builds tests
