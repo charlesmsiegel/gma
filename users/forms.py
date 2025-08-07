@@ -142,35 +142,32 @@ class EmailAuthenticationForm(forms.Form):
 class UserProfileForm(forms.ModelForm):
     """Form for editing user profile information."""
 
-    # Common timezone choices for dropdown
-    TIMEZONE_CHOICES = [
-        ("UTC", "UTC (Coordinated Universal Time)"),
-        ("America/New_York", "America/New_York (Eastern Time)"),
-        ("America/Chicago", "America/Chicago (Central Time)"),
-        ("America/Denver", "America/Denver (Mountain Time)"),
-        ("America/Los_Angeles", "America/Los_Angeles (Pacific Time)"),
-        ("America/Phoenix", "America/Phoenix (Arizona Time)"),
-        ("America/Anchorage", "America/Anchorage (Alaska Time)"),
-        ("Pacific/Honolulu", "Pacific/Honolulu (Hawaii Time)"),
-        ("Europe/London", "Europe/London (GMT/BST)"),
-        ("Europe/Paris", "Europe/Paris (CET/CEST)"),
-        ("Europe/Berlin", "Europe/Berlin (CET/CEST)"),
-        ("Europe/Rome", "Europe/Rome (CET/CEST)"),
-        ("Europe/Madrid", "Europe/Madrid (CET/CEST)"),
-        ("Europe/Stockholm", "Europe/Stockholm (CET/CEST)"),
-        ("Asia/Tokyo", "Asia/Tokyo (Japan Standard Time)"),
-        ("Asia/Shanghai", "Asia/Shanghai (China Standard Time)"),
-        ("Asia/Kolkata", "Asia/Kolkata (India Standard Time)"),
-        ("Australia/Sydney", "Australia/Sydney (AEST/AEDT)"),
-        ("Australia/Melbourne", "Australia/Melbourne (AEST/AEDT)"),
-        ("Australia/Perth", "Australia/Perth (AWST)"),
-    ]
-
-    timezone = forms.CharField(
-        max_length=50,
+    timezone = forms.ChoiceField(
+        choices=[],  # Will be populated in __init__
         widget=forms.Select(attrs={"class": "form-control"}),
         help_text="Select your timezone for accurate time displays.",
     )
+
+    def __init__(self, *args, **kwargs):
+        """Initialize form and populate timezone choices."""
+        super().__init__(*args, **kwargs)
+
+        # Common timezone choices - using Django-compatible timezone names
+        timezone_choices = [
+            ("UTC", "UTC"),
+            ("America/New_York", "America/New_York"),
+            ("America/Chicago", "America/Chicago"),
+            ("America/Denver", "America/Denver"),
+            ("America/Los_Angeles", "America/Los_Angeles"),
+            ("Europe/London", "Europe/London"),
+            ("Europe/Paris", "Europe/Paris"),
+            ("Europe/Berlin", "Europe/Berlin"),
+            ("Asia/Tokyo", "Asia/Tokyo"),
+            ("Asia/Shanghai", "Asia/Shanghai"),
+            ("Australia/Sydney", "Australia/Sydney"),
+        ]
+
+        self.fields["timezone"].choices = timezone_choices
 
     class Meta:
         model = User
@@ -189,24 +186,6 @@ class UserProfileForm(forms.ModelForm):
                 "Leave blank to use your username."
             ),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Set choices for the timezone field
-        choices = self.TIMEZONE_CHOICES
-
-        # If timezone is not in our choices, add it as a custom option
-        if self.instance and self.instance.timezone:
-            timezone_values = [choice[0] for choice in self.TIMEZONE_CHOICES]
-            if self.instance.timezone not in timezone_values:
-                # Add current timezone as first choice if it's not in our common list
-                custom_choice = (
-                    self.instance.timezone,
-                    f"{self.instance.timezone} (Custom)",
-                )
-                choices = [custom_choice] + self.TIMEZONE_CHOICES
-
-        self.fields["timezone"].widget.choices = choices
 
     def clean_display_name(self):
         """Validate display_name uniqueness (case-insensitive, excluding self)."""

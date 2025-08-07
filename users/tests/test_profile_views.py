@@ -159,7 +159,7 @@ class UserProfileEditViewTest(TestCase):
         response = self.client.post(reverse("users:profile_edit"), data)
 
         self.assertEqual(response.status_code, 200)  # Form redisplayed with errors
-        self.assertContains(response, "not a valid timezone")
+        self.assertContains(response, "not one of the available choices")
         # User data should not be changed
         self.user.refresh_from_db()
         self.assertEqual(self.user.timezone, "America/New_York")
@@ -305,7 +305,7 @@ class UserProfileFormValidationTest(TestCase):
             self.assertEqual(
                 response.status_code, 200, f"Should fail for timezone: {timezone}"
             )
-            self.assertContains(response, "not a valid timezone")
+            self.assertContains(response, "not one of the available choices")
 
     def test_display_name_max_length_validation(self):
         """Test display_name respects max_length constraint."""
