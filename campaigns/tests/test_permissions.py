@@ -42,7 +42,7 @@ class PermissionClassesTest(TestCase):
 
         # Create campaign
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner, game_system="mage"
+            name="Test Campaign", owner=self.owner, game_system="Mage: The Ascension"
         )
 
         # Create memberships
@@ -209,12 +209,12 @@ class CampaignPermissionMixinTest(TestCase):
 
         # Create campaigns
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner, game_system="mage"
+            name="Test Campaign", owner=self.owner, game_system="Mage: The Ascension"
         )
         self.inactive_campaign = Campaign.objects.create(
             name="Inactive Campaign",
             owner=self.owner,
-            game_system="mage",
+            game_system="Mage: The Ascension",
             is_active=False,
         )
 

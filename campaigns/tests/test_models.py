@@ -86,7 +86,7 @@ class CampaignModelTest(TestCase):
     def test_campaign_default_values(self):
         """Test default values for campaign fields."""
         campaign = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner, game_system="mage"
+            name="Test Campaign", owner=self.owner, game_system="Mage: The Ascension"
         )
         self.assertTrue(campaign.is_active)
         self.assertEqual(campaign.description, "")
@@ -110,7 +110,7 @@ class CampaignMembershipModelTest(TestCase):
             username="observer", email="observer@test.com", password="testpass123"
         )
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner, game_system="mage"
+            name="Test Campaign", owner=self.owner, game_system="Mage: The Ascension"
         )
 
     def test_create_membership(self):
@@ -247,7 +247,7 @@ class CampaignQueryMethodsTest(TestCase):
         )
 
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", owner=self.owner, game_system="mage"
+            name="Test Campaign", owner=self.owner, game_system="Mage: The Ascension"
         )
 
         # Create memberships
