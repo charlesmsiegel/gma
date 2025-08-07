@@ -47,13 +47,13 @@ class PermissionClassesTest(TestCase):
 
         # Create memberships
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.gm, role="gm"
+            campaign=self.campaign, user=self.gm, role="GM"
         )
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
+            campaign=self.campaign, user=self.player, role="PLAYER"
         )
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.observer, role="observer"
+            campaign=self.campaign, user=self.observer, role="OBSERVER"
         )
 
         # Create a simple view for testing
@@ -118,9 +118,9 @@ class PermissionClassesTest(TestCase):
         request.user = self.observer
         self.assertTrue(permission.has_permission(request, self.view))
 
-        # Owner without membership should not have permission
+        # Owner has automatic OWNER membership so should have permission
         request.user = self.owner
-        self.assertFalse(permission.has_permission(request, self.view))
+        self.assertTrue(permission.has_permission(request, self.view))
 
         # Non-member should not have permission
         request.user = self.non_member
@@ -169,21 +169,19 @@ class PermissionClassesTest(TestCase):
 
         self.assertFalse(permission.has_permission(request, self.view))
 
-    def test_owner_with_gm_membership(self):
-        """Test that owner with GM membership has both permissions."""
-        # Add GM membership for owner
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.owner, role="gm"
-        )
-
+    def test_owner_permissions_through_owner_role(self):
+        """Test that owner has appropriate permissions through OWNER role."""
         request = self.factory.get("/")
         request.user = self.owner
 
-        # Should have all permissions
+        # Owner should have owner and member permissions, but not GM permissions
+        # (unless GM permissions are granted through OWNER role in the model)
         self.assertTrue(IsCampaignOwner().has_permission(request, self.view))
-        self.assertTrue(IsCampaignGM().has_permission(request, self.view))
         self.assertTrue(IsCampaignMember().has_permission(request, self.view))
         self.assertTrue(IsCampaignOwnerOrGM().has_permission(request, self.view))
+        # GM permission depends on whether OWNER role grants GM privileges
+        # Based on the model, only GM role grants GM permissions
+        self.assertFalse(IsCampaignGM().has_permission(request, self.view))
 
 
 class CampaignPermissionMixinTest(TestCase):
@@ -220,10 +218,10 @@ class CampaignPermissionMixinTest(TestCase):
 
         # Create memberships
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.gm, role="gm"
+            campaign=self.campaign, user=self.gm, role="GM"
         )
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player, role="player"
+            campaign=self.campaign, user=self.player, role="PLAYER"
         )
 
     def test_get_campaign_success(self):
@@ -259,9 +257,8 @@ class CampaignPermissionMixinTest(TestCase):
         mixin.check_campaign_permission(self.owner, "owner")
         mixin.check_campaign_permission(self.owner, "owner_or_gm")
 
-        # Owner without membership should not pass member check
-        with self.assertRaises(Http404):
-            mixin.check_campaign_permission(self.owner, "member")
+        # Owner has automatic OWNER membership so should pass member check
+        mixin.check_campaign_permission(self.owner, "member")
 
     def test_check_campaign_permission_gm(self):
         """Test check_campaign_permission for GM."""

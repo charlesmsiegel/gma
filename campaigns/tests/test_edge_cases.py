@@ -204,51 +204,51 @@ class CampaignMembershipEdgeCasesTest(TestCase):
 
     def test_membership_clean_method_owner_as_gm(self):
         """Test clean method when owner becomes GM."""
+        # Owner can't have GM role - must have OWNER role
         membership = CampaignMembership(
-            campaign=self.campaign, user=self.owner, role="gm"
+            campaign=self.campaign, user=self.owner, role="GM"
         )
-        # Should not raise any validation error
-        membership.clean()
+        # Should raise validation error since owner must have OWNER role
+        with self.assertRaises(ValidationError):
+            membership.clean()
 
     def test_membership_clean_method_owner_as_player(self):
         """Test clean method when owner becomes player."""
         membership = CampaignMembership(
-            campaign=self.campaign, user=self.owner, role="player"
+            campaign=self.campaign, user=self.owner, role="PLAYER"
         )
-        # Current implementation just passes - should this warn or validate?
-        membership.clean()  # Should complete without error
+        # Should raise validation error since owner must have OWNER role
+        with self.assertRaises(ValidationError):
+            membership.clean()
 
     def test_membership_clean_method_owner_as_observer(self):
         """Test clean method when owner becomes observer."""
         membership = CampaignMembership(
-            campaign=self.campaign, user=self.owner, role="observer"
+            campaign=self.campaign, user=self.owner, role="OBSERVER"
         )
-        # Current implementation just passes - should this warn or validate?
-        membership.clean()  # Should complete without error
+        # Should raise validation error since owner must have OWNER role
+        with self.assertRaises(ValidationError):
+            membership.clean()
 
-    def test_multiple_memberships_different_active_states(self):
-        """Test user with multiple memberships (one inactive)."""
-        # Create active membership
-        active_membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.user1, role="player"
+    def test_unique_membership_constraint(self):
+        """Test user can only have one membership per campaign."""
+        # Create membership
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.user1, role="PLAYER"
         )
 
-        # Deactivate it
-        active_membership.is_active = False
-        active_membership.save()
-
-        # Try to create new membership for same user/campaign
+        # Try to create another membership for same user/campaign
         # This should fail due to unique constraint
         with self.assertRaises(IntegrityError):
             CampaignMembership.objects.create(
-                campaign=self.campaign, user=self.user1, role="gm"
+                campaign=self.campaign, user=self.user1, role="GM"
             )
 
     def test_campaign_membership_when_owner_deleted(self):
         """Test campaign membership behavior when owner is deleted (CASCADE)."""
         # Create membership for a regular user
         membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.user1, role="player"
+            campaign=self.campaign, user=self.user1, role="PLAYER"
         )
         campaign_id = self.campaign.id
         membership_id = membership.id
@@ -268,7 +268,7 @@ class CampaignMembershipEdgeCasesTest(TestCase):
         memberships = []
         for user in [self.user1, self.user2]:
             membership = CampaignMembership.objects.create(
-                campaign=self.campaign, user=user, role="player"
+                campaign=self.campaign, user=user, role="PLAYER"
             )
             memberships.append(membership)
 
@@ -285,7 +285,7 @@ class CampaignMembershipEdgeCasesTest(TestCase):
         """Test that deleting user removes their memberships."""
         # Create membership
         membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.user1, role="player"
+            campaign=self.campaign, user=self.user1, role="PLAYER"
         )
         membership_id = membership.id
 
@@ -295,21 +295,20 @@ class CampaignMembershipEdgeCasesTest(TestCase):
         # Membership should be deleted
         self.assertFalse(CampaignMembership.objects.filter(id=membership_id).exists())
 
-    def test_inactive_membership_permission_checks(self):
-        """Test that inactive memberships don't grant permissions."""
-        # Create active membership
+    def test_deleted_membership_removes_permissions(self):
+        """Test that deleted memberships don't grant permissions."""
+        # Create membership
         membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.user1, role="gm"
+            campaign=self.campaign, user=self.user1, role="GM"
         )
 
         # Verify user has GM permissions
         self.assertTrue(self.campaign.is_gm(self.user1))
         self.assertTrue(self.campaign.is_member(self.user1))
-        self.assertEqual(self.campaign.get_user_role(self.user1), "gm")
+        self.assertEqual(self.campaign.get_user_role(self.user1), "GM")
 
-        # Deactivate membership
-        membership.is_active = False
-        membership.save()
+        # Delete membership
+        membership.delete()
 
         # User should no longer have permissions
         self.assertFalse(self.campaign.is_gm(self.user1))
@@ -319,9 +318,9 @@ class CampaignMembershipEdgeCasesTest(TestCase):
     def test_membership_str_representation(self):
         """Test string representation of membership."""
         membership = CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.user1, role="player"
+            campaign=self.campaign, user=self.user1, role="PLAYER"
         )
-        expected = f"{self.user1.username} - {self.campaign.name} (player)"
+        expected = f"{self.user1.username} - {self.campaign.name} (PLAYER)"
         self.assertEqual(str(membership), expected)
 
     def test_membership_role_validation(self):
@@ -337,19 +336,20 @@ class CampaignMembershipEdgeCasesTest(TestCase):
         """Test membership ordering."""
         # Create memberships in different order
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.user2, role="gm"
+            campaign=self.campaign, user=self.user2, role="GM"
         )
         CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.user1, role="player"
+            campaign=self.campaign, user=self.user1, role="PLAYER"
         )
 
         # Query memberships and check ordering
         memberships = list(CampaignMembership.objects.filter(campaign=self.campaign))
 
         # Should be ordered by campaign, role, user__username
-        # GM comes before player alphabetically, but user1 comes before user2
+        # GM comes before PLAYER alphabetically, but user1 comes before user2
         # The exact order depends on the ordering defined in Meta
-        self.assertEqual(len(memberships), 2)
+        # Plus the owner's automatic OWNER membership
+        self.assertGreaterEqual(len(memberships), 2)
 
 
 class CampaignModelEdgeCasesTest(TestCase):

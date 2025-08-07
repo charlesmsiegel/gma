@@ -46,8 +46,8 @@ class CampaignAdmin(admin.ModelAdmin):
 class CampaignMembershipAdmin(admin.ModelAdmin):
     """Admin configuration for CampaignMembership model."""
 
-    list_display = ["user", "campaign", "role", "is_active", "joined_at"]
-    list_filter = ["role", "is_active", "joined_at", "campaign__game_system"]
+    list_display = ["user", "campaign", "role", "joined_at"]
+    list_filter = ["role", "joined_at", "campaign__game_system"]
     search_fields = [
         "user__username",
         "user__email",
@@ -69,7 +69,7 @@ class CampaignMembershipAdmin(admin.ModelAdmin):
         ),
         (
             "Status",
-            {"fields": ["is_active", "joined_at"]},
+            {"fields": ["joined_at"]},
         ),
     ]
 
