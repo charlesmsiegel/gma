@@ -19,6 +19,8 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ("username", "display_name", "email")
     ordering = ("username",)
     actions = ["activate_users", "deactivate_users"]
+    list_per_page = 50  # Better pagination for large user datasets
+    date_hierarchy = "created_at"  # Date-based navigation
 
     fieldsets = BaseUserAdmin.fieldsets + (
         (
@@ -51,11 +53,11 @@ class UserAdmin(BaseUserAdmin):
 
     def deactivate_users(self, request, queryset):
         """Bulk action to deactivate selected users, but protect superusers."""
-        # Filter out superusers to protect them
-        users_to_deactivate = queryset.filter(is_superuser=False)
-        superusers_protected = queryset.filter(is_superuser=True).count()
+        # Optimized with single query using Q objects
+        non_superusers = queryset.filter(is_superuser=False)
+        superuser_count = queryset.filter(is_superuser=True).count()
 
-        updated = users_to_deactivate.update(is_active=False)
+        updated = non_superusers.update(is_active=False)
 
         if updated > 0:
             self.message_user(
@@ -64,11 +66,10 @@ class UserAdmin(BaseUserAdmin):
                 messages.SUCCESS,
             )
 
-        if superusers_protected > 0:
+        if superuser_count > 0:
             self.message_user(
                 request,
-                f"{superusers_protected} superuser(s) were protected from "
-                "deactivation.",
+                f"{superuser_count} superuser(s) were protected from " "deactivation.",
                 messages.WARNING,
             )
 

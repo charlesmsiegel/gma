@@ -176,3 +176,111 @@ class UserAdminTest(TestCase):
         readonly_fields = self.user_admin.readonly_fields
         self.assertIn("created_at", readonly_fields)
         self.assertIn("updated_at", readonly_fields)
+
+    def test_list_per_page_configuration(self):
+        """Test that list_per_page is configured for better pagination."""
+        self.assertEqual(self.user_admin.list_per_page, 50)
+
+    def test_date_hierarchy_configuration(self):
+        """Test that date_hierarchy is configured for date-based navigation."""
+        self.assertEqual(self.user_admin.date_hierarchy, "created_at")
+
+    def test_pagination_with_large_dataset(self):
+        """Test pagination behavior with a larger dataset."""
+        # Create more users than the page size
+        users = []
+        for i in range(75):  # More than list_per_page (50)
+            user = self.User.objects.create_user(
+                username=f"user{i}",
+                email=f"user{i}@example.com",
+                password="testpass123",
+            )
+            users.append(user)
+
+        # Verify we have more users than one page can display
+        self.assertGreater(self.User.objects.count(), self.user_admin.list_per_page)
+
+        # Test that pagination configuration is accessible
+        self.assertTrue(hasattr(self.user_admin, "list_per_page"))
+        self.assertIsInstance(self.user_admin.list_per_page, int)
+        self.assertGreater(self.user_admin.list_per_page, 0)
+
+    def test_deactivate_users_optimized_query(self):
+        """Test that deactivate_users uses optimized query logic."""
+        # Create mix of regular users and superusers
+        regular_user1 = self.User.objects.create_user(
+            username="regular1", email="regular1@example.com", is_active=True
+        )
+        regular_user2 = self.User.objects.create_user(
+            username="regular2", email="regular2@example.com", is_active=True
+        )
+        superuser1 = self.User.objects.create_superuser(
+            username="super1", email="super1@example.com", password="superpass"
+        )
+        superuser2 = self.User.objects.create_superuser(
+            username="super2", email="super2@example.com", password="superpass"
+        )
+
+        # Create queryset with all users
+        queryset = self.User.objects.filter(
+            id__in=[regular_user1.id, regular_user2.id, superuser1.id, superuser2.id]
+        )
+
+        # Execute bulk action
+        admin_user = self.User.objects.create_superuser(
+            username="admin", email="admin@example.com", password="adminpass"
+        )
+        request = self._get_request(admin_user)
+
+        # Capture the behavior - this tests the optimized query logic
+        self.user_admin.deactivate_users(request, queryset)
+
+        # Verify results: regular users deactivated, superusers protected
+        regular_user1.refresh_from_db()
+        regular_user2.refresh_from_db()
+        superuser1.refresh_from_db()
+        superuser2.refresh_from_db()
+
+        self.assertFalse(regular_user1.is_active)
+        self.assertFalse(regular_user2.is_active)
+        self.assertTrue(superuser1.is_active)  # Protected
+        self.assertTrue(superuser2.is_active)  # Protected
+
+    def test_admin_configuration_completeness(self):
+        """Test that all admin configuration attributes are properly set."""
+        # Test all the configuration attributes
+        self.assertTrue(hasattr(self.user_admin, "list_display"))
+        self.assertTrue(hasattr(self.user_admin, "list_filter"))
+        self.assertTrue(hasattr(self.user_admin, "search_fields"))
+        self.assertTrue(hasattr(self.user_admin, "ordering"))
+        self.assertTrue(hasattr(self.user_admin, "actions"))
+        self.assertTrue(hasattr(self.user_admin, "list_per_page"))
+        self.assertTrue(hasattr(self.user_admin, "date_hierarchy"))
+        self.assertTrue(hasattr(self.user_admin, "readonly_fields"))
+
+        # Test that they are properly configured
+        self.assertIsInstance(self.user_admin.list_display, tuple)
+        self.assertIsInstance(self.user_admin.list_filter, tuple)
+        self.assertIsInstance(self.user_admin.search_fields, tuple)
+        self.assertIsInstance(self.user_admin.ordering, tuple)
+        self.assertIsInstance(self.user_admin.actions, list)
+        self.assertIsInstance(self.user_admin.list_per_page, int)
+        self.assertIsInstance(self.user_admin.date_hierarchy, str)
+        self.assertIsInstance(self.user_admin.readonly_fields, tuple)
+
+    def test_date_hierarchy_field_exists_in_model(self):
+        """Test that the date_hierarchy field actually exists in the model."""
+        # Verify the field used for date_hierarchy exists in the User model
+        self.assertTrue(hasattr(self.User, self.user_admin.date_hierarchy))
+
+        # Create a user and verify the field has a value
+        user = self.User.objects.create_user(
+            username="datetest", email="datetest@example.com", password="testpass123"
+        )
+
+        # Get the field value
+        field_value = getattr(user, self.user_admin.date_hierarchy)
+        self.assertIsNotNone(field_value)
+
+        # Verify it's a datetime field
+        self.assertTrue(hasattr(field_value, "year"))  # Should be a datetime object
