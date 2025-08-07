@@ -63,48 +63,53 @@ class Campaign(models.Model):
 
     def save(self, *args, **kwargs):
         """Save the campaign with auto-generated slug."""
-        if not self.slug:
+        from django.db import IntegrityError
+
+        slug_was_auto_generated = not self.slug
+
+        if slug_was_auto_generated:
             self.slug = self._generate_unique_slug()
-        super().save(*args, **kwargs)
+
+        # Only retry slug generation for auto-generated slugs
+        if slug_was_auto_generated:
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    super().save(*args, **kwargs)
+                    break
+                except IntegrityError as e:
+                    if "slug" in str(e) and attempt < max_retries - 1:
+                        # Regenerate slug and try again
+                        self.slug = self._generate_unique_slug()
+                    else:
+                        raise
+        else:
+            # For explicitly set slugs, let Django handle the IntegrityError
+            super().save(*args, **kwargs)
 
     def _generate_unique_slug(self) -> str:
-        """Generate a unique slug for the campaign using atomic operations."""
-        from django.db import transaction
+        """Generate a unique slug for the campaign."""
+        import uuid
 
-        base_slug = slugify(self.name) or ""
-
-        # Handle edge cases for empty slugs
-        if not base_slug:
-            base_slug = "campaign"
+        base_slug = slugify(self.name) or "campaign"
 
         # Truncate to fit in slug field (200 chars max)
         max_base_length = 190  # Leave room for counter suffix
         if len(base_slug) > max_base_length:
             base_slug = base_slug[:max_base_length]
 
-        # Use atomic transaction to prevent race conditions
-        with transaction.atomic():
-            # Lock the Campaign table to prevent concurrent slug generation
-            existing_campaigns = list(
-                Campaign.objects.select_for_update()
-                .filter(slug__startswith=base_slug)
-                .values_list("slug", flat=True)
-            )
+        # Try the base slug first
+        slug = base_slug
+        counter = 1
 
-            # Find the next available slug
-            slug = base_slug
-            counter = 1
-
-            while slug in existing_campaigns:
-                slug = f"{base_slug}-{counter}"
-                counter += 1
-
-                # Safety check to prevent infinite loop
-                if counter > 9999:
-                    import uuid
-
-                    slug = f"{base_slug[:180]}-{uuid.uuid4().hex[:8]}"
-                    break
+        # Keep trying until we find a unique slug
+        # The unique=True constraint on the slug field will prevent race conditions
+        while Campaign.objects.filter(slug=slug).exists():
+            if counter > 999:  # Fallback to UUID after reasonable attempts
+                slug = f"{base_slug[:180]}-{uuid.uuid4().hex[:8]}"
+                break
+            slug = f"{base_slug}-{counter}"
+            counter += 1
 
         return slug
 
