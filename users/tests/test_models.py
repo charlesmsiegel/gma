@@ -268,8 +268,13 @@ class CustomUserModelTest(TestCase):
             email="test@example.com",
             password="testpass123",
         )
-        # Explicitly set display_name to None (should be empty by default)
-        user.display_name = None
-        user.save()
-
-        self.assertEqual(user.get_display_name(), "testuser")
+        # Test the method logic directly with None value
+        # (Django CharField converts None to empty string in DB)
+        original_display_name = user.display_name
+        try:
+            # Temporarily override for method testing
+            user.display_name = None
+            self.assertEqual(user.get_display_name(), "testuser")
+        finally:
+            # Restore original value
+            user.display_name = original_display_name
