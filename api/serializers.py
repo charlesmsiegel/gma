@@ -5,6 +5,8 @@ API serializers for the GMA application.
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from campaigns.models import Campaign, CampaignMembership
+
 User = get_user_model()
 
 
@@ -141,3 +143,79 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ):
             raise serializers.ValidationError("A user with this email already exists.")
         return value
+
+
+class CampaignSerializer(serializers.ModelSerializer):
+    """Serializer for Campaign model."""
+
+    owner = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Campaign
+        fields = (
+            "id",
+            "name",
+            "slug",
+            "description",
+            "game_system",
+            "is_active",
+            "created_at",
+            "updated_at",
+            "owner",
+        )
+        read_only_fields = ("id", "slug", "created_at", "updated_at", "owner")
+
+    def validate_name(self, value):
+        """Validate campaign name."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Campaign name is required.")
+
+        # Trim whitespace
+        value = value.strip()
+
+        if len(value) > 200:
+            raise serializers.ValidationError(
+                "Campaign name must not exceed 200 characters."
+            )
+
+        return value
+
+    def validate_description(self, value):
+        """Clean description field."""
+        return value.strip() if value else ""
+
+    def validate_game_system(self, value):
+        """Clean game system field."""
+        return value.strip() if value else ""
+
+    def create(self, validated_data):
+        """Create campaign with owner from request."""
+        # Owner should be passed via save(owner=user) in the view
+        return super().create(validated_data)
+
+
+class CampaignMembershipSerializer(serializers.ModelSerializer):
+    """Serializer for CampaignMembership model."""
+
+    user = UserSerializer(read_only=True)
+    campaign = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = CampaignMembership
+        fields = (
+            "id",
+            "campaign",
+            "user",
+            "role",
+            "joined_at",
+        )
+        read_only_fields = ("id", "campaign", "user", "joined_at")
+
+
+class CampaignDetailSerializer(CampaignSerializer):
+    """Detailed serializer for Campaign model with memberships."""
+
+    memberships = CampaignMembershipSerializer(many=True, read_only=True)
+
+    class Meta(CampaignSerializer.Meta):
+        fields = CampaignSerializer.Meta.fields + ("memberships",)

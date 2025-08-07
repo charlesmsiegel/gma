@@ -1,3 +1,15 @@
-from django.shortcuts import render
+from .campaign_views import (
+    CampaignCreateView,
+    CampaignDetailView,
+    CampaignListView,
+    campaign_create_function_view,
+    campaign_detail_function_view,
+)
 
-# Create your views here.
+__all__ = [
+    "CampaignCreateView",
+    "CampaignDetailView",
+    "CampaignListView",
+    "campaign_create_function_view",
+    "campaign_detail_function_view",
+]
