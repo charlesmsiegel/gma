@@ -52,8 +52,6 @@ python manage.py runserver
 daphne -b 0.0.0.0 -p 8000 gma.asgi:application
 
 # Run tests
-python manage.py test
-# or use Makefile
 make test
 
 # Run tests with coverage

@@ -79,6 +79,7 @@ class CustomUserModelTest(TestCase):
             email="test@example.com",
             display_name="x" * 100,  # Exactly 100 characters
         )
+        user.set_password("testpass123")
         # Should not raise ValidationError
         user.full_clean()
 
@@ -103,6 +104,7 @@ class CustomUserModelTest(TestCase):
             email="test@example.com",
             timezone="x" * 50,  # Exactly 50 characters
         )
+        user.set_password("testpass123")
         # Should not raise ValidationError
         user.full_clean()
 
