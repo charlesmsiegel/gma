@@ -73,6 +73,7 @@ class LogoutView(BaseLogoutView):
 
     template_name = "registration/logout.html"
     next_page = reverse_lazy("core:index")
+    http_method_names = ["get", "post"]
 
     def dispatch(self, request, *args, **kwargs):
         """Handle logout with success message."""
