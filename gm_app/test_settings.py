@@ -17,6 +17,14 @@ CHANNEL_LAYERS = {
     }
 }
 
+# Use database sessions instead of Redis cache for tests
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}
+
 
 # Disable migrations for faster test runs
 class DisableMigrations:
@@ -32,6 +40,9 @@ MIGRATION_MODULES = DisableMigrations()
 # Test-specific settings
 SECRET_KEY = "test-secret-key-for-tests-only"
 DEBUG = False
+
+# Set login URL to our custom view
+LOGIN_URL = "users:login"
 
 # Faster password hashing for tests
 PASSWORD_HASHERS = [
