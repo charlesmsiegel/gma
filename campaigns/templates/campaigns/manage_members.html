@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Member Management - {{ campaign.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Member Management</h1>
+    <h2>{{ campaign.name }}</h2>
+
+    {% if can_manage %}
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}" class="btn btn-primary">Send Invitation</a>
+                <a href="{% url 'campaigns:change_member_role' slug=campaign.slug %}" class="btn btn-secondary">Change Member Role</a>
+                <a href="{% url 'campaigns:bulk_member_management' slug=campaign.slug %}" class="btn btn-secondary">Bulk Operations</a>
+            </div>
+        </div>
+
+        <div class="members-list">
+            <h3>Current Members</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Owner -->
+                    <tr>
+                        <td>{{ campaign.owner.username }}</td>
+                        <td><span class="badge badge-primary">Owner</span></td>
+                        <td>{{ campaign.created_at|date:"M d, Y" }}</td>
+                        <td>-</td>
+                    </tr>
+
+                    <!-- Other Members -->
+                    {% for membership in members %}
+                    <tr>
+                        <td>{{ membership.user.username }}</td>
+                        <td><span class="badge badge-secondary">{{ membership.role }}</span></td>
+                        <td>{{ membership.joined_at|date:"M d, Y" }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning change-role-btn"
+                                    data-user-id="{{ membership.user.id }}"
+                                    data-current-role="{{ membership.role }}">
+                                Change Role
+                            </button>
+                            <button class="btn btn-sm btn-danger remove-member-btn"
+                                    data-user-id="{{ membership.user.id }}">
+                                Remove
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            You don't have permission to manage members for this campaign.
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-secondary">Back to Campaign</a>
+    </div>
+</div>
+
+<script>
+// AJAX functionality for role changes and member removal
+document.addEventListener('DOMContentLoaded', function() {
+    // Change role buttons
+    document.querySelectorAll('.change-role-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var userId = this.dataset.userId;
+            var currentRole = this.dataset.currentRole;
+            var newRole = prompt('Enter new role (GM, PLAYER, or OBSERVER):', currentRole);
+
+            if (newRole && ['GM', 'PLAYER', 'OBSERVER'].includes(newRole.toUpperCase())) {
+                fetch("{% url 'campaigns:ajax_change_role' slug=campaign.slug %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: 'user_id=' + userId + '&role=' + newRole.toUpperCase()
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+            }
+        });
+    });
+
+    // Remove member buttons
+    document.querySelectorAll('.remove-member-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to remove this member?')) {
+                var userId = this.dataset.userId;
+
+                fetch("{% url 'campaigns:ajax_remove_member' slug=campaign.slug %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: 'user_id=' + userId
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

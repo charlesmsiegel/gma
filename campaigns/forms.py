@@ -6,8 +6,11 @@ with proper validation and user assignment.
 """
 
 from django import forms
+from django.contrib.auth import get_user_model
 
-from .models import Campaign
+from .models import Campaign, CampaignInvitation, CampaignMembership
+
+User = get_user_model()
 
 
 class CampaignForm(forms.ModelForm):
@@ -37,3 +40,154 @@ class CampaignForm(forms.ModelForm):
         if commit:
             campaign.save()
         return campaign
+
+
+class SendInvitationForm(forms.Form):
+    """Form for sending campaign invitations."""
+
+    invited_user = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label="User to invite",
+    )
+    role = forms.ChoiceField(
+        choices=CampaignMembership.ROLE_CHOICES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label="Role",
+    )
+    message = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+        required=False,
+        label="Optional message",
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.campaign = kwargs.pop("campaign", None)
+        super().__init__(*args, **kwargs)
+
+        if self.campaign:
+            # Exclude users who are already members or have pending invitations
+            existing_users = set([self.campaign.owner.id])
+            existing_users.update(
+                self.campaign.memberships.values_list("user_id", flat=True)
+            )
+            existing_users.update(
+                CampaignInvitation.objects.filter(
+                    campaign=self.campaign, status="PENDING"
+                ).values_list("invited_user_id", flat=True)
+            )
+
+            self.fields["invited_user"].queryset = User.objects.exclude(
+                id__in=existing_users
+            )
+
+    def save(self, invited_by, campaign):
+        """Create the invitation."""
+        invitation = CampaignInvitation.objects.create(
+            campaign=campaign,
+            invited_user=self.cleaned_data["invited_user"],
+            invited_by=invited_by,
+            role=self.cleaned_data["role"],
+            message=self.cleaned_data.get("message", ""),
+        )
+        return invitation
+
+
+class ChangeMemberRoleForm(forms.Form):
+    """Form for changing member roles."""
+
+    member = forms.ModelChoiceField(
+        queryset=CampaignMembership.objects.none(),
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label="Member",
+    )
+    new_role = forms.ChoiceField(
+        choices=CampaignMembership.ROLE_CHOICES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label="New Role",
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.campaign = kwargs.pop("campaign", None)
+        super().__init__(*args, **kwargs)
+
+        if self.campaign:
+            self.fields["member"].queryset = self.campaign.memberships.select_related(
+                "user"
+            )
+
+    def save(self):
+        """Update the member's role."""
+        membership = self.cleaned_data["member"]
+        membership.role = self.cleaned_data["new_role"]
+        membership.save()
+        return membership
+
+
+class BulkMemberManagementForm(forms.Form):
+    """Form for bulk member operations."""
+
+    ACTION_CHOICES = [
+        ("add", "Add Members"),
+        ("remove", "Remove Members"),
+        ("change_role", "Change Roles"),
+    ]
+
+    action = forms.ChoiceField(
+        choices=ACTION_CHOICES, widget=forms.RadioSelect, label="Action"
+    )
+    users = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Select Users",
+    )
+    role = forms.ChoiceField(
+        choices=CampaignMembership.ROLE_CHOICES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        required=False,
+        label="Role (for add/change operations)",
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.campaign = kwargs.pop("campaign", None)
+        super().__init__(*args, **kwargs)
+
+        if self.campaign:
+            # Adjust user queryset based on action
+            self.fields["users"].queryset = User.objects.exclude(
+                id=self.campaign.owner.id
+            )
+
+    def process_bulk_operation(self):
+        """Process the bulk operation."""
+        action = self.cleaned_data["action"]
+        users = self.cleaned_data.get("users", [])
+        role = self.cleaned_data.get("role")
+
+        results = {"added": 0, "removed": 0, "updated": 0}
+
+        if action == "add" and role:
+            for user in users:
+                if not CampaignMembership.objects.filter(
+                    campaign=self.campaign, user=user
+                ).exists():
+                    CampaignMembership.objects.create(
+                        campaign=self.campaign, user=user, role=role
+                    )
+                    results["added"] += 1
+
+        elif action == "remove":
+            memberships = CampaignMembership.objects.filter(
+                campaign=self.campaign, user__in=users
+            )
+            results["removed"] = memberships.count()
+            memberships.delete()
+
+        elif action == "change_role" and role:
+            memberships = CampaignMembership.objects.filter(
+                campaign=self.campaign, user__in=users
+            )
+            results["updated"] = memberships.update(role=role)
+
+        return results

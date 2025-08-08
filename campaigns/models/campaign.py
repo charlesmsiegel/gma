@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Optional
 
 from django.conf import settings
@@ -5,7 +6,59 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 from django.utils.text import slugify
+
+
+class CampaignInvitationManager(models.Manager):
+    """Custom manager for CampaignInvitation model."""
+
+    def cleanup_expired(self):
+        """Clean up expired invitations.
+
+        Very old invitations (30+ days expired) are deleted.
+        Recently expired invitations are marked as EXPIRED.
+
+        Returns:
+            int: Number of invitations processed (updated + deleted)
+        """
+        now = timezone.now()
+        very_old_threshold = now - timedelta(days=30)
+
+        # Delete very old expired invitations
+        very_old_expired = self.filter(
+            status="PENDING",
+            expires_at__isnull=False,
+            expires_at__lt=very_old_threshold,
+        )
+        deleted_count, _ = very_old_expired.delete()
+
+        # Mark recently expired as EXPIRED status
+        recently_expired = self.filter(
+            status="PENDING",
+            expires_at__isnull=False,
+            expires_at__lt=now,
+            expires_at__gte=very_old_threshold,
+        )
+        updated_count = recently_expired.update(status="EXPIRED")
+
+        return deleted_count + updated_count
+
+    def pending(self):
+        """Get all pending invitations."""
+        return self.filter(status="PENDING")
+
+    def active(self):
+        """Get all active (pending and not expired) invitations."""
+        return self.filter(status="PENDING", expires_at__gt=timezone.now())
+
+    def for_campaign(self, campaign):
+        """Get all invitations for a specific campaign."""
+        return self.filter(campaign=campaign)
+
+    def for_user(self, user):
+        """Get all invitations for a specific user."""
+        return self.filter(invited_user=user)
 
 
 class CampaignManager(models.Manager):
@@ -232,3 +285,160 @@ class CampaignMembership(models.Model):
                     "Campaign owner cannot have a membership role. "
                     "Ownership is handled automatically."
                 )
+
+
+class CampaignInvitation(models.Model):
+    """Invitation to join a campaign."""
+
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("ACCEPTED", "Accepted"),
+        ("DECLINED", "Declined"),
+        ("EXPIRED", "Expired"),
+    ]
+
+    campaign = models.ForeignKey(
+        Campaign,
+        on_delete=models.CASCADE,
+        related_name="invitations",
+        help_text="The campaign being invited to",
+    )
+    invited_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="campaign_invitations",
+        help_text="The user being invited",
+    )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_invitations",
+        help_text="The user who sent the invitation",
+    )
+    role = models.CharField(
+        max_length=10,
+        choices=CampaignMembership.ROLE_CHOICES,
+        help_text="The role being offered",
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="PENDING",
+        help_text="Current status of the invitation",
+    )
+    message = models.TextField(
+        blank=True,
+        help_text="Optional message from the inviter",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(
+        null=True, blank=True, help_text="When this invitation expires"
+    )
+
+    objects = CampaignInvitationManager()
+
+    class Meta:
+        db_table = "campaigns_invitation"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["campaign", "invited_user"],
+                name="unique_campaign_user_invitation",
+            ),
+        ]
+        ordering = ["-created_at"]
+        verbose_name = "Campaign Invitation"
+        verbose_name_plural = "Campaign Invitations"
+        indexes = [
+            models.Index(fields=["invited_user", "status"]),
+            models.Index(fields=["campaign", "status"]),
+        ]
+
+    def __str__(self):
+        """Return a string representation of the invitation."""
+        return (
+            f"{self.invited_user.username} invited to {self.campaign.name} "
+            f"as {self.role}"
+        )
+
+    def save(self, *args, **kwargs):
+        """Save the invitation with auto-generated expiry."""
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(days=7)
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        """Validate the invitation data."""
+        super().clean()
+
+        if self.campaign and self.invited_user:
+            # Prevent inviting campaign owner
+            if self.campaign.owner == self.invited_user:
+                raise ValidationError("Cannot invite the campaign owner.")
+
+            # Prevent duplicate active invitations
+            if self.pk is None:  # Only check on creation
+                existing = CampaignInvitation.objects.filter(
+                    campaign=self.campaign,
+                    invited_user=self.invited_user,
+                    status="PENDING",
+                ).exists()
+                if existing:
+                    raise ValidationError(
+                        "User already has a pending invitation to this campaign."
+                    )
+
+            # Prevent inviting existing members
+            if CampaignMembership.objects.filter(
+                campaign=self.campaign, user=self.invited_user
+            ).exists():
+                raise ValidationError("User is already a member of this campaign.")
+
+    @property
+    def is_expired(self):
+        """Check if invitation has expired."""
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+
+    def accept(self):
+        """Accept the invitation and create membership."""
+        if self.status != "PENDING":
+            raise ValidationError("Only pending invitations can be accepted.")
+
+        if self.is_expired:
+            raise ValidationError("This invitation has expired.")
+
+        # Create membership
+        membership = CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.invited_user, role=self.role
+        )
+
+        # Update invitation status
+        self.status = "ACCEPTED"
+        self.save()
+
+        # Notification removed for simplicity
+
+        return membership
+
+    def decline(self):
+        """Decline the invitation."""
+        if self.status == "DECLINED":
+            # Already declined, idempotent operation
+            return
+        if self.status != "PENDING":
+            raise ValidationError("Only pending invitations can be declined.")
+
+        self.status = "DECLINED"
+        self.save()
+
+        # Notification removed for simplicity
+
+    def cancel(self):
+        """Cancel the invitation (for senders/campaign owners)."""
+        if self.status != "PENDING":
+            raise ValidationError("Only pending invitations can be cancelled.")
+
+        # Notification removed for simplicity
+
+        self.delete()
