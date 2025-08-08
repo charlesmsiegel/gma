@@ -10,6 +10,32 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 
+class CampaignInvitationManager(models.Manager):
+    """Custom manager for CampaignInvitation model."""
+
+    def cleanup_expired(self):
+        """Mark expired invitations as expired."""
+        return self.filter(
+            status="PENDING", expires_at__isnull=False, expires_at__lt=timezone.now()
+        ).update(status="EXPIRED")
+
+    def pending(self):
+        """Get all pending invitations."""
+        return self.filter(status="PENDING")
+
+    def active(self):
+        """Get all active (pending and not expired) invitations."""
+        return self.filter(status="PENDING", expires_at__gt=timezone.now())
+
+    def for_campaign(self, campaign):
+        """Get all invitations for a specific campaign."""
+        return self.filter(campaign=campaign)
+
+    def for_user(self, user):
+        """Get all invitations for a specific user."""
+        return self.filter(invited_user=user)
+
+
 class CampaignManager(models.Manager):
     """Custom manager for Campaign model with visibility filtering."""
 
@@ -284,6 +310,8 @@ class CampaignInvitation(models.Model):
         null=True, blank=True, help_text="When this invitation expires"
     )
 
+    objects = CampaignInvitationManager()
+
     class Meta:
         db_table = "campaigns_invitation"
         constraints = [
@@ -370,6 +398,9 @@ class CampaignInvitation(models.Model):
 
     def decline(self):
         """Decline the invitation."""
+        if self.status == "DECLINED":
+            # Already declined, idempotent operation
+            return
         if self.status != "PENDING":
             raise ValidationError("Only pending invitations can be declined.")
 
@@ -382,11 +413,3 @@ class CampaignInvitation(models.Model):
             raise ValidationError("Only pending invitations can be cancelled.")
 
         self.delete()
-
-    @classmethod
-    def cleanup_expired(cls):
-        """Mark expired invitations as expired."""
-        expired_count = cls.objects.filter(
-            status="PENDING", expires_at__isnull=False, expires_at__lt=timezone.now()
-        ).update(status="EXPIRED")
-        return expired_count

@@ -16,6 +16,14 @@ from api.views.campaign_views import (
     list_campaign_invitations,
     send_campaign_invitation,
 )
+from api.views.membership_views import (
+    bulk_add_members,
+    bulk_change_roles,
+    bulk_remove_members,
+    change_member_role,
+    list_campaign_members,
+    remove_campaign_member,
+)
 
 app_name = "campaigns"
 
@@ -62,5 +70,37 @@ urlpatterns = [
         "invitations/<int:pk>/cancel/",
         cancel_campaign_invitation,
         name="cancel_invitation",
+    ),
+    # Enhanced membership management endpoints
+    path(
+        "<int:campaign_id>/members/list/",
+        list_campaign_members,
+        name="list_members",
+    ),
+    path(
+        "<int:campaign_id>/members/<int:user_id>/remove/",
+        remove_campaign_member,
+        name="remove_member",
+    ),
+    path(
+        "<int:campaign_id>/members/<int:user_id>/role/",
+        change_member_role,
+        name="change_member_role",
+    ),
+    # Bulk operations
+    path(
+        "<int:campaign_id>/members/bulk-add/",
+        bulk_add_members,
+        name="bulk_add_members",
+    ),
+    path(
+        "<int:campaign_id>/members/bulk-change-roles/",
+        bulk_change_roles,
+        name="bulk_change_roles",
+    ),
+    path(
+        "<int:campaign_id>/members/bulk-remove/",
+        bulk_remove_members,
+        name="bulk_remove_members",
     ),
 ]
