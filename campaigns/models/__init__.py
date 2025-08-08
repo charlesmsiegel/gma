@@ -1,3 +1,3 @@
-from .campaign import Campaign, CampaignMembership
+from .campaign import Campaign, CampaignInvitation, CampaignMembership
 
-__all__ = ["Campaign", "CampaignMembership"]
+__all__ = ["Campaign", "CampaignMembership", "CampaignInvitation"]
