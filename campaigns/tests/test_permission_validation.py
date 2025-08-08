@@ -469,7 +469,8 @@ class InvitationPermissionTest(TestCase):
             )
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_only_invitee_can_decline_invitation(self):
         """Test that only the invited user can decline their invitation."""
@@ -506,7 +507,8 @@ class InvitationPermissionTest(TestCase):
             )
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_invitation_sender_can_cancel(self):
         """Test that invitation sender can cancel their invitation."""
@@ -534,7 +536,8 @@ class InvitationPermissionTest(TestCase):
             )
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_owner_can_cancel_any_invitation(self):
         """Test that campaign owner can cancel any invitation."""
@@ -562,7 +565,8 @@ class InvitationPermissionTest(TestCase):
             )
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_others_cannot_cancel_invitation(self):
         """Test that other users cannot cancel invitations."""
@@ -590,7 +594,8 @@ class InvitationPermissionTest(TestCase):
                     self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
 
 class OwnerProtectionTest(TestCase):
@@ -831,4 +836,5 @@ class CrossCampaignPermissionTest(TestCase):
             self.assertEqual(response2.status_code, status.HTTP_404_NOT_FOUND)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation

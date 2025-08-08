@@ -253,7 +253,8 @@ class SendInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_send_invitation_response_structure(self):
         """Test that send invitation response has correct structure."""
@@ -329,7 +330,8 @@ class AcceptInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_invitee_can_accept_invitation(self):
         """Test that invited user can accept their invitation."""
@@ -358,7 +360,8 @@ class AcceptInvitationAPITest(TestCase):
             )
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_other_user_cannot_accept_invitation(self):
         """Test that other users cannot accept someone else's invitation."""
@@ -384,7 +387,8 @@ class AcceptInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_accept_expired_invitation_fails(self):
         """Test that accepting expired invitation fails."""
@@ -411,7 +415,8 @@ class AcceptInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_accept_already_accepted_invitation_fails(self):
         """Test that accepting already accepted invitation fails."""
@@ -438,7 +443,8 @@ class AcceptInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_accept_invitation_creates_membership(self):
         """Test that accepting invitation creates campaign membership."""
@@ -473,7 +479,8 @@ class AcceptInvitationAPITest(TestCase):
                 self.assertTrue(self.campaign.is_player(self.invitee))
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
 
 class DeclineInvitationAPITest(TestCase):
@@ -518,7 +525,8 @@ class DeclineInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_invitee_can_decline_invitation(self):
         """Test that invited user can decline their invitation."""
@@ -547,7 +555,8 @@ class DeclineInvitationAPITest(TestCase):
             )
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_other_user_cannot_decline_invitation(self):
         """Test that other users cannot decline someone else's invitation."""
@@ -573,7 +582,8 @@ class DeclineInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_decline_already_accepted_invitation_fails(self):
         """Test that declining already accepted invitation fails."""
@@ -600,7 +610,8 @@ class DeclineInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
 
 class CancelInvitationAPITest(TestCase):
@@ -656,7 +667,8 @@ class CancelInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_invitation_sender_can_cancel(self):
         """Test that invitation sender can cancel their invitation."""
@@ -685,7 +697,8 @@ class CancelInvitationAPITest(TestCase):
             )
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_campaign_owner_can_cancel_any_invitation(self):
         """Test that campaign owner can cancel any invitation."""
@@ -714,7 +727,8 @@ class CancelInvitationAPITest(TestCase):
             )
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_player_cannot_cancel_invitation(self):
         """Test that regular players cannot cancel invitations."""
@@ -740,7 +754,8 @@ class CancelInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_cancel_accepted_invitation_fails(self):
         """Test that canceling accepted invitation fails."""
@@ -767,7 +782,8 @@ class CancelInvitationAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
 
 class ListInvitationsAPITest(TestCase):
@@ -891,7 +907,8 @@ class ListInvitationsAPITest(TestCase):
                 self.assertNotIn(invitation2.id, invitation_ids)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_list_user_invitations_filters_by_user(self):
         """Test that listing user invitations filters by user."""
@@ -924,7 +941,8 @@ class ListInvitationsAPITest(TestCase):
                 self.assertNotIn(invitation2.id, invitation_ids)
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_list_invitations_response_structure(self):
         """Test that list invitations response has correct structure."""
@@ -991,4 +1009,5 @@ class ListInvitationsAPITest(TestCase):
                 self.assertTrue(all(status == "PENDING" for status in statuses))
 
         except ImportError:
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation

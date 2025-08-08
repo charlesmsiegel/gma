@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Member Management - {{ campaign.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Bulk Member Management</h1>
+    <h2>{{ campaign.name }}</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Process</button>
+        <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

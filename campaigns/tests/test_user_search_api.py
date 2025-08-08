@@ -200,7 +200,8 @@ class UserSearchAPITest(TestCase):
 
         except ImportError:
             # CampaignInvitation model not yet implemented
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_search_includes_users_with_declined_invitations(self):
         """Test that search includes users who declined previous invitations."""
@@ -227,7 +228,8 @@ class UserSearchAPITest(TestCase):
 
         except ImportError:
             # CampaignInvitation model not yet implemented
-            self.skipTest("CampaignInvitation model not yet implemented")
+            # CampaignInvitation model should exist now
+            from campaigns.models import CampaignInvitation
 
     def test_search_pagination(self):
         """Test that search results are properly paginated."""
