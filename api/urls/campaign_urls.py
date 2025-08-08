@@ -9,7 +9,12 @@ from api.views.campaign_views import (
     CampaignListCreateAPIView,
     CampaignMembershipListAPIView,
     UserCampaignListAPIView,
+    accept_campaign_invitation,
     campaign_user_search,
+    cancel_campaign_invitation,
+    decline_campaign_invitation,
+    list_campaign_invitations,
+    send_campaign_invitation,
 )
 
 app_name = "campaigns"
@@ -31,5 +36,31 @@ urlpatterns = [
         "<int:campaign_id>/user-search/",
         campaign_user_search,
         name="user_search",
+    ),
+    # Invitation management
+    path(
+        "<int:campaign_id>/invitations/send/",
+        send_campaign_invitation,
+        name="send_invitation",
+    ),
+    path(
+        "<int:campaign_id>/invitations/",
+        list_campaign_invitations,
+        name="list_invitations",
+    ),
+    path(
+        "invitations/<int:pk>/accept/",
+        accept_campaign_invitation,
+        name="accept_invitation",
+    ),
+    path(
+        "invitations/<int:pk>/decline/",
+        decline_campaign_invitation,
+        name="decline_invitation",
+    ),
+    path(
+        "invitations/<int:pk>/cancel/",
+        cancel_campaign_invitation,
+        name="cancel_invitation",
     ),
 ]
