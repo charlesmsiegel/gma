@@ -5,11 +5,15 @@ This module contains signal handlers for campaign-related events like
 invitations, membership changes, and notifications.
 """
 
+import logging
+import sys
+
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_delete, pre_save
 from django.dispatch import receiver
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def send_notification(user, title, message, notification_type, **kwargs):
@@ -25,7 +29,10 @@ def send_notification(user, title, message, notification_type, **kwargs):
     """
     # For now, this is a placeholder implementation
     # In production, this would integrate with a notification system
-    print(f"Notification to {user.username}: {title} - {message}")
+
+    # Only log if not in test mode (check for test runner)
+    if "test" not in sys.argv:
+        logger.info(f"Notification to {user.username}: {title} - {message}")
     return True
 
 
@@ -41,7 +48,12 @@ def send_websocket_notification(user, message_type, data=None, **kwargs):
     """
     # Placeholder implementation for WebSocket notifications
     data_str = f" - {data}" if data else ""
-    print(f"WebSocket notification to {user.username}: {message_type}{data_str}")
+
+    # Only log if not in test mode (check for test runner)
+    if "test" not in sys.argv:
+        logger.info(
+            f"WebSocket notification to {user.username}: {message_type}{data_str}"
+        )
     return True
 
 
