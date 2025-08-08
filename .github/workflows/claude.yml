@@ -12,7 +12,6 @@ on:
 
 jobs:
   claude:
-    if: false  # Temporarily disabled
     runs-on: ubuntu-latest
     permissions:
       contents: read
