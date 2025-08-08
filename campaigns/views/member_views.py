@@ -15,39 +15,28 @@ from campaigns.forms import (
     ChangeMemberRoleForm,
     SendInvitationForm,
 )
+from campaigns.mixins import CampaignManagementMixin
 from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
 
 User = get_user_model()
 
 
-class ManageMembersView(LoginRequiredMixin, TemplateView):
+class ManageMembersView(LoginRequiredMixin, CampaignManagementMixin, TemplateView):
     """View for managing campaign members."""
 
     template_name = "campaigns/manage_members.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        slug = kwargs.get("slug")
-        campaign = get_object_or_404(Campaign, slug=slug, is_active=True)
-
-        # Check if user has permission to manage members
-        user_role = campaign.get_user_role(self.request.user)
-        if user_role not in ["OWNER", "GM"]:
-            messages.error(self.request, "You don't have permission to manage members.")
-            context["campaign"] = campaign
-            context["can_manage"] = False
-            return context
-
-        context["campaign"] = campaign
+        context["campaign"] = self.campaign
         context["can_manage"] = True
-        context["members"] = campaign.memberships.select_related("user").order_by(
+        context["members"] = self.campaign.memberships.select_related("user").order_by(
             "role", "user__username"
         )
-
         return context
 
 
-class SendInvitationView(LoginRequiredMixin, FormView):
+class SendInvitationView(LoginRequiredMixin, CampaignManagementMixin, FormView):
     """View for sending campaign invitations."""
 
     template_name = "campaigns/send_invitation.html"

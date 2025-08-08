@@ -12,7 +12,6 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from campaigns.models import Campaign, CampaignMembership
-from campaigns.signals import send_member_removed_notification
 
 User = get_user_model()
 
@@ -167,16 +166,10 @@ def remove_campaign_member(request, campaign_id, user_id):
             {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
         )
 
-    # Store member info for notification before deletion
-    removed_user = membership.user
-
     # Remove member
     membership.delete()
 
-    # Send notification
-    send_member_removed_notification(
-        campaign=campaign, removed_user=removed_user, removed_by=request.user
-    )
+    # Notification removed for simplicity
 
     return Response(
         {"detail": "Member removed successfully."}, status=status.HTTP_204_NO_CONTENT
@@ -249,23 +242,11 @@ def change_member_role(request, campaign_id, user_id):
             {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
         )
 
-    # Store old role for notification
-    old_role = membership.role
-
     # Update role
     membership.role = new_role
     membership.save()
 
-    # Send notification if role actually changed
-    if old_role != new_role:
-        from campaigns.signals import send_notification
-
-        send_notification(
-            user=membership.user,
-            title="Role Changed",
-            message=f"Your role in {campaign.name} has been changed to {new_role}",
-            notification_type="role_changed",
-        )
+    # Notification removed for simplicity
 
     return Response({"detail": "Role updated successfully.", "role": new_role})
 
@@ -417,25 +398,11 @@ def bulk_change_roles(request, campaign_id):
                     {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            # Store old role for notification
-            old_role = membership.role
-
             # Update role
             membership.role = new_role
             membership.save()
 
-            # Send notification if role actually changed
-            if old_role != new_role:
-                from campaigns.signals import send_notification
-
-                send_notification(
-                    user=membership.user,
-                    title="Role Changed",
-                    message=(
-                        f"Your role in {campaign.name} has been changed to {new_role}"
-                    ),
-                    notification_type="role_changed",
-                )
+            # Notification removed for simplicity
 
             updated.append({"user_id": user_id, "role": new_role})
 
@@ -502,16 +469,10 @@ def bulk_remove_members(request, campaign_id):
                     {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            # Store member info for notification before deletion
-            removed_user = membership.user
-
             # Remove member
             membership.delete()
 
-            # Send notification
-            send_member_removed_notification(
-                campaign=campaign, removed_user=removed_user, removed_by=request.user
-            )
+            # Notification removed for simplicity
 
             removed.append({"user_id": user_id})
 
