@@ -359,7 +359,7 @@ class CampaignInvitationModelTest(TestCase):
         )
 
         # Run cleanup
-        expired_count = CampaignInvitation.cleanup_expired()
+        expired_count = CampaignInvitation.objects.cleanup_expired()
 
         self.assertEqual(expired_count, 1)
 
