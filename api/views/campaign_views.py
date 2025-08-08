@@ -46,27 +46,15 @@ class CampaignListAPIView(generics.ListAPIView):
         """Return campaigns visible to the user with proper ordering and filtering."""
         user = self.request.user
 
-        # Start with base queryset with optimized joins
-        queryset = Campaign.objects.select_related("owner").prefetch_related(
-            "memberships__user"
+        # Start with visibility-filtered queryset using custom manager
+        queryset = (
+            Campaign.objects.visible_to_user(user)
+            .select_related("owner")
+            .prefetch_related("memberships__user")
         )
 
         # Only show active campaigns by default (matching template view)
         queryset = queryset.filter(is_active=True)
-
-        # Apply visibility logic
-        if user.is_authenticated:
-            # Authenticated users see:
-            # 1. Public campaigns
-            # 2. Private campaigns where they are members (including owner)
-            queryset = queryset.filter(
-                Q(is_public=True)  # Public campaigns
-                | Q(owner=user)  # Campaigns they own
-                | Q(memberships__user=user)  # Campaigns they're members of
-            ).distinct()
-        else:
-            # Unauthenticated users see only public campaigns
-            queryset = queryset.filter(is_public=True)
 
         # Apply role filtering if requested
         role_filter = self.request.GET.get("role", "").lower()
@@ -119,24 +107,11 @@ class CampaignDetailAPIView(generics.RetrieveAPIView):
     def get_queryset(self):
         """Return campaigns visible to the user with proper permission filtering."""
         user = self.request.user
-        queryset = Campaign.objects.select_related("owner").prefetch_related(
-            "memberships__user"
+        return (
+            Campaign.objects.visible_to_user(user)
+            .select_related("owner")
+            .prefetch_related("memberships__user")
         )
-
-        if user.is_authenticated:
-            # Authenticated users can see:
-            # 1. All public campaigns
-            # 2. Private campaigns where they are members (including owner)
-            queryset = queryset.filter(
-                Q(is_public=True)  # Public campaigns
-                | Q(owner=user)  # Campaigns they own
-                | Q(memberships__user=user)  # Campaigns they're members of
-            ).distinct()
-        else:
-            # Unauthenticated users can only see public campaigns
-            queryset = queryset.filter(is_public=True)
-
-        return queryset
 
     def get_serializer_context(self):
         """Add request to serializer context for role-specific data."""

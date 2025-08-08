@@ -1,0 +1,213 @@
+/* Campaign Detail Page Styles */
+
+.campaign-header {
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+}
+
+.campaign-title {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.campaign-meta {
+    color: #666;
+    font-size: 0.9rem;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.campaign-status {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.campaign-description {
+    background-color: #f8f9fa;
+    border-left: 4px solid #3498db;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    border-radius: 0 4px 4px 0;
+}
+
+.info-section {
+    margin-bottom: 2rem;
+}
+
+.info-section h3 {
+    color: #2c3e50;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.info-item {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    border-left: 3px solid #3498db;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    color: #666;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.role-owner {
+    background-color: #ffd700;
+    color: #b8860b;
+}
+
+.role-gm {
+    background-color: #e8f4fd;
+    color: #0056b3;
+}
+
+.role-player {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.role-observer {
+    background-color: #e2e3e5;
+    color: #6c757d;
+}
+
+.visibility-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+}
+
+.visibility-public {
+    background-color: #cce5ff;
+    color: #0056b3;
+}
+
+.visibility-private {
+    background-color: #f5c6cb;
+    color: #721c24;
+}
+
+.member-list-section {
+    margin-bottom: 2rem;
+}
+
+.member-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.member-card {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 6px;
+    border-left: 3px solid #3498db;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.member-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.member-name {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.member-joined {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.owner-card {
+    border-left-color: #ffd700;
+    background: linear-gradient(135deg, #fff9e6 0%, #f8f9fa 100%);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.empty-state {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 2rem;
+}
+
+@media (max-width: 768px) {
+    .campaign-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .member-list {
+        grid-template-columns: 1fr;
+    }
+
+    .visibility-badge {
+        display: block;
+        margin-left: 0;
+        margin-top: 0.5rem;
+        width: fit-content;
+    }
+}

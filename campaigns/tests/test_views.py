@@ -659,18 +659,18 @@ class CampaignListViewTest(TestCase):
         # Test different page sizes
         for page_size in [10, 20, 50]:
             response = self.client.get(
-                reverse("campaigns:list"), {"per_page": page_size}
+                reverse("campaigns:list"), {"page_size": page_size}
             )
             paginator = response.context["paginator"]
             self.assertEqual(paginator.per_page, page_size)
 
         # Test invalid page size defaults to 25
-        response = self.client.get(reverse("campaigns:list"), {"per_page": "invalid"})
+        response = self.client.get(reverse("campaigns:list"), {"page_size": "invalid"})
         paginator = response.context["paginator"]
         self.assertEqual(paginator.per_page, 25)
 
         # Test excessive page size is capped (e.g., at 100)
-        response = self.client.get(reverse("campaigns:list"), {"per_page": 1000})
+        response = self.client.get(reverse("campaigns:list"), {"page_size": 1000})
         paginator = response.context["paginator"]
         self.assertLessEqual(paginator.per_page, 100)
 

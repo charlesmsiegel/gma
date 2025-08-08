@@ -22,10 +22,9 @@ class CampaignListView(ListView):
     Features:
     - Show public campaigns to everyone
     - Show private campaigns only to members
-    - Member campaigns appear first
     - Role-based filtering via ?role=owner|gm|player|observer
     - Search functionality via ?q=search_term
-    - Configurable pagination via ?per_page=N (max 100)
+    - Configurable pagination via ?page_size=N (max 100)
     - Exclude inactive campaigns by default, include with ?show_inactive=true
     """
 
@@ -37,9 +36,9 @@ class CampaignListView(ListView):
     def get_paginate_by(self, queryset):
         """Get pagination count, user-configurable with max limit."""
         try:
-            per_page = int(self.request.GET.get("per_page", self.paginate_by))
+            page_size = int(self.request.GET.get("page_size", self.paginate_by))
             # Cap at 100 to prevent performance issues
-            return min(max(per_page, 1), 100)
+            return min(max(page_size, 1), 100)
         except (ValueError, TypeError):
             return self.paginate_by
 
@@ -47,29 +46,17 @@ class CampaignListView(ListView):
         """Return campaigns visible to the user with proper ordering and filtering."""
         user = self.request.user
 
-        # Start with base queryset
-        queryset = Campaign.objects.select_related("owner").prefetch_related(
-            "memberships"
+        # Start with visibility-filtered queryset using custom manager
+        queryset = (
+            Campaign.objects.visible_to_user(user)
+            .select_related("owner")
+            .prefetch_related("memberships")
         )
 
         # Handle active/inactive filtering
         show_inactive = self.request.GET.get("show_inactive", "").lower() == "true"
         if not show_inactive:
             queryset = queryset.filter(is_active=True)
-
-        # Apply visibility logic
-        if user.is_authenticated:
-            # Authenticated users see:
-            # 1. Public campaigns
-            # 2. Private campaigns where they are members (including owner)
-            queryset = queryset.filter(
-                Q(is_public=True)  # Public campaigns
-                | Q(owner=user)  # Campaigns they own
-                | Q(memberships__user=user)  # Campaigns they're members of
-            ).distinct()
-        else:
-            # Unauthenticated users see only public campaigns
-            queryset = queryset.filter(is_public=True)
 
         # Apply role filtering if requested
         role_filter = self.request.GET.get("role", "").lower()
@@ -122,24 +109,11 @@ class CampaignDetailView(DetailView):
     def get_queryset(self):
         """Return campaigns visible to the user with proper permission filtering."""
         user = self.request.user
-        queryset = Campaign.objects.select_related("owner").prefetch_related(
-            "memberships"
+        return (
+            Campaign.objects.visible_to_user(user)
+            .select_related("owner")
+            .prefetch_related("memberships")
         )
-
-        if user.is_authenticated:
-            # Authenticated users can see:
-            # 1. All public campaigns
-            # 2. Private campaigns where they are members (including owner)
-            queryset = queryset.filter(
-                Q(is_public=True)  # Public campaigns
-                | Q(owner=user)  # Campaigns they own
-                | Q(memberships__user=user)  # Campaigns they're members of
-            ).distinct()
-        else:
-            # Unauthenticated users can only see public campaigns
-            queryset = queryset.filter(is_public=True)
-
-        return queryset
 
     def get_context_data(self, **kwargs):
         """Add additional context for the template."""
