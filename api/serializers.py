@@ -146,9 +146,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class CampaignSerializer(serializers.ModelSerializer):
-    """Serializer for Campaign model."""
+    """Serializer for Campaign model with user role and member count."""
 
     owner = UserSerializer(read_only=True)
+    user_role = serializers.SerializerMethodField()
+    member_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Campaign
@@ -159,11 +161,34 @@ class CampaignSerializer(serializers.ModelSerializer):
             "description",
             "game_system",
             "is_active",
+            "is_public",
             "created_at",
             "updated_at",
             "owner",
+            "user_role",
+            "member_count",
         )
-        read_only_fields = ("id", "slug", "created_at", "updated_at", "owner")
+        read_only_fields = (
+            "id",
+            "slug",
+            "created_at",
+            "updated_at",
+            "owner",
+            "user_role",
+            "member_count",
+        )
+
+    def get_user_role(self, obj):
+        """Get the current user's role in this campaign."""
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        return obj.get_user_role(request.user)
+
+    def get_member_count(self, obj):
+        """Get the total number of members in this campaign."""
+        # Count owner + memberships
+        return 1 + obj.memberships.count()
 
     def create(self, validated_data):
         """Create campaign with owner from request."""
@@ -190,9 +215,70 @@ class CampaignMembershipSerializer(serializers.ModelSerializer):
 
 
 class CampaignDetailSerializer(CampaignSerializer):
-    """Detailed serializer for Campaign model with memberships."""
+    """Detailed serializer for Campaign model with memberships and role-specific data."""  # noqa: E501
 
     memberships = CampaignMembershipSerializer(many=True, read_only=True)
+    members = serializers.SerializerMethodField()
+    settings = serializers.SerializerMethodField()
 
     class Meta(CampaignSerializer.Meta):
-        fields = CampaignSerializer.Meta.fields + ("memberships",)
+        fields = CampaignSerializer.Meta.fields + (
+            "memberships",
+            "members",
+            "settings",
+        )
+
+    def get_members(self, obj):
+        """Get member list - always include for detail view."""
+        members_data = []
+
+        # Add owner
+        members_data.append(
+            {
+                "id": obj.owner.id,
+                "username": obj.owner.username,
+                "email": obj.owner.email,
+                "role": "OWNER",
+            }
+        )
+
+        # Add other members
+        for membership in obj.memberships.all():
+            members_data.append(
+                {
+                    "id": membership.user.id,
+                    "username": membership.user.username,
+                    "email": membership.user.email,
+                    "role": membership.role,
+                }
+            )
+
+        return members_data
+
+    def get_settings(self, obj):
+        """Get campaign settings - only for owners."""
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+
+        if obj.is_owner(request.user):
+            return {
+                "visibility": "public" if obj.is_public else "private",
+                "status": "active" if obj.is_active else "inactive",
+            }
+        return None
+
+    def to_representation(self, instance):
+        """Customize representation to conditionally include settings field."""
+        data = super().to_representation(instance)
+
+        # Remove settings field if user is not owner
+        request = self.context.get("request")
+        if (
+            not request
+            or not request.user.is_authenticated
+            or not instance.is_owner(request.user)
+        ):
+            data.pop("settings", None)
+
+        return data
