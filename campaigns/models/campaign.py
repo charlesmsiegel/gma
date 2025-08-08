@@ -14,10 +14,35 @@ class CampaignInvitationManager(models.Manager):
     """Custom manager for CampaignInvitation model."""
 
     def cleanup_expired(self):
-        """Mark expired invitations as expired."""
-        return self.filter(
-            status="PENDING", expires_at__isnull=False, expires_at__lt=timezone.now()
-        ).update(status="EXPIRED")
+        """Clean up expired invitations.
+
+        Very old invitations (30+ days expired) are deleted.
+        Recently expired invitations are marked as EXPIRED.
+
+        Returns:
+            int: Number of invitations processed (updated + deleted)
+        """
+        now = timezone.now()
+        very_old_threshold = now - timedelta(days=30)
+
+        # Delete very old expired invitations
+        very_old_expired = self.filter(
+            status="PENDING",
+            expires_at__isnull=False,
+            expires_at__lt=very_old_threshold,
+        )
+        deleted_count, _ = very_old_expired.delete()
+
+        # Mark recently expired as EXPIRED status
+        recently_expired = self.filter(
+            status="PENDING",
+            expires_at__isnull=False,
+            expires_at__lt=now,
+            expires_at__gte=very_old_threshold,
+        )
+        updated_count = recently_expired.update(status="EXPIRED")
+
+        return deleted_count + updated_count
 
     def pending(self):
         """Get all pending invitations."""
@@ -381,8 +406,6 @@ class CampaignInvitation(models.Model):
             raise ValidationError("Only pending invitations can be accepted.")
 
         if self.is_expired:
-            self.status = "EXPIRED"
-            self.save()
             raise ValidationError("This invitation has expired.")
 
         # Create membership
