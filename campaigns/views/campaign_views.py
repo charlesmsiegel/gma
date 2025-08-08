@@ -101,12 +101,12 @@ class CampaignListView(ListView):
                             WHEN campaigns_campaign.owner_id = %s THEN 1
                             WHEN EXISTS(
                                 SELECT 1 FROM campaigns_membership
-                                WHERE campaigns_membership.campaign_id = campaigns_campaign.id  # noqa: E501
+                                WHERE campaigns_membership.campaign_id = campaigns_campaign.id
                                 AND campaigns_membership.user_id = %s
                             ) THEN 1
                             ELSE 0
                         END
-                    """
+                    """  # noqa: E501
                 },
                 select_params=[user.id, user.id],
                 order_by=["-is_user_member", "-created_at", "name"],
