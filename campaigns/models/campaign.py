@@ -417,6 +417,11 @@ class CampaignInvitation(models.Model):
         self.status = "ACCEPTED"
         self.save()
 
+        # Send notification
+        from campaigns.signals import send_invitation_accepted_notification
+
+        send_invitation_accepted_notification(self)
+
         return membership
 
     def decline(self):
@@ -430,9 +435,19 @@ class CampaignInvitation(models.Model):
         self.status = "DECLINED"
         self.save()
 
+        # Send notification
+        from campaigns.signals import send_invitation_declined_notification
+
+        send_invitation_declined_notification(self)
+
     def cancel(self):
         """Cancel the invitation (for senders/campaign owners)."""
         if self.status != "PENDING":
             raise ValidationError("Only pending invitations can be cancelled.")
+
+        # Send notification before deleting
+        from campaigns.signals import send_invitation_canceled_notification
+
+        send_invitation_canceled_notification(self)
 
         self.delete()

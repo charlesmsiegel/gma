@@ -10,6 +10,7 @@ urlpatterns = [
     path("profile/", include("api.urls.profile_urls")),
     path("campaigns/", include("api.urls.campaign_urls")),
     path("invitations/", include("api.urls.invitation_urls")),
+    path("notifications/", include("api.urls.notification_urls")),
     # Direct campaign endpoints for expected URL names
     path("campaign-list/", CampaignListAPIView.as_view(), name="campaign-list"),
     path(

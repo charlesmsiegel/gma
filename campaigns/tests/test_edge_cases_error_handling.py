@@ -6,7 +6,6 @@ duplicate operations, and other boundary conditions.
 """
 
 from datetime import timedelta
-from unittest import skip
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -530,11 +529,11 @@ class ErrorRecoveryTest(TestCase):
             name="Error Recovery Test", owner=self.owner, game_system="Test System"
         )
 
-    @skip("Database connection failure mocking is not working correctly in test env")
     def test_database_connection_failure_handling(self):
         """Test handling of database connection failures."""
-        with patch("django.db.connection.cursor") as mock_cursor:
-            mock_cursor.side_effect = Exception("Database connection failed")
+        # Mock the Campaign.objects.get method to simulate database connection failure
+        with patch("campaigns.models.Campaign.objects.get") as mock_get:
+            mock_get.side_effect = Exception("Database connection failed")
 
             self.client.force_authenticate(user=self.owner)
 
@@ -548,6 +547,10 @@ class ErrorRecoveryTest(TestCase):
             self.assertEqual(
                 response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+            # Should have error message
+            self.assertIn("error", response.data)
+            self.assertEqual(response.data["error"], "Internal server error")
 
     def test_partial_bulk_operation_failure(self):
         """Test handling when part of bulk operation fails."""

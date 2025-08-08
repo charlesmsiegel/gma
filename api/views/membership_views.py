@@ -28,7 +28,13 @@ def list_campaign_members(request, campaign_id):
         campaign = Campaign.objects.get(id=campaign_id, is_active=True)
     except Campaign.DoesNotExist:
         return Response(
-            {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
+            {"error": "Campaign not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception:
+        # Handle database connection errors and other unexpected errors
+        return Response(
+            {"error": "Internal server error"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
     # Check if user is a member

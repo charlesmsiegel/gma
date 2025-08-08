@@ -5,8 +5,6 @@ This module tests the web interface components for campaign membership
 management, including templates, forms, and member list management.
 """
 
-from unittest import skip
-
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -504,7 +502,6 @@ class CampaignMembershipAJAXTest(TestCase):
         except Exception:
             self.skipTest("AJAX member removal not yet implemented")
 
-    @skip("AJAX invitation response endpoints not yet implemented")
     def test_invitation_response_ajax(self):
         """Test AJAX invitation response functionality."""
         try:

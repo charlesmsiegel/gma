@@ -28,5 +28,6 @@ urlpatterns = [
     path("scenes/", include("scenes.urls", namespace="scenes")),
     path("locations/", include("locations.urls", namespace="locations")),
     path("items/", include("items.urls", namespace="items")),
+    path("invitations/", include("invitations.urls", namespace="invitations")),
     path("api/", include("api.urls", namespace="api")),
 ]
