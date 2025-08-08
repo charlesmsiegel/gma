@@ -9,6 +9,7 @@ from api.views.campaign_views import (
     CampaignListCreateAPIView,
     CampaignMembershipListAPIView,
     UserCampaignListAPIView,
+    campaign_user_search,
 )
 
 app_name = "campaigns"
@@ -24,5 +25,11 @@ urlpatterns = [
         "<int:campaign_pk>/members/",
         CampaignMembershipListAPIView.as_view(),
         name="members",
+    ),
+    # User search for invitations
+    path(
+        "<int:campaign_id>/user-search/",
+        campaign_user_search,
+        name="user_search",
     ),
 ]
