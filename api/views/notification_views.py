@@ -15,7 +15,7 @@ def list_notifications(request):
     return JsonResponse({"notifications": [], "unread_count": 0})
 
 
-@api_view(["POST"])
+@api_view(["POST", "PATCH"])
 @permission_classes([IsAuthenticated])
 def mark_notification_read(request, pk):
     """Mark a notification as read."""

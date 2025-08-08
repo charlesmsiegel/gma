@@ -50,6 +50,9 @@ class User(AbstractUser):
     timezone = models.CharField(
         max_length=50, default="UTC", validators=[validate_timezone]
     )
+    notification_preferences = models.JSONField(
+        default=dict, blank=True, help_text="User notification preferences"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
