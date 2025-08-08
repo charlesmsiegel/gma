@@ -314,6 +314,7 @@ class CampaignDetailAPITest(TestCase):
             description="Campaign for testing detail endpoint",
             game_system="World of Darkness",
             owner=self.owner,
+            is_public=True,  # Make campaign public for API tests
         )
 
         # Add member to campaign
@@ -325,12 +326,13 @@ class CampaignDetailAPITest(TestCase):
             "api:campaigns:detail", kwargs={"pk": self.campaign.pk}
         )
 
-    def test_campaign_detail_requires_authentication(self):
-        """Test that unauthenticated users get 403 error (DRF default)."""
+    def test_campaign_detail_allows_unauthenticated_for_public_campaigns(self):
+        """Test that unauthenticated users can view public campaign details."""
         response = self.client.get(self.detail_url)
 
-        # DRF returns 403 for IsAuthenticated permission denied
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Public campaigns are accessible to unauthenticated users
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["name"], "Detail Test Campaign")
 
     def test_owner_can_view_campaign_detail(self):
         """Test that campaign owner can view detail."""

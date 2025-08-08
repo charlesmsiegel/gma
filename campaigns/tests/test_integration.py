@@ -240,6 +240,7 @@ class CampaignCreationIntegrationTest(TestCase):
             "name": "Detail Access Test",
             "description": "Testing detail view access",
             "game_system": "Test System",
+            "is_public": True,  # Make campaign public for detail access test
         }
 
         create_response = self.api_client.post(

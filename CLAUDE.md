@@ -296,10 +296,10 @@ Whenever we start a session, unless resuming a previous workflow, we use the fol
 1) Create a branch for the work we're doing
 2) Determine our success criteria.
 3) Ask the user clarifying questions about our goals
-4) write tests that will be satisfied if and only if we are successful.
+4) Use @agent-test-automator to write tests that will be satisfied if and only if we are successful.
 5) Commit the tests to the branch
-6) Implement features/fixes/etc testing after each unit of work with `make test`
-7) Whenever there is an improvement in `make test` (errots converted to failures, failures converted to passing tests) we commit to our branch
+6) Implement features/fixes/etc testing after each unit of work with `make test`. Commit whenever the number of test failures decreases. favor frequent small commits over single larger ones
+7) Run @agent-architect-review and @agent-simplify to ensure the code is clean and ready for deployment. Commit after each runs and all tests pass.
 8) Once all tests pass, we open a pull request
 
 ## Responsibilities

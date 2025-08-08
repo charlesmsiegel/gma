@@ -3,151 +3,18 @@
 {% block title %}{{ campaign.name }} - {{ block.super }}{% endblock %}
 
 {% block extra_css %}
-<style>
-.campaign-header {
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 1rem;
-    margin-bottom: 2rem;
-}
-
-.campaign-title {
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
-}
-
-.campaign-meta {
-    color: #666;
-    font-size: 0.9rem;
-    display: flex;
-    gap: 2rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.5rem;
-}
-
-.campaign-status {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-active {
-    background-color: #d4edda;
-    color: #155724;
-}
-
-.status-inactive {
-    background-color: #f8d7da;
-    color: #721c24;
-}
-
-.campaign-description {
-    background-color: #f8f9fa;
-    border-left: 4px solid #3498db;
-    padding: 1.5rem;
-    margin: 2rem 0;
-    border-radius: 0 4px 4px 0;
-}
-
-.info-section {
-    margin-bottom: 2rem;
-}
-
-.info-section h3 {
-    color: #2c3e50;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-}
-
-.info-item {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 4px;
-    border-left: 3px solid #3498db;
-}
-
-.info-label {
-    font-weight: 600;
-    color: #2c3e50;
-    margin-bottom: 0.25rem;
-}
-
-.info-value {
-    color: #666;
-}
-
-.role-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.role-owner {
-    background-color: #ffd700;
-    color: #b8860b;
-}
-
-.role-gm {
-    background-color: #e8f4fd;
-    color: #0056b3;
-}
-
-.role-player {
-    background-color: #d4edda;
-    color: #155724;
-}
-
-.role-observer {
-    background-color: #e2e3e5;
-    color: #6c757d;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    margin-top: 2rem;
-}
-
-.empty-state {
-    text-align: center;
-    color: #666;
-    font-style: italic;
-    padding: 2rem;
-}
-
-@media (max-width: 768px) {
-    .campaign-meta {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .action-buttons {
-        flex-direction: column;
-    }
-
-    .info-grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
+{% load static %}
+<link rel="stylesheet" href="{% static 'campaigns/css/campaign_detail.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="campaign-header">
-    <h1 class="campaign-title">{{ campaign.name }}</h1>
+    <h1 class="campaign-title">
+        {{ campaign.name }}
+        <span class="visibility-badge visibility-{% if campaign.is_public %}public{% else %}private{% endif %}">
+            {% if campaign.is_public %}Public{% else %}Private{% endif %}
+        </span>
+    </h1>
     <div class="campaign-meta">
         <span><strong>Owner:</strong> {{ campaign.owner.username }}</span>
         <span><strong>System:</strong> {{ campaign.game_system|default:"Not specified" }}</span>
@@ -206,8 +73,41 @@
             <div class="info-label">Created</div>
             <div class="info-value">{{ campaign.created_at|date:"F j, Y \a\t g:i A" }}</div>
         </div>
+
+        <div class="info-item">
+            <div class="info-label">Last Updated</div>
+            <div class="info-value">{{ campaign.updated_at|date:"F j, Y \a\t g:i A" }}</div>
+        </div>
     </div>
 </div>
+
+{% if is_member %}
+<div class="member-list-section">
+    <h3>Campaign Members ({{ campaign.memberships.count|add:1 }})</h3>
+
+    <div class="member-list">
+        <!-- Campaign Owner -->
+        <div class="member-card owner-card">
+            <div class="member-info">
+                <div class="member-name">{{ campaign.owner.username }}</div>
+                <div class="member-joined">Owner since {{ campaign.created_at|date:"M j, Y" }}</div>
+            </div>
+            <span class="role-badge role-owner">Owner</span>
+        </div>
+
+        <!-- Other Members -->
+        {% for membership in campaign.memberships.all %}
+        <div class="member-card">
+            <div class="member-info">
+                <div class="member-name">{{ membership.user.username }}</div>
+                <div class="member-joined">Joined {{ membership.joined_at|date:"M j, Y" }}</div>
+            </div>
+            <span class="role-badge role-{{ membership.role|lower }}">{{ membership.role }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
 {% if user.is_authenticated %}
     <div class="info-section">
@@ -235,14 +135,19 @@
         <a href="#" class="btn btn-primary">Edit Campaign</a>
         <a href="#" class="btn btn-secondary">Manage Members</a>
         <a href="#" class="btn btn-secondary">Campaign Settings</a>
-    {% elif user.is_authenticated and is_member %}
+    {% elif user.is_authenticated and user_role == "GM" %}
+        <a href="#" class="btn btn-primary">Create Scene</a>
+        <a href="#" class="btn btn-secondary">Manage NPCs</a>
+    {% elif user.is_authenticated and user_role == "PLAYER" %}
         <a href="#" class="btn btn-primary">View Scenes</a>
-        <a href="#" class="btn btn-secondary">My Characters</a>
+        <a href="#" class="btn btn-secondary">My Character</a>
+    {% elif user.is_authenticated and user_role == "OBSERVER" %}
+        <a href="#" class="btn btn-primary">View Scenes</a>
     {% elif user.is_authenticated %}
         <a href="#" class="btn btn-secondary">Request to Join</a>
     {% endif %}
 
-    <a href="{% url 'core:index' %}" class="btn btn-secondary">Back to Home</a>
+    <a href="{% url 'campaigns:list' %}" class="btn btn-secondary">Back to Campaigns</a>
 </div>
 
 {% if not user.is_authenticated %}

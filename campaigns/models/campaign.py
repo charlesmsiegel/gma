@@ -4,7 +4,34 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.utils.text import slugify
+
+
+class CampaignManager(models.Manager):
+    """Custom manager for Campaign model with visibility filtering."""
+
+    def visible_to_user(self, user: Optional[AbstractUser]):
+        """Return campaigns visible to the given user.
+
+        Args:
+            user: The user to filter campaigns for
+
+        Returns:
+            QuerySet of campaigns visible to the user
+        """
+        if user and user.is_authenticated:
+            # Authenticated users see:
+            # 1. Public campaigns
+            # 2. Private campaigns where they are members (including owner)
+            return self.filter(
+                Q(is_public=True)  # Public campaigns
+                | Q(owner=user)  # Campaigns they own
+                | Q(memberships__user=user)  # Campaigns they're members of
+            ).distinct()
+        else:
+            # Unauthenticated users see only public campaigns
+            return self.filter(is_public=True)
 
 
 class Campaign(models.Model):
@@ -33,11 +60,24 @@ class Campaign(models.Model):
     )
 
     is_active = models.BooleanField(
-        default=True, help_text="Whether the campaign is currently active"
+        default=True,
+        db_index=True,
+        help_text="Whether the campaign is currently active",
+    )
+
+    is_public = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=(
+            "Whether the campaign is visible to non-members. "
+            "Private campaigns require membership to view."
+        ),
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = CampaignManager()
 
     class Meta:
         db_table = "campaigns_campaign"

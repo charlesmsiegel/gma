@@ -3,197 +3,8 @@
 {% block title %}Campaigns - {{ block.super }}{% endblock %}
 
 {% block extra_css %}
-<style>
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.page-title {
-    color: #2c3e50;
-    margin: 0;
-}
-
-.campaigns-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.campaign-card {
-    background: white;
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border-left: 4px solid #3498db;
-}
-
-.campaign-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.campaign-card h3 {
-    margin: 0 0 0.5rem 0;
-    color: #2c3e50;
-}
-
-.campaign-card h3 a {
-    color: inherit;
-    text-decoration: none;
-}
-
-.campaign-card h3 a:hover {
-    color: #3498db;
-}
-
-.campaign-meta {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-    color: #666;
-    flex-wrap: wrap;
-}
-
-.campaign-description {
-    color: #555;
-    line-height: 1.5;
-    margin-bottom: 1rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.campaign-description.empty {
-    font-style: italic;
-    color: #999;
-}
-
-.campaign-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #eee;
-}
-
-.campaign-status {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-active {
-    background-color: #d4edda;
-    color: #155724;
-}
-
-.status-inactive {
-    background-color: #f8d7da;
-    color: #721c24;
-}
-
-.btn-view {
-    background-color: #3498db;
-    color: white;
-    text-decoration: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    transition: background-color 0.3s ease;
-}
-
-.btn-view:hover {
-    background-color: #2980b9;
-    color: white;
-    text-decoration: none;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.empty-state h3 {
-    color: #666;
-    margin-bottom: 1rem;
-}
-
-.empty-state p {
-    color: #999;
-    margin-bottom: 2rem;
-}
-
-.pagination-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-top: 2rem;
-}
-
-.pagination {
-    display: flex;
-    gap: 0.5rem;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.pagination a, .pagination span {
-    padding: 0.75rem 1rem;
-    border: 1px solid #ddd;
-    text-decoration: none;
-    color: #3498db;
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-}
-
-.pagination a:hover {
-    background-color: #f8f9fa;
-}
-
-.pagination .current {
-    background-color: #3498db;
-    color: white;
-    border-color: #3498db;
-}
-
-@media (max-width: 768px) {
-    .campaigns-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .page-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .campaign-meta {
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .campaign-footer {
-        flex-direction: column;
-        gap: 1rem;
-        align-items: stretch;
-    }
-}
-</style>
+{% load static %}
+<link rel="stylesheet" href="{% static 'campaigns/css/campaign_list.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -204,18 +15,82 @@
     {% endif %}
 </div>
 
+<!-- Search and Filter Section -->
+<div class="search-filters">
+    <!-- Search Form -->
+    <form method="get" class="search-form">
+        <input
+            type="text"
+            name="q"
+            class="search-input"
+            placeholder="Search campaigns by name, description, or game system"
+            value="{{ search_query|default:'' }}"
+        >
+        <button type="submit" class="search-btn">Search</button>
+
+        <!-- Preserve other parameters -->
+        {% if current_role_filter %}
+            <input type="hidden" name="role" value="{{ current_role_filter }}">
+        {% endif %}
+        {% if page_obj.number and page_obj.number != 1 %}
+            <input type="hidden" name="page" value="{{ page_obj.number }}">
+        {% endif %}
+    </form>
+
+    <!-- Role Filters (only for authenticated users) -->
+    {% if user.is_authenticated %}
+        <div class="role-filters">
+            <a href="?{% if search_query %}q={{ search_query|urlencode }}{% endif %}"
+               class="role-filter {% if not current_role_filter %}active{% endif %}">
+                All
+            </a>
+            <a href="?role=owner{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
+               class="role-filter {% if current_role_filter == 'owner' %}active{% endif %}">
+                Owner
+            </a>
+            <a href="?role=gm{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
+               class="role-filter {% if current_role_filter == 'gm' %}active{% endif %}">
+                GM
+            </a>
+            <a href="?role=player{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
+               class="role-filter {% if current_role_filter == 'player' %}active{% endif %}">
+                Player
+            </a>
+            <a href="?role=observer{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
+               class="role-filter {% if current_role_filter == 'observer' %}active{% endif %}">
+                Observer
+            </a>
+        </div>
+    {% endif %}
+</div>
+
 {% if campaigns %}
     <div class="campaigns-grid">
         {% for campaign in campaigns %}
             <div class="campaign-card">
-                <h3><a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a></h3>
+                <h3>
+                    <!-- Privacy and Member Indicators -->
+                    {% if user.is_authenticated %}
+                        <span class="privacy-indicator {% if campaign.is_public %}privacy-public{% else %}privacy-private{% endif %}">
+                            {% if campaign.is_public %}Public{% else %}Private{% endif %}
+                        </span>
+                        {% if campaign.user_is_member %}
+                            <span class="member-indicator">Member</span>
+                        {% endif %}
+                    {% endif %}
+                    <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+                </h3>
 
                 <div class="campaign-meta">
                     <span><strong>Owner:</strong> {{ campaign.owner.username }}</span>
                     {% if campaign.game_system %}
                         <span><strong>System:</strong> {{ campaign.game_system }}</span>
                     {% endif %}
+                    <span><strong>Members:</strong> {{ campaign.member_count }} member{{ campaign.member_count|pluralize }}</span>
                     <span><strong>Created:</strong> {{ campaign.created_at|date:"M j, Y" }}</span>
+                    {% if campaign.updated_at != campaign.created_at %}
+                        <span><strong>Last Updated:</strong> {{ campaign.updated_at|date:"M j, Y" }}</span>
+                    {% endif %}
                 </div>
 
                 {% if campaign.description %}
@@ -238,21 +113,21 @@
         <div class="pagination-wrapper">
             <div class="pagination">
                 {% if page_obj.has_previous %}
-                    <a href="?page=1">First</a>
-                    <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    <a href="?page=1{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">Previous</a>
                 {% endif %}
 
                 {% for num in page_obj.paginator.page_range %}
                     {% if page_obj.number == num %}
                         <span class="current">{{ num }}</span>
                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <a href="?page={{ num }}">{{ num }}</a>
+                        <a href="?page={{ num }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">{{ num }}</a>
                     {% endif %}
                 {% endfor %}
 
                 {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}">Next</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">Last</a>
                 {% endif %}
             </div>
         </div>
@@ -260,16 +135,33 @@
 
 {% else %}
     <div class="empty-state">
-        <h3>No Campaigns Found</h3>
-        <p>There are no campaigns available at the moment.</p>
-        {% if user.is_authenticated %}
-            <a href="{% url 'campaigns:create' %}" class="btn btn-success">Create Your First Campaign</a>
-        {% else %}
-            <p>Sign up to create and participate in campaigns!</p>
-            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <a href="{% url 'users:login' %}" class="btn btn-primary">Login</a>
-                <a href="{% url 'users:register' %}" class="btn btn-secondary">Create Account</a>
+        {% if search_query or current_role_filter %}
+            <h3>No Results Found</h3>
+            {% if search_query and current_role_filter %}
+                <p>No campaigns match your search "{{ search_query }}" for {{ current_role_filter }} role.</p>
+            {% elif search_query %}
+                <p>No campaigns match your search "{{ search_query }}".</p>
+            {% elif current_role_filter %}
+                <p>You don't have any campaigns with the {{ current_role_filter }} role.</p>
+            {% endif %}
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem;">
+                <a href="{% url 'campaigns:list' %}" class="btn btn-secondary">Clear Filters</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'campaigns:create' %}" class="btn btn-success">Create Campaign</a>
+                {% endif %}
             </div>
+        {% else %}
+            <h3>No Campaigns Found</h3>
+            <p>There are no campaigns available at the moment.</p>
+            {% if user.is_authenticated %}
+                <a href="{% url 'campaigns:create' %}" class="btn btn-success">Create Your First Campaign</a>
+            {% else %}
+                <p>Sign up to create and participate in campaigns!</p>
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <a href="{% url 'users:login' %}" class="btn btn-primary">Login</a>
+                    <a href="{% url 'users:register' %}" class="btn btn-secondary">Create Account</a>
+                </div>
+            {% endif %}
         {% endif %}
     </div>
 {% endif %}

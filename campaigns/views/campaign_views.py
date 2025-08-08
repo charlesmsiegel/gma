@@ -7,6 +7,7 @@ through the web interface, including proper authentication and permission checks
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
 from django.shortcuts import redirect
 from django.views.generic import CreateView, DetailView, ListView
 
@@ -15,18 +16,85 @@ from ..models import Campaign
 
 
 class CampaignListView(ListView):
-    """View for listing campaigns."""
+    """
+    View for listing campaigns with advanced visibility, filtering, and search.
+
+    Features:
+    - Show public campaigns to everyone
+    - Show private campaigns only to members
+    - Role-based filtering via ?role=owner|gm|player|observer
+    - Search functionality via ?q=search_term
+    - Configurable pagination via ?page_size=N (max 100)
+    - Exclude inactive campaigns by default, include with ?show_inactive=true
+    """
 
     model = Campaign
     template_name = "campaigns/campaign_list.html"
     context_object_name = "campaigns"
-    paginate_by = 20
+    paginate_by = 25
+
+    def get_paginate_by(self, queryset):
+        """Get pagination count, user-configurable with max limit."""
+        try:
+            page_size = int(self.request.GET.get("page_size", self.paginate_by))
+            # Cap at 100 to prevent performance issues
+            return min(max(page_size, 1), 100)
+        except (ValueError, TypeError):
+            return self.paginate_by
 
     def get_queryset(self):
-        """Return campaigns visible to the user."""
-        # For now, return all active campaigns
-        # Later this can be filtered by membership, permissions, etc.
-        return Campaign.objects.filter(is_active=True).select_related("owner")
+        """Return campaigns visible to the user with proper ordering and filtering."""
+        user = self.request.user
+
+        # Start with visibility-filtered queryset using custom manager
+        queryset = (
+            Campaign.objects.visible_to_user(user)
+            .select_related("owner")
+            .prefetch_related("memberships")
+        )
+
+        # Handle active/inactive filtering
+        show_inactive = self.request.GET.get("show_inactive", "").lower() == "true"
+        if not show_inactive:
+            queryset = queryset.filter(is_active=True)
+
+        # Apply role filtering if requested
+        role_filter = self.request.GET.get("role", "").lower()
+        if role_filter and user.is_authenticated:
+            if role_filter == "owner":
+                queryset = queryset.filter(owner=user)
+            elif role_filter in ["gm", "player", "observer"]:
+                role_upper = role_filter.upper()
+                queryset = queryset.filter(
+                    memberships__user=user, memberships__role=role_upper
+                )
+
+        # Apply search filtering
+        search_query = self.request.GET.get("q", "").strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(name__icontains=search_query)
+                | Q(description__icontains=search_query)
+                | Q(game_system__icontains=search_query)
+            )
+
+        # Simple ordering by creation date
+        # TODO: Add member prioritization later if users request it
+        queryset = queryset.order_by("-created_at", "name")
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        """Add additional context for template rendering."""
+        context = super().get_context_data(**kwargs)
+
+        # Add search query to context for form persistence
+        context["search_query"] = self.request.GET.get("q", "")
+
+        # Add current role filter to context
+        context["current_role_filter"] = self.request.GET.get("role", "")
+
+        return context
 
 
 class CampaignDetailView(DetailView):
@@ -39,10 +107,13 @@ class CampaignDetailView(DetailView):
     slug_url_kwarg = "slug"
 
     def get_queryset(self):
-        """Return campaigns visible to the user."""
-        # For now, return all campaigns
-        # Later this can be filtered by permissions
-        return Campaign.objects.select_related("owner")
+        """Return campaigns visible to the user with proper permission filtering."""
+        user = self.request.user
+        return (
+            Campaign.objects.visible_to_user(user)
+            .select_related("owner")
+            .prefetch_related("memberships")
+        )
 
     def get_context_data(self, **kwargs):
         """Add additional context for the template."""
