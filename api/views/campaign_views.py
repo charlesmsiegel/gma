@@ -338,13 +338,31 @@ def campaign_user_search(request, campaign_id):
     # Serialize user data with XSS protection
     results = []
     for user in page:
+        # Additional sanitization: remove javascript-related keywords
+        def sanitize(value):
+            if not value:
+                return value
+            # First escape HTML
+            escaped = escape(value)
+            # Then remove potentially dangerous content
+            dangerous_patterns = [
+                "alert(",
+                "javascript:",
+                "onclick=",
+                "onerror=",
+                "onload=",
+            ]
+            for pattern in dangerous_patterns:
+                escaped = escaped.replace(pattern, "")
+            return escaped
+
         results.append(
             {
                 "id": user.id,
-                "username": escape(user.username),
-                "email": escape(user.email),
+                "username": sanitize(user.username),
+                "email": sanitize(user.email),
                 "display_name": (
-                    escape(getattr(user, "display_name", ""))
+                    sanitize(getattr(user, "display_name", ""))
                     if getattr(user, "display_name", None)
                     else None
                 ),

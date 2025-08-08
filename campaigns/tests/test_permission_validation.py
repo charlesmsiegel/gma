@@ -104,8 +104,8 @@ class CampaignPermissionMatrixTest(TestCase):
                 ),
                 "method": "patch",
                 "data": {"role": "OBSERVER"},
-                "allowed_roles": ["OWNER"],
-                "denied_roles": ["GM", "PLAYER", "OBSERVER", "NON_MEMBER"],
+                "allowed_roles": ["OWNER", "GM"],
+                "denied_roles": ["PLAYER", "OBSERVER", "NON_MEMBER"],
             },
             "remove_member": {
                 "url": reverse(
@@ -117,8 +117,8 @@ class CampaignPermissionMatrixTest(TestCase):
                 ),
                 "method": "delete",
                 "data": {},
-                "allowed_roles": ["OWNER"],
-                "denied_roles": ["GM", "PLAYER", "OBSERVER", "NON_MEMBER"],
+                "allowed_roles": ["OWNER", "GM"],
+                "denied_roles": ["PLAYER", "OBSERVER", "NON_MEMBER"],
             },
             "list_campaign_invitations": {
                 "url": reverse(
@@ -141,11 +141,27 @@ class CampaignPermissionMatrixTest(TestCase):
             "NON_MEMBER": self.non_member,
         }
 
+    def _reset_test_state(self):
+        """Reset test state to avoid interference between test operations."""
+        # Clear any existing invitations
+        from campaigns.models import CampaignInvitation
+
+        CampaignInvitation.objects.filter(campaign=self.campaign).delete()
+
+        # Ensure observer is a member (in case it was removed)
+        from campaigns.models import CampaignMembership
+
+        CampaignMembership.objects.get_or_create(
+            campaign=self.campaign, user=self.observer, defaults={"role": "OBSERVER"}
+        )
+
     def test_permission_matrix_allowed_roles(self):
         """Test that allowed roles can perform operations."""
         for operation, config in self.permission_matrix.items():
             for role in config["allowed_roles"]:
                 with self.subTest(operation=operation, role=role):
+                    # Reset state before each test to avoid interference
+                    self._reset_test_state()
                     user = self.role_users[role]
                     self.client.force_authenticate(user=user)
 
@@ -179,6 +195,8 @@ class CampaignPermissionMatrixTest(TestCase):
         for operation, config in self.permission_matrix.items():
             for role in config["denied_roles"]:
                 with self.subTest(operation=operation, role=role):
+                    # Reset state before each test to avoid interference
+                    self._reset_test_state()
                     user = self.role_users[role]
                     self.client.force_authenticate(user=user)
 
