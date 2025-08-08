@@ -13,6 +13,7 @@ from .auth_views import (
     PasswordResetView,
     RegisterView,
 )
+from .invitation_views import UserInvitationsView
 from .profile_views import UserProfileEditView, UserProfileView
 
 __all__ = [
@@ -27,4 +28,5 @@ __all__ = [
     "RegisterView",
     "UserProfileView",
     "UserProfileEditView",
+    "UserInvitationsView",
 ]

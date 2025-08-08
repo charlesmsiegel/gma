@@ -10,6 +10,7 @@ from ..views import (
     PasswordResetDoneView,
     PasswordResetView,
     RegisterView,
+    UserInvitationsView,
     UserProfileEditView,
     UserProfileView,
 )
@@ -25,6 +26,8 @@ urlpatterns = [
     # Profile management
     path("profile/", UserProfileView.as_view(), name="profile"),
     path("profile/edit/", UserProfileEditView.as_view(), name="profile_edit"),
+    # Invitations
+    path("invitations/", UserInvitationsView.as_view(), name="invitations"),
     # Password change
     path("password/change/", PasswordChangeView.as_view(), name="password_change"),
     path(

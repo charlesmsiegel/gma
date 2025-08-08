@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}{{ campaign.name }} - Invitations{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ campaign.name }} - Invitations</h1>
+
+    {% if can_manage %}
+        <div class="invitation-controls">
+            <button class="btn btn-primary">Send Invitation</button>
+        </div>
+    {% endif %}
+
+    <div class="invitations-list">
+        {% if invitations %}
+            {% for invitation in invitations %}
+                <div class="invitation-item">
+                    <h3>{{ invitation.invited_user.username }}</h3>
+                    <p>Role: {{ invitation.role }}</p>
+                    <p>Status: <span class="badge status-{{ invitation.status|lower }} badge-{{ invitation.status|lower }}">{{ invitation.status|title }}</span></p>
+                    <p>Invited by: {{ invitation.invited_by.username }}</p>
+                    <p>Created: {{ invitation.created_at }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No invitations found.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

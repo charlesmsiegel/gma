@@ -85,24 +85,32 @@
 <div class="member-list-section">
     <h3>Campaign Members ({{ campaign.memberships.count|add:1 }})</h3>
 
-    <div class="member-list">
+    <div class="member-list" role="list" aria-label="Campaign member list">
         <!-- Campaign Owner -->
-        <div class="member-card owner-card">
+        <div class="member-card owner-card" role="listitem">
             <div class="member-info">
                 <div class="member-name">{{ campaign.owner.username }}</div>
                 <div class="member-joined">Owner since {{ campaign.created_at|date:"M j, Y" }}</div>
             </div>
-            <span class="role-badge role-owner">Owner</span>
+            <span class="role-badge role-owner" aria-label="Role: Owner">Owner</span>
         </div>
 
         <!-- Other Members -->
         {% for membership in campaign.memberships.all %}
-        <div class="member-card">
+        <div class="member-card" role="listitem">
             <div class="member-info">
                 <div class="member-name">{{ membership.user.username }}</div>
                 <div class="member-joined">Joined {{ membership.joined_at|date:"M j, Y" }}</div>
             </div>
-            <span class="role-badge role-{{ membership.role|lower }}">{{ membership.role }}</span>
+            <div class="member-actions">
+                <span class="role-badge role-{{ membership.role|lower }}" aria-label="Role: {{ membership.role }}">{{ membership.role }}</span>
+                {% if user.is_authenticated and is_owner %}
+                    <div class="member-controls">
+                        <a href="#" class="btn btn-sm btn-secondary" aria-label="Change role for {{ membership.user.username }}">Change Role</a>
+                        <a href="#" class="btn btn-sm btn-danger" aria-label="Remove {{ membership.user.username }} from campaign">Remove</a>
+                    </div>
+                {% endif %}
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -133,6 +141,7 @@
 <div class="action-buttons">
     {% if user.is_authenticated and is_owner %}
         <a href="#" class="btn btn-primary">Edit Campaign</a>
+        <a href="#" class="btn btn-secondary">Invite Users</a>
         <a href="#" class="btn btn-secondary">Manage Members</a>
         <a href="#" class="btn btn-secondary">Campaign Settings</a>
     {% elif user.is_authenticated and user_role == "GM" %}
