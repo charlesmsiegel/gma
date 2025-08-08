@@ -44,26 +44,17 @@ class SendInvitationView(LoginRequiredMixin, CampaignManagementMixin, FormView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        campaign = get_object_or_404(Campaign, slug=self.kwargs["slug"])
-        kwargs["campaign"] = campaign
+        kwargs["campaign"] = self.campaign
         return kwargs
 
     def post(self, request, *args, **kwargs):
         """Handle both form submission and direct user ID submission."""
-        campaign = get_object_or_404(Campaign, slug=self.kwargs["slug"])
-
-        # Check permissions
-        user_role = campaign.get_user_role(request.user)
-        if user_role not in ["OWNER", "GM"]:
-            messages.error(request, "You don't have permission to send invitations.")
-            return redirect("campaigns:detail", slug=campaign.slug)
-
         # Handle direct user ID submission (from tests or AJAX)
         if "invited_user_id" in request.POST:
             invited_user_id = request.POST.get("invited_user_id", "").strip()
             if not invited_user_id:
                 messages.error(request, "Please select a user to invite.")
-                return redirect("campaigns:send_invitation", slug=campaign.slug)
+                return redirect("campaigns:send_invitation", slug=self.campaign.slug)
 
             try:
                 invited_user = User.objects.get(id=invited_user_id)
@@ -72,7 +63,7 @@ class SendInvitationView(LoginRequiredMixin, CampaignManagementMixin, FormView):
 
                 # Create invitation
                 invitation = CampaignInvitation.objects.create(
-                    campaign=campaign,
+                    campaign=self.campaign,
                     invited_user=invited_user,
                     invited_by=request.user,
                     role=role,
@@ -81,31 +72,29 @@ class SendInvitationView(LoginRequiredMixin, CampaignManagementMixin, FormView):
                 messages.success(
                     request, f"Invitation sent to {invitation.invited_user.username}!"
                 )
-                return redirect("campaigns:manage_members", slug=campaign.slug)
+                return redirect("campaigns:manage_members", slug=self.campaign.slug)
             except User.DoesNotExist:
                 messages.error(request, "User not found.")
-                return redirect("campaigns:send_invitation", slug=campaign.slug)
+                return redirect("campaigns:send_invitation", slug=self.campaign.slug)
 
         # Otherwise, handle normal form submission
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
-        campaign = get_object_or_404(Campaign, slug=self.kwargs["slug"])
-
         # Create invitation
-        invitation = form.save(invited_by=self.request.user, campaign=campaign)
+        invitation = form.save(invited_by=self.request.user, campaign=self.campaign)
         messages.success(
             self.request, f"Invitation sent to {invitation.invited_user.username}!"
         )
-        return redirect("campaigns:manage_members", slug=campaign.slug)
+        return redirect("campaigns:manage_members", slug=self.campaign.slug)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["campaign"] = get_object_or_404(Campaign, slug=self.kwargs["slug"])
+        context["campaign"] = self.campaign
         return context
 
 
-class ChangeMemberRoleView(LoginRequiredMixin, FormView):
+class ChangeMemberRoleView(LoginRequiredMixin, CampaignManagementMixin, FormView):
     """View for changing member roles."""
 
     template_name = "campaigns/change_member_role.html"
@@ -113,31 +102,22 @@ class ChangeMemberRoleView(LoginRequiredMixin, FormView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        campaign = get_object_or_404(Campaign, slug=self.kwargs["slug"])
-        kwargs["campaign"] = campaign
+        kwargs["campaign"] = self.campaign
         return kwargs
 
     def form_valid(self, form):
-        campaign = get_object_or_404(Campaign, slug=self.kwargs["slug"])
-
-        # Check permissions
-        user_role = campaign.get_user_role(self.request.user)
-        if user_role not in ["OWNER", "GM"]:
-            messages.error(self.request, "You don't have permission to change roles.")
-            return redirect("campaigns:detail", slug=campaign.slug)
-
         # Update role
         membership = form.save()
         messages.success(self.request, f"Role updated for {membership.user.username}!")
-        return redirect("campaigns:manage_members", slug=campaign.slug)
+        return redirect("campaigns:manage_members", slug=self.campaign.slug)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["campaign"] = get_object_or_404(Campaign, slug=self.kwargs["slug"])
+        context["campaign"] = self.campaign
         return context
 
 
-class BulkMemberManagementView(LoginRequiredMixin, FormView):
+class BulkMemberManagementView(LoginRequiredMixin, CampaignManagementMixin, FormView):
     """View for bulk member operations."""
 
     template_name = "campaigns/bulk_member_management.html"
@@ -145,29 +125,18 @@ class BulkMemberManagementView(LoginRequiredMixin, FormView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        campaign = get_object_or_404(Campaign, slug=self.kwargs["slug"])
-        kwargs["campaign"] = campaign
+        kwargs["campaign"] = self.campaign
         return kwargs
 
     def form_valid(self, form):
-        campaign = get_object_or_404(Campaign, slug=self.kwargs["slug"])
-
-        # Check permissions
-        user_role = campaign.get_user_role(self.request.user)
-        if user_role not in ["OWNER", "GM"]:
-            messages.error(
-                self.request, "You don't have permission for bulk operations."
-            )
-            return redirect("campaigns:detail", slug=campaign.slug)
-
         # Process bulk operation
         result = form.process_bulk_operation()
         messages.success(self.request, f"Bulk operation completed: {result}")
-        return redirect("campaigns:manage_members", slug=campaign.slug)
+        return redirect("campaigns:manage_members", slug=self.campaign.slug)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["campaign"] = get_object_or_404(Campaign, slug=self.kwargs["slug"])
+        context["campaign"] = self.campaign
         return context
 
 
@@ -191,7 +160,8 @@ class AjaxUserSearchView(LoginRequiredMixin, View):
         users = (
             User.objects.filter(username__icontains=query)
             .exclude(id=campaign.owner.id)
-            .exclude(campaign_memberships__campaign=campaign)[:10]
+            .exclude(campaign_memberships__campaign=campaign)
+            .only("id", "username", "email")[:10]
         )
 
         results = [

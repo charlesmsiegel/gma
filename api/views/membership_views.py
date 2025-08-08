@@ -30,8 +30,12 @@ def list_campaign_members(request, campaign_id):
         return Response(
             {"error": "Campaign not found"}, status=status.HTTP_404_NOT_FOUND
         )
-    except Exception:
+    except Exception as e:
         # Handle database connection errors and other unexpected errors
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Database error in list_campaign_members: {str(e)}")
         return Response(
             {"error": "Internal server error"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
