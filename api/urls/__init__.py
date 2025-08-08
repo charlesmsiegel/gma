@@ -1,9 +1,19 @@
 from django.urls import include, path
 
+# Import campaign views directly for main api namespace
+from api.views.campaign_views import CampaignDetailAPIView, CampaignListAPIView
+
 app_name = "api"
 
 urlpatterns = [
     path("auth/", include("api.urls.auth_urls")),
     path("profile/", include("api.urls.profile_urls")),
     path("campaigns/", include("api.urls.campaign_urls")),
+    # Direct campaign endpoints for expected URL names
+    path("campaign-list/", CampaignListAPIView.as_view(), name="campaign-list"),
+    path(
+        "campaign-detail/<int:pk>/",
+        CampaignDetailAPIView.as_view(),
+        name="campaign-detail",
+    ),
 ]

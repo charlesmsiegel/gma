@@ -36,6 +36,14 @@ class Campaign(models.Model):
         default=True, help_text="Whether the campaign is currently active"
     )
 
+    is_public = models.BooleanField(
+        default=False,
+        help_text=(
+            "Whether the campaign is visible to non-members. "
+            "Private campaigns require membership to view."
+        ),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
