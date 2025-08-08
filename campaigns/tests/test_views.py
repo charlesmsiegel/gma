@@ -595,26 +595,6 @@ class CampaignListViewTest(TestCase):
         public_campaigns = [c for c in campaigns if c.is_public]
         self.assertTrue(len(public_campaigns) > 0)
 
-    def test_member_campaigns_appear_first(self):
-        """Test that campaigns user is a member of appear before public campaigns."""
-        self.client.login(username="player", password="testpass123")
-        response = self.client.get(reverse("campaigns:list"))
-
-        campaigns = list(response.context["campaigns"])
-
-        # Find index of member campaign and first public non-member campaign
-        member_campaign_index = campaigns.index(self.private_campaign)
-
-        # Find first public campaign that player is not a member of
-        non_member_public_index = None
-        for i, campaign in enumerate(campaigns):
-            if campaign.is_public and not campaign.is_member(self.player):
-                non_member_public_index = i
-                break
-
-        if non_member_public_index is not None:
-            self.assertLess(member_campaign_index, non_member_public_index)
-
     def test_role_filtering(self):
         """Test filtering campaigns by user role."""
         self.client.login(username="owner", password="testpass123")

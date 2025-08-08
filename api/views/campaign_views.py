@@ -88,29 +88,9 @@ class CampaignListAPIView(generics.ListAPIView):
                 | Q(game_system__icontains=search_query)
             )
 
-        # Order results: member campaigns first, then by creation date
-        if user.is_authenticated:
-            # Custom ordering to put member campaigns first
-            queryset = queryset.extra(
-                select={
-                    "is_user_member": """
-                        CASE
-                            WHEN campaigns_campaign.owner_id = %s THEN 1
-                            WHEN EXISTS(
-                                SELECT 1 FROM campaigns_membership
-                                WHERE campaigns_membership.campaign_id = campaigns_campaign.id
-                                AND campaigns_membership.user_id = %s
-                            ) THEN 1
-                            ELSE 0
-                        END
-                    """  # noqa: E501
-                },
-                select_params=[user.id, user.id],
-                order_by=["-is_user_member", "-created_at", "name"],
-            )
-        else:
-            # For unauthenticated users, simple ordering
-            queryset = queryset.order_by("-created_at", "name")
+        # Simple ordering by creation date
+        # TODO: Add member prioritization later if users request it
+        queryset = queryset.order_by("-created_at", "name")
 
         return queryset
 
