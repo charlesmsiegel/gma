@@ -227,6 +227,11 @@ LOGGING = {
     },
 }
 
+# Authentication settings
+LOGIN_URL = "users:login"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
+
 # Django REST Framework configuration
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
