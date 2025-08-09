@@ -3,6 +3,12 @@ API views for campaign management.
 
 This module provides REST API endpoints for campaign listing and detail views
 with proper visibility controls, filtering, and pagination using Django REST Framework.
+
+Key Features:
+- Standardized campaign permission checking via CampaignLookupMixin
+- Consolidated campaign retrieval and validation patterns
+- Role-based access control (OWNER, GM, PLAYER, OBSERVER)
+- Secure error handling that prevents information leakage
 """
 
 from django.contrib.auth import get_user_model
@@ -14,6 +20,48 @@ from rest_framework.response import Response
 
 from api.serializers import CampaignDetailSerializer, CampaignSerializer
 from campaigns.models import Campaign
+
+
+class CampaignLookupMixin:
+    """
+    Mixin to handle campaign retrieval and permission validation for API views.
+
+    Provides standardized campaign lookup with proper error handling and
+    permission checking for campaign management operations.
+    """
+
+    def get_campaign_with_permissions(self, campaign_id, required_roles=None):
+        """
+        Retrieve campaign and validate user permissions.
+
+        Args:
+            campaign_id: The campaign ID to retrieve
+            required_roles: List of roles required (e.g. ['OWNER', 'GM'])
+
+        Returns:
+            tuple: (campaign, user_role) if authorized
+
+        Raises:
+            Response: 404 if campaign not found or user lacks permission
+        """
+        if required_roles is None:
+            required_roles = ["OWNER", "GM"]
+
+        try:
+            campaign = Campaign.objects.get(id=campaign_id, is_active=True)
+        except Campaign.DoesNotExist:
+            return Response(
+                {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        user_role = campaign.get_user_role(self.request.user)
+        if user_role not in required_roles:
+            # Hide existence for security - return same 404
+            return Response(
+                {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        return campaign, user_role
 
 
 class CampaignPagination(PageNumberPagination):
@@ -145,51 +193,6 @@ class CampaignListCreateAPIView(generics.ListCreateAPIView):
         serializer.save(owner=self.request.user)
 
 
-class CampaignDetailAPIView_Old(generics.RetrieveUpdateDestroyAPIView):
-    """
-    API view for retrieving, updating, and deleting a specific campaign.
-
-    GET: Returns campaign details
-    PUT/PATCH: Updates campaign (owner only)
-    DELETE: Deletes campaign (owner only)
-    """
-
-    serializer_class = CampaignDetailSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    lookup_field = "pk"
-
-    def get_queryset(self):
-        """Return campaigns accessible to the authenticated user."""
-        # For now, return all campaigns
-        # Later add permission filtering
-        return Campaign.objects.select_related("owner").prefetch_related(
-            "memberships__user"
-        )
-
-    def get_permissions(self):
-        """
-        Instantiate and return the list of permissions required for this view.
-        Only owners can modify or delete campaigns.
-        """
-        if self.request.method in ["PUT", "PATCH", "DELETE"]:
-            self.permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
-        return super().get_permissions()
-
-
-class IsOwnerOrReadOnly(permissions.BasePermission):
-    """
-    Custom permission to only allow owners of a campaign to edit it.
-    """
-
-    def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed to any authenticated user
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
-        # Write permissions are only allowed to the owner of the campaign
-        return obj.owner == request.user
-
-
 class CampaignMembershipListAPIView(generics.ListCreateAPIView):
     """
     API view for listing and creating campaign memberships.
@@ -263,6 +266,18 @@ class UserCampaignListAPIView(generics.ListAPIView):
 User = get_user_model()
 
 
+class CampaignPermissionHelper(CampaignLookupMixin):
+    """
+    Helper class for function-based views to use CampaignLookupMixin.
+
+    Since function-based views can't inherit from mixins directly,
+    this helper provides the same functionality.
+    """
+
+    def __init__(self, request):
+        self.request = request
+
+
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def campaign_user_search(request, campaign_id):
@@ -275,20 +290,15 @@ def campaign_user_search(request, campaign_id):
     from django.core.paginator import Paginator
     from django.utils.html import escape
 
-    try:
-        campaign = Campaign.objects.get(id=campaign_id, is_active=True)
-    except Campaign.DoesNotExist:
-        return Response(
-            {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
-        )
+    # Use helper to check campaign permissions
+    helper = CampaignPermissionHelper(request)
+    result = helper.get_campaign_with_permissions(campaign_id, ["OWNER", "GM"])
 
-    # Check if user has permission to invite (owner or GM)
-    user_role = campaign.get_user_role(request.user)
-    if user_role not in ["OWNER", "GM"]:
-        return Response(
-            {"detail": "Campaign not found."},
-            status=status.HTTP_404_NOT_FOUND,  # Hide existence for non-authorized users
-        )
+    # If result is a Response object, it means an error occurred
+    if isinstance(result, Response):
+        return result
+
+    campaign, user_role = result
 
     # Get search query
     query = request.GET.get("q", "").strip()
@@ -410,20 +420,15 @@ def send_campaign_invitation(request, campaign_id):
 
     from campaigns.models import CampaignInvitation
 
-    try:
-        campaign = Campaign.objects.get(id=campaign_id, is_active=True)
-    except Campaign.DoesNotExist:
-        return Response(
-            {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
-        )
+    # Use helper to check campaign permissions
+    helper = CampaignPermissionHelper(request)
+    result = helper.get_campaign_with_permissions(campaign_id, ["OWNER", "GM"])
 
-    # Check if user has permission to invite (owner or GM)
-    user_role = campaign.get_user_role(request.user)
-    if user_role not in ["OWNER", "GM"]:
-        return Response(
-            {"detail": "Campaign not found."},
-            status=status.HTTP_404_NOT_FOUND,  # Hide existence for security
-        )
+    # If result is a Response object, it means an error occurred
+    if isinstance(result, Response):
+        return result
+
+    campaign, user_role = result
 
     # Get invitation data
     invited_user_id = request.data.get("invited_user_id")
@@ -502,20 +507,15 @@ def list_campaign_invitations(request, campaign_id):
     """
     from campaigns.models import CampaignInvitation
 
-    try:
-        campaign = Campaign.objects.get(id=campaign_id, is_active=True)
-    except Campaign.DoesNotExist:
-        return Response(
-            {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
-        )
+    # Use helper to check campaign permissions
+    helper = CampaignPermissionHelper(request)
+    result = helper.get_campaign_with_permissions(campaign_id, ["OWNER", "GM"])
 
-    # Check if user has permission to view (owner or GM)
-    user_role = campaign.get_user_role(request.user)
-    if user_role not in ["OWNER", "GM"]:
-        return Response(
-            {"detail": "Campaign not found."},
-            status=status.HTTP_404_NOT_FOUND,  # Hide existence for security
-        )
+    # If result is a Response object, it means an error occurred
+    if isinstance(result, Response):
+        return result
+
+    campaign, user_role = result
 
     # Get invitations
     invitations = (
