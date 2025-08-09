@@ -97,16 +97,36 @@ jobs:
       shell: bash -l {0}
 
     - name: Run tests with coverage
+      id: test_run
       run: |
         conda run -n gma coverage run --source='.' manage.py test --verbosity=2
+        echo "TEST_EXIT_CODE=$?" >> $GITHUB_OUTPUT
+      shell: bash -l {0}
+      continue-on-error: true
+
+    - name: Generate coverage XML
+      run: |
         conda run -n gma coverage xml
+      shell: bash -l {0}
+      if: always()
+
+    - name: Generate coverage report
+      run: |
         conda run -n gma coverage report --show-missing --skip-covered
       shell: bash -l {0}
+      if: always()
 
     - name: Check coverage threshold
       run: |
         conda run -n gma coverage report --fail-under=80
       shell: bash -l {0}
+      if: always()
+
+    - name: Fail if tests failed
+      if: steps.test_run.outcome == 'failure'
+      run: |
+        echo "Tests failed - failing the workflow"
+        exit 1
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
