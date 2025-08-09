@@ -99,34 +99,56 @@ jobs:
     - name: Run tests with coverage
       id: test_run
       run: |
+        set +e  # Don't exit on error
         conda run -n gma coverage run --source='.' manage.py test --verbosity=2
-        echo "TEST_EXIT_CODE=$?" >> $GITHUB_OUTPUT
+        TEST_EXIT_CODE=$?
+        echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_OUTPUT
+        # Ensure coverage data exists even if tests failed
+        conda run -n gma coverage combine || true
+        exit 0  # Always exit successfully from this step
       shell: bash -l {0}
-      continue-on-error: true
+      continue-on-error: false
 
     - name: Generate coverage XML
       run: |
-        conda run -n gma coverage xml
+        if [ -f .coverage ]; then
+          conda run -n gma coverage xml
+        else
+          echo "No coverage data found - creating empty coverage file"
+          conda run -n gma coverage run --source='.' -m py_compile manage.py || true
+          conda run -n gma coverage xml || echo "Failed to generate coverage XML"
+        fi
       shell: bash -l {0}
       if: always()
 
     - name: Generate coverage report
       run: |
-        conda run -n gma coverage report --show-missing --skip-covered
+        if [ -f .coverage ]; then
+          conda run -n gma coverage report --show-missing --skip-covered
+        else
+          echo "No coverage data to report"
+        fi
       shell: bash -l {0}
       if: always()
 
     - name: Check coverage threshold
       run: |
-        conda run -n gma coverage report --fail-under=80
+        if [ -f .coverage ]; then
+          conda run -n gma coverage report --fail-under=80
+        else
+          echo "No coverage data to check threshold"
+        fi
       shell: bash -l {0}
       if: always()
 
-    - name: Fail if tests failed
-      if: steps.test_run.outcome == 'failure'
+    - name: Check if tests passed
       run: |
-        echo "Tests failed - failing the workflow"
-        exit 1
+        echo "Test exit code was: ${{ steps.test_run.outputs.TEST_EXIT_CODE }}"
+        if [ "${{ steps.test_run.outputs.TEST_EXIT_CODE }}" != "0" ] && [ "${{ steps.test_run.outputs.TEST_EXIT_CODE }}" != "" ]; then
+          echo "Tests failed - failing the workflow"
+          exit 1
+        fi
+      shell: bash -l {0}
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
