@@ -214,8 +214,31 @@ class CampaignMembershipSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "campaign", "user", "joined_at")
 
 
+class CampaignMemberSerializer(serializers.ModelSerializer):
+    """Simplified serializer for campaign members list."""
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "email")
+
+
+class CampaignSettingsSerializer(serializers.Serializer):
+    """Separate serializer for campaign settings."""
+
+    visibility = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+
+    def get_visibility(self, obj):
+        """Get visibility setting."""
+        return "public" if obj.is_public else "private"
+
+    def get_status(self, obj):
+        """Get status setting."""
+        return "active" if obj.is_active else "inactive"
+
+
 class CampaignDetailSerializer(CampaignSerializer):
-    """Detailed serializer for Campaign model with memberships and role-specific data."""  # noqa: E501
+    """Detailed serializer for Campaign model with memberships and settings."""
 
     memberships = CampaignMembershipSerializer(many=True, read_only=True)
     members = serializers.SerializerMethodField()
@@ -229,56 +252,33 @@ class CampaignDetailSerializer(CampaignSerializer):
         )
 
     def get_members(self, obj):
-        """Get member list - always include for detail view."""
-        members_data = []
+        """Get simplified member list including owner and memberships."""
+        # Build owner data
+        owner_data = {
+            "id": obj.owner.id,
+            "username": obj.owner.username,
+            "email": obj.owner.email,
+            "role": "OWNER",
+        }
 
-        # Add owner
-        members_data.append(
-            {
-                "id": obj.owner.id,
-                "username": obj.owner.username,
-                "email": obj.owner.email,
-                "role": "OWNER",
-            }
-        )
+        # Build membership data using the serializer
+        membership_data = []
+        for membership in obj.memberships.select_related("user"):
+            member_serializer = CampaignMemberSerializer(membership.user)
+            member_info = member_serializer.data
+            member_info["role"] = membership.role
+            membership_data.append(member_info)
 
-        # Add other members
-        for membership in obj.memberships.all():
-            members_data.append(
-                {
-                    "id": membership.user.id,
-                    "username": membership.user.username,
-                    "email": membership.user.email,
-                    "role": membership.role,
-                }
-            )
-
-        return members_data
+        return [owner_data] + membership_data
 
     def get_settings(self, obj):
-        """Get campaign settings - only for owners."""
+        """Get campaign settings only if user is owner."""
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return None
 
         if obj.is_owner(request.user):
-            return {
-                "visibility": "public" if obj.is_public else "private",
-                "status": "active" if obj.is_active else "inactive",
-            }
+            settings_serializer = CampaignSettingsSerializer(obj)
+            return settings_serializer.data
+
         return None
-
-    def to_representation(self, instance):
-        """Customize representation to conditionally include settings field."""
-        data = super().to_representation(instance)
-
-        # Remove settings field if user is not owner
-        request = self.context.get("request")
-        if (
-            not request
-            or not request.user.is_authenticated
-            or not instance.is_owner(request.user)
-        ):
-            data.pop("settings", None)
-
-        return data
