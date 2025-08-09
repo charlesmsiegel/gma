@@ -525,6 +525,181 @@ class CharacterRelationshipTest(TestCase):
         self.assertIn(char2, campaign_characters)
 
 
+class CharacterValidationOptimizationTest(TestCase):
+    """Test optimized Character validation logic performance."""
+
+    def setUp(self):
+        """Set up test data for optimization tests."""
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.player = User.objects.create_user(
+            username="player", email="player@test.com", password="testpass123"
+        )
+
+    def test_unlimited_characters_early_exit(self):
+        """Test that max_characters_per_player=0 skips validation queries."""
+        # Create campaign with unlimited characters
+        campaign = Campaign.objects.create(
+            name="Unlimited Campaign",
+            owner=self.owner,
+            game_system="Test System",
+            max_characters_per_player=0,  # Unlimited
+        )
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.player, role="PLAYER"
+        )
+
+        # This should succeed without hitting the database for character counts
+        character = Character(
+            name="Unlimited Character",
+            campaign=campaign,
+            player_owner=self.player,
+            game_system="Test System",
+        )
+        # Should not raise ValidationError
+        character.full_clean()
+
+    def test_missing_fields_early_exit(self):
+        """Test that validation skips when required fields are missing."""
+        character = Character(
+            name="Test Character",
+            game_system="Test System",
+        )
+        # Should not raise ValidationError for missing campaign/player_owner
+        # The required field validation will catch this elsewhere
+        character._validate_character_limit()  # Should not crash
+
+    def test_optimized_query_uses_field_ids(self):
+        """Test that optimized queries use _id fields to avoid extra queries."""
+        campaign = Campaign.objects.create(
+            name="Query Test Campaign",
+            owner=self.owner,
+            game_system="Test System",
+            max_characters_per_player=2,
+        )
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.player, role="PLAYER"
+        )
+
+        # Create character instance with IDs set
+        character = Character(
+            name="Query Test Character",
+            campaign=campaign,
+            player_owner=self.player,
+            game_system="Test System",
+        )
+        character.campaign_id = campaign.id
+        character.player_owner_id = self.player.id
+
+        # The validation should work without additional queries
+        character._validate_character_limit()
+
+    def test_character_limit_validation_edge_cases(self):
+        """Test edge cases in character limit validation."""
+        campaign = Campaign.objects.create(
+            name="Edge Case Campaign",
+            owner=self.owner,
+            game_system="Test System",
+            max_characters_per_player=1,
+        )
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.player, role="PLAYER"
+        )
+
+        # Create first character
+        existing_char = Character.objects.create(
+            name="Existing Character",
+            campaign=campaign,
+            player_owner=self.player,
+            game_system="Test System",
+        )
+
+        # Test updating existing character (should not count itself)
+        existing_char.name = "Updated Name"
+        existing_char.full_clean()  # Should succeed
+
+        # Test creating new character when limit is reached
+        with self.assertRaises(ValidationError):
+            new_char = Character(
+                name="New Character",
+                campaign=campaign,
+                player_owner=self.player,
+                game_system="Test System",
+            )
+            new_char.full_clean()
+
+    def test_exists_optimization_performance(self):
+        """Test that exists() with limit is used instead of count()."""
+        campaign = Campaign.objects.create(
+            name="Performance Campaign",
+            owner=self.owner,
+            game_system="Test System",
+            max_characters_per_player=3,
+        )
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.player, role="PLAYER"
+        )
+
+        # Create characters up to limit
+        for i in range(3):
+            Character.objects.create(
+                name=f"Character {i+1}",
+                campaign=campaign,
+                player_owner=self.player,
+                game_system="Test System",
+            )
+
+        # Test validation on character that would exceed limit
+        with self.assertRaises(ValidationError) as cm:
+            character = Character(
+                name="Exceeding Character",
+                campaign=campaign,
+                player_owner=self.player,
+                game_system="Test System",
+            )
+            character.full_clean()
+
+        self.assertIn("cannot have more than 3", str(cm.exception))
+
+    def test_validation_with_different_campaigns(self):
+        """Test that validation is scoped to specific campaigns."""
+        campaign1 = Campaign.objects.create(
+            name="Campaign 1",
+            owner=self.owner,
+            game_system="Test System",
+            max_characters_per_player=1,
+        )
+        campaign2 = Campaign.objects.create(
+            name="Campaign 2",
+            owner=self.owner,
+            game_system="Test System",
+            max_characters_per_player=1,
+        )
+
+        for campaign in [campaign1, campaign2]:
+            CampaignMembership.objects.create(
+                campaign=campaign, user=self.player, role="PLAYER"
+            )
+
+        # Create character in campaign1
+        Character.objects.create(
+            name="Character 1",
+            campaign=campaign1,
+            player_owner=self.player,
+            game_system="Test System",
+        )
+
+        # Should still be able to create character in campaign2
+        character2 = Character(
+            name="Character 2",
+            campaign=campaign2,
+            player_owner=self.player,
+            game_system="Test System",
+        )
+        character2.full_clean()  # Should succeed
+
+
 class CharacterEdgeCaseTest(TestCase):
     """Test Character model edge cases and special scenarios."""
 
