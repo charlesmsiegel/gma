@@ -83,35 +83,39 @@ class CampaignManager(models.Manager):
 class Campaign(models.Model):
     """Campaign model for tabletop RPG campaigns."""
 
-    name = models.CharField(max_length=200, help_text="Campaign name")
-    slug = models.SlugField(
+    name = models.CharField(  # type: ignore[var-annotated]
+        max_length=200, help_text="Campaign name"
+    )
+    slug = models.SlugField(  # type: ignore[var-annotated]
         max_length=200,
         unique=True,
         blank=True,
         help_text="URL-friendly campaign identifier",
     )
-    description = models.TextField(blank=True, help_text="Campaign description")
+    description = models.TextField(  # type: ignore[var-annotated]
+        blank=True, help_text="Campaign description"
+    )
 
-    owner = models.ForeignKey(
+    owner = models.ForeignKey(  # type: ignore[var-annotated]
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="owned_campaigns",
         help_text="Campaign owner",
     )
 
-    game_system = models.CharField(
+    game_system = models.CharField(  # type: ignore[var-annotated]
         max_length=100,
         blank=True,
         help_text="The game system being used (free text entry)",
     )
 
-    is_active = models.BooleanField(
+    is_active = models.BooleanField(  # type: ignore[var-annotated]
         default=True,
         db_index=True,
         help_text="Whether the campaign is currently active",
     )
 
-    is_public = models.BooleanField(
+    is_public = models.BooleanField(  # type: ignore[var-annotated]
         default=False,
         db_index=True,
         help_text=(
@@ -120,18 +124,18 @@ class Campaign(models.Model):
         ),
     )
 
-    allow_observer_join = models.BooleanField(
+    allow_observer_join = models.BooleanField(  # type: ignore[var-annotated]
         default=False,
         help_text="Allow anyone to join as an observer without invitation",
     )
 
-    allow_player_join = models.BooleanField(
+    allow_player_join = models.BooleanField(  # type: ignore[var-annotated]
         default=False,
         help_text="Allow anyone to join as a player without invitation",
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
+    updated_at = models.DateTimeField(auto_now=True)  # type: ignore[var-annotated]
 
     objects = CampaignManager()
 
@@ -197,6 +201,7 @@ class Campaign(models.Model):
             return "OWNER"
 
         # Single database query to get user's membership role
+        # type: ignore[attr-defined]
         membership = self.memberships.filter(user=cast(Any, user)).first()
         return membership.role if membership else None
 
@@ -259,24 +264,24 @@ class CampaignMembership(models.Model):
         ("OBSERVER", "Observer"),
     ]
 
-    campaign = models.ForeignKey(
+    campaign = models.ForeignKey(  # type: ignore[var-annotated]
         Campaign,
         on_delete=models.CASCADE,
         related_name="memberships",
         help_text="The campaign",
     )
-    user = models.ForeignKey(
+    user = models.ForeignKey(  # type: ignore[var-annotated]
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="campaign_memberships",
         help_text="The user",
     )
-    role = models.CharField(
+    role = models.CharField(  # type: ignore[var-annotated]
         max_length=10,
         choices=ROLE_CHOICES,
         help_text="The user's role in the campaign",
     )
-    joined_at = models.DateTimeField(auto_now_add=True)
+    joined_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
 
     class Meta:
         db_table = "campaigns_membership"
@@ -315,41 +320,41 @@ class CampaignInvitation(models.Model):
         ("EXPIRED", "Expired"),
     ]
 
-    campaign = models.ForeignKey(
+    campaign = models.ForeignKey(  # type: ignore[var-annotated]
         Campaign,
         on_delete=models.CASCADE,
         related_name="invitations",
         help_text="The campaign being invited to",
     )
-    invited_user = models.ForeignKey(
+    invited_user = models.ForeignKey(  # type: ignore[var-annotated]
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="campaign_invitations",
         help_text="The user being invited",
     )
-    invited_by = models.ForeignKey(
+    invited_by = models.ForeignKey(  # type: ignore[var-annotated]
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="sent_invitations",
         help_text="The user who sent the invitation",
     )
-    role = models.CharField(
+    role = models.CharField(  # type: ignore[var-annotated]
         max_length=10,
         choices=CampaignMembership.ROLE_CHOICES,
         help_text="The role being offered",
     )
-    status = models.CharField(
+    status = models.CharField(  # type: ignore[var-annotated]
         max_length=10,
         choices=STATUS_CHOICES,
         default="PENDING",
         help_text="Current status of the invitation",
     )
-    message = models.TextField(
+    message = models.TextField(  # type: ignore[var-annotated]
         blank=True,
         help_text="Optional message from the inviter",
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField(
+    created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
+    expires_at = models.DateTimeField(  # type: ignore[var-annotated]
         null=True, blank=True, help_text="When this invitation expires"
     )
 

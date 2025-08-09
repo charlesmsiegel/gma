@@ -38,7 +38,7 @@ def authenticate_by_email_or_username(
             # Use the found user's username for authentication
             return authenticate(
                 request=request,
-                username=user_obj.username,
+                username=user_obj.get_username(),
                 password=password,
             )
         except User.DoesNotExist:

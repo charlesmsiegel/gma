@@ -40,21 +40,21 @@ def validate_timezone(value: str) -> None:
 class User(AbstractUser):
     """Custom User model extending Django's AbstractUser."""
 
-    display_name = models.CharField(
+    display_name = models.CharField(  # type: ignore[var-annotated]
         max_length=100,
         blank=True,
         unique=True,
         null=True,  # Allow NULL for empty names (unique constraint ignores NULL)
         help_text="Optional unique display name for your profile",
     )
-    timezone = models.CharField(
+    timezone = models.CharField(  # type: ignore[var-annotated]
         max_length=50, default="UTC", validators=[validate_timezone]
     )
     notification_preferences = models.JSONField(
         default=dict, blank=True, help_text="User notification preferences"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
+    updated_at = models.DateTimeField(auto_now=True)  # type: ignore[var-annotated]
 
     class Meta:
         db_table = "users_user"
