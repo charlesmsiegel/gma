@@ -1,7 +1,7 @@
 from django.urls import include, path
 
 # Import campaign views directly for main api namespace
-from api.views.campaign_views import CampaignDetailAPIView, CampaignListAPIView
+from api.views.campaigns import CampaignDetailAPIView, CampaignListAPIView
 
 app_name = "api"
 

@@ -4,7 +4,7 @@ URL configuration for invitation API endpoints.
 
 from django.urls import path
 
-from api.views.campaign_views import list_user_invitations
+from api.views.campaigns import list_user_invitations
 
 app_name = "invitations"
 

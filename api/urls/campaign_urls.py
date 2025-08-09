@@ -4,7 +4,7 @@ URL configuration for campaign API endpoints.
 
 from django.urls import path
 
-from api.views.campaign_views import (
+from api.views.campaigns import (
     CampaignDetailAPIView,
     CampaignListCreateAPIView,
     CampaignMembershipListAPIView,
@@ -16,7 +16,7 @@ from api.views.campaign_views import (
     list_campaign_invitations,
     send_campaign_invitation,
 )
-from api.views.membership_views import (
+from api.views.memberships import (
     bulk_add_members,
     bulk_change_roles,
     bulk_remove_members,
