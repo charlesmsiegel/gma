@@ -193,31 +193,19 @@ class BulkMemberManagementForm(forms.Form):
         return results
 
 
-class CampaignSettingsForm(forms.ModelForm):
-    """Form for editing campaign settings."""
+class CampaignSettingsForm(CampaignForm):
+    """Form for editing campaign settings, extends basic campaign form."""
 
-    class Meta:
+    class Meta(CampaignForm.Meta):
         model = Campaign
-        fields = [
-            "name",
-            "description",
-            "game_system",
+        fields = CampaignForm.Meta.fields + [
             "is_active",
             "is_public",
             "allow_observer_join",
             "allow_player_join",
         ]
         widgets = {
-            "name": forms.TextInput(attrs={"placeholder": "Enter campaign name"}),
-            "description": forms.Textarea(
-                attrs={
-                    "rows": 4,
-                    "placeholder": "Enter campaign description (optional)",
-                }
-            ),
-            "game_system": forms.TextInput(
-                attrs={"placeholder": "e.g. Mage: The Ascension"}
-            ),
+            **CampaignForm.Meta.widgets,
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "allow_observer_join": forms.CheckboxInput(
@@ -228,15 +216,14 @@ class CampaignSettingsForm(forms.ModelForm):
             ),
         }
         labels = {
+            **getattr(CampaignForm.Meta, "labels", {}),
             "is_active": "Campaign is active",
             "is_public": "Campaign is public (visible to non-members)",
             "allow_observer_join": "Anyone can join as observer",
             "allow_player_join": "Anyone can join as player",
         }
         help_texts = {
-            "name": "The display name of your campaign",
-            "description": "Optional description of your campaign",
-            "game_system": "The tabletop RPG system you're using",
+            **getattr(CampaignForm.Meta, "help_texts", {}),
             "is_active": "Inactive campaigns are hidden from lists",
             "is_public": "Public campaigns are visible to all users",
             "allow_observer_join": "Observers can view but not participate",
