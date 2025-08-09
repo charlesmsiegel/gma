@@ -156,17 +156,54 @@ psql -U postgres
 
 ## Architecture Overview
 
+### Service Layer Architecture
+The project uses a **Service Layer Pattern** to separate business logic from views and forms:
+
+- **Services** (`campaigns/services.py`): Business logic for complex operations
+  - `MembershipService`: Handles campaign membership operations (add/remove/change roles)
+  - `InvitationService`: Manages invitation creation and lifecycle
+  - `CampaignService`: General campaign operations, settings, and user search
+- **When to use services vs direct model access**:
+  - Use services for operations involving multiple models or complex business rules
+  - Use services when operations require transaction management (@transaction.atomic)
+  - Direct model access is fine for simple CRUD operations
+  - Services provide a consistent interface for both web views and API endpoints
+
+### API Architecture
+The API has been refactored for modularity and standardization:
+
+- **Error Handling** (`api/errors.py`): Standardized error responses with security focus
+  - `APIError`: Consistent error response builders (not_found, validation_error, etc.)
+  - `FieldValidator`: Field validation helpers with standardized messages
+  - `SecurityResponseHelper`: Security-focused responses that prevent information leakage
+- **Modular View Structure** (`api/views/`):
+  - `campaigns/`: Campaign-related API views (list, search, invitations)
+  - `memberships/`: Membership management views (bulk operations, member management)
+  - Focused modules replacing large monolithic view files
+- **Serializers** (`api/serializers.py`): 13+ DRF serializers for consistent API responses
+  - Nested serializers for related data
+  - Role-based field exposure (settings only for owners)
+  - Bulk operation response formats with success/error tracking
+
+### Permission System Simplification
+Consolidated permission checking with consistent patterns:
+
+- **CampaignManagementMixin**: Template view permission checking
+- **Role Hierarchy**: OWNER → GM → PLAYER → OBSERVER
+- **Security Principle**: Return 404 instead of 403 to hide resource existence
+- **Consistent Access Control**: `campaign.get_user_role(user)` for role checking
+
 ### Django App Structure
 The project follows a domain-driven monolithic architecture with these Django apps:
 
 - **users**: Authentication, profiles, campaign role management
-- **campaigns**: Campaign creation, game system selection, membership
+- **campaigns**: Campaign creation, game system selection, membership, invitations
 - **scenes**: Scene lifecycle, character participation, real-time chat, dice rolling
 - **characters**: Polymorphic character models, game system logic, character sheets
 - **locations**: Hierarchical campaign locations
 - **items**: Equipment and treasure management
-- **api**: DRF views, serializers, WebSocket routing
-- **core**: Front page, utilities, base templates
+- **api**: Modular DRF views, serializers, standardized error handling
+- **core**: Front page, utilities, base templates, management commands
 
 #### Internal Structure
 The models, views, urls, and tests modules in every app should be managed as python modules rather than individual files.
@@ -189,6 +226,46 @@ Character (base)
 - Flat URL patterns with query parameter filtering
 - Example: `/api/scenes/?campaign_id={id}`
 - WebSocket messages mirror REST API data structures
+- Standardized error responses with security considerations
+- Bulk operation endpoints for efficiency
+
+## Test-Driven Development Workflow
+
+### Testing Philosophy
+The project follows strict **Test-Driven Development (TDD)** principles:
+
+1. **Write Tests First**: All features start with comprehensive test coverage
+2. **Red-Green-Refactor**: Write failing test → Make it pass → Improve code quality
+3. **Frequent Commits**: Commit after each test passes or failure count decreases
+4. **Comprehensive Coverage**: Aim for 80%+ test coverage with quality over quantity
+
+### Test Structure
+Tests are organized by functionality and complexity:
+
+- **Unit Tests**: Individual model methods, service functions, utility functions
+- **Integration Tests**: API endpoints, service layer interactions, database operations
+- **Edge Cases**: Error handling, permission boundaries, validation failures
+- **Security Tests**: Authentication, authorization, data leakage prevention
+
+### Test Categories by App
+- **campaigns/tests/**: Campaign models, membership, invitations, permissions
+- **api/tests/**: API endpoints, error handling, security, serializers
+- **users/tests/**: Authentication, user management, profile operations
+- **core/tests/**: Management commands, health checks, WebSocket connections
+
+### Running Tests
+```bash
+make test                   # Run all tests
+make test-coverage          # Run with coverage report
+python -m coverage report   # View coverage summary
+python -m coverage html     # Generate detailed HTML report
+```
+
+### Test Patterns
+- **Service Testing**: Test business logic separately from HTTP layer
+- **API Testing**: Use DRF test client for endpoint validation
+- **Permission Testing**: Verify role-based access controls
+- **Error Handling**: Test both success and failure scenarios
 
 ## Development Phases
 
@@ -314,3 +391,16 @@ Use the following agents for specific tasks:
 - @agent-frontend-developer for building react frontned elements
 - @agent-simplify should run before PR to ensure the design doesn't get too complex
 - @agent-test-automator builds tests
+
+# Documentation Structure
+
+Comprehensive technical documentation is available in the `/docs` directory:
+
+- **`docs/architecture.md`**: System architecture, service layer, API structure, security patterns
+- **`docs/api-reference.md`**: Complete API endpoint documentation with examples
+- **`docs/development-guide.md`**: TDD workflow, code standards, testing practices
+- **`docs/deployment.md`**: Production deployment, security, monitoring, scaling
+- **`docs/database-schema.md`**: Database models, relationships, query optimization
+- **`docs/HARDCODED_VALUES.md`**: Environment variables to configure for production
+
+The documentation is designed for both new developers joining the project and as a reference for the existing team. Each document includes practical examples and follows the project's architectural decisions.
