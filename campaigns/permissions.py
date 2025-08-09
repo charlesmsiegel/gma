@@ -4,12 +4,13 @@ This module provides simple, readable permission functions for campaign resource
 All permission denials return 404 Not Found to hide resource existence.
 """
 
-from typing import List
+from typing import List, Optional, Tuple, Union
 
 from django.contrib.auth.models import AnonymousUser
 from django.http import Http404
-from rest_framework import permissions
+from rest_framework import permissions, status
 from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Campaign
@@ -58,6 +59,9 @@ class CampaignLookupMixin:
     Simple mixin for Django views to handle campaign lookup and permission checks.
     """
 
+    request: Request  # This will be provided by the view class that uses this mixin
+    kwargs: dict  # URL kwargs provided by Django views
+
     def get_campaign(self) -> Campaign:
         """Get the campaign object from the URL kwargs."""
         try:
@@ -76,6 +80,41 @@ class CampaignLookupMixin:
         campaign = self.get_campaign()
         if not check_campaign_role(user, campaign, list(roles)):
             raise Http404("Campaign not found")
+
+    def get_campaign_with_permissions(
+        self, campaign_id: int, required_roles: Optional[List[str]] = None
+    ) -> Union[Tuple[Campaign, str], Response]:
+        """
+        Retrieve campaign and validate user permissions for API views.
+
+        Args:
+            campaign_id: The campaign ID to retrieve
+            required_roles: List of roles required (e.g. ['OWNER', 'GM'])
+
+        Returns:
+            tuple: (campaign, user_role) if authorized
+
+        Raises:
+            Response: 404 if campaign not found or user lacks permission
+        """
+        if required_roles is None:
+            required_roles = ["OWNER", "GM"]
+
+        try:
+            campaign = Campaign.objects.get(id=campaign_id, is_active=True)
+        except Campaign.DoesNotExist:
+            return Response(
+                {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        user_role = campaign.get_user_role(self.request.user)
+        if user_role not in required_roles:
+            # Hide existence for security - return same 404
+            return Response(
+                {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        return campaign, user_role
 
 
 # Simple permission functions for common use cases

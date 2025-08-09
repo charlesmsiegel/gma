@@ -11,66 +11,18 @@ Key Features:
 - Secure error handling that prevents information leakage
 """
 
-from typing import List, Optional, Tuple, Union
-
 from django.contrib.auth import get_user_model
 from django.db.models import Q, QuerySet
 from rest_framework import filters, generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.request import Request
 from rest_framework.response import Response
 
 from api.serializers import CampaignDetailSerializer, CampaignSerializer
 from campaigns.models import Campaign
+from campaigns.permissions import CampaignLookupMixin
 
 User = get_user_model()
-
-
-class CampaignLookupMixin:
-    """
-    Mixin to handle campaign retrieval and permission validation for API views.
-
-    Provides standardized campaign lookup with proper error handling and
-    permission checking for campaign management operations.
-    """
-
-    request: Request  # This will be provided by the view class that uses this mixin
-
-    def get_campaign_with_permissions(
-        self, campaign_id: int, required_roles: Optional[List[str]] = None
-    ) -> Union[Tuple[Campaign, str], Response]:
-        """
-        Retrieve campaign and validate user permissions.
-
-        Args:
-            campaign_id: The campaign ID to retrieve
-            required_roles: List of roles required (e.g. ['OWNER', 'GM'])
-
-        Returns:
-            tuple: (campaign, user_role) if authorized
-
-        Raises:
-            Response: 404 if campaign not found or user lacks permission
-        """
-        if required_roles is None:
-            required_roles = ["OWNER", "GM"]
-
-        try:
-            campaign = Campaign.objects.get(id=campaign_id, is_active=True)
-        except Campaign.DoesNotExist:
-            return Response(
-                {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        user_role = campaign.get_user_role(self.request.user)
-        if user_role not in required_roles:
-            # Hide existence for security - return same 404
-            return Response(
-                {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        return campaign, user_role
 
 
 class CampaignPagination(PageNumberPagination):
@@ -272,16 +224,8 @@ class UserCampaignListAPIView(generics.ListAPIView):
         )
 
 
-User = get_user_model()
-
-
 class CampaignPermissionHelper(CampaignLookupMixin):
-    """
-    Helper class for function-based views to use CampaignLookupMixin.
-
-    Since function-based views can't inherit from mixins directly,
-    this helper provides the same functionality.
-    """
+    """Helper class for function-based views to use CampaignLookupMixin."""
 
     def __init__(self, request):
         self.request = request
