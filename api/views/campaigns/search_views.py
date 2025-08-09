@@ -7,15 +7,14 @@ with proper permission controls and result filtering.
 
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
-from django.db.models import Q
 from rest_framework import permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from api.errors import APIError
 from api.serializers import UserSerializer
-from campaigns.models import CampaignInvitation
 from campaigns.permissions import CampaignLookupMixin
+from campaigns.services import CampaignService
 
 User = get_user_model()
 
@@ -57,27 +56,11 @@ def campaign_user_search(request, campaign_id):
             {"results": [], "count": 0, "query": query, "next": None, "previous": None}
         )
 
-    # Start with all users
-    users = User.objects.all()
-
-    # Exclude campaign owner
-    users = users.exclude(id=campaign.owner.id)
-
-    # Exclude existing members
-    existing_member_ids = campaign.memberships.values_list("user_id", flat=True)
-    users = users.exclude(id__in=existing_member_ids)
-
-    # Exclude users with pending invitations
-    pending_invitation_user_ids = CampaignInvitation.objects.filter(
-        campaign=campaign, status="PENDING"
-    ).values_list("invited_user_id", flat=True)
-    users = users.exclude(id__in=pending_invitation_user_ids)
-
-    # Apply search filter (username or email)
-    users = users.filter(Q(username__icontains=query) | Q(email__icontains=query))
-
-    # Order by username
-    users = users.order_by("username")
+    # Use service to search for users (get all matches for pagination)
+    campaign_service = CampaignService(campaign)
+    users = campaign_service.search_users_for_invitation(
+        query, limit=100
+    )  # Get enough for pagination
 
     # Pagination
     page_size = min(int(request.GET.get("page_size", 10)), 20)  # Max 20 results

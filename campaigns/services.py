@@ -293,7 +293,7 @@ class CampaignService:
         """Search for users who can be invited to a campaign.
 
         Args:
-            query: Search query (username contains)
+            query: Search query (username or email contains)
             limit: Maximum number of results
 
         Returns:
@@ -312,10 +312,14 @@ class CampaignService:
         membership_service = MembershipService(self.campaign)
         excluded_users = membership_service._get_excluded_user_ids()
 
-        # Search users
+        # Import Q here to avoid circular imports
+        from django.db.models import Q
+
+        # Search users by username or email
         return (
             get_user_model()
-            .objects.filter(username__icontains=query)
+            .objects.filter(Q(username__icontains=query) | Q(email__icontains=query))
             .exclude(id__in=excluded_users)
+            .order_by("username")
             .only("id", "username", "email")[:limit]
         )
