@@ -1,11 +1,10 @@
-"""
-Simplified campaign-based permission system.
+"""Simplified campaign-based permission system.
 
-This module provides a simple, flexible permission system for campaign resources.
+This module provides simple, readable permission functions for campaign resources.
 All permission denials return 404 Not Found to hide resource existence.
 """
 
-from typing import Optional, Union
+from typing import List
 
 from django.contrib.auth.models import AnonymousUser
 from django.http import Http404
@@ -16,62 +15,50 @@ from rest_framework.views import APIView
 from .models import Campaign
 
 
-class CampaignPermission(permissions.BasePermission):
-    """
-    Flexible campaign permission class that can check for multiple roles.
+def get_campaign_or_404(view: APIView) -> Campaign:
+    """Get the campaign from view kwargs or raise 404."""
+    try:
+        campaign_id = view.kwargs.get("campaign_id")
+        if not campaign_id:
+            raise Http404("Campaign not found")
+        return Campaign.objects.get(id=campaign_id, is_active=True)
+    except (Campaign.DoesNotExist, ValueError, TypeError):
+        raise Http404("Campaign not found")
 
-    Usage:
-        # Single role
-        permission_classes = [CampaignPermission("OWNER")]
 
-        # Multiple roles
-        permission_classes = [CampaignPermission(["OWNER", "GM"])]
+def check_campaign_role(user, campaign: Campaign, required_roles: List[str]) -> bool:
+    """Check if user has any of the required roles for the campaign."""
+    if isinstance(user, AnonymousUser):
+        return False
+    return campaign.has_role(user, *required_roles)
 
-        # Any member
-        permission_classes = [CampaignPermission.any_member()]
-    """
 
-    def __init__(self, required_roles: Union[str, list] = None):
-        """Initialize with required roles."""
-        if required_roles is None:
-            required_roles = []
-        elif isinstance(required_roles, str):
-            required_roles = [required_roles]
+class CampaignRolePermission(permissions.BasePermission):
+    """Simple permission class for checking campaign roles."""
+
+    def __init__(self, required_roles: List[str]):
+        """Initialize with required roles list."""
         self.required_roles = required_roles
-
-    @classmethod
-    def any_member(cls):
-        """Create permission that allows any campaign member."""
-        return cls(["OWNER", "GM", "PLAYER", "OBSERVER"])
-
-    def get_campaign(self, view: APIView) -> Optional[Campaign]:
-        """Get the campaign from the view's kwargs."""
-        try:
-            campaign_id = view.kwargs.get("campaign_id")
-            if not campaign_id:
-                return None
-            return Campaign.objects.get(id=campaign_id, is_active=True)
-        except (Campaign.DoesNotExist, ValueError, TypeError):
-            return None
 
     def has_permission(self, request: Request, view: APIView) -> bool:
         """Check if the user has permission to access the campaign resource."""
         if isinstance(request.user, AnonymousUser):
             return False
 
-        campaign = self.get_campaign(view)
-        if not campaign:
+        try:
+            campaign = get_campaign_or_404(view)
+        except Http404:
             return False
 
-        return campaign.has_role(request.user, *self.required_roles)
+        return check_campaign_role(request.user, campaign, self.required_roles)
 
 
-class CampaignPermissionMixin:
+class CampaignLookupMixin:
     """
-    Simple mixin for Django views to handle campaign-based permissions.
+    Simple mixin for Django views to handle campaign lookup and permission checks.
     """
 
-    def get_campaign(self):
+    def get_campaign(self) -> Campaign:
         """Get the campaign object from the URL kwargs."""
         try:
             campaign_id = self.kwargs.get("campaign_id")
@@ -81,18 +68,53 @@ class CampaignPermissionMixin:
         except (Campaign.DoesNotExist, ValueError, TypeError):
             raise Http404("Campaign not found")
 
-    def check_campaign_permission(self, user, *roles):
+    def check_campaign_permission(self, user, *roles) -> None:
         """Check if a user has any of the specified roles for the campaign."""
         if isinstance(user, AnonymousUser):
             raise Http404("Campaign not found")
 
         campaign = self.get_campaign()
-        if not campaign.has_role(user, *roles):
+        if not check_campaign_role(user, campaign, list(roles)):
             raise Http404("Campaign not found")
 
 
-# Convenience permission instances
-IsCampaignOwner = CampaignPermission("OWNER")
-IsCampaignGM = CampaignPermission("GM")
-IsCampaignMember = CampaignPermission.any_member()
-IsCampaignOwnerOrGM = CampaignPermission(["OWNER", "GM"])
+# Simple permission functions for common use cases
+def require_campaign_owner(user, campaign: Campaign) -> bool:
+    """Check if user is campaign owner."""
+    return check_campaign_role(user, campaign, ["OWNER"])
+
+
+def require_campaign_admin(user, campaign: Campaign) -> bool:
+    """Check if user is campaign owner or GM."""
+    return check_campaign_role(user, campaign, ["OWNER", "GM"])
+
+
+def require_campaign_member(user, campaign: Campaign) -> bool:
+    """Check if user is any campaign member."""
+    return check_campaign_role(user, campaign, ["OWNER", "GM", "PLAYER", "OBSERVER"])
+
+
+# Convenience permission instances for backward compatibility
+IsCampaignOwner = CampaignRolePermission(["OWNER"])
+IsCampaignGM = CampaignRolePermission(["GM"])
+IsCampaignMember = CampaignRolePermission(["OWNER", "GM", "PLAYER", "OBSERVER"])
+IsCampaignOwnerOrGM = CampaignRolePermission(["OWNER", "GM"])
+
+# Backward compatibility aliases
+CampaignPermissionMixin = CampaignLookupMixin
+
+
+# Deprecated class for backward compatibility
+class CampaignPermission(CampaignRolePermission):
+    """Deprecated: Use CampaignRolePermission instead."""
+
+    def __init__(self, required_roles):
+        """Initialize with required roles (backward compatibility)."""
+        if isinstance(required_roles, str):
+            required_roles = [required_roles]
+        super().__init__(required_roles)
+
+    @classmethod
+    def any_member(cls):
+        """Create permission that allows any campaign member."""
+        return cls(["OWNER", "GM", "PLAYER", "OBSERVER"])
