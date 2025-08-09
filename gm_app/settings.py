@@ -51,6 +51,10 @@ INSTALLED_APPS = [
     "core",
     "users",
     "campaigns",
+    "characters",
+    "scenes",
+    "locations",
+    "items",
     "api",
 ]
 

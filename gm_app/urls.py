@@ -24,5 +24,9 @@ urlpatterns = [
     path("", include("core.urls", namespace="core")),
     path("users/", include("users.urls", namespace="users")),
     path("campaigns/", include("campaigns.urls", namespace="campaigns")),
+    path("characters/", include("characters.urls", namespace="characters")),
+    path("scenes/", include("scenes.urls", namespace="scenes")),
+    path("locations/", include("locations.urls", namespace="locations")),
+    path("items/", include("items.urls", namespace="items")),
     path("api/", include("api.urls", namespace="api")),
 ]
