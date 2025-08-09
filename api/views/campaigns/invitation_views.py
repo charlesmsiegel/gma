@@ -19,6 +19,7 @@ from api.errors import (
 )
 from campaigns.models import CampaignInvitation
 from campaigns.permissions import CampaignLookupMixin
+from campaigns.services import InvitationService
 
 User = get_user_model()
 
@@ -76,17 +77,15 @@ def send_campaign_invitation(request, campaign_id):
             FieldValidator.build_field_errors(invited_user_id="User not found.")
         )
 
-    # Create invitation
+    # Create invitation using service
     try:
-        invitation = CampaignInvitation(
-            campaign=campaign,
+        invitation_service = InvitationService(campaign)
+        invitation = invitation_service.create_invitation(
             invited_user=invited_user,
             invited_by=request.user,
             role=role,
             message=message,
         )
-        invitation.full_clean()
-        invitation.save()
 
         # TODO: Send notification to invited user
 
@@ -134,17 +133,10 @@ def list_campaign_invitations(request, campaign_id):
 
     campaign, user_role = result
 
-    # Get invitations
-    invitations = (
-        CampaignInvitation.objects.filter(campaign=campaign)
-        .select_related("invited_user", "invited_by")
-        .order_by("-created_at")
-    )
-
-    # Filter by status if requested
+    # Get invitations using service
+    invitation_service = InvitationService(campaign)
     status_filter = request.GET.get("status")
-    if status_filter:
-        invitations = invitations.filter(status__iexact=status_filter)
+    invitations = invitation_service.get_campaign_invitations(status=status_filter)
 
     results = []
     for invitation in invitations:
