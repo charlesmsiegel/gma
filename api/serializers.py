@@ -282,3 +282,18 @@ class CampaignDetailSerializer(CampaignSerializer):
             return settings_serializer.data
 
         return None
+
+    def to_representation(self, instance):
+        """Remove settings field for non-owners."""
+        data = super().to_representation(instance)
+
+        # Remove settings field if user is not owner
+        request = self.context.get("request")
+        if (
+            not request
+            or not request.user.is_authenticated
+            or not instance.is_owner(request.user)
+        ):
+            data.pop("settings", None)
+
+        return data
