@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}{{ campaign.name }} Settings - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.form-help {
+    font-size: 0.875rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.form-errors {
+    margin-top: 0.25rem;
+}
+
+.form-error {
+    color: #e74c3c;
+    font-size: 0.875rem;
+    display: block;
+}
+
+.form-check-wrapper {
+    margin-top: 0.5rem;
+}
+
+.form-check-input {
+    width: auto;
+    margin-right: 0.5rem;
+}
+
+.form-check-label {
+    display: inline;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.settings-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+}
+
+.settings-section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 0.5rem;
+}
+
+.btn-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    text-decoration: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+    color: white;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .btn-group {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>{{ campaign.name }} - Settings</h1>
+    <p>Configure your campaign settings below. Only campaign owners can modify these settings.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <!-- Basic Information Section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Basic Information</div>
+
+            <div class="form-group">
+                <label for="{{ form.name.id_for_label }}" class="form-label">
+                    Campaign Name
+                    <span style="color: #e74c3c;">*</span>
+                </label>
+                {{ form.name }}
+                {% if form.name.help_text %}
+                    <div class="form-help">{{ form.name.help_text }}</div>
+                {% endif %}
+                {% if form.name.errors %}
+                    <div class="form-errors">
+                        {% for error in form.name.errors %}
+                            <span class="form-error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.game_system.id_for_label }}" class="form-label">
+                    Game System
+                </label>
+                {{ form.game_system }}
+                {% if form.game_system.help_text %}
+                    <div class="form-help">{{ form.game_system.help_text }}</div>
+                {% endif %}
+                {% if form.game_system.errors %}
+                    <div class="form-errors">
+                        {% for error in form.game_system.errors %}
+                            <span class="form-error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.description.id_for_label }}" class="form-label">
+                    Description
+                </label>
+                {{ form.description }}
+                {% if form.description.help_text %}
+                    <div class="form-help">{{ form.description.help_text }}</div>
+                {% endif %}
+                {% if form.description.errors %}
+                    <div class="form-errors">
+                        {% for error in form.description.errors %}
+                            <span class="form-error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <div class="form-check-wrapper">
+                    {{ form.is_active }}
+                    <label for="{{ form.is_active.id_for_label }}" class="form-check-label">
+                        {{ form.is_active.label }}
+                    </label>
+                    {% if form.is_active.help_text %}
+                        <div class="form-help">{{ form.is_active.help_text }}</div>
+                    {% endif %}
+                    {% if form.is_active.errors %}
+                        <div class="form-errors">
+                            {% for error in form.is_active.errors %}
+                                <span class="form-error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Visibility Settings Section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Visibility Settings</div>
+
+            <div class="form-group">
+                <div class="form-check-wrapper">
+                    {{ form.is_public }}
+                    <label for="{{ form.is_public.id_for_label }}" class="form-check-label">
+                        {{ form.is_public.label }}
+                    </label>
+                    {% if form.is_public.help_text %}
+                        <div class="form-help">{{ form.is_public.help_text }}</div>
+                    {% endif %}
+                    {% if form.is_public.errors %}
+                        <div class="form-errors">
+                            {% for error in form.is_public.errors %}
+                                <span class="form-error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Membership Settings Section -->
+        <div class="settings-section">
+            <div class="settings-section-title">Membership Settings</div>
+
+            <div class="form-group">
+                <div class="form-check-wrapper">
+                    {{ form.allow_observer_join }}
+                    <label for="{{ form.allow_observer_join.id_for_label }}" class="form-check-label">
+                        {{ form.allow_observer_join.label }}
+                    </label>
+                    {% if form.allow_observer_join.help_text %}
+                        <div class="form-help">{{ form.allow_observer_join.help_text }}</div>
+                    {% endif %}
+                    {% if form.allow_observer_join.errors %}
+                        <div class="form-errors">
+                            {% for error in form.allow_observer_join.errors %}
+                                <span class="form-error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-check-wrapper">
+                    {{ form.allow_player_join }}
+                    <label for="{{ form.allow_player_join.id_for_label }}" class="form-check-label">
+                        {{ form.allow_player_join.label }}
+                    </label>
+                    {% if form.allow_player_join.help_text %}
+                        <div class="form-help">{{ form.allow_player_join.help_text }}</div>
+                    {% endif %}
+                    {% if form.allow_player_join.errors %}
+                        <div class="form-errors">
+                            {% for error in form.allow_player_join.errors %}
+                                <span class="form-error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="form-errors mb-3">
+                {% for error in form.non_field_errors %}
+                    <span class="form-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="btn-group">
+            <button type="submit" class="btn btn-success">Save Settings</button>
+            <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h3>Settings Help</h3>
+    <ul>
+        <li><strong>Campaign Active:</strong> Inactive campaigns are hidden from public listings.</li>
+        <li><strong>Public Campaign:</strong> Public campaigns are visible to all users, private campaigns only to members.</li>
+        <li><strong>Observer Join:</strong> Allow anyone to join as an observer (can view but not participate).</li>
+        <li><strong>Player Join:</strong> Allow anyone to join as a player (can participate in scenes).</li>
+    </ul>
+    <p><small><strong>Note:</strong> Only campaign owners can access and modify these settings.</small></p>
+</div>
+{% endblock %}

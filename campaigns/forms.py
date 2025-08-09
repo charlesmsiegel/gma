@@ -191,3 +191,41 @@ class BulkMemberManagementForm(forms.Form):
             results["updated"] = memberships.update(role=role)
 
         return results
+
+
+class CampaignSettingsForm(CampaignForm):
+    """Form for editing campaign settings, extends basic campaign form."""
+
+    class Meta(CampaignForm.Meta):
+        model = Campaign
+        fields = CampaignForm.Meta.fields + [
+            "is_active",
+            "is_public",
+            "allow_observer_join",
+            "allow_player_join",
+        ]
+        widgets = {
+            **CampaignForm.Meta.widgets,
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "allow_observer_join": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "allow_player_join": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+        }
+        labels = {
+            **getattr(CampaignForm.Meta, "labels", {}),
+            "is_active": "Campaign is active",
+            "is_public": "Campaign is public (visible to non-members)",
+            "allow_observer_join": "Anyone can join as observer",
+            "allow_player_join": "Anyone can join as player",
+        }
+        help_texts = {
+            **getattr(CampaignForm.Meta, "help_texts", {}),
+            "is_active": "Inactive campaigns are hidden from lists",
+            "is_public": "Public campaigns are visible to all users",
+            "allow_observer_join": "Observers can view but not participate",
+            "allow_player_join": "Players can participate in scenes",
+        }

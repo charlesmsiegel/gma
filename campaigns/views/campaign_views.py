@@ -7,11 +7,13 @@ through the web interface, including proper authentication and permission checks
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import redirect
-from django.views.generic import CreateView, DetailView, ListView
+from django.urls import reverse
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from ..forms import CampaignForm
+from ..forms import CampaignForm, CampaignSettingsForm
 from ..models import Campaign
 
 
@@ -148,6 +150,51 @@ class CampaignCreateView(LoginRequiredMixin, CreateView):
             self.request, f'Campaign "{campaign.name}" was created successfully!'
         )
         return redirect("campaigns:detail", slug=campaign.slug)
+
+    def form_invalid(self, form):
+        """Handle invalid form submission."""
+        messages.error(self.request, "Please correct the errors below and try again.")
+        return super().form_invalid(form)
+
+
+class CampaignSettingsView(LoginRequiredMixin, UpdateView):
+    """
+    View for editing campaign settings.
+
+    Only campaign owners can access this view.
+    Provides form-based editing of campaign settings including:
+    - Basic information (name, description, game_system, is_active)
+    - Visibility settings (is_public)
+    - Membership settings (allow_observer_join, allow_player_join)
+    """
+
+    model = Campaign
+    form_class = CampaignSettingsForm
+    template_name = "campaigns/campaign_settings.html"
+    slug_url_kwarg = "slug"
+    context_object_name = "campaign"
+
+    def get_object(self, queryset=None):
+        """Get campaign and verify user is owner."""
+        campaign = super().get_object(queryset)
+
+        # Only campaign owners can access settings
+        if not campaign.is_owner(self.request.user):
+            raise PermissionDenied("Only campaign owners can edit settings.")
+
+        return campaign
+
+    def get_success_url(self):
+        """Redirect to campaign detail after successful update."""
+        return reverse("campaigns:detail", kwargs={"slug": self.object.slug})
+
+    def form_valid(self, form):
+        """Handle successful form submission."""
+        messages.success(
+            self.request,
+            f"Settings for '{form.instance.name}' have been updated successfully.",
+        )
+        return super().form_valid(form)
 
     def form_invalid(self, form):
         """Handle invalid form submission."""
