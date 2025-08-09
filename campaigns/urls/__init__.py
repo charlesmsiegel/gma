@@ -9,6 +9,7 @@ from campaigns.views import (
     CampaignDetailView,
     CampaignInvitationsView,
     CampaignListView,
+    CampaignSettingsView,
     ChangeMemberRoleView,
     ManageMembersView,
     SendInvitationView,
@@ -20,8 +21,9 @@ urlpatterns = [
     # Campaign listing and creation
     path("", CampaignListView.as_view(), name="list"),
     path("create/", CampaignCreateView.as_view(), name="create"),
-    # Campaign detail
+    # Campaign detail and settings
     path("<slug:slug>/", CampaignDetailView.as_view(), name="detail"),
+    path("<slug:slug>/settings/", CampaignSettingsView.as_view(), name="settings"),
     # Campaign invitations
     path(
         "<slug:slug>/invitations/",

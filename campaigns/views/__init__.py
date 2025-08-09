@@ -1,4 +1,9 @@
-from .campaign_views import CampaignCreateView, CampaignDetailView, CampaignListView
+from .campaign_views import (
+    CampaignCreateView,
+    CampaignDetailView,
+    CampaignListView,
+    CampaignSettingsView,
+)
 from .invitation_views import CampaignInvitationsView
 from .member_views import (
     AjaxChangeMemberRoleView,
@@ -14,6 +19,7 @@ __all__ = [
     "CampaignCreateView",
     "CampaignDetailView",
     "CampaignListView",
+    "CampaignSettingsView",
     "CampaignInvitationsView",
     "ManageMembersView",
     "SendInvitationView",

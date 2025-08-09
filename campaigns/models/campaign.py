@@ -127,6 +127,16 @@ class Campaign(models.Model):
         ),
     )
 
+    allow_observer_join = models.BooleanField(
+        default=False,
+        help_text="Allow anyone to join as an observer without invitation",
+    )
+
+    allow_player_join = models.BooleanField(
+        default=False,
+        help_text="Allow anyone to join as a player without invitation",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

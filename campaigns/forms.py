@@ -191,3 +191,54 @@ class BulkMemberManagementForm(forms.Form):
             results["updated"] = memberships.update(role=role)
 
         return results
+
+
+class CampaignSettingsForm(forms.ModelForm):
+    """Form for editing campaign settings."""
+
+    class Meta:
+        model = Campaign
+        fields = [
+            "name",
+            "description",
+            "game_system",
+            "is_active",
+            "is_public",
+            "allow_observer_join",
+            "allow_player_join",
+        ]
+        widgets = {
+            "name": forms.TextInput(attrs={"placeholder": "Enter campaign name"}),
+            "description": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "placeholder": "Enter campaign description (optional)",
+                }
+            ),
+            "game_system": forms.TextInput(
+                attrs={"placeholder": "e.g. Mage: The Ascension"}
+            ),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "allow_observer_join": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "allow_player_join": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+        }
+        labels = {
+            "is_active": "Campaign is active",
+            "is_public": "Campaign is public (visible to non-members)",
+            "allow_observer_join": "Anyone can join as observer",
+            "allow_player_join": "Anyone can join as player",
+        }
+        help_texts = {
+            "name": "The display name of your campaign",
+            "description": "Optional description of your campaign",
+            "game_system": "The tabletop RPG system you're using",
+            "is_active": "Inactive campaigns are hidden from lists",
+            "is_public": "Public campaigns are visible to all users",
+            "allow_observer_join": "Observers can view but not participate",
+            "allow_player_join": "Players can participate in scenes",
+        }
