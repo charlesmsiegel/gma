@@ -11,9 +11,18 @@ from django.utils.text import slugify
 
 
 class CampaignInvitationManager(models.Manager):
-    """Custom manager for CampaignInvitation model."""
+    """Custom manager for CampaignInvitation model.
 
-    def cleanup_expired(self):
+    Only contains methods that provide complex business logic beyond Django ORM.
+    Use standard Django ORM methods for simple filtering:
+    - CampaignInvitation.objects.filter(status="PENDING") instead of .pending()
+    - CampaignInvitation.objects.filter(campaign=campaign) instead of
+      .for_campaign(campaign)
+    - CampaignInvitation.objects.filter(invited_user=user) instead of
+      .for_user(user)
+    """
+
+    def cleanup_expired(self) -> int:
         """Clean up expired invitations.
 
         Very old invitations (30+ days expired) are deleted.
@@ -43,22 +52,6 @@ class CampaignInvitationManager(models.Manager):
         updated_count = recently_expired.update(status="EXPIRED")
 
         return deleted_count + updated_count
-
-    def pending(self):
-        """Get all pending invitations."""
-        return self.filter(status="PENDING")
-
-    def active(self):
-        """Get all active (pending and not expired) invitations."""
-        return self.filter(status="PENDING", expires_at__gt=timezone.now())
-
-    def for_campaign(self, campaign):
-        """Get all invitations for a specific campaign."""
-        return self.filter(campaign=campaign)
-
-    def for_user(self, user):
-        """Get all invitations for a specific user."""
-        return self.filter(invited_user=user)
 
 
 class CampaignManager(models.Manager):
@@ -220,26 +213,41 @@ class Campaign(models.Model):
         user_role = self.get_user_role(user)
         return user_role in roles if user_role else False
 
-    # Convenience methods for backward compatibility
+    # Convenience methods - use has_role() for most cases or these shortcuts
+    # for common patterns
     def is_owner(self, user: Optional[AbstractUser]) -> bool:
         """Check if the user is the campaign owner."""
         return self.has_role(user, "OWNER")
 
+    def is_member(self, user: Optional[AbstractUser]) -> bool:
+        """Check if the user has any membership in this campaign.
+
+        For specific role checks, use has_role(user, "ROLE") instead of
+        dedicated methods.
+        """
+        return self.has_role(user, "OWNER", "GM", "PLAYER", "OBSERVER")
+
+    # Legacy methods for backward compatibility - consider migrating to has_role()
     def is_gm(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is a GM of this campaign."""
+        """Check if the user is a GM.
+
+        Consider using has_role(user, 'GM') instead.
+        """
         return self.has_role(user, "GM")
 
     def is_player(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is a player in this campaign."""
+        """Check if the user is a player.
+
+        Consider using has_role(user, 'PLAYER') instead.
+        """
         return self.has_role(user, "PLAYER")
 
     def is_observer(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user is an observer of this campaign."""
-        return self.has_role(user, "OBSERVER")
+        """Check if the user is an observer.
 
-    def is_member(self, user: Optional[AbstractUser]) -> bool:
-        """Check if the user has any membership in this campaign."""
-        return self.has_role(user, "OWNER", "GM", "PLAYER", "OBSERVER")
+        Consider using has_role(user, 'OBSERVER') instead.
+        """
+        return self.has_role(user, "OBSERVER")
 
 
 class CampaignMembership(models.Model):
