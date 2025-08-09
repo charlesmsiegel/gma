@@ -12,8 +12,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from typing import List
 
-from .secrets import SECRET_KEY  # noqa: F401
+try:
+    from .secrets import SECRET_KEY  # noqa: F401
+except ImportError:
+    # Default key for development only
+    SECRET_KEY = "django-insecure-^*s0+@a6h+tvqf6@vr)_(gya=hhge4$!j3yo+5$%*(pstvcv6t"  # nosec B105  # noqa: E501
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,7 +32,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS: List[str] = []
 
 
 # Application definition
@@ -221,6 +226,11 @@ LOGGING = {
         },
     },
 }
+
+# Authentication settings
+LOGIN_URL = "users:login"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
 
 # Django REST Framework configuration
 REST_FRAMEWORK = {

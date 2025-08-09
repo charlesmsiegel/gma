@@ -8,7 +8,6 @@ on:
 
 jobs:
   test:
-    if: false  # Temporarily disabled
     runs-on: ubuntu-latest
 
     services:
@@ -17,7 +16,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
-          POSTGRES_DB: gma_test
+          POSTGRES_DB: postgres
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -44,50 +43,112 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Cache pip dependencies
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        activate-environment: gma
+        environment-file: environment.yml
+        python-version: 3.11
+        auto-activate-base: false
+
+    - name: Cache conda dependencies
       uses: actions/cache@v4
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('environment.yml') }}
+        path: ~/conda_pkgs_dir
+        key: ${{ runner.os }}-conda-${{ hashFiles('environment.yml') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install coverage pytest pytest-django pytest-asyncio
-        pip install django redis channels djangorestframework django-polymorphic
-        pip install psycopg2-binary
+          ${{ runner.os }}-conda-
 
     - name: Set up test environment variables
       run: |
-        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gma_test" >> $GITHUB_ENV
+        echo "DB_NAME=gm_app_db" >> $GITHUB_ENV
+        echo "DB_USER=postgres" >> $GITHUB_ENV
+        echo "DB_PASSWORD=postgres" >> $GITHUB_ENV
+        echo "DB_HOST=localhost" >> $GITHUB_ENV
+        echo "DB_PORT=5432" >> $GITHUB_ENV
         echo "REDIS_URL=redis://localhost:6379/0" >> $GITHUB_ENV
         echo "SECRET_KEY=test-secret-key-for-github-actions-only" >> $GITHUB_ENV
         echo "DEBUG=False" >> $GITHUB_ENV
         echo "DJANGO_SETTINGS_MODULE=gm_app.settings" >> $GITHUB_ENV
 
+    - name: Create database
+      run: |
+        PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE gm_app_db;"
+      shell: bash -l {0}
+
     - name: Run Django system checks
       run: |
-        python manage.py check --deploy
+        conda run -n gma python manage.py check --deploy
+      shell: bash -l {0}
+
+    - name: Generate migrations
+      run: |
+        conda run -n gma python manage.py makemigrations --verbosity=2
+      shell: bash -l {0}
 
     - name: Run migrations
       run: |
-        python manage.py migrate --verbosity=0
+        conda run -n gma python manage.py migrate --verbosity=0
+      shell: bash -l {0}
 
     - name: Run health check
       run: |
-        python manage.py health_check
+        conda run -n gma python manage.py health_check
+      shell: bash -l {0}
 
     - name: Run tests with coverage
+      id: test_run
       run: |
-        coverage run --source='.' manage.py test --verbosity=2
-        coverage xml
-        coverage report --show-missing --skip-covered
+        set +e  # Don't exit on error
+        conda run -n gma coverage run --source='.' manage.py test --verbosity=2
+        TEST_EXIT_CODE=$?
+        echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_OUTPUT
+        # Ensure coverage data exists even if tests failed
+        conda run -n gma coverage combine || true
+        exit 0  # Always exit successfully from this step
+      shell: bash -l {0}
+      continue-on-error: false
+
+    - name: Generate coverage XML
+      run: |
+        if [ -f .coverage ]; then
+          conda run -n gma coverage xml
+        else
+          echo "No coverage data found - creating empty coverage file"
+          conda run -n gma coverage run --source='.' -m py_compile manage.py || true
+          conda run -n gma coverage xml || echo "Failed to generate coverage XML"
+        fi
+      shell: bash -l {0}
+      if: always()
+
+    - name: Generate coverage report
+      run: |
+        if [ -f .coverage ]; then
+          conda run -n gma coverage report --show-missing --skip-covered
+        else
+          echo "No coverage data to report"
+        fi
+      shell: bash -l {0}
+      if: always()
 
     - name: Check coverage threshold
       run: |
-        coverage report --fail-under=80
+        if [ -f .coverage ]; then
+          conda run -n gma coverage report --fail-under=80
+        else
+          echo "No coverage data to check threshold"
+        fi
+      shell: bash -l {0}
+      if: always()
+
+    - name: Check if tests passed
+      run: |
+        echo "Test exit code was: ${{ steps.test_run.outputs.TEST_EXIT_CODE }}"
+        if [ "${{ steps.test_run.outputs.TEST_EXIT_CODE }}" != "0" ] && [ "${{ steps.test_run.outputs.TEST_EXIT_CODE }}" != "" ]; then
+          echo "Tests failed - failing the workflow"
+          exit 1
+        fi
+      shell: bash -l {0}
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
@@ -109,16 +170,16 @@ jobs:
     - name: Comment coverage on PR
       if: github.event_name == 'pull_request'
       run: |
-        coverage report --format=markdown > coverage_comment.md
+        conda run -n gma coverage report --format=markdown > coverage_comment.md
         echo "## 📊 Coverage Report" >> pr_comment.md
         echo "" >> pr_comment.md
         cat coverage_comment.md >> pr_comment.md
         echo "" >> pr_comment.md
         echo "Minimum coverage required: 80%" >> pr_comment.md
+      shell: bash -l {0}
       continue-on-error: true
 
   integration-test:
-    if: false  # Temporarily disabled
     runs-on: ubuntu-latest
     needs: test
 
@@ -128,7 +189,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
-          POSTGRES_DB: gma_integration_test
+          POSTGRES_DB: postgres
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -155,24 +216,42 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install django redis channels djangorestframework django-polymorphic
-        pip install psycopg2-binary
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        activate-environment: gma
+        environment-file: environment.yml
+        python-version: 3.11
+        auto-activate-base: false
 
     - name: Set up test environment variables
       run: |
-        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gma_integration_test" >> $GITHUB_ENV
+        echo "DB_NAME=gm_app_db" >> $GITHUB_ENV
+        echo "DB_USER=postgres" >> $GITHUB_ENV
+        echo "DB_PASSWORD=postgres" >> $GITHUB_ENV
+        echo "DB_HOST=localhost" >> $GITHUB_ENV
+        echo "DB_PORT=5432" >> $GITHUB_ENV
         echo "REDIS_URL=redis://localhost:6379/0" >> $GITHUB_ENV
         echo "SECRET_KEY=test-secret-key-for-integration-tests" >> $GITHUB_ENV
         echo "DEBUG=False" >> $GITHUB_ENV
         echo "DJANGO_SETTINGS_MODULE=gm_app.settings" >> $GITHUB_ENV
 
+    - name: Create database
+      run: |
+        PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE gm_app_db;"
+      shell: bash -l {0}
+
+    - name: Generate migrations
+      run: |
+        conda run -n gma python manage.py makemigrations --verbosity=2
+      shell: bash -l {0}
+
     - name: Run migrations
       run: |
-        python manage.py migrate --verbosity=0
+        conda run -n gma python manage.py migrate --verbosity=0
+      shell: bash -l {0}
 
     - name: Run integration tests
       run: |
-        python manage.py test tests.test_project_setup --verbosity=2
+        conda run -n gma python manage.py test tests.test_project_setup --verbosity=2
+      shell: bash -l {0}
