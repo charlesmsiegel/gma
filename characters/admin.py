@@ -11,22 +11,3 @@ class CharacterAdmin(admin.ModelAdmin):
     list_filter = ["campaign", "game_system", "created_at"]
     search_fields = ["name", "campaign__name", "player_owner__username"]
     readonly_fields = ["created_at", "updated_at"]
-
-    fieldsets = (
-        (
-            None,
-            {
-                "fields": (
-                    "name",
-                    "description",
-                    "campaign",
-                    "player_owner",
-                    "game_system",
-                )
-            },
-        ),
-        (
-            "Timestamps",
-            {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
-        ),
-    )
