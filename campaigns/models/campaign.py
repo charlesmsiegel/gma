@@ -201,8 +201,9 @@ class Campaign(models.Model):
             return "OWNER"
 
         # Single database query to get user's membership role
-        # type: ignore[attr-defined]
-        membership = self.memberships.filter(user=cast(Any, user)).first()
+        membership = self.memberships.filter(  # type: ignore[attr-defined]
+            user=cast(Any, user)
+        ).first()
         return membership.role if membership else None
 
     def has_role(self, user: Optional[AbstractUser], *roles: str) -> bool:
