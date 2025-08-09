@@ -427,6 +427,31 @@ class CampaignDetailViewTest(TestCase):
         # Should not contain edit link for non-owners
         self.assertNotContains(response, "Edit Campaign")
 
+    def test_owner_management_buttons_functional(self):
+        """Test that owner sees functional Invite Users and Manage Members buttons."""
+        self.client.login(username="owner", password="TestPass123!")
+        response = self.client.get(self.detail_url)
+
+        # Verify buttons exist and have proper URLs (not href="#")
+        expected_invite_url = f"/campaigns/{self.campaign.slug}/send-invitation/"
+        expected_manage_url = f"/campaigns/{self.campaign.slug}/members/"
+
+        self.assertContains(response, f'href="{expected_invite_url}"')
+        self.assertContains(response, f'href="{expected_manage_url}"')
+        self.assertContains(response, "Invite Users</a>")
+        self.assertContains(response, "Manage Members</a>")
+
+        # If we can see the proper URLs above, the buttons are functional
+
+    def test_non_owner_cannot_see_management_buttons(self):
+        """Test that non-owners don't see Invite Users or Manage Members buttons."""
+        self.client.login(username="otheruser", password="TestPass123!")
+        response = self.client.get(self.detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Invite Users</a>")
+        self.assertNotContains(response, "Manage Members</a>")
+
 
 class CampaignFormTest(TestCase):
     """Test the campaign creation form directly."""
