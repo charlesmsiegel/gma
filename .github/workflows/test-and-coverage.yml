@@ -81,6 +81,11 @@ jobs:
         conda run -n gma python manage.py check --deploy
       shell: bash -l {0}
 
+    - name: Generate migrations
+      run: |
+        conda run -n gma python manage.py makemigrations --verbosity=2
+      shell: bash -l {0}
+
     - name: Run migrations
       run: |
         conda run -n gma python manage.py migrate --verbosity=0
@@ -192,6 +197,11 @@ jobs:
     - name: Create database
       run: |
         PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE gm_app_db;"
+      shell: bash -l {0}
+
+    - name: Generate migrations
+      run: |
+        conda run -n gma python manage.py makemigrations --verbosity=2
       shell: bash -l {0}
 
     - name: Run migrations
