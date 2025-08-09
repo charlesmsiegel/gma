@@ -18,67 +18,138 @@ from campaigns.models import Campaign, CampaignMembership
 User = get_user_model()
 
 
-class CampaignModelSettingsFieldsTest(TestCase):
+class CampaignSettingsTestMixin:
+    """Common test utilities and fixtures for campaign settings tests."""
+
+    def create_test_users(self):
+        """Create standard test users for campaign testing."""
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm_user = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player_user = User.objects.create_user(
+            username="player", email="player@test.com", password="testpass123"
+        )
+        self.observer_user = User.objects.create_user(
+            username="observer", email="observer@test.com", password="testpass123"
+        )
+        self.non_member_user = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+    def create_test_campaign(self, owner=None, **kwargs):
+        """Create a test campaign with sensible defaults."""
+        if owner is None:
+            owner = self.owner
+
+        defaults = {
+            "name": "Test Campaign",
+            "owner": owner,
+            "description": "Test description",
+            "game_system": "Test System",
+            "is_active": True,
+            "is_public": False,
+            "allow_observer_join": False,
+            "allow_player_join": False,
+        }
+        defaults.update(kwargs)
+        return Campaign.objects.create(**defaults)
+
+    def create_campaign_memberships(self, campaign=None):
+        """Create standard campaign memberships for test users."""
+        if campaign is None:
+            campaign = self.campaign
+
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.gm_user, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.player_user, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.observer_user, role="OBSERVER"
+        )
+
+    def get_valid_form_data(self, **overrides):
+        """Get valid form data for campaign settings with optional overrides."""
+        data = {
+            "name": "Valid Campaign Name",
+            "description": "Valid description",
+            "game_system": "Valid System",
+            "is_active": True,
+            "is_public": False,
+            "allow_observer_join": False,
+            "allow_player_join": False,
+        }
+        data.update(overrides)
+        return data
+
+    def assert_permission_denied(self, username, url):
+        """Assert that user cannot access the given URL."""
+        self.client.login(username=username, password="testpass123")
+        response = self.client.get(url)
+        self.assertIn(response.status_code, [403, 404, 302])
+
+    def assert_anonymous_permission_denied(self, url):
+        """Assert that anonymous user cannot access the given URL."""
+        response = self.client.get(url)
+        self.assertIn(response.status_code, [302, 403, 404])
+
+
+class BaseCampaignSettingsTest(TestCase, CampaignSettingsTestMixin):
+    """Base test class for campaign settings tests with common setUp."""
+
+    def setUp(self):
+        """Set up common test data."""
+        self.create_test_users()
+        self.campaign = self.create_test_campaign()
+        self.create_campaign_memberships()
+        self.settings_url = reverse(
+            "campaigns:settings", kwargs={"slug": self.campaign.slug}
+        )
+
+
+class CampaignModelSettingsFieldsTest(TestCase, CampaignSettingsTestMixin):
     """Test new Campaign model fields for settings functionality."""
 
     def setUp(self):
         """Set up test users."""
-        self.owner = User.objects.create_user(
-            username="owner", email="owner@test.com", password="testpass123"
-        )
+        self.create_test_users()
 
     def test_allow_observer_join_field_default(self):
         """Test allow_observer_join field defaults to False."""
-        campaign = Campaign.objects.create(
-            name="Test Campaign",
-            owner=self.owner,
-        )
+        campaign = self.create_test_campaign()
         self.assertFalse(campaign.allow_observer_join)
 
     def test_allow_player_join_field_default(self):
         """Test allow_player_join field defaults to False."""
-        campaign = Campaign.objects.create(
-            name="Test Campaign",
-            owner=self.owner,
-        )
+        campaign = self.create_test_campaign()
         self.assertFalse(campaign.allow_player_join)
 
     def test_allow_observer_join_field_can_be_true(self):
         """Test allow_observer_join field can be set to True."""
-        campaign = Campaign.objects.create(
-            name="Test Campaign",
-            owner=self.owner,
-            allow_observer_join=True,
-        )
+        campaign = self.create_test_campaign(allow_observer_join=True)
         self.assertTrue(campaign.allow_observer_join)
 
     def test_allow_player_join_field_can_be_true(self):
         """Test allow_player_join field can be set to True."""
-        campaign = Campaign.objects.create(
-            name="Test Campaign",
-            owner=self.owner,
-            allow_player_join=True,
-        )
+        campaign = self.create_test_campaign(allow_player_join=True)
         self.assertTrue(campaign.allow_player_join)
 
     def test_both_join_fields_can_be_true(self):
         """Test both join fields can be True simultaneously."""
-        campaign = Campaign.objects.create(
-            name="Test Campaign",
-            owner=self.owner,
-            allow_observer_join=True,
-            allow_player_join=True,
+        campaign = self.create_test_campaign(
+            allow_observer_join=True, allow_player_join=True
         )
         self.assertTrue(campaign.allow_observer_join)
         self.assertTrue(campaign.allow_player_join)
 
     def test_campaign_fields_save_correctly(self):
         """Test campaign settings fields persist correctly after save."""
-        campaign = Campaign.objects.create(
-            name="Test Campaign",
-            owner=self.owner,
-            allow_observer_join=True,
-            allow_player_join=False,
+        campaign = self.create_test_campaign(
+            allow_observer_join=True, allow_player_join=False
         )
         campaign.save()
 
@@ -88,24 +159,13 @@ class CampaignModelSettingsFieldsTest(TestCase):
         self.assertFalse(campaign.allow_player_join)
 
 
-class CampaignSettingsFormTest(TestCase):
+class CampaignSettingsFormTest(TestCase, CampaignSettingsTestMixin):
     """Test CampaignSettingsForm validation and behavior."""
 
     def setUp(self):
         """Set up test users and campaign."""
-        self.owner = User.objects.create_user(
-            username="owner", email="owner@test.com", password="testpass123"
-        )
-        self.campaign = Campaign.objects.create(
-            name="Test Campaign",
-            owner=self.owner,
-            description="Test description",
-            game_system="Mage: The Ascension",
-            is_active=True,
-            is_public=False,
-            allow_observer_join=False,
-            allow_player_join=False,
-        )
+        self.create_test_users()
+        self.campaign = self.create_test_campaign(game_system="Mage: The Ascension")
 
     def test_campaign_settings_form_class_exists(self):
         """Test CampaignSettingsForm class exists (will fail until implemented)."""
@@ -133,15 +193,14 @@ class CampaignSettingsFormTest(TestCase):
         """Test form validation with valid data."""
         from campaigns.forms import CampaignSettingsForm
 
-        form_data = {
-            "name": "Updated Campaign Name",
-            "description": "Updated description",
-            "game_system": "Vampire: The Masquerade",
-            "is_active": True,
-            "is_public": True,
-            "allow_observer_join": True,
-            "allow_player_join": True,
-        }
+        form_data = self.get_valid_form_data(
+            name="Updated Campaign Name",
+            description="Updated description",
+            game_system="Vampire: The Masquerade",
+            is_public=True,
+            allow_observer_join=True,
+            allow_player_join=True,
+        )
         form = CampaignSettingsForm(data=form_data, instance=self.campaign)
         self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
 
@@ -149,15 +208,7 @@ class CampaignSettingsFormTest(TestCase):
         """Test form validation fails when name is empty."""
         from campaigns.forms import CampaignSettingsForm
 
-        form_data = {
-            "name": "",  # Empty name should be invalid
-            "description": "Test description",
-            "game_system": "Test System",
-            "is_active": True,
-            "is_public": False,
-            "allow_observer_join": False,
-            "allow_player_join": False,
-        }
+        form_data = self.get_valid_form_data(name="")  # Empty name should be invalid
         form = CampaignSettingsForm(data=form_data, instance=self.campaign)
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors)
@@ -166,15 +217,9 @@ class CampaignSettingsFormTest(TestCase):
         """Test form validates with only required field (name)."""
         from campaigns.forms import CampaignSettingsForm
 
-        form_data = {
-            "name": "Minimal Campaign",
-            "description": "",
-            "game_system": "",
-            "is_active": False,
-            "is_public": False,
-            "allow_observer_join": False,
-            "allow_player_join": False,
-        }
+        form_data = self.get_valid_form_data(
+            name="Minimal Campaign", description="", game_system="", is_active=False
+        )
         form = CampaignSettingsForm(data=form_data, instance=self.campaign)
         self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
 
@@ -182,10 +227,7 @@ class CampaignSettingsFormTest(TestCase):
         """Test boolean fields handle default values correctly."""
         from campaigns.forms import CampaignSettingsForm
 
-        # Test with minimal data, boolean fields should default properly
-        form_data = {
-            "name": "Test Campaign",
-        }
+        form_data = {"name": "Test Campaign"}
         form = CampaignSettingsForm(data=form_data, instance=self.campaign)
         # Form should be valid even with missing boolean fields
         if form.is_valid():
@@ -201,15 +243,15 @@ class CampaignSettingsFormTest(TestCase):
         from campaigns.forms import CampaignSettingsForm
 
         original_name = self.campaign.name
-        form_data = {
-            "name": "New Campaign Name",
-            "description": "New description",
-            "game_system": "New System",
-            "is_active": not self.campaign.is_active,
-            "is_public": not self.campaign.is_public,
-            "allow_observer_join": not self.campaign.allow_observer_join,
-            "allow_player_join": not self.campaign.allow_player_join,
-        }
+        form_data = self.get_valid_form_data(
+            name="New Campaign Name",
+            description="New description",
+            game_system="New System",
+            is_active=not self.campaign.is_active,
+            is_public=not self.campaign.is_public,
+            allow_observer_join=not self.campaign.allow_observer_join,
+            allow_player_join=not self.campaign.allow_player_join,
+        )
 
         form = CampaignSettingsForm(data=form_data, instance=self.campaign)
         self.assertTrue(form.is_valid())
@@ -231,126 +273,57 @@ class CampaignSettingsFormTest(TestCase):
         )
 
 
-class CampaignSettingsViewPermissionsTest(TestCase):
+class CampaignSettingsViewPermissionsTest(BaseCampaignSettingsTest):
     """Test access control for campaign settings views."""
-
-    def setUp(self):
-        """Set up test users and campaign."""
-        self.owner = User.objects.create_user(
-            username="owner", email="owner@test.com", password="testpass123"
-        )
-        self.gm_user = User.objects.create_user(
-            username="gm", email="gm@test.com", password="testpass123"
-        )
-        self.player_user = User.objects.create_user(
-            username="player", email="player@test.com", password="testpass123"
-        )
-        self.observer_user = User.objects.create_user(
-            username="observer", email="observer@test.com", password="testpass123"
-        )
-        self.non_member_user = User.objects.create_user(
-            username="nonmember", email="nonmember@test.com", password="testpass123"
-        )
-
-        self.campaign = Campaign.objects.create(
-            name="Test Campaign",
-            owner=self.owner,
-            description="Test description",
-            game_system="Test System",
-        )
-
-        # Create memberships
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.gm_user, role="GM"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player_user, role="PLAYER"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.observer_user, role="OBSERVER"
-        )
 
     def test_owner_can_access_settings_get(self):
         """Test campaign owner can access settings page via GET."""
         self.client.login(username="owner", password="testpass123")
-
-        # This URL will need to be implemented
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
-        response = self.client.get(url)
+        response = self.client.get(self.settings_url)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("form", response.context)
 
     def test_gm_cannot_access_settings(self):
         """Test GM cannot access campaign settings."""
-        self.client.login(username="gm", password="testpass123")
-
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
-        response = self.client.get(url)
-
-        # Should be forbidden (403) or redirect to login/error
-        self.assertIn(response.status_code, [403, 404, 302])
+        self.assert_permission_denied("gm", self.settings_url)
 
     def test_player_cannot_access_settings(self):
         """Test player cannot access campaign settings."""
-        self.client.login(username="player", password="testpass123")
-
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
-        response = self.client.get(url)
-
-        self.assertIn(response.status_code, [403, 404, 302])
+        self.assert_permission_denied("player", self.settings_url)
 
     def test_observer_cannot_access_settings(self):
         """Test observer cannot access campaign settings."""
-        self.client.login(username="observer", password="testpass123")
-
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
-        response = self.client.get(url)
-
-        self.assertIn(response.status_code, [403, 404, 302])
+        self.assert_permission_denied("observer", self.settings_url)
 
     def test_non_member_cannot_access_settings(self):
         """Test non-member cannot access campaign settings."""
-        self.client.login(username="nonmember", password="testpass123")
-
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
-        response = self.client.get(url)
-
-        self.assertIn(response.status_code, [403, 404, 302])
+        self.assert_permission_denied("nonmember", self.settings_url)
 
     def test_anonymous_user_cannot_access_settings(self):
         """Test anonymous user cannot access campaign settings."""
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
-        response = self.client.get(url)
-
-        # Should redirect to login or show 403/404
-        self.assertIn(response.status_code, [302, 403, 404])
+        self.assert_anonymous_permission_denied(self.settings_url)
 
 
-class CampaignSettingsViewBehaviorTest(TestCase):
+class CampaignSettingsViewBehaviorTest(BaseCampaignSettingsTest):
     """Test campaign settings view GET/POST behavior and validation."""
 
     def setUp(self):
         """Set up test users and campaign."""
-        self.owner = User.objects.create_user(
-            username="owner", email="owner@test.com", password="testpass123"
-        )
-        self.campaign = Campaign.objects.create(
-            name="Test Campaign",
-            owner=self.owner,
-            description="Original description",
-            game_system="Original System",
-            is_active=True,
-            is_public=False,
-            allow_observer_join=False,
-            allow_player_join=False,
+        super().setUp()
+        # Override the default campaign with specific settings for this test
+        self.campaign.name = "Test Campaign"
+        self.campaign.description = "Original description"
+        self.campaign.game_system = "Original System"
+        self.campaign.save()
+        self.settings_url = reverse(
+            "campaigns:settings", kwargs={"slug": self.campaign.slug}
         )
         self.client.login(username="owner", password="testpass123")
 
     def test_settings_view_get_shows_current_values(self):
         """Test GET request shows current campaign settings in form."""
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
-        response = self.client.get(url)
+        response = self.client.get(self.settings_url)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.campaign.name)
@@ -373,19 +346,17 @@ class CampaignSettingsViewBehaviorTest(TestCase):
 
     def test_settings_view_post_valid_data_updates_campaign(self):
         """Test POST request with valid data updates campaign settings."""
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
+        post_data = self.get_valid_form_data(
+            name="Updated Campaign Name",
+            description="Updated description",
+            game_system="Updated System",
+            is_active=False,
+            is_public=True,
+            allow_observer_join=True,
+            allow_player_join=True,
+        )
 
-        post_data = {
-            "name": "Updated Campaign Name",
-            "description": "Updated description",
-            "game_system": "Updated System",
-            "is_active": False,
-            "is_public": True,
-            "allow_observer_join": True,
-            "allow_player_join": True,
-        }
-
-        response = self.client.post(url, data=post_data)
+        response = self.client.post(self.settings_url, data=post_data)
 
         # Should redirect after successful update
         self.assertEqual(response.status_code, 302)
@@ -402,19 +373,9 @@ class CampaignSettingsViewBehaviorTest(TestCase):
 
     def test_settings_view_post_invalid_data_shows_errors(self):
         """Test POST request with invalid data shows form errors."""
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
+        post_data = self.get_valid_form_data(name="")  # Invalid: name is required
 
-        post_data = {
-            "name": "",  # Invalid: name is required
-            "description": "Valid description",
-            "game_system": "Valid System",
-            "is_active": True,
-            "is_public": False,
-            "allow_observer_join": False,
-            "allow_player_join": False,
-        }
-
-        response = self.client.post(url, data=post_data)
+        response = self.client.post(self.settings_url, data=post_data)
 
         # Should not redirect, should show form with errors
         self.assertEqual(response.status_code, 200)
@@ -429,22 +390,17 @@ class CampaignSettingsViewBehaviorTest(TestCase):
 
     def test_settings_view_post_partial_data_updates_specified_fields(self):
         """Test POST with partial data only updates specified fields."""
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
-
         original_description = self.campaign.description
         original_game_system = self.campaign.game_system
 
-        post_data = {
-            "name": "New Name Only",
-            "description": original_description,
-            "game_system": original_game_system,
-            "is_active": True,
-            "is_public": True,  # Only changing this
-            "allow_observer_join": False,
-            "allow_player_join": False,
-        }
+        post_data = self.get_valid_form_data(
+            name="New Name Only",
+            description=original_description,
+            game_system=original_game_system,
+            is_public=True,  # Only changing this
+        )
 
-        response = self.client.post(url, data=post_data)
+        response = self.client.post(self.settings_url, data=post_data)
         self.assertEqual(response.status_code, 302)
 
         self.campaign.refresh_from_db()
@@ -455,19 +411,13 @@ class CampaignSettingsViewBehaviorTest(TestCase):
 
     def test_settings_view_redirect_after_success(self):
         """Test redirect after successful settings update."""
-        url = reverse("campaigns:settings", kwargs={"slug": self.campaign.slug})
+        post_data = self.get_valid_form_data(
+            name="Updated Name",
+            description="Updated description",
+            game_system="Updated System",
+        )
 
-        post_data = {
-            "name": "Updated Name",
-            "description": "Updated description",
-            "game_system": "Updated System",
-            "is_active": True,
-            "is_public": False,
-            "allow_observer_join": False,
-            "allow_player_join": False,
-        }
-
-        response = self.client.post(url, data=post_data)
+        response = self.client.post(self.settings_url, data=post_data)
 
         # Should redirect to campaign detail page
         expected_redirect_url = reverse(
@@ -483,23 +433,16 @@ class CampaignSettingsViewBehaviorTest(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class CampaignSettingsIntegrationTest(TestCase):
+class CampaignSettingsIntegrationTest(TestCase, CampaignSettingsTestMixin):
     """Test end-to-end campaign settings workflow."""
 
     def setUp(self):
         """Set up test users and campaign."""
-        self.owner = User.objects.create_user(
-            username="owner", email="owner@test.com", password="testpass123"
-        )
-        self.campaign = Campaign.objects.create(
+        self.create_test_users()
+        self.campaign = self.create_test_campaign(
             name="Integration Test Campaign",
-            owner=self.owner,
             description="Original description",
             game_system="D&D 5e",
-            is_active=True,
-            is_public=False,
-            allow_observer_join=False,
-            allow_player_join=False,
         )
 
     def test_full_settings_workflow(self):
@@ -521,15 +464,14 @@ class CampaignSettingsIntegrationTest(TestCase):
         self.assertEqual(settings_get_response.status_code, 200)
 
         # Step 4: Update settings with new values
-        updated_data = {
-            "name": "Updated Integration Campaign",
-            "description": "This campaign was updated through integration test",
-            "game_system": "Mage: The Ascension",
-            "is_active": True,
-            "is_public": True,
-            "allow_observer_join": True,
-            "allow_player_join": True,
-        }
+        updated_data = self.get_valid_form_data(
+            name="Updated Integration Campaign",
+            description="This campaign was updated through integration test",
+            game_system="Mage: The Ascension",
+            is_public=True,
+            allow_observer_join=True,
+            allow_player_join=True,
+        )
 
         settings_post_response = self.client.post(settings_url, data=updated_data)
         self.assertEqual(settings_post_response.status_code, 302)
@@ -561,6 +503,9 @@ class CampaignSettingsIntegrationTest(TestCase):
     def test_settings_link_visible_to_owner_only(self):
         """Test settings link is only visible to campaign owner."""
         detail_url = reverse("campaigns:detail", kwargs={"slug": self.campaign.slug})
+        settings_url = reverse(
+            "campaigns:settings", kwargs={"slug": self.campaign.slug}
+        )
 
         # Test owner sees settings link/button
         self.client.login(username="owner", password="testpass123")
@@ -568,19 +513,11 @@ class CampaignSettingsIntegrationTest(TestCase):
         self.assertEqual(owner_response.status_code, 200)
         # Check for settings link (this will depend on template implementation)
         # This assertion may need adjustment based on actual template
-        settings_url = reverse(
-            "campaigns:settings", kwargs={"slug": self.campaign.slug}
-        )
         # Could contain link text like "Settings", "Edit Settings", or URL
         self.assertContains(owner_response, settings_url)
 
         # Test non-owner doesn't see settings link
-        gm_user = User.objects.create_user(
-            username="gm", email="gm@test.com", password="testpass123"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=gm_user, role="GM"
-        )
+        self.create_campaign_memberships()
 
         self.client.login(username="gm", password="testpass123")
         gm_response = self.client.get(detail_url)
@@ -596,15 +533,15 @@ class CampaignSettingsIntegrationTest(TestCase):
         settings_url = reverse(
             "campaigns:settings", kwargs={"slug": self.campaign.slug}
         )
-        update_data = {
-            "name": "Session Test Campaign",
-            "description": "Testing persistence",
-            "game_system": "Custom System",
-            "is_active": False,
-            "is_public": True,
-            "allow_observer_join": True,
-            "allow_player_join": False,
-        }
+        update_data = self.get_valid_form_data(
+            name="Session Test Campaign",
+            description="Testing persistence",
+            game_system="Custom System",
+            is_active=False,
+            is_public=True,
+            allow_observer_join=True,
+            allow_player_join=False,
+        )
 
         response = self.client.post(settings_url, data=update_data)
         self.assertEqual(response.status_code, 302)
@@ -642,15 +579,9 @@ class CampaignSettingsIntegrationTest(TestCase):
         self.assertContains(get_response, "csrfmiddlewaretoken")
 
         # POST without CSRF should fail
-        post_data = {
-            "name": "No CSRF Test",
-            "description": "Testing CSRF protection",
-            "game_system": "Test System",
-            "is_active": True,
-            "is_public": False,
-            "allow_observer_join": False,
-            "allow_player_join": False,
-        }
+        post_data = self.get_valid_form_data(
+            name="No CSRF Test", description="Testing CSRF protection"
+        )
 
         # Disable CSRF for this test by using enforce_csrf_checks=False
         # In a real scenario, this would fail without proper CSRF token
@@ -660,18 +591,13 @@ class CampaignSettingsIntegrationTest(TestCase):
         self.assertIn(response.status_code, [200, 302, 403])
 
 
-class CampaignSettingsEdgeCasesTest(TestCase):
+class CampaignSettingsEdgeCasesTest(TestCase, CampaignSettingsTestMixin):
     """Test edge cases and error conditions for campaign settings."""
 
     def setUp(self):
         """Set up test data."""
-        self.owner = User.objects.create_user(
-            username="owner", email="owner@test.com", password="testpass123"
-        )
-        self.campaign = Campaign.objects.create(
-            name="Edge Case Campaign",
-            owner=self.owner,
-        )
+        self.create_test_users()
+        self.campaign = self.create_test_campaign(name="Edge Case Campaign")
         self.client.login(username="owner", password="testpass123")
 
     def test_settings_with_very_long_name(self):
@@ -682,16 +608,7 @@ class CampaignSettingsEdgeCasesTest(TestCase):
 
         # Campaign name field should have max_length=200 based on model
         long_name = "A" * 250  # Longer than allowed
-
-        post_data = {
-            "name": long_name,
-            "description": "Test description",
-            "game_system": "Test System",
-            "is_active": True,
-            "is_public": False,
-            "allow_observer_join": False,
-            "allow_player_join": False,
-        }
+        post_data = self.get_valid_form_data(name=long_name)
 
         response = self.client.post(settings_url, data=post_data)
 
@@ -708,16 +625,11 @@ class CampaignSettingsEdgeCasesTest(TestCase):
         )
 
         special_name = "Campaign with 特殊文字 & symbols! @#$%"
-
-        post_data = {
-            "name": special_name,
-            "description": "Test description with émojis 🎲",
-            "game_system": 'System with "quotes" & ampersands',
-            "is_active": True,
-            "is_public": False,
-            "allow_observer_join": False,
-            "allow_player_join": False,
-        }
+        post_data = self.get_valid_form_data(
+            name=special_name,
+            description="Test description with émojis 🎲",
+            game_system='System with "quotes" & ampersands',
+        )
 
         response = self.client.post(settings_url, data=post_data)
 
@@ -742,15 +654,14 @@ class CampaignSettingsEdgeCasesTest(TestCase):
         )
 
         # Now try to update via form
-        post_data = {
-            "name": "Form Updated Name",
-            "description": "Updated via form",
-            "game_system": "Updated System",
-            "is_active": True,
-            "is_public": True,
-            "allow_observer_join": True,
-            "allow_player_join": True,
-        }
+        post_data = self.get_valid_form_data(
+            name="Form Updated Name",
+            description="Updated via form",
+            game_system="Updated System",
+            is_public=True,
+            allow_observer_join=True,
+            allow_player_join=True,
+        )
 
         response = self.client.post(settings_url, data=post_data)
         self.assertEqual(response.status_code, 302)
@@ -769,15 +680,15 @@ class CampaignSettingsEdgeCasesTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Update campaign name
-        post_data = {
-            "name": "Completely New Campaign Name That Changes Slug",
-            "description": self.campaign.description,
-            "game_system": self.campaign.game_system,
-            "is_active": self.campaign.is_active,
-            "is_public": self.campaign.is_public,
-            "allow_observer_join": self.campaign.allow_observer_join,
-            "allow_player_join": self.campaign.allow_player_join,
-        }
+        post_data = self.get_valid_form_data(
+            name="Completely New Campaign Name That Changes Slug",
+            description=self.campaign.description,
+            game_system=self.campaign.game_system,
+            is_active=self.campaign.is_active,
+            is_public=self.campaign.is_public,
+            allow_observer_join=self.campaign.allow_observer_join,
+            allow_player_join=self.campaign.allow_player_join,
+        )
 
         response = self.client.post(settings_url, data=post_data)
         self.assertEqual(response.status_code, 302)
