@@ -1,172 +1,194 @@
 {% extends "base.html" %}
-
 {% block title %}{{ campaign.name }} - {{ block.super }}{% endblock %}
-
 {% block extra_css %}
-{% load static %}
-<link rel="stylesheet" href="{% static 'campaigns/css/campaign_detail.css' %}">
+  {% load static %}
+  <link rel="stylesheet"
+        href="{% static 'campaigns/css/campaign_detail.css' %}">
 {% endblock %}
-
 {% block content %}
-<div class="campaign-header">
+  <div class="campaign-header">
     <h1 class="campaign-title">
-        {{ campaign.name }}
-        <span class="visibility-badge visibility-{% if campaign.is_public %}public{% else %}private{% endif %}">
-            {% if campaign.is_public %}Public{% else %}Private{% endif %}
-        </span>
+      {{ campaign.name }}
+      <span class="visibility-badge visibility-
+                   {% if campaign.is_public %}
+                     public
+                   {% else %}
+                     private
+                   {% endif %}">
+        {% if campaign.is_public %}
+          Public
+        {% else %}
+          Private
+        {% endif %}
+      </span>
     </h1>
     <div class="campaign-meta">
-        <span><strong>Owner:</strong> {{ campaign.owner.username }}</span>
-        <span><strong>System:</strong> {{ campaign.game_system|default:"Not specified" }}</span>
-        <span><strong>Created:</strong> {{ campaign.created_at|date:"M j, Y" }}</span>
-        {% if campaign.updated_at != campaign.created_at %}
-            <span><strong>Updated:</strong> {{ campaign.updated_at|date:"M j, Y" }}</span>
-        {% endif %}
+      <span><strong>Owner:</strong> {{ campaign.owner.username }}</span>
+      <span><strong>System:</strong> {{ campaign.game_system|default:"Not specified" }}</span>
+      <span><strong>Created:</strong> {{ campaign.created_at|date:"M j, Y" }}</span>
+      {% if campaign.updated_at != campaign.created_at %}
+        <span><strong>Updated:</strong> {{ campaign.updated_at|date:"M j, Y" }}</span>
+      {% endif %}
     </div>
     <div>
-        <span class="campaign-status {% if campaign.is_active %}status-active{% else %}status-inactive{% endif %}">
-            {% if campaign.is_active %}Active{% else %}Inactive{% endif %}
-        </span>
-        {% if user.is_authenticated and user_role %}
-            <span class="role-badge role-{{ user_role|lower }}">{{ user_role }}</span>
+      <span class="campaign-status
+                   {% if campaign.is_active %}
+                     status-active
+                   {% else %}
+                     status-inactive
+                   {% endif %}">
+        {% if campaign.is_active %}
+          Active
+        {% else %}
+          Inactive
         {% endif %}
+      </span>
+      {% if user.is_authenticated and user_role %}
+        <span class="role-badge role-{{ user_role|lower }}">{{ user_role }}</span>
+      {% endif %}
     </div>
-</div>
-
-{% if campaign.description %}
+  </div>
+  {% if campaign.description %}
     <div class="campaign-description">
-        <h3>Campaign Description</h3>
-        <p>{{ campaign.description|linebreaks }}</p>
+      <h3>Campaign Description</h3>
+      <p>{{ campaign.description|linebreaks }}</p>
     </div>
-{% else %}
+  {% else %}
     <div class="campaign-description">
-        <h3>Campaign Description</h3>
-        <p class="empty-state">No description provided yet.</p>
+      <h3>Campaign Description</h3>
+      <p class="empty-state">No description provided yet.</p>
     </div>
-{% endif %}
-
-<div class="info-section">
+  {% endif %}
+  <div class="info-section">
     <h3>Campaign Information</h3>
     <div class="info-grid">
-        <div class="info-item">
-            <div class="info-label">Campaign Master</div>
-            <div class="info-value">{{ campaign.owner.username }}</div>
+      <div class="info-item">
+        <div class="info-label">Campaign Master</div>
+        <div class="info-value">{{ campaign.owner.username }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Game System</div>
+        <div class="info-value">{{ campaign.game_system|default:"Not specified" }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Status</div>
+        <div class="info-value">
+          {% if campaign.is_active %}
+            Active Campaign
+          {% else %}
+            Inactive Campaign
+          {% endif %}
         </div>
-
-        <div class="info-item">
-            <div class="info-label">Game System</div>
-            <div class="info-value">{{ campaign.game_system|default:"Not specified" }}</div>
-        </div>
-
-        <div class="info-item">
-            <div class="info-label">Status</div>
-            <div class="info-value">
-                {% if campaign.is_active %}
-                    Active Campaign
-                {% else %}
-                    Inactive Campaign
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="info-item">
-            <div class="info-label">Created</div>
-            <div class="info-value">{{ campaign.created_at|date:"F j, Y \a\t g:i A" }}</div>
-        </div>
-
-        <div class="info-item">
-            <div class="info-label">Last Updated</div>
-            <div class="info-value">{{ campaign.updated_at|date:"F j, Y \a\t g:i A" }}</div>
-        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Created</div>
+        <div class="info-value">{{ campaign.created_at|date:"F j, Y \a\t g:i A" }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Last Updated</div>
+        <div class="info-value">{{ campaign.updated_at|date:"F j, Y \a\t g:i A" }}</div>
+      </div>
     </div>
-</div>
-
-{% if is_member %}
-<div class="member-list-section">
-    <h3>Campaign Members ({{ campaign.memberships.count|add:1 }})</h3>
-
-    <div class="member-list" role="list" aria-label="Campaign member list">
+  </div>
+  {% if is_member %}
+    <div class="member-list-section">
+      <h3>Campaign Members ({{ campaign.memberships.count|add:1 }})</h3>
+      <div class="member-list" role="list" aria-label="Campaign member list">
         <!-- Campaign Owner -->
         <div class="member-card owner-card" role="listitem">
-            <div class="member-info">
-                <div class="member-name">{{ campaign.owner.username }}</div>
-                <div class="member-joined">Owner since {{ campaign.created_at|date:"M j, Y" }}</div>
-            </div>
-            <span class="role-badge role-owner" aria-label="Role: Owner">Owner</span>
+          <div class="member-info">
+            <div class="member-name">{{ campaign.owner.username }}</div>
+            <div class="member-joined">Owner since {{ campaign.created_at|date:"M j, Y" }}</div>
+          </div>
+          <span class="role-badge role-owner" aria-label="Role: Owner">Owner</span>
         </div>
-
         <!-- Other Members -->
         {% for membership in campaign.memberships.all %}
-        <div class="member-card" role="listitem">
+          <div class="member-card" role="listitem">
             <div class="member-info">
-                <div class="member-name">{{ membership.user.username }}</div>
-                <div class="member-joined">Joined {{ membership.joined_at|date:"M j, Y" }}</div>
+              <div class="member-name">{{ membership.user.username }}</div>
+              <div class="member-joined">Joined {{ membership.joined_at|date:"M j, Y" }}</div>
             </div>
             <div class="member-actions">
-                <span class="role-badge role-{{ membership.role|lower }}" aria-label="Role: {{ membership.role }}">{{ membership.role }}</span>
-                {% if user.is_authenticated and is_owner %}
-                    <div class="member-controls">
-                        <a href="#" class="btn btn-sm btn-secondary" aria-label="Change role for {{ membership.user.username }}">Change Role</a>
-                        <a href="#" class="btn btn-sm btn-danger" aria-label="Remove {{ membership.user.username }} from campaign">Remove</a>
-                    </div>
-                {% endif %}
+              <span class="role-badge role-{{ membership.role|lower }}"
+                    aria-label="Role: {{ membership.role }}">{{ membership.role }}</span>
+              {% if user.is_authenticated and is_owner %}
+                <div class="member-controls">
+                  <a href="#"
+                     class="btn btn-sm btn-secondary"
+                     aria-label="Change role for {{ membership.user.username }}">Change Role</a>
+                  <a href="#"
+                     class="btn btn-sm btn-danger"
+                     aria-label="Remove {{ membership.user.username }} from campaign">Remove</a>
+                </div>
+              {% endif %}
             </div>
-        </div>
+          </div>
         {% endfor %}
+      </div>
     </div>
-</div>
-{% endif %}
-
-{% if user.is_authenticated %}
+  {% endif %}
+  {% if user.is_authenticated %}
     <div class="info-section">
-        <h3>Your Access</h3>
-        {% if user_role %}
-            <p>You are a <strong class="role-badge role-{{ user_role|lower }}">{{ user_role }}</strong> in this campaign.</p>
-
-            {% if user_role == "OWNER" %}
-                <p>As the campaign owner, you have full control over this campaign including settings, membership management, and content creation.</p>
-            {% elif user_role == "GM" %}
-                <p>As a Game Master, you can manage scenes, NPCs, and guide the story within this campaign.</p>
-            {% elif user_role == "PLAYER" %}
-                <p>As a Player, you can participate in scenes, manage your characters, and interact with the campaign world.</p>
-            {% elif user_role == "OBSERVER" %}
-                <p>As an Observer, you can view campaign content but have limited interaction privileges.</p>
-            {% endif %}
-        {% else %}
-            <p class="empty-state">You are not a member of this campaign.</p>
+      <h3>Your Access</h3>
+      {% if user_role %}
+        <p>
+          You are a <strong class="role-badge role-{{ user_role|lower }}">{{ user_role }}</strong> in this campaign.
+        </p>
+        {% if user_role == "OWNER" %}
+          <p>
+            As the campaign owner, you have full control over this campaign including settings, membership management, and content creation.
+          </p>
+        {% elif user_role == "GM" %}
+          <p>
+            As a Game Master, you can manage scenes, NPCs, and guide the story within this campaign.
+          </p>
+        {% elif user_role == "PLAYER" %}
+          <p>
+            As a Player, you can participate in scenes, manage your characters, and interact with the campaign world.
+          </p>
+        {% elif user_role == "OBSERVER" %}
+          <p>
+            As an Observer, you can view campaign content but have limited interaction privileges.
+          </p>
         {% endif %}
+      {% else %}
+        <p class="empty-state">You are not a member of this campaign.</p>
+      {% endif %}
     </div>
-{% endif %}
-
-<div class="action-buttons">
+  {% endif %}
+  <div class="action-buttons">
     {% if user.is_authenticated and is_owner %}
-        <a href="#" class="btn btn-primary">Edit Campaign</a>
-        <a href="#" class="btn btn-secondary">Invite Users</a>
-        <a href="#" class="btn btn-secondary">Manage Members</a>
-        <a href="{% url 'campaigns:settings' slug=campaign.slug %}" class="btn btn-secondary">Campaign Settings</a>
+      <a href="#" class="btn btn-primary">Edit Campaign</a>
+      <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}"
+         class="btn btn-secondary">Invite Users</a>
+      <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}"
+         class="btn btn-secondary">Manage Members</a>
+      <a href="{% url 'campaigns:settings' slug=campaign.slug %}"
+         class="btn btn-secondary">Campaign Settings</a>
     {% elif user.is_authenticated and user_role == "GM" %}
-        <a href="#" class="btn btn-primary">Create Scene</a>
-        <a href="#" class="btn btn-secondary">Manage NPCs</a>
+      <a href="#" class="btn btn-primary">Create Scene</a>
+      <a href="#" class="btn btn-secondary">Manage NPCs</a>
     {% elif user.is_authenticated and user_role == "PLAYER" %}
-        <a href="#" class="btn btn-primary">View Scenes</a>
-        <a href="#" class="btn btn-secondary">My Character</a>
+      <a href="#" class="btn btn-primary">View Scenes</a>
+      <a href="#" class="btn btn-secondary">My Character</a>
     {% elif user.is_authenticated and user_role == "OBSERVER" %}
-        <a href="#" class="btn btn-primary">View Scenes</a>
+      <a href="#" class="btn btn-primary">View Scenes</a>
     {% elif user.is_authenticated %}
-        <a href="#" class="btn btn-secondary">Request to Join</a>
+      <a href="#" class="btn btn-secondary">Request to Join</a>
     {% endif %}
-
     <a href="{% url 'campaigns:list' %}" class="btn btn-secondary">Back to Campaigns</a>
-</div>
-
-{% if not user.is_authenticated %}
+  </div>
+  {% if not user.is_authenticated %}
     <div class="card mt-4">
-        <h3>Join This Campaign</h3>
-        <p>To participate in this campaign, you need to be logged in and have appropriate permissions.</p>
-        <div class="action-buttons">
-            <a href="{% url 'users:login' %}" class="btn btn-primary">Login</a>
-            <a href="{% url 'users:register' %}" class="btn btn-secondary">Create Account</a>
-        </div>
+      <h3>Join This Campaign</h3>
+      <p>
+        To participate in this campaign, you need to be logged in and have appropriate permissions.
+      </p>
+      <div class="action-buttons">
+        <a href="{% url 'users:login' %}" class="btn btn-primary">Login</a>
+        <a href="{% url 'users:register' %}" class="btn btn-secondary">Create Account</a>
+      </div>
     </div>
-{% endif %}
+  {% endif %}
 {% endblock %}
