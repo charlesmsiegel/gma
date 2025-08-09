@@ -11,6 +11,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from campaigns.models import Campaign, CampaignMembership
+from campaigns.services import MembershipService
 
 User = get_user_model()
 
@@ -46,7 +47,8 @@ def list_campaign_members(request, campaign_id):
             {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
         )
 
-    # Get members
+    # Get members using service
+    membership_service = MembershipService(campaign)
     results = []
 
     # Apply role filtering if requested
@@ -67,10 +69,8 @@ def list_campaign_members(request, campaign_id):
         )
 
     # Add other members
-    memberships = (
-        CampaignMembership.objects.filter(campaign=campaign)
-        .select_related("user")
-        .order_by("role", "user__username")
+    memberships = membership_service.get_campaign_members().order_by(
+        "role", "user__username"
     )
 
     # Apply role filtering to memberships
@@ -146,9 +146,21 @@ def remove_campaign_member(request, campaign_id, user_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Get target membership
+    # Use service to remove member
+    membership_service = MembershipService(campaign)
+
+    # Get the user to remove
+    try:
+        user_to_remove = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response(
+            {"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Check if membership exists and get target role
     try:
         membership = CampaignMembership.objects.get(campaign=campaign, user_id=user_id)
+        target_role = membership.role
     except CampaignMembership.DoesNotExist:
         return Response(
             {"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND
@@ -160,7 +172,7 @@ def remove_campaign_member(request, campaign_id, user_id):
         pass
     elif user_role == "GM":
         # GM can only remove players and observers
-        if membership.role == "GM":
+        if target_role == "GM":
             return Response(
                 {"detail": "Member not found."}, status=status.HTTP_404_NOT_FOUND
             )
@@ -169,8 +181,8 @@ def remove_campaign_member(request, campaign_id, user_id):
             {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
         )
 
-    # Remove member
-    membership.delete()
+    # Remove member using service
+    membership_service.remove_member(user_to_remove)
 
     # Notification removed for simplicity
 
@@ -222,7 +234,7 @@ def change_member_role(request, campaign_id, user_id):
     if new_role not in ["GM", "PLAYER", "OBSERVER"]:
         return Response({"role": ["Invalid role."]}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Get target membership
+    # Get target membership and check permissions
     try:
         membership = CampaignMembership.objects.get(campaign=campaign, user_id=user_id)
     except CampaignMembership.DoesNotExist:
@@ -245,9 +257,9 @@ def change_member_role(request, campaign_id, user_id):
             {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
         )
 
-    # Update role
-    membership.role = new_role
-    membership.save()
+    # Update role using service
+    membership_service = MembershipService(campaign)
+    membership_service.change_member_role(membership, new_role)
 
     # Notification removed for simplicity
 
