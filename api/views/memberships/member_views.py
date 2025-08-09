@@ -10,6 +10,7 @@ from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from api.serializers import CampaignMemberResponseSerializer
 from campaigns.models import Campaign, CampaignMembership
 from campaigns.services import MembershipService
 
@@ -56,17 +57,13 @@ def list_campaign_members(request, campaign_id):
 
     # Add owner (only if not filtered or owner role requested)
     if not role_filter or role_filter.upper() == "OWNER":
-        results.append(
-            {
-                "user": {
-                    "id": campaign.owner.id,
-                    "username": campaign.owner.username,
-                    "email": campaign.owner.email,
-                },
-                "role": "OWNER",
-                "joined_at": campaign.created_at,
-            }
-        )
+        owner_data = {
+            "user": campaign.owner,
+            "role": "OWNER",
+            "joined_at": campaign.created_at,
+        }
+        serializer = CampaignMemberResponseSerializer(owner_data)
+        results.append(serializer.data)
 
     # Add other members
     memberships = membership_service.get_campaign_members().order_by(
@@ -78,17 +75,13 @@ def list_campaign_members(request, campaign_id):
         memberships = memberships.filter(role=role_filter.upper())
 
     for membership in memberships:
-        results.append(
-            {
-                "user": {
-                    "id": membership.user.id,
-                    "username": membership.user.username,
-                    "email": membership.user.email,
-                },
-                "role": membership.role,
-                "joined_at": membership.joined_at,
-            }
-        )
+        member_data = {
+            "user": membership.user,
+            "role": membership.role,
+            "joined_at": membership.joined_at,
+        }
+        serializer = CampaignMemberResponseSerializer(member_data)
+        results.append(serializer.data)
 
     # Apply pagination
     page_size = min(int(request.GET.get("page_size", 25)), 100)

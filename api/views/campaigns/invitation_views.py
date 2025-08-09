@@ -17,6 +17,11 @@ from api.errors import (
     SecurityResponseHelper,
     handle_django_validation_error,
 )
+from api.serializers import (
+    CampaignInvitationSerializer,
+    InvitationAcceptResponseSerializer,
+    InvitationCreateSerializer,
+)
 from campaigns.models import CampaignInvitation
 from campaigns.permissions import CampaignLookupMixin
 from campaigns.services import InvitationService
@@ -89,27 +94,8 @@ def send_campaign_invitation(request, campaign_id):
 
         # TODO: Send notification to invited user
 
-        return Response(
-            {
-                "id": invitation.id,
-                "campaign": {"id": campaign.id, "name": campaign.name},
-                "invited_user": {
-                    "id": invited_user.id,
-                    "username": invited_user.username,
-                    "email": invited_user.email,
-                },
-                "invited_by": {
-                    "id": request.user.id,
-                    "username": request.user.username,
-                },
-                "role": invitation.role,
-                "status": invitation.status,
-                "message": invitation.message,
-                "created_at": invitation.created_at,
-                "expires_at": invitation.expires_at,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        serializer = InvitationCreateSerializer(invitation)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     except DjangoValidationError as e:
         return handle_django_validation_error(e)
@@ -138,28 +124,8 @@ def list_campaign_invitations(request, campaign_id):
     status_filter = request.GET.get("status")
     invitations = invitation_service.get_campaign_invitations(status=status_filter)
 
-    results = []
-    for invitation in invitations:
-        results.append(
-            {
-                "id": invitation.id,
-                "invited_user": {
-                    "id": invitation.invited_user.id,
-                    "username": invitation.invited_user.username,
-                    "email": invitation.invited_user.email,
-                },
-                "invited_by": {
-                    "id": invitation.invited_by.id,
-                    "username": invitation.invited_by.username,
-                },
-                "role": invitation.role,
-                "status": invitation.status,
-                "message": invitation.message,
-                "created_at": invitation.created_at,
-                "expires_at": invitation.expires_at,
-                "is_expired": invitation.is_expired,
-            }
-        )
+    serializer = CampaignInvitationSerializer(invitations, many=True)
+    results = serializer.data
 
     return Response(
         {"results": results, "count": len(results), "next": None, "previous": None}
@@ -186,20 +152,20 @@ def accept_campaign_invitation(request, pk):
     try:
         membership = invitation.accept()
 
-        return Response(
-            {
-                "detail": "Invitation accepted successfully.",
-                "membership": {
-                    "campaign": {
-                        "id": membership.campaign.id,
-                        "name": membership.campaign.name,
-                    },
-                    "role": membership.role,
-                    "joined_at": membership.joined_at,
-                },
-            },
-            status=status.HTTP_200_OK,
-        )
+        # Build response data using serializers
+        membership_data = {
+            "campaign": membership.campaign,
+            "role": membership.role,
+            "joined_at": membership.joined_at,
+        }
+
+        response_data = {
+            "detail": "Invitation accepted successfully.",
+            "membership": membership_data,
+        }
+
+        serializer = InvitationAcceptResponseSerializer(response_data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     except DjangoValidationError as e:
         return handle_django_validation_error(e)
@@ -286,28 +252,8 @@ def list_user_invitations(request):
     if status_filter:
         invitations = invitations.filter(status__iexact=status_filter)
 
-    results = []
-    for invitation in invitations:
-        results.append(
-            {
-                "id": invitation.id,
-                "campaign": {
-                    "id": invitation.campaign.id,
-                    "name": invitation.campaign.name,
-                    "game_system": invitation.campaign.game_system,
-                },
-                "invited_by": {
-                    "id": invitation.invited_by.id,
-                    "username": invitation.invited_by.username,
-                },
-                "role": invitation.role,
-                "status": invitation.status,
-                "message": invitation.message,
-                "created_at": invitation.created_at,
-                "expires_at": invitation.expires_at,
-                "is_expired": invitation.is_expired,
-            }
-        )
+    serializer = CampaignInvitationSerializer(invitations, many=True)
+    results = serializer.data
 
     return Response(
         {"results": results, "count": len(results), "next": None, "previous": None}

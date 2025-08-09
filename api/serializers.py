@@ -5,7 +5,7 @@ API serializers for the GMA application.
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from campaigns.models import Campaign, CampaignMembership
+from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
 
 User = get_user_model()
 
@@ -297,3 +297,158 @@ class CampaignDetailSerializer(CampaignSerializer):
             data.pop("settings", None)
 
         return data
+
+
+# Invitation-specific serializers
+class InvitationUserSerializer(serializers.ModelSerializer):
+    """Lightweight user serializer for invitation responses."""
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "email")
+
+
+class InvitationCampaignSerializer(serializers.ModelSerializer):
+    """Lightweight campaign serializer for invitation responses."""
+
+    class Meta:
+        model = Campaign
+        fields = ("id", "name", "game_system")
+
+
+class CampaignInvitationSerializer(serializers.ModelSerializer):
+    """Serializer for CampaignInvitation model with nested relationships."""
+
+    campaign = InvitationCampaignSerializer(read_only=True)
+    invited_user = InvitationUserSerializer(read_only=True)
+    invited_by = InvitationUserSerializer(read_only=True)
+    is_expired = serializers.ReadOnlyField()
+
+    class Meta:
+        model = CampaignInvitation
+        fields = (
+            "id",
+            "campaign",
+            "invited_user",
+            "invited_by",
+            "role",
+            "status",
+            "message",
+            "created_at",
+            "expires_at",
+            "is_expired",
+        )
+        read_only_fields = (
+            "id",
+            "campaign",
+            "invited_user",
+            "invited_by",
+            "created_at",
+            "expires_at",
+            "is_expired",
+        )
+
+
+class InvitationCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating campaign invitations (response format)."""
+
+    campaign = InvitationCampaignSerializer(read_only=True)
+    invited_user = InvitationUserSerializer(read_only=True)
+    invited_by = InvitationUserSerializer(read_only=True)
+
+    class Meta:
+        model = CampaignInvitation
+        fields = (
+            "id",
+            "campaign",
+            "invited_user",
+            "invited_by",
+            "role",
+            "status",
+            "message",
+            "created_at",
+            "expires_at",
+        )
+        read_only_fields = (
+            "id",
+            "campaign",
+            "invited_user",
+            "invited_by",
+            "created_at",
+            "expires_at",
+        )
+
+
+# Membership response serializers
+class MembershipResponseSerializer(serializers.Serializer):
+    """Serializer for membership data in invitation acceptance responses."""
+
+    campaign = InvitationCampaignSerializer(read_only=True)
+    role = serializers.CharField(read_only=True)
+    joined_at = serializers.DateTimeField(read_only=True)
+
+
+class InvitationAcceptResponseSerializer(serializers.Serializer):
+    """Serializer for invitation acceptance response."""
+
+    detail = serializers.CharField(read_only=True)
+    membership = MembershipResponseSerializer(read_only=True)
+
+
+# Member list serializers
+class CampaignMemberResponseSerializer(serializers.Serializer):
+    """Serializer for campaign member data in member list responses."""
+
+    user = InvitationUserSerializer(read_only=True)
+    role = serializers.CharField(read_only=True)
+    joined_at = serializers.DateTimeField(read_only=True)
+
+
+# Bulk operation serializers
+class BulkAddMemberSuccessSerializer(serializers.Serializer):
+    """Serializer for successful bulk add member operations."""
+
+    user_id = serializers.IntegerField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    role = serializers.CharField(read_only=True)
+
+
+class BulkOperationErrorSerializer(serializers.Serializer):
+    """Serializer for bulk operation errors."""
+
+    user_id = serializers.IntegerField(read_only=True, required=False)
+    error = serializers.CharField(read_only=True)
+
+
+class BulkAddMemberResponseSerializer(serializers.Serializer):
+    """Serializer for bulk add member response."""
+
+    added = BulkAddMemberSuccessSerializer(many=True, read_only=True)
+    failed = BulkOperationErrorSerializer(many=True, read_only=True)
+
+
+class BulkRoleChangeSuccessSerializer(serializers.Serializer):
+    """Serializer for successful bulk role change operations."""
+
+    user_id = serializers.IntegerField(read_only=True)
+    role = serializers.CharField(read_only=True)
+
+
+class BulkRoleChangeResponseSerializer(serializers.Serializer):
+    """Serializer for bulk role change response."""
+
+    updated = BulkRoleChangeSuccessSerializer(many=True, read_only=True)
+    errors = BulkOperationErrorSerializer(many=True, read_only=True, required=False)
+
+
+class BulkRemoveMemberSuccessSerializer(serializers.Serializer):
+    """Serializer for successful bulk remove member operations."""
+
+    user_id = serializers.IntegerField(read_only=True)
+
+
+class BulkRemoveMemberResponseSerializer(serializers.Serializer):
+    """Serializer for bulk remove member response."""
+
+    removed = BulkRemoveMemberSuccessSerializer(many=True, read_only=True)
+    errors = BulkOperationErrorSerializer(many=True, read_only=True, required=False)

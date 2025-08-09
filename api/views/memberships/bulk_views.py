@@ -12,6 +12,11 @@ from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from api.serializers import (
+    BulkAddMemberResponseSerializer,
+    BulkRemoveMemberResponseSerializer,
+    BulkRoleChangeResponseSerializer,
+)
 from campaigns.models import Campaign, CampaignMembership
 from campaigns.services import MembershipService
 
@@ -95,10 +100,9 @@ def bulk_add_members(request, campaign_id):
     if errors and not added:
         return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(
-        {"added": added, "failed": errors if errors else []},
-        status=status.HTTP_201_CREATED,
-    )
+    response_data = {"added": added, "failed": errors if errors else []}
+    serializer = BulkAddMemberResponseSerializer(response_data)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(["PATCH"])
@@ -181,7 +185,9 @@ def bulk_change_roles(request, campaign_id):
     if errors and not updated:
         return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response({"updated": updated, "errors": errors if errors else None})
+    response_data = {"updated": updated, "errors": errors if errors else None}
+    serializer = BulkRoleChangeResponseSerializer(response_data)
+    return Response(serializer.data)
 
 
 @api_view(["DELETE"])
@@ -253,7 +259,6 @@ def bulk_remove_members(request, campaign_id):
     if errors and not removed:
         return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(
-        {"removed": removed, "errors": errors if errors else None},
-        status=status.HTTP_204_NO_CONTENT,
-    )
+    response_data = {"removed": removed, "errors": errors if errors else None}
+    serializer = BulkRemoveMemberResponseSerializer(response_data)
+    return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
