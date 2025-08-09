@@ -288,7 +288,8 @@ def campaign_user_search(request, campaign_id):
     Excludes campaign owner, existing members, and users with pending invitations.
     """
     from django.core.paginator import Paginator
-    from django.utils.html import escape
+
+    from api.serializers import UserSerializer
 
     # Use helper to check campaign permissions
     helper = CampaignPermissionHelper(request)
@@ -345,39 +346,8 @@ def campaign_user_search(request, campaign_id):
     paginator = Paginator(users, page_size)
     page = paginator.get_page(page_number)
 
-    # Serialize user data with XSS protection
-    results = []
-    for user in page:
-        # Additional sanitization: remove javascript-related keywords
-        def sanitize(value):
-            if not value:
-                return value
-            # First escape HTML
-            escaped = escape(value)
-            # Then remove potentially dangerous content
-            dangerous_patterns = [
-                "alert(",
-                "javascript:",
-                "onclick=",
-                "onerror=",
-                "onload=",
-            ]
-            for pattern in dangerous_patterns:
-                escaped = escaped.replace(pattern, "")
-            return escaped
-
-        results.append(
-            {
-                "id": user.id,
-                "username": sanitize(user.username),
-                "email": sanitize(user.email),
-                "display_name": (
-                    sanitize(getattr(user, "display_name", ""))
-                    if getattr(user, "display_name", None)
-                    else None
-                ),
-            }
-        )
+    # Use DRF serializer for consistent data handling
+    serializer = UserSerializer(page, many=True, context={"request": request})
 
     # Build pagination URLs
     request_url = request.build_absolute_uri(request.path)
@@ -396,9 +366,9 @@ def campaign_user_search(request, campaign_id):
 
     return Response(
         {
-            "results": results,
+            "results": serializer.data,
             "count": paginator.count,
-            "query": escape(query),
+            "query": query,
             "next": next_url,
             "previous": previous_url,
             "page_size": page_size,
