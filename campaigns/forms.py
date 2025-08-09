@@ -2,13 +2,15 @@
 Forms for campaign creation and management.
 
 This module provides Django forms for creating and editing campaigns,
-with proper validation and user assignment.
+with proper validation and user assignment. Business logic is handled
+by service layer classes.
 """
 
 from django import forms
 from django.contrib.auth import get_user_model
 
-from .models import Campaign, CampaignInvitation, CampaignMembership
+from .models import Campaign, CampaignMembership
+from .services import MembershipService
 
 User = get_user_model()
 
@@ -42,6 +44,54 @@ class CampaignForm(forms.ModelForm):
         return campaign
 
 
+class CampaignSettingsForm(forms.ModelForm):
+    """Form for editing campaign settings."""
+
+    class Meta:
+        model = Campaign
+        fields = [
+            "name",
+            "description",
+            "game_system",
+            "is_active",
+            "is_public",
+            "allow_observer_join",
+            "allow_player_join",
+        ]
+        widgets = {
+            "name": forms.TextInput(attrs={"placeholder": "Enter campaign name"}),
+            "description": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "placeholder": "Enter campaign description (optional)",
+                }
+            ),
+            "game_system": forms.TextInput(
+                attrs={"placeholder": "e.g. Mage: The Ascension"}
+            ),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "allow_observer_join": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "allow_player_join": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+        }
+        labels = {
+            "is_active": "Campaign is active",
+            "is_public": "Campaign is public (visible to non-members)",
+            "allow_observer_join": "Anyone can join as observer",
+            "allow_player_join": "Anyone can join as player",
+        }
+        help_texts = {
+            "is_active": "Inactive campaigns are hidden from lists",
+            "is_public": "Public campaigns are visible to all users",
+            "allow_observer_join": "Observers can view but not participate",
+            "allow_player_join": "Players can participate in scenes",
+        }
+
+
 class SendInvitationForm(forms.Form):
     """Form for sending campaign invitations."""
 
@@ -66,31 +116,11 @@ class SendInvitationForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         if self.campaign:
-            # Exclude users who are already members or have pending invitations
-            existing_users = set([self.campaign.owner.id])
-            existing_users.update(
-                self.campaign.memberships.values_list("user_id", flat=True)
+            # Use service to get available users
+            membership_service = MembershipService(self.campaign)
+            self.fields["invited_user"].queryset = (
+                membership_service.get_available_users_for_invitation()
             )
-            existing_users.update(
-                CampaignInvitation.objects.filter(
-                    campaign=self.campaign, status="PENDING"
-                ).values_list("invited_user_id", flat=True)
-            )
-
-            self.fields["invited_user"].queryset = User.objects.exclude(
-                id__in=existing_users
-            )
-
-    def save(self, invited_by, campaign):
-        """Create the invitation."""
-        invitation = CampaignInvitation.objects.create(
-            campaign=campaign,
-            invited_user=self.cleaned_data["invited_user"],
-            invited_by=invited_by,
-            role=self.cleaned_data["role"],
-            message=self.cleaned_data.get("message", ""),
-        )
-        return invitation
 
 
 class ChangeMemberRoleForm(forms.Form):
@@ -112,16 +142,9 @@ class ChangeMemberRoleForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         if self.campaign:
-            self.fields["member"].queryset = self.campaign.memberships.select_related(
-                "user"
-            )
-
-    def save(self):
-        """Update the member's role."""
-        membership = self.cleaned_data["member"]
-        membership.role = self.cleaned_data["new_role"]
-        membership.save()
-        return membership
+            # Use service to get campaign members
+            membership_service = MembershipService(self.campaign)
+            self.fields["member"].queryset = membership_service.get_campaign_members()
 
 
 class BulkMemberManagementForm(forms.Form):
@@ -154,78 +177,24 @@ class BulkMemberManagementForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         if self.campaign:
-            # Adjust user queryset based on action
+            # Exclude campaign owner from bulk operations
             self.fields["users"].queryset = User.objects.exclude(
                 id=self.campaign.owner.id
             )
 
-    def process_bulk_operation(self):
-        """Process the bulk operation."""
-        action = self.cleaned_data["action"]
-        users = self.cleaned_data.get("users", [])
-        role = self.cleaned_data.get("role")
+    def clean(self):
+        """Validate form data."""
+        cleaned_data = super().clean()
+        action = cleaned_data.get("action")
+        role = cleaned_data.get("role")
+        users = cleaned_data.get("users")
 
-        results = {"added": 0, "removed": 0, "updated": 0}
+        # Validate that role is provided for add/change operations
+        if action in ["add", "change_role"] and not role:
+            raise forms.ValidationError(f"Role is required for {action} operations.")
 
-        if action == "add" and role:
-            for user in users:
-                if not CampaignMembership.objects.filter(
-                    campaign=self.campaign, user=user
-                ).exists():
-                    CampaignMembership.objects.create(
-                        campaign=self.campaign, user=user, role=role
-                    )
-                    results["added"] += 1
+        # Validate that users are selected
+        if not users:
+            raise forms.ValidationError("Please select at least one user.")
 
-        elif action == "remove":
-            memberships = CampaignMembership.objects.filter(
-                campaign=self.campaign, user__in=users
-            )
-            results["removed"] = memberships.count()
-            memberships.delete()
-
-        elif action == "change_role" and role:
-            memberships = CampaignMembership.objects.filter(
-                campaign=self.campaign, user__in=users
-            )
-            results["updated"] = memberships.update(role=role)
-
-        return results
-
-
-class CampaignSettingsForm(CampaignForm):
-    """Form for editing campaign settings, extends basic campaign form."""
-
-    class Meta(CampaignForm.Meta):
-        model = Campaign
-        fields = CampaignForm.Meta.fields + [
-            "is_active",
-            "is_public",
-            "allow_observer_join",
-            "allow_player_join",
-        ]
-        widgets = {
-            **CampaignForm.Meta.widgets,
-            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "allow_observer_join": forms.CheckboxInput(
-                attrs={"class": "form-check-input"}
-            ),
-            "allow_player_join": forms.CheckboxInput(
-                attrs={"class": "form-check-input"}
-            ),
-        }
-        labels = {
-            **getattr(CampaignForm.Meta, "labels", {}),
-            "is_active": "Campaign is active",
-            "is_public": "Campaign is public (visible to non-members)",
-            "allow_observer_join": "Anyone can join as observer",
-            "allow_player_join": "Anyone can join as player",
-        }
-        help_texts = {
-            **getattr(CampaignForm.Meta, "help_texts", {}),
-            "is_active": "Inactive campaigns are hidden from lists",
-            "is_public": "Public campaigns are visible to all users",
-            "allow_observer_join": "Observers can view but not participate",
-            "allow_player_join": "Players can participate in scenes",
-        }
+        return cleaned_data

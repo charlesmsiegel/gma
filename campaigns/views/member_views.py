@@ -5,6 +5,7 @@ Views for campaign member management.
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
@@ -16,7 +17,8 @@ from campaigns.forms import (
     SendInvitationForm,
 )
 from campaigns.mixins import CampaignManagementMixin
-from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
+from campaigns.models import Campaign, CampaignMembership
+from campaigns.services import CampaignService, InvitationService, MembershipService
 
 User = get_user_model()
 
@@ -61,9 +63,9 @@ class SendInvitationView(LoginRequiredMixin, CampaignManagementMixin, FormView):
                 role = request.POST.get("role", "PLAYER")
                 message = request.POST.get("message", "")
 
-                # Create invitation
-                invitation = CampaignInvitation.objects.create(
-                    campaign=self.campaign,
+                # Use service to create invitation
+                invitation_service = InvitationService(self.campaign)
+                invitation = invitation_service.create_invitation(
                     invited_user=invited_user,
                     invited_by=request.user,
                     role=role,
@@ -76,17 +78,30 @@ class SendInvitationView(LoginRequiredMixin, CampaignManagementMixin, FormView):
             except User.DoesNotExist:
                 messages.error(request, "User not found.")
                 return redirect("campaigns:send_invitation", slug=self.campaign.slug)
+            except ValidationError as e:
+                messages.error(request, f"Error creating invitation: {e}")
+                return redirect("campaigns:send_invitation", slug=self.campaign.slug)
 
         # Otherwise, handle normal form submission
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
-        # Create invitation
-        invitation = form.save(invited_by=self.request.user, campaign=self.campaign)
-        messages.success(
-            self.request, f"Invitation sent to {invitation.invited_user.username}!"
-        )
-        return redirect("campaigns:manage_members", slug=self.campaign.slug)
+        # Use service to create invitation
+        invitation_service = InvitationService(self.campaign)
+        try:
+            invitation = invitation_service.create_invitation(
+                invited_user=form.cleaned_data["invited_user"],
+                invited_by=self.request.user,
+                role=form.cleaned_data["role"],
+                message=form.cleaned_data.get("message", ""),
+            )
+            messages.success(
+                self.request, f"Invitation sent to {invitation.invited_user.username}!"
+            )
+            return redirect("campaigns:manage_members", slug=self.campaign.slug)
+        except ValidationError as e:
+            messages.error(self.request, f"Error creating invitation: {e}")
+            return self.form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -106,10 +121,20 @@ class ChangeMemberRoleView(LoginRequiredMixin, CampaignManagementMixin, FormView
         return kwargs
 
     def form_valid(self, form):
-        # Update role
-        membership = form.save()
-        messages.success(self.request, f"Role updated for {membership.user.username}!")
-        return redirect("campaigns:manage_members", slug=self.campaign.slug)
+        # Use service to update role
+        membership_service = MembershipService(self.campaign)
+        try:
+            membership = membership_service.change_member_role(
+                membership=form.cleaned_data["member"],
+                new_role=form.cleaned_data["new_role"],
+            )
+            messages.success(
+                self.request, f"Role updated for {membership.user.username}!"
+            )
+            return redirect("campaigns:manage_members", slug=self.campaign.slug)
+        except ValidationError as e:
+            messages.error(self.request, f"Error updating role: {e}")
+            return self.form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -129,10 +154,19 @@ class BulkMemberManagementView(LoginRequiredMixin, CampaignManagementMixin, Form
         return kwargs
 
     def form_valid(self, form):
-        # Process bulk operation
-        result = form.process_bulk_operation()
-        messages.success(self.request, f"Bulk operation completed: {result}")
-        return redirect("campaigns:manage_members", slug=self.campaign.slug)
+        # Use service to process bulk operation
+        membership_service = MembershipService(self.campaign)
+        try:
+            result = membership_service.bulk_operation(
+                action=form.cleaned_data["action"],
+                users=form.cleaned_data["users"],
+                role=form.cleaned_data.get("role"),
+            )
+            messages.success(self.request, f"Bulk operation completed: {result}")
+            return redirect("campaigns:manage_members", slug=self.campaign.slug)
+        except ValidationError as e:
+            messages.error(self.request, f"Error in bulk operation: {e}")
+            return self.form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -156,13 +190,9 @@ class AjaxUserSearchView(LoginRequiredMixin, View):
         if len(query) < 2:
             return JsonResponse({"users": []})
 
-        # Search users
-        users = (
-            User.objects.filter(username__icontains=query)
-            .exclude(id=campaign.owner.id)
-            .exclude(campaign_memberships__campaign=campaign)
-            .only("id", "username", "email")[:10]
-        )
+        # Use service to search users
+        campaign_service = CampaignService(campaign)
+        users = campaign_service.search_users_for_invitation(query, limit=10)
 
         results = [
             {"id": user.id, "username": user.username, "email": user.email}
@@ -192,19 +222,21 @@ class AjaxChangeMemberRoleView(LoginRequiredMixin, View):
         if new_role not in ["GM", "PLAYER", "OBSERVER"]:
             return JsonResponse({"error": "Invalid role"}, status=400)
 
-        # Update membership
+        # Update membership using service
         try:
             membership = CampaignMembership.objects.get(
                 campaign=campaign, user_id=user_id
             )
-            membership.role = new_role
-            membership.save()
+            membership_service = MembershipService(campaign)
+            membership_service.change_member_role(membership, new_role)
 
             return JsonResponse(
                 {"success": True, "message": f"Role updated to {new_role}"}
             )
         except CampaignMembership.DoesNotExist:
             return JsonResponse({"error": "Member not found"}, status=404)
+        except ValidationError as e:
+            return JsonResponse({"error": str(e)}, status=400)
 
 
 class AjaxRemoveMemberView(LoginRequiredMixin, View):
@@ -227,7 +259,7 @@ class AjaxRemoveMemberView(LoginRequiredMixin, View):
         if int(user_id) == campaign.owner.id:
             return JsonResponse({"error": "Cannot remove campaign owner"}, status=400)
 
-        # Remove member
+        # Remove member using service
         try:
             membership = CampaignMembership.objects.get(
                 campaign=campaign, user_id=user_id
@@ -239,10 +271,14 @@ class AjaxRemoveMemberView(LoginRequiredMixin, View):
                     {"error": "GMs cannot remove other GMs"}, status=403
                 )
 
-            membership.delete()
+            membership_service = MembershipService(campaign)
+            user = User.objects.get(id=user_id)
+            membership_service.remove_member(user)
 
             return JsonResponse(
                 {"success": True, "message": "Member removed successfully"}
             )
         except CampaignMembership.DoesNotExist:
             return JsonResponse({"error": "Member not found"}, status=404)
+        except User.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
