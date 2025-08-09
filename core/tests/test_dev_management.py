@@ -313,8 +313,8 @@ class CreateTestDataCommandTest(TestCase):
         # Check for appropriate campaign/character messages based on model availability
         # Campaigns model is now implemented, so verify creation messages
         self.assertIn("Created campaign:", output)
-        # Characters model is not implemented yet, so verify skip message
-        self.assertIn("Character model not implemented yet, skipping...", output)
+        # Characters model is now implemented, so verify character creation messages
+        self.assertIn("Created character:", output)
 
     def test_create_test_data_zero_counts(self):
         """Test create_test_data command with zero counts."""
