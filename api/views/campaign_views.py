@@ -11,15 +11,20 @@ Key Features:
 - Secure error handling that prevents information leakage
 """
 
+from typing import List, Optional, Tuple, Union
+
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from rest_framework import filters, generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 from api.serializers import CampaignDetailSerializer, CampaignSerializer
 from campaigns.models import Campaign
+
+User = get_user_model()
 
 
 class CampaignLookupMixin:
@@ -30,7 +35,11 @@ class CampaignLookupMixin:
     permission checking for campaign management operations.
     """
 
-    def get_campaign_with_permissions(self, campaign_id, required_roles=None):
+    request: Request  # This will be provided by the view class that uses this mixin
+
+    def get_campaign_with_permissions(
+        self, campaign_id: int, required_roles: Optional[List[str]] = None
+    ) -> Union[Tuple[Campaign, str], Response]:
         """
         Retrieve campaign and validate user permissions.
 
@@ -92,7 +101,7 @@ class CampaignListAPIView(generics.ListAPIView):
     ordering_fields = ["created_at", "updated_at", "name"]
     permission_classes = []  # Allow unauthenticated access to public campaigns
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Campaign]:
         """Return campaigns visible to the user with proper ordering and filtering."""
         user = self.request.user
 

@@ -1,7 +1,9 @@
-from django.urls import path
+from typing import List
+
+from django.urls import URLPattern, path
 
 app_name = "scenes"
 
-urlpatterns = [
+urlpatterns: List[URLPattern] = [
     # Scene-related URLs will be added here
 ]

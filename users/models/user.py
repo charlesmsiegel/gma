@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 
-def validate_timezone(value):
+def validate_timezone(value: str) -> None:
     """
     Validate that the timezone string is a valid timezone identifier.
 
@@ -62,6 +62,6 @@ class User(AbstractUser):
         verbose_name = "User"
         verbose_name_plural = "Users"
 
-    def get_display_name(self):
+    def get_display_name(self) -> str:
         """Return display_name if set, otherwise fall back to username."""
         return self.display_name or self.username

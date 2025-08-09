@@ -8,13 +8,14 @@ separating concerns from Django forms and views.
 from typing import Dict, List, Optional, Set
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import QuerySet
 
 from .models import Campaign, CampaignInvitation, CampaignMembership
 
-User = get_user_model()
+# Use AbstractUser for typing - our User model extends this
 
 
 class MembershipService:
@@ -38,7 +39,7 @@ class MembershipService:
         # Get IDs of users who cannot be invited
         excluded_users = self._get_excluded_user_ids()
 
-        return User.objects.exclude(id__in=excluded_users)
+        return get_user_model().objects.exclude(id__in=excluded_users)
 
     def get_campaign_members(self) -> QuerySet:
         """Get all campaign members with user information."""
@@ -66,7 +67,7 @@ class MembershipService:
         membership.save()
         return membership
 
-    def remove_member(self, user: User) -> bool:
+    def remove_member(self, user: AbstractUser) -> bool:
         """Remove a user from the campaign.
 
         Args:
@@ -84,7 +85,7 @@ class MembershipService:
         except CampaignMembership.DoesNotExist:
             return False
 
-    def add_member(self, user: User, role: str) -> CampaignMembership:
+    def add_member(self, user: AbstractUser, role: str) -> CampaignMembership:
         """Add a new member to the campaign.
 
         Args:
@@ -117,7 +118,7 @@ class MembershipService:
 
     @transaction.atomic
     def bulk_operation(
-        self, action: str, users: List[User], role: Optional[str] = None
+        self, action: str, users: List[AbstractUser], role: Optional[str] = None
     ) -> Dict[str, int]:
         """Perform bulk membership operations.
 
@@ -183,7 +184,11 @@ class InvitationService:
         self.campaign = campaign
 
     def create_invitation(
-        self, invited_user: User, invited_by: User, role: str, message: str = ""
+        self,
+        invited_user: AbstractUser,
+        invited_by: AbstractUser,
+        role: str,
+        message: str = "",
     ) -> CampaignInvitation:
         """Create a new campaign invitation.
 
@@ -246,7 +251,7 @@ class CampaignService:
         """Initialize service, optionally for a specific campaign."""
         self.campaign = campaign
 
-    def create_campaign(self, owner: User, **campaign_data) -> Campaign:
+    def create_campaign(self, owner: AbstractUser, **campaign_data) -> Campaign:
         """Create a new campaign.
 
         Args:
@@ -301,7 +306,7 @@ class CampaignService:
             raise ValueError("No campaign associated with this service")
 
         if len(query) < 2:
-            return User.objects.none()
+            return get_user_model().objects.none()
 
         # Get excluded user IDs
         membership_service = MembershipService(self.campaign)
@@ -309,7 +314,8 @@ class CampaignService:
 
         # Search users
         return (
-            User.objects.filter(username__icontains=query)
+            get_user_model()
+            .objects.filter(username__icontains=query)
             .exclude(id__in=excluded_users)
             .only("id", "username", "email")[:limit]
         )

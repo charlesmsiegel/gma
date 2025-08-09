@@ -1,9 +1,14 @@
 """Utility functions for user authentication and management."""
 
+from typing import Optional
+
 from django.contrib.auth import authenticate, get_user_model
+from django.http import HttpRequest
 
 
-def authenticate_by_email_or_username(request, username, password):
+def authenticate_by_email_or_username(
+    request: Optional[HttpRequest], username: str, password: str
+) -> Optional[object]:
     """
     Authenticate user by username or email.
 

@@ -1,7 +1,9 @@
-from django.urls import path
+from typing import List
+
+from django.urls import URLPattern, path
 
 app_name = "locations"
 
-urlpatterns = [
+urlpatterns: List[URLPattern] = [
     # Location-related URLs will be added here
 ]

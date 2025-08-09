@@ -11,16 +11,16 @@ logger = logging.getLogger(__name__)
 class TestWebSocketConsumer(AsyncWebsocketConsumer):
     """Basic WebSocket consumer for testing connectivity."""
 
-    async def connect(self):
+    async def connect(self) -> None:
         """Accept WebSocket connection."""
         await self.accept()
         logger.info("WebSocket connection established")
 
-    async def disconnect(self, close_code):
+    async def disconnect(self, close_code: int) -> None:
         """Handle WebSocket disconnection."""
         logger.info(f"WebSocket disconnected with code: {close_code}")
 
-    async def receive(self, text_data):
+    async def receive(self, text_data: str) -> None:
         """
         Receive message from WebSocket.
 

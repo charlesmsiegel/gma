@@ -28,17 +28,17 @@ CACHES = {
 
 # Disable migrations for faster test runs
 class DisableMigrations:
-    def __contains__(self, item):
+    def __contains__(self, item: str) -> bool:
         return True
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> None:
         return None
 
 
 MIGRATION_MODULES = DisableMigrations()
 
 # Test-specific settings
-SECRET_KEY = "test-secret-key-for-tests-only"
+SECRET_KEY = "test-secret-key-for-tests-only"  # nosec
 DEBUG = False
 
 # Set login URL to our custom view

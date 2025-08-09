@@ -1,7 +1,9 @@
-from django.urls import path
+from typing import List
+
+from django.urls import URLPattern, path
 
 app_name = "characters"
 
-urlpatterns = [
+urlpatterns: List[URLPattern] = [
     # Character-related URLs will be added here
 ]

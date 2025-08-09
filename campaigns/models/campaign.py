@@ -1,11 +1,11 @@
 from datetime import timedelta
-from typing import Optional
+from typing import Any, Optional, cast
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -57,7 +57,7 @@ class CampaignInvitationManager(models.Manager):
 class CampaignManager(models.Manager):
     """Custom manager for Campaign model with visibility filtering."""
 
-    def visible_to_user(self, user: Optional[AbstractUser]):
+    def visible_to_user(self, user: Optional[AbstractUser]) -> "QuerySet[Campaign]":
         """Return campaigns visible to the given user.
 
         Args:
@@ -141,11 +141,11 @@ class Campaign(models.Model):
         verbose_name = "Campaign"
         verbose_name_plural = "Campaigns"
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return the campaign name."""
         return self.name
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the campaign with auto-generated slug."""
         if not self.slug:
             self.slug = self._generate_unique_slug()
@@ -174,7 +174,7 @@ class Campaign(models.Model):
 
         return slug
 
-    def clean(self):
+    def clean(self) -> None:
         """Validate the campaign data."""
         super().clean()
         if not self.name:
@@ -197,7 +197,7 @@ class Campaign(models.Model):
             return "OWNER"
 
         # Single database query to get user's membership role
-        membership = self.memberships.filter(user=user).first()
+        membership = self.memberships.filter(user=cast(Any, user)).first()
         return membership.role if membership else None
 
     def has_role(self, user: Optional[AbstractUser], *roles: str) -> bool:
@@ -289,11 +289,11 @@ class CampaignMembership(models.Model):
         verbose_name = "Campaign Membership"
         verbose_name_plural = "Campaign Memberships"
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the membership."""
         return f"{self.user.username} - {self.campaign.name} ({self.role})"
 
-    def clean(self):
+    def clean(self) -> None:
         """Validate the membership data."""
         super().clean()
         if self.campaign and self.user:
@@ -371,20 +371,20 @@ class CampaignInvitation(models.Model):
             models.Index(fields=["campaign", "status"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the invitation."""
         return (
             f"{self.invited_user.username} invited to {self.campaign.name} "
             f"as {self.role}"
         )
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the invitation with auto-generated expiry."""
         if not self.expires_at:
             self.expires_at = timezone.now() + timedelta(days=7)
         super().save(*args, **kwargs)
 
-    def clean(self):
+    def clean(self) -> None:
         """Validate the invitation data."""
         super().clean()
 
@@ -412,13 +412,13 @@ class CampaignInvitation(models.Model):
                 raise ValidationError("User is already a member of this campaign.")
 
     @property
-    def is_expired(self):
+    def is_expired(self) -> bool:
         """Check if invitation has expired."""
         if not self.expires_at:
             return False
         return timezone.now() > self.expires_at
 
-    def accept(self):
+    def accept(self) -> "CampaignMembership":
         """Accept the invitation and create membership."""
         if self.status != "PENDING":
             raise ValidationError("Only pending invitations can be accepted.")
@@ -439,7 +439,7 @@ class CampaignInvitation(models.Model):
 
         return membership
 
-    def decline(self):
+    def decline(self) -> None:
         """Decline the invitation."""
         if self.status == "DECLINED":
             # Already declined, idempotent operation
@@ -452,7 +452,7 @@ class CampaignInvitation(models.Model):
 
         # Notification removed for simplicity
 
-    def cancel(self):
+    def cancel(self) -> None:
         """Cancel the invitation (for senders/campaign owners)."""
         if self.status != "PENDING":
             raise ValidationError("Only pending invitations can be cancelled.")

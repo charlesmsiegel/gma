@@ -2,6 +2,8 @@
 Views for user invitation management.
 """
 
+from typing import Any, Dict, cast
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 
@@ -11,7 +13,7 @@ class UserInvitationsView(LoginRequiredMixin, TemplateView):
 
     template_name = "users/invitations.html"
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
 
         # Get user's invitations
@@ -19,7 +21,9 @@ class UserInvitationsView(LoginRequiredMixin, TemplateView):
             from campaigns.models import CampaignInvitation
 
             invitations = (
-                CampaignInvitation.objects.filter(invited_user=self.request.user)
+                CampaignInvitation.objects.filter(
+                    invited_user=cast(Any, self.request.user)
+                )
                 .select_related("campaign", "invited_by")
                 .order_by("-created_at")
             )

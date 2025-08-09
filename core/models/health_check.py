@@ -24,5 +24,5 @@ class HealthCheckLog(models.Model):
     class Meta:
         ordering = ["-timestamp"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.service} - {self.status} at {self.timestamp}"
