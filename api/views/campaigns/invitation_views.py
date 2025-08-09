@@ -11,6 +11,12 @@ from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from api.errors import (
+    APIError,
+    FieldValidator,
+    SecurityResponseHelper,
+    handle_django_validation_error,
+)
 from campaigns.models import CampaignInvitation
 from campaigns.permissions import CampaignLookupMixin
 
@@ -48,22 +54,26 @@ def send_campaign_invitation(request, campaign_id):
     message = request.data.get("message", "")
 
     # Validate required fields
-    if not invited_user_id:
-        return Response(
-            {"invited_user_id": ["This field is required."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if not role:
-        return Response(
-            {"role": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST
-        )
+    errors = {}
+
+    invited_user_id_error = FieldValidator.required_field(
+        "invited_user_id", invited_user_id
+    )
+    if invited_user_id_error:
+        errors.update(invited_user_id_error)
+
+    role_error = FieldValidator.required_field("role", role)
+    if role_error:
+        errors.update(role_error)
+
+    if errors:
+        return APIError.validation_error(errors)
 
     # Get invited user
-    try:
-        invited_user = User.objects.get(id=invited_user_id)
-    except User.DoesNotExist:
-        return Response(
-            {"invited_user_id": ["User not found."]}, status=status.HTTP_400_BAD_REQUEST
+    invited_user = FieldValidator.validate_user_exists(invited_user_id)
+    if not invited_user:
+        return APIError.validation_error(
+            FieldValidator.build_field_errors(invited_user_id="User not found.")
         )
 
     # Create invitation
@@ -103,10 +113,7 @@ def send_campaign_invitation(request, campaign_id):
         )
 
     except DjangoValidationError as e:
-        if hasattr(e, "message_dict"):
-            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return handle_django_validation_error(e)
 
 
 @api_view(["GET"])
@@ -175,19 +182,14 @@ def accept_campaign_invitation(request, pk):
 
     Only the invited user can accept their own invitation.
     """
-    try:
-        invitation = CampaignInvitation.objects.get(id=pk)
-    except CampaignInvitation.DoesNotExist:
-        return Response(
-            {"detail": "Invitation not found."}, status=status.HTTP_404_NOT_FOUND
-        )
-
-    # Check if user is the invited user
-    if invitation.invited_user != request.user:
-        return Response(
-            {"detail": "Invitation not found."},
-            status=status.HTTP_404_NOT_FOUND,  # Hide existence for security
-        )
+    invitation, error_response = SecurityResponseHelper.safe_get_or_404(
+        CampaignInvitation.objects,
+        request.user,
+        lambda user, inv: inv.invited_user == user,  # Permission check
+        id=pk,
+    )
+    if error_response:
+        return error_response
 
     try:
         membership = invitation.accept()
@@ -208,7 +210,7 @@ def accept_campaign_invitation(request, pk):
         )
 
     except DjangoValidationError as e:
-        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return handle_django_validation_error(e)
 
 
 @api_view(["POST"])
@@ -219,19 +221,14 @@ def decline_campaign_invitation(request, pk):
 
     Only the invited user can decline their own invitation.
     """
-    try:
-        invitation = CampaignInvitation.objects.get(id=pk)
-    except CampaignInvitation.DoesNotExist:
-        return Response(
-            {"detail": "Invitation not found."}, status=status.HTTP_404_NOT_FOUND
-        )
-
-    # Check if user is the invited user
-    if invitation.invited_user != request.user:
-        return Response(
-            {"detail": "Invitation not found."},
-            status=status.HTTP_404_NOT_FOUND,  # Hide existence for security
-        )
+    invitation, error_response = SecurityResponseHelper.safe_get_or_404(
+        CampaignInvitation.objects,
+        request.user,
+        lambda user, inv: inv.invited_user == user,  # Permission check
+        id=pk,
+    )
+    if error_response:
+        return error_response
 
     try:
         invitation.decline()
@@ -241,7 +238,7 @@ def decline_campaign_invitation(request, pk):
         )
 
     except DjangoValidationError as e:
-        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return handle_django_validation_error(e)
 
 
 @api_view(["POST", "DELETE"])
@@ -252,20 +249,18 @@ def cancel_campaign_invitation(request, pk):
 
     Only the invitation sender or campaign owner/GM can cancel invitations.
     """
-    try:
-        invitation = CampaignInvitation.objects.get(id=pk)
-    except CampaignInvitation.DoesNotExist:
-        return Response(
-            {"detail": "Invitation not found."}, status=status.HTTP_404_NOT_FOUND
-        )
 
-    # Check permissions - invitation sender or campaign owner/GM
-    user_role = invitation.campaign.get_user_role(request.user)
-    if request.user != invitation.invited_by and user_role not in ["OWNER", "GM"]:
-        return Response(
-            {"detail": "Invitation not found."},
-            status=status.HTTP_404_NOT_FOUND,  # Hide existence for security
-        )
+    # Define permission check for cancellation
+    def can_cancel_invitation(user, invitation):
+        """Check if user can cancel this invitation."""
+        user_role = invitation.campaign.get_user_role(user)
+        return user == invitation.invited_by or user_role in ["OWNER", "GM"]
+
+    invitation, error_response = SecurityResponseHelper.safe_get_or_404(
+        CampaignInvitation.objects, request.user, can_cancel_invitation, id=pk
+    )
+    if error_response:
+        return error_response
 
     try:
         invitation.cancel()
@@ -276,7 +271,7 @@ def cancel_campaign_invitation(request, pk):
         )
 
     except DjangoValidationError as e:
-        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return handle_django_validation_error(e)
 
 
 @api_view(["GET"])

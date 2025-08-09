@@ -8,10 +8,11 @@ with proper permission controls and result filtering.
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
 from django.db.models import Q
-from rest_framework import permissions, status
+from rest_framework import permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from api.errors import APIError
 from api.serializers import UserSerializer
 from campaigns.models import CampaignInvitation
 from campaigns.permissions import CampaignLookupMixin
@@ -48,10 +49,7 @@ def campaign_user_search(request, campaign_id):
     # Get search query
     query = request.GET.get("q", "").strip()
     if not query:
-        return Response(
-            {"detail": "Search query parameter 'q' is required."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return APIError.bad_request("Search query parameter 'q' is required.")
 
     # Check minimum query length
     if len(query) < 2:

@@ -14,8 +14,8 @@ Key Features:
 from django.db.models import Q, QuerySet
 from rest_framework import filters, generics, permissions
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
 
+from api.errors import SecurityResponseHelper
 from api.serializers import CampaignDetailSerializer, CampaignSerializer
 from campaigns.models import Campaign
 
@@ -173,23 +173,21 @@ class CampaignMembershipListAPIView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         """Create membership with the campaign from URL."""
-        from rest_framework import status
-
         campaign_pk = self.kwargs.get("campaign_pk")
-        try:
-            campaign = Campaign.objects.get(pk=campaign_pk)
-        except Campaign.DoesNotExist:
-            return Response(
-                {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
-            )
 
-        # Check if user has permission to add members (owner or GM)
-        user = self.request.user
-        if not (campaign.is_owner(user) or campaign.is_gm(user)):
-            return Response(
-                {"detail": "Permission denied to add members to this campaign."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # Check if campaign exists and user has permission
+        campaign, error_response = SecurityResponseHelper.safe_get_or_404(
+            Campaign.objects,
+            self.request.user,
+            lambda user, camp: camp.is_owner(user) or camp.is_gm(user),
+            pk=campaign_pk,
+        )
+        if error_response:
+            # This is in perform_create, so we need to raise an exception
+            # instead of returning a Response
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound("Campaign not found.")
 
         serializer.save(campaign=campaign)
 
