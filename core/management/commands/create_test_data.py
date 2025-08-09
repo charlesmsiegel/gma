@@ -97,7 +97,9 @@ class Command(BaseCommand):
             test_campaigns = self.create_test_campaigns(campaigns_count, verbosity)
 
             # Create test characters (when character models are implemented)
-            test_characters = self.create_test_characters(characters_count, verbosity)
+            test_characters = self.create_test_characters(
+                characters_count, test_campaigns, test_users, verbosity
+            )
 
             self.stdout.write(self.style.SUCCESS("✅ Test data created successfully!"))
             self.stdout.write(f"  👥 Created {len(test_users)} users")
@@ -236,7 +238,7 @@ class Command(BaseCommand):
 
         return campaigns
 
-    def create_test_characters(self, count, verbosity):
+    def create_test_characters(self, count, campaigns, users, verbosity):
         """Create test characters."""
         if verbosity >= 2:
             self.stdout.write("Creating test characters...")
@@ -244,19 +246,48 @@ class Command(BaseCommand):
         characters = []
 
         try:
+            import random
+
             from characters.models import Character
+
+            # Only create characters if we have campaigns and users
+            if not campaigns or not users:
+                if verbosity >= 2:
+                    self.stdout.write(
+                        "  No campaigns or users available, "
+                        "skipping character creation..."
+                    )
+                return characters
 
             # Create test characters
             for i in range(1, count + 1):
                 character_name = f"{ADDITIONAL_CHARACTER_PREFIX}{i}"
                 if not Character.objects.filter(name=character_name).exists():
+                    # Randomly assign to campaign and user
+                    campaign = random.choice(campaigns)  # nosec B311
+                    user = random.choice(users)  # nosec B311
+
+                    # Make sure user is a member of the campaign
+                    if not campaign.is_member(user):
+                        # Add user as a player to the campaign
+                        from campaigns.models import CampaignMembership
+
+                        CampaignMembership.objects.get_or_create(
+                            campaign=campaign, user=user, defaults={"role": "PLAYER"}
+                        )
+
                     character = Character.objects.create(
                         name=character_name,
                         description=f"Test character #{i} for development",
+                        campaign=campaign,
+                        player_owner=user,
+                        game_system=campaign.game_system or "Generic",
                     )
                     characters.append(character)
                     if verbosity >= 2:
-                        self.stdout.write(f"  Created character: {character.name}")
+                        self.stdout.write(
+                            f"  Created character: {character.name} in {campaign.name}"
+                        )
 
         except (ImportError, AttributeError):
             # Character model not implemented yet

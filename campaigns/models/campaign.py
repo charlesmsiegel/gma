@@ -134,6 +134,11 @@ class Campaign(models.Model):
         help_text="Allow anyone to join as a player without invitation",
     )
 
+    max_characters_per_player = models.PositiveIntegerField(  # type: ignore[var-annotated]  # noqa: E501
+        default=1,
+        help_text="Maximum number of characters each player can have in this campaign",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
     updated_at = models.DateTimeField(auto_now=True)  # type: ignore[var-annotated]
 
