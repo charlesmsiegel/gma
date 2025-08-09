@@ -6,12 +6,14 @@ roles of campaign members with proper transaction handling and error reporting.
 """
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from campaigns.models import Campaign, CampaignMembership
+from campaigns.services import MembershipService
 
 User = get_user_model()
 
@@ -45,11 +47,13 @@ def bulk_add_members(request, campaign_id):
             {"members": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Validate and add members
+    # Use service for bulk operations
+    membership_service = MembershipService(campaign)
     added = []
     errors = []
 
     with transaction.atomic():
+        users_to_add = []
         for member_data in members:
             user_id = member_data.get("user_id")
             role = member_data.get("role", "PLAYER")
@@ -65,25 +69,28 @@ def bulk_add_members(request, campaign_id):
             # Check if user exists
             try:
                 user = User.objects.get(id=user_id)
+                users_to_add.append((user, role))
             except User.DoesNotExist:
                 errors.append({"user_id": user_id, "error": "User not found."})
                 continue
 
-            # Check if already a member
-            if (
-                user == campaign.owner
-                or CampaignMembership.objects.filter(
-                    campaign=campaign, user=user
-                ).exists()
-            ):
-                errors.append(
-                    {"user_id": user_id, "error": "User is already a member."}
+        # Process users to add
+        for user, role in users_to_add:
+            try:
+                membership_service.add_member(user, role)
+                added.append(
+                    {"user_id": user.id, "username": user.username, "role": role}
                 )
-                continue
-
-            # Add member
-            CampaignMembership.objects.create(campaign=campaign, user=user, role=role)
-            added.append({"user_id": user.id, "username": user.username, "role": role})
+            except ValidationError as e:
+                # Extract the error message
+                error_msg = str(e)
+                if "already a member" in error_msg:
+                    error_msg = "User is already a member."
+                elif "Invalid role" in error_msg:
+                    error_msg = "Invalid role."
+                elif "Cannot add campaign owner" in error_msg:
+                    error_msg = "User is already a member."  # Keep consistent message
+                errors.append({"user_id": user.id, "error": error_msg})
 
     if errors and not added:
         return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -123,7 +130,8 @@ def bulk_change_roles(request, campaign_id):
             {"changes": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Apply changes
+    # Use service for bulk role changes
+    membership_service = MembershipService(campaign)
     updated = []
     errors = []
 
@@ -147,7 +155,7 @@ def bulk_change_roles(request, campaign_id):
                 )
                 continue
 
-            # Get membership
+            # Get membership for permission check
             try:
                 membership = CampaignMembership.objects.get(
                     campaign=campaign, user_id=user_id
@@ -163,13 +171,12 @@ def bulk_change_roles(request, campaign_id):
                     {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            # Update role
-            membership.role = new_role
-            membership.save()
-
-            # Notification removed for simplicity
-
-            updated.append({"user_id": user_id, "role": new_role})
+            # Update role using service
+            try:
+                membership_service.change_member_role(membership, new_role)
+                updated.append({"user_id": user_id, "role": new_role})
+            except ValidationError as e:
+                errors.append({"user_id": user_id, "error": str(e)})
 
     if errors and not updated:
         return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -207,7 +214,8 @@ def bulk_remove_members(request, campaign_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Remove members
+    # Use service for bulk removal
+    membership_service = MembershipService(campaign)
     removed = []
     errors = []
 
@@ -218,7 +226,7 @@ def bulk_remove_members(request, campaign_id):
                 errors.append({"user_id": user_id, "error": "Cannot remove owner."})
                 continue
 
-            # Get membership
+            # Get membership for permission check
             try:
                 membership = CampaignMembership.objects.get(
                     campaign=campaign, user_id=user_id
@@ -234,12 +242,13 @@ def bulk_remove_members(request, campaign_id):
                     {"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            # Remove member
-            membership.delete()
-
-            # Notification removed for simplicity
-
-            removed.append({"user_id": user_id})
+            # Remove member using service
+            try:
+                user = User.objects.get(id=user_id)
+                membership_service.remove_member(user)
+                removed.append({"user_id": user_id})
+            except User.DoesNotExist:
+                errors.append({"user_id": user_id, "error": "User not found."})
 
     if errors and not removed:
         return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
