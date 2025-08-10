@@ -1,0 +1,460 @@
+/* Gothic Theme - Dark medieval-inspired (for tabletop RPGs) */
+[data-theme="gothic"] {
+  /* Primary Colors - Deep reds and blacks */
+  --theme-primary: #8b0000;
+  --theme-primary-dark: #660000;
+  --theme-primary-light: #cc3333;
+  --theme-secondary: #4a4a4a;
+  --theme-secondary-dark: #2a2a2a;
+  --theme-secondary-light: #6a6a6a;
+  --theme-success: #556b2f;
+  --theme-info: #483d8b;
+  --theme-warning: #b8860b;
+  --theme-danger: #dc143c;
+  --theme-light: #f5f5dc;
+  --theme-dark: #1a1a1a;
+
+  /* Background Colors - Medieval atmosphere */
+  --theme-bg-body: #1a1a1a;
+  --theme-bg-surface: #2a2a2a;
+  --theme-bg-card: #3a3a3a;
+  --theme-bg-modal: #3a3a3a;
+  --theme-bg-navbar: #000000;
+  --theme-bg-sidebar: #2a2a2a;
+  --theme-bg-hover: rgba(139, 0, 0, 0.15);
+  --theme-bg-active: rgba(139, 0, 0, 0.25);
+
+  /* Text Colors - Gothic elegance */
+  --theme-text-primary: #f5f5dc;
+  --theme-text-secondary: #d3d3d3;
+  --theme-text-muted: #a9a9a9;
+  --theme-text-light: #808080;
+  --theme-text-white: #ffffff;
+  --theme-text-inverse: #1a1a1a;
+
+  /* Border Colors - Ornate details */
+  --theme-border-color: #555555;
+  --theme-border-light: #444444;
+  --theme-border-dark: #666666;
+  --theme-border-focus: var(--theme-primary);
+
+  /* Form Controls */
+  --theme-input-bg: #2a2a2a;
+  --theme-input-border: #555555;
+  --theme-input-focus-border: var(--theme-primary);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(139, 0, 0, 0.5);
+  --theme-input-placeholder: #a9a9a9;
+
+  /* Navigation */
+  --theme-nav-link-color: #f5f5dc;
+  --theme-nav-link-hover: #cc3333;
+  --theme-nav-link-active: #8b0000;
+
+  /* Tables */
+  --theme-table-bg: transparent;
+  --theme-table-striped-bg: rgba(139, 0, 0, 0.1);
+  --theme-table-hover-bg: rgba(139, 0, 0, 0.15);
+  --theme-table-border-color: var(--theme-border-color);
+
+  /* Shadows - Dramatic lighting */
+  --theme-shadow-sm: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.8);
+  --theme-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.9);
+  --theme-shadow-lg: 0 2rem 4rem rgba(0, 0, 0, 0.95);
+  --theme-shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Gothic theme specific enhancements */
+[data-theme="gothic"] body {
+  font-family: 'Cinzel', 'Times New Roman', serif;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  position: relative;
+}
+
+[data-theme="gothic"] body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(139, 0, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(139, 0, 0, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+[data-theme="gothic"] .navbar {
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  border-bottom: 2px solid #8b0000;
+  box-shadow: 0 4px 20px rgba(139, 0, 0, 0.5);
+  position: relative;
+}
+
+[data-theme="gothic"] .navbar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #8b0000, transparent);
+}
+
+[data-theme="gothic"] .navbar-brand {
+  color: #f5f5dc !important;
+  font-weight: 700;
+  font-family: 'Cinzel', serif;
+  font-size: 1.8rem;
+  text-shadow: 0 0 10px rgba(139, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.8);
+  letter-spacing: 2px;
+}
+
+[data-theme="gothic"] .card {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border: 2px solid #555555;
+  border-radius: 0;
+  box-shadow: var(--theme-shadow);
+  position: relative;
+}
+
+[data-theme="gothic"] .card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, 
+    #8b0000 0%, transparent 25%, 
+    transparent 75%, #8b0000 100%);
+  z-index: -1;
+  border-radius: 0;
+}
+
+[data-theme="gothic"] .card-header {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border-bottom: 2px solid #8b0000;
+  color: var(--theme-text-primary);
+  font-weight: 700;
+  font-family: 'Cinzel', serif;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+[data-theme="gothic"] .btn {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  letter-spacing: 1px;
+  border-radius: 0;
+  border-width: 2px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="gothic"] .btn-primary {
+  background: linear-gradient(135deg, #8b0000 0%, #660000 100%);
+  border-color: #8b0000;
+  color: #f5f5dc;
+  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.4);
+}
+
+[data-theme="gothic"] .btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(245, 245, 220, 0.3), transparent);
+  transition: left 0.6s;
+}
+
+[data-theme="gothic"] .btn-primary:hover::before {
+  left: 100%;
+}
+
+[data-theme="gothic"] .btn-primary:hover {
+  background: linear-gradient(135deg, #660000 0%, #4a0000 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(139, 0, 0, 0.6);
+  text-shadow: 0 0 10px rgba(245, 245, 220, 0.8);
+}
+
+[data-theme="gothic"] .btn-secondary {
+  background: linear-gradient(135deg, #4a4a4a 0%, #2a2a2a 100%);
+  border-color: #555555;
+  color: #f5f5dc;
+}
+
+[data-theme="gothic"] .btn-secondary:hover {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border-color: #8b0000;
+  color: #cc3333;
+}
+
+[data-theme="gothic"] .form-control {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border: 2px solid #555555;
+  border-radius: 0;
+  color: var(--theme-text-primary);
+  font-family: 'Cinzel', serif;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="gothic"] .form-control:focus {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border-color: var(--theme-primary);
+  color: var(--theme-text-primary);
+  box-shadow: 0 0 0 0.2rem rgba(139, 0, 0, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 0 5px rgba(245, 245, 220, 0.3);
+}
+
+[data-theme="gothic"] .dropdown-menu {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border: 2px solid #8b0000;
+  border-radius: 0;
+  box-shadow: var(--theme-shadow-lg);
+}
+
+[data-theme="gothic"] .dropdown-item {
+  color: var(--theme-text-primary);
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+[data-theme="gothic"] .dropdown-item:hover {
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.3) 0%, rgba(102, 0, 0, 0.3) 100%);
+  color: #cc3333;
+  text-shadow: 0 0 8px rgba(204, 51, 51, 0.5);
+}
+
+[data-theme="gothic"] .list-group-item {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border: 1px solid #555555;
+  border-radius: 0;
+  color: var(--theme-text-primary);
+  font-family: 'Cinzel', serif;
+}
+
+[data-theme="gothic"] .list-group-item:hover {
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.2) 0%, rgba(58, 58, 58, 0.8) 100%);
+  color: #cc3333;
+  transform: translateX(5px);
+  box-shadow: inset 3px 0 0 #8b0000;
+}
+
+[data-theme="gothic"] .progress {
+  background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+  border: 1px solid #8b0000;
+  border-radius: 0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="gothic"] .progress-bar {
+  background: linear-gradient(90deg, #8b0000 0%, #cc3333 50%, #8b0000 100%);
+  box-shadow: 0 0 10px rgba(139, 0, 0, 0.8);
+  position: relative;
+}
+
+[data-theme="gothic"] .progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(245, 245, 220, 0.3), transparent);
+  animation: gothic-shimmer 2s ease-in-out infinite;
+}
+
+@keyframes gothic-shimmer {
+  0%, 100% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+}
+
+[data-theme="gothic"] .badge {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  border-radius: 0;
+  border: 1px solid;
+  letter-spacing: 0.5px;
+}
+
+[data-theme="gothic"] .badge.bg-primary {
+  background: linear-gradient(135deg, #8b0000 0%, #660000 100%) !important;
+  border-color: #cc3333;
+  box-shadow: 0 2px 8px rgba(139, 0, 0, 0.5);
+}
+
+[data-theme="gothic"] .modal-content {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border: 3px solid #8b0000;
+  border-radius: 0;
+  box-shadow: var(--theme-shadow-lg);
+}
+
+[data-theme="gothic"] .modal-header {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border-bottom: 2px solid #8b0000;
+}
+
+[data-theme="gothic"] .modal-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  color: #f5f5dc;
+  text-shadow: 0 0 10px rgba(139, 0, 0, 0.8);
+  letter-spacing: 1px;
+}
+
+[data-theme="gothic"] .table {
+  font-family: 'Cinzel', serif;
+  color: var(--theme-text-primary);
+}
+
+[data-theme="gothic"] .table th {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border-color: #8b0000;
+  color: #cc3333;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+[data-theme="gothic"] .table-striped > tbody > tr:nth-of-type(odd) > td {
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(42, 42, 42, 0.5));
+}
+
+/* Gothic ornamental effects */
+[data-theme="gothic"] h1, [data-theme="gothic"] h2, 
+[data-theme="gothic"] h3, [data-theme="gothic"] h4 {
+  font-family: 'Cinzel', serif;
+  color: #f5f5dc;
+  text-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+  letter-spacing: 1px;
+  position: relative;
+}
+
+[data-theme="gothic"] h1::after, [data-theme="gothic"] h2::after {
+  content: '⚜';
+  position: absolute;
+  right: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8b0000;
+  font-size: 0.8em;
+}
+
+/* Campaign-specific styling for gothic theme */
+[data-theme="gothic"] .campaign-card {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 50%, #1a1a1a 100%);
+  border: 3px solid #8b0000;
+  border-radius: 0;
+  box-shadow: var(--theme-shadow-lg);
+  transition: all 0.4s ease;
+  position: relative;
+}
+
+[data-theme="gothic"] .campaign-card::after {
+  content: '🗡️';
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 1.5rem;
+  opacity: 0.3;
+  transition: all 0.3s ease;
+}
+
+[data-theme="gothic"] .campaign-card:hover::after {
+  opacity: 1;
+  transform: rotate(15deg);
+  text-shadow: 0 0 10px rgba(139, 0, 0, 0.8);
+}
+
+[data-theme="gothic"] .campaign-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 2rem 4rem rgba(139, 0, 0, 0.4), 0 0 30px rgba(139, 0, 0, 0.6);
+}
+
+[data-theme="gothic"] .character-sheet {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border: 3px solid #8b0000;
+  border-radius: 0;
+  box-shadow: var(--theme-shadow);
+  font-family: 'Cinzel', serif;
+}
+
+[data-theme="gothic"] .scene-chat {
+  background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+  border: 2px solid #8b0000;
+  border-radius: 0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="gothic"] .dice-roller {
+  background: radial-gradient(circle, #3a3a3a 0%, #2a2a2a 50%, #1a1a1a 100%);
+  border: 4px solid #8b0000;
+  border-radius: 0;
+  box-shadow: 0 0 30px rgba(139, 0, 0, 0.8), var(--theme-shadow);
+  position: relative;
+  font-family: 'Cinzel', serif;
+}
+
+[data-theme="gothic"] .dice-roller::before {
+  content: '⚅';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3rem;
+  color: #8b0000;
+  text-shadow: 0 0 20px rgba(139, 0, 0, 0.8);
+  animation: gothic-pulse 3s ease-in-out infinite;
+}
+
+@keyframes gothic-pulse {
+  0%, 100% { 
+    transform: translate(-50%, -50%) scale(1); 
+    text-shadow: 0 0 20px rgba(139, 0, 0, 0.8);
+  }
+  50% { 
+    transform: translate(-50%, -50%) scale(1.1); 
+    text-shadow: 0 0 30px rgba(139, 0, 0, 1);
+  }
+}
+
+/* Gothic scrollbar */
+[data-theme="gothic"] ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+[data-theme="gothic"] ::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border: 1px solid #8b0000;
+}
+
+[data-theme="gothic"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #8b0000, #660000);
+  border: 1px solid #cc3333;
+  box-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+}
+
+[data-theme="gothic"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #cc3333, #8b0000);
+}
+
+/* Navigation enhancements */
+[data-theme="gothic"] .navbar-nav .nav-link {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+}
+
+[data-theme="gothic"] .navbar-nav .nav-link:hover {
+  text-shadow: 0 0 10px rgba(204, 51, 51, 0.8);
+  transform: translateY(-1px);
+}

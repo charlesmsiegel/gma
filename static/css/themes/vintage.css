@@ -1,0 +1,629 @@
+/* Vintage Theme - Old paper/parchment feel (for tabletop RPGs) */
+[data-theme="vintage"] {
+  /* Primary Colors - Aged browns and sepia */
+  --theme-primary: #8b4513;
+  --theme-primary-dark: #654321;
+  --theme-primary-light: #daa520;
+  --theme-secondary: #696969;
+  --theme-secondary-dark: #2f4f4f;
+  --theme-secondary-light: #a0a0a0;
+  --theme-success: #228b22;
+  --theme-info: #4682b4;
+  --theme-warning: #daa520;
+  --theme-danger: #b22222;
+  --theme-light: #f5f5dc;
+  --theme-dark: #2f1b14;
+
+  /* Background Colors - Parchment and aged paper */
+  --theme-bg-body: #f4f1e8;
+  --theme-bg-surface: #ede7d3;
+  --theme-bg-card: #faf8f1;
+  --theme-bg-modal: #faf8f1;
+  --theme-bg-navbar: #8b4513;
+  --theme-bg-sidebar: #ede7d3;
+  --theme-bg-hover: rgba(139, 69, 19, 0.08);
+  --theme-bg-active: rgba(139, 69, 19, 0.16);
+
+  /* Text Colors - Aged ink */
+  --theme-text-primary: #2f1b14;
+  --theme-text-secondary: #654321;
+  --theme-text-muted: #8b7355;
+  --theme-text-light: #a0956b;
+  --theme-text-white: #ffffff;
+  --theme-text-inverse: #f5f5dc;
+
+  /* Border Colors - Weathered edges */
+  --theme-border-color: #d2b48c;
+  --theme-border-light: #e6d3a3;
+  --theme-border-dark: #bc9a6a;
+  --theme-border-focus: var(--theme-primary);
+
+  /* Form Controls */
+  --theme-input-bg: #faf8f1;
+  --theme-input-border: #d2b48c;
+  --theme-input-focus-border: var(--theme-primary);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(139, 69, 19, 0.25);
+  --theme-input-placeholder: #8b7355;
+
+  /* Navigation */
+  --theme-nav-link-color: #f5f5dc;
+  --theme-nav-link-hover: #daa520;
+  --theme-nav-link-active: #daa520;
+
+  /* Tables */
+  --theme-table-bg: transparent;
+  --theme-table-striped-bg: rgba(210, 180, 140, 0.1);
+  --theme-table-hover-bg: rgba(210, 180, 140, 0.15);
+  --theme-table-border-color: var(--theme-border-color);
+
+  /* Shadows - Soft, aged shadows */
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(47, 27, 20, 0.2);
+  --theme-shadow: 0 0.5rem 1rem rgba(47, 27, 20, 0.3);
+  --theme-shadow-lg: 0 1rem 3rem rgba(47, 27, 20, 0.4);
+  --theme-shadow-inset: inset 0 1px 2px rgba(47, 27, 20, 0.2);
+}
+
+/* Vintage theme specific enhancements */
+[data-theme="vintage"] body {
+  font-family: 'Crimson Text', 'Times New Roman', serif;
+  background: 
+    linear-gradient(135deg, #f4f1e8 0%, #ede7d3 100%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(139, 69, 19, 0.02) 0px,
+      rgba(139, 69, 19, 0.02) 1px,
+      transparent 1px,
+      transparent 20px
+    );
+  position: relative;
+}
+
+/* Paper texture overlay */
+[data-theme="vintage"] body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(139, 69, 19, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(218, 165, 32, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(210, 180, 140, 0.02) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Aged paper stains */
+[data-theme="vintage"] body::after {
+  content: '';
+  position: fixed;
+  top: 20%;
+  right: 15%;
+  width: 100px;
+  height: 80px;
+  background: radial-gradient(ellipse, rgba(139, 69, 19, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.3;
+}
+
+[data-theme="vintage"] .navbar {
+  background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+  border-bottom: 3px solid #daa520;
+  box-shadow: 0 4px 8px rgba(139, 69, 19, 0.4);
+  position: relative;
+}
+
+[data-theme="vintage"] .navbar::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    #daa520,
+    #daa520 5px,
+    #b8860b 5px,
+    #b8860b 10px
+  );
+}
+
+[data-theme="vintage"] .navbar-brand {
+  color: #f5f5dc !important;
+  font-weight: 700;
+  font-family: 'Uncial Antiqua', 'Crimson Text', serif;
+  font-size: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 1px;
+}
+
+[data-theme="vintage"] .card {
+  background: 
+    linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 20px,
+      rgba(139, 69, 19, 0.05) 20px,
+      rgba(139, 69, 19, 0.05) 21px
+    );
+  border: 2px solid #d2b48c;
+  border-radius: 8px;
+  box-shadow: 
+    0 0.5rem 1rem rgba(139, 69, 19, 0.2),
+    inset 0 1px 2px rgba(218, 165, 32, 0.1);
+  position: relative;
+}
+
+/* Decorative corner flourishes */
+[data-theme="vintage"] .card::before {
+  content: '❦';
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  color: #daa520;
+  font-size: 1.2rem;
+  opacity: 0.6;
+}
+
+[data-theme="vintage"] .card::after {
+  content: '❦';
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  color: #daa520;
+  font-size: 1.2rem;
+  opacity: 0.6;
+  transform: rotate(180deg);
+}
+
+[data-theme="vintage"] .card-header {
+  background: 
+    linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(139, 69, 19, 0.05) 0px,
+      rgba(139, 69, 19, 0.05) 2px,
+      transparent 2px,
+      transparent 4px
+    );
+  border-bottom: 2px solid #d2b48c;
+  color: var(--theme-text-primary);
+  font-weight: 600;
+  font-family: 'Crimson Text', serif;
+  text-align: center;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="vintage"] .btn {
+  font-family: 'Crimson Text', serif;
+  font-weight: 600;
+  border-radius: 4px;
+  border-width: 2px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+[data-theme="vintage"] .btn-primary {
+  background: 
+    linear-gradient(135deg, #8b4513 0%, #a0522d 100%),
+    radial-gradient(ellipse at center, rgba(218, 165, 32, 0.1) 0%, transparent 70%);
+  border-color: #654321;
+  color: #f5f5dc;
+  box-shadow: 0 3px 6px rgba(139, 69, 19, 0.4);
+}
+
+[data-theme="vintage"] .btn-primary:hover {
+  background: 
+    linear-gradient(135deg, #654321 0%, #8b4513 100%),
+    radial-gradient(ellipse at center, rgba(218, 165, 32, 0.2) 0%, transparent 70%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 10px rgba(139, 69, 19, 0.5);
+}
+
+[data-theme="vintage"] .btn-secondary {
+  background: linear-gradient(135deg, #696969 0%, #2f4f4f 100%);
+  border-color: #2f4f4f;
+  color: #f5f5dc;
+}
+
+[data-theme="vintage"] .alert-warning {
+  background: 
+    linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%);
+  border: 2px solid #daa520;
+  border-left: 6px solid #daa520;
+  color: #654321;
+  font-family: 'Crimson Text', serif;
+  position: relative;
+}
+
+[data-theme="vintage"] .alert-warning::before {
+  content: '⚠';
+  position: absolute;
+  top: 50%;
+  left: -3px;
+  transform: translateY(-50%);
+  background: #daa520;
+  color: #2f1b14;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+[data-theme="vintage"] .form-control {
+  background: 
+    linear-gradient(135deg, #faf8f1 0%, #f8f6e8 100%);
+  border: 2px solid #d2b48c;
+  border-radius: 4px;
+  color: var(--theme-text-primary);
+  font-family: 'Crimson Text', serif;
+  box-shadow: inset 0 1px 3px rgba(139, 69, 19, 0.1);
+}
+
+[data-theme="vintage"] .form-control:focus {
+  background: 
+    linear-gradient(135deg, #ffffff 0%, #faf8f1 100%);
+  border-color: var(--theme-primary);
+  color: var(--theme-text-primary);
+  box-shadow: 0 0 0 0.2rem rgba(139, 69, 19, 0.25);
+}
+
+[data-theme="vintage"] .form-label {
+  font-family: 'Crimson Text', serif;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="vintage"] .dropdown-menu {
+  background: 
+    linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%);
+  border: 2px solid #d2b48c;
+  border-radius: 4px;
+  box-shadow: 0 0.5rem 1.5rem rgba(139, 69, 19, 0.3);
+}
+
+[data-theme="vintage"] .dropdown-item {
+  color: var(--theme-text-primary);
+  font-family: 'Crimson Text', serif;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+[data-theme="vintage"] .dropdown-item:hover {
+  background: 
+    linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%);
+  color: var(--theme-text-primary);
+}
+
+[data-theme="vintage"] .list-group-item {
+  background: 
+    linear-gradient(135deg, #faf8f1 0%, #f8f6e8 100%);
+  border: 1px solid #d2b48c;
+  color: var(--theme-text-primary);
+  font-family: 'Crimson Text', serif;
+  transition: all 0.2s ease;
+}
+
+[data-theme="vintage"] .list-group-item:hover {
+  background: 
+    linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%);
+  transform: translateX(3px);
+  box-shadow: inset 3px 0 0 #daa520;
+}
+
+[data-theme="vintage"] .progress {
+  background: 
+    linear-gradient(135deg, #ede7d3 0%, #d2b48c 100%);
+  border: 1px solid #bc9a6a;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 2px rgba(139, 69, 19, 0.2);
+}
+
+[data-theme="vintage"] .progress-bar {
+  background: 
+    linear-gradient(90deg, #8b4513 0%, #daa520 50%, #8b4513 100%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(245, 245, 220, 0.1) 0px,
+      rgba(245, 245, 220, 0.1) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+  border-radius: 5px;
+  box-shadow: inset 0 1px 2px rgba(245, 245, 220, 0.3);
+}
+
+[data-theme="vintage"] .badge {
+  font-family: 'Crimson Text', serif;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="vintage"] .badge.bg-primary {
+  background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%) !important;
+  border-color: #654321;
+  box-shadow: 0 2px 4px rgba(139, 69, 19, 0.3);
+}
+
+[data-theme="vintage"] .modal-content {
+  background: 
+    linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(139, 69, 19, 0.02) 0px,
+      rgba(139, 69, 19, 0.02) 1px,
+      transparent 1px,
+      transparent 25px
+    );
+  border: 3px solid #d2b48c;
+  border-radius: 8px;
+  box-shadow: 0 1rem 3rem rgba(139, 69, 19, 0.4);
+}
+
+[data-theme="vintage"] .modal-header {
+  background: 
+    linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%);
+  border-bottom: 2px solid #d2b48c;
+}
+
+[data-theme="vintage"] .modal-title {
+  font-family: 'Uncial Antiqua', 'Crimson Text', serif;
+  font-weight: 700;
+  color: var(--theme-text-primary);
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+  letter-spacing: 1px;
+}
+
+[data-theme="vintage"] .table {
+  font-family: 'Crimson Text', serif;
+  color: var(--theme-text-primary);
+}
+
+[data-theme="vintage"] .table th {
+  background: 
+    linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%);
+  border-color: #d2b48c;
+  color: var(--theme-text-primary);
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="vintage"] .table-striped > tbody > tr:nth-of-type(odd) > td {
+  background: 
+    linear-gradient(135deg, rgba(210, 180, 140, 0.1), rgba(237, 231, 211, 0.1));
+}
+
+/* Vintage typography */
+[data-theme="vintage"] h1, [data-theme="vintage"] h2, 
+[data-theme="vintage"] h3, [data-theme="vintage"] h4 {
+  font-family: 'Uncial Antiqua', 'Crimson Text', serif;
+  color: var(--theme-text-primary);
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+  position: relative;
+}
+
+[data-theme="vintage"] h1::after, [data-theme="vintage"] h2::after {
+  content: '⁂';
+  position: absolute;
+  right: -40px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #daa520;
+  font-size: 0.6em;
+  opacity: 0.7;
+}
+
+/* Campaign-specific styling for vintage theme */
+[data-theme="vintage"] .campaign-card {
+  background: 
+    linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(139, 69, 19, 0.03) 0px,
+      rgba(139, 69, 19, 0.03) 1px,
+      transparent 1px,
+      transparent 15px
+    );
+  border: 3px solid #d2b48c;
+  border-radius: 12px;
+  box-shadow: 
+    0 0.5rem 1.5rem rgba(139, 69, 19, 0.3),
+    inset 0 1px 2px rgba(218, 165, 32, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+[data-theme="vintage"] .campaign-card::before {
+  content: '✠';
+  position: absolute;
+  top: 12px;
+  left: 15px;
+  color: #daa520;
+  font-size: 1.5rem;
+  opacity: 0.4;
+  transform: rotate(-15deg);
+}
+
+[data-theme="vintage"] .campaign-card:hover {
+  transform: translateY(-3px) rotate(0.5deg);
+  box-shadow: 
+    0 1rem 2rem rgba(139, 69, 19, 0.4),
+    inset 0 1px 2px rgba(218, 165, 32, 0.2);
+}
+
+[data-theme="vintage"] .character-sheet {
+  background: 
+    linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 24px,
+      rgba(139, 69, 19, 0.1) 24px,
+      rgba(139, 69, 19, 0.1) 25px
+    );
+  border: 3px solid #d2b48c;
+  border-radius: 8px;
+  box-shadow: 0 0.5rem 1rem rgba(139, 69, 19, 0.3);
+  font-family: 'Crimson Text', serif;
+  padding: 2rem;
+  position: relative;
+}
+
+[data-theme="vintage"] .character-sheet::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #daa520, transparent);
+}
+
+[data-theme="vintage"] .scene-chat {
+  background: 
+    linear-gradient(180deg, #f4f1e8 0%, #ede7d3 100%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(139, 69, 19, 0.05) 0px,
+      rgba(139, 69, 19, 0.05) 1px,
+      transparent 1px,
+      transparent 20px
+    );
+  border: 2px solid #d2b48c;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 4px rgba(139, 69, 19, 0.1);
+}
+
+[data-theme="vintage"] .dice-roller {
+  background: 
+    radial-gradient(circle, #faf8f1 0%, #ede7d3 70%, #d2b48c 100%),
+    repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      rgba(139, 69, 19, 0.05) 0deg,
+      rgba(139, 69, 19, 0.05) 45deg,
+      transparent 45deg,
+      transparent 90deg
+    );
+  border: 4px solid #8b4513;
+  border-radius: 50%;
+  box-shadow: 
+    0 0.5rem 1rem rgba(139, 69, 19, 0.4),
+    inset 0 2px 4px rgba(218, 165, 32, 0.2);
+  position: relative;
+  font-family: 'Uncial Antiqua', serif;
+}
+
+[data-theme="vintage"] .dice-roller::before {
+  content: '⚃';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3rem;
+  color: #8b4513;
+  text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.5);
+  animation: vintage-wobble 4s ease-in-out infinite;
+}
+
+@keyframes vintage-wobble {
+  0%, 100% { 
+    transform: translate(-50%, -50%) rotate(-2deg);
+  }
+  50% { 
+    transform: translate(-50%, -50%) rotate(2deg);
+  }
+}
+
+/* Aged paper scrollbar */
+[data-theme="vintage"] ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+[data-theme="vintage"] ::-webkit-scrollbar-track {
+  background: linear-gradient(135deg, #ede7d3, #d2b48c);
+  border: 1px solid #bc9a6a;
+  border-radius: 6px;
+}
+
+[data-theme="vintage"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #8b4513, #a0522d);
+  border: 1px solid #654321;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 2px rgba(218, 165, 32, 0.3);
+}
+
+[data-theme="vintage"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #a0522d, #8b4513);
+}
+
+/* Calligraphy-style navigation */
+[data-theme="vintage"] .navbar-nav .nav-link {
+  font-family: 'Crimson Text', serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+[data-theme="vintage"] .navbar-nav .nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: #daa520;
+  transform: translateX(-50%);
+  transition: width 0.3s ease;
+}
+
+[data-theme="vintage"] .navbar-nav .nav-link:hover::after {
+  width: 80%;
+}
+
+[data-theme="vintage"] .navbar-nav .nav-link:hover {
+  text-shadow: 0 0 8px rgba(218, 165, 32, 0.8);
+}
+
+/* Ink blot decorations */
+[data-theme="vintage"] .card-title::before {
+  content: '※';
+  margin-right: 0.5rem;
+  color: #daa520;
+  opacity: 0.7;
+}
+
+/* Manuscript illumination style */
+[data-theme="vintage"] .btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      rgba(245, 245, 220, 0.1) 0px,
+      rgba(245, 245, 220, 0.1) 2px,
+      transparent 2px,
+      transparent 4px
+    );
+  border-radius: 2px;
+  pointer-events: none;
+}
