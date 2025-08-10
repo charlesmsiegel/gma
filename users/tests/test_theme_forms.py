@@ -344,8 +344,34 @@ class ThemeFormTests(TestCase):
 
     def test_form_save_commit_false_with_theme(self):
         """Test form save with commit=False preserves theme changes."""
-        # Skip this test - incompatible with migrations disabled test environment
-        self.skipTest("Skipping due to test database migration limitations")
+        form_data = {
+            "display_name": "Test Save",
+            "timezone": "Europe/Berlin",
+            "theme": "lavender",
+        }
+
+        form = UserProfileForm(data=form_data, instance=self.user)
+        self.assertTrue(form.is_valid())
+
+        # Save with commit=False
+        user = form.save(commit=False)
+
+        # Theme should be set on the unsaved instance
+        self.assertEqual(user.theme, "lavender")
+        self.assertEqual(user.display_name, "Test Save")
+        self.assertEqual(user.timezone, "Europe/Berlin")
+
+        # Check that they're the same instance
+        self.assertEqual(user.pk, self.user.pk)
+
+        # Now save the user
+        user.save()
+
+        # Now it should be persisted - refresh from database
+        saved_user = User.objects.get(pk=self.user.pk)
+        self.assertEqual(saved_user.theme, "lavender")
+        self.assertEqual(saved_user.display_name, "Test Save")
+        self.assertEqual(saved_user.timezone, "Europe/Berlin")
 
     def test_form_multiple_instances_different_themes(self):
         """Test multiple form instances with different themes."""
