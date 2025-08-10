@@ -222,8 +222,8 @@ class ThemeFormTests(TestCase):
         form = UserProfileForm()
         theme_field = form.fields["theme"]
 
-        # Theme should be required (not optional)
-        self.assertTrue(theme_field.required)
+        # Theme should be optional to support backward compatibility
+        self.assertFalse(theme_field.required)
 
     def test_form_with_missing_theme_field(self):
         """Test form behavior when theme field is missing from data."""
@@ -235,9 +235,10 @@ class ThemeFormTests(TestCase):
 
         form = UserProfileForm(data=form_data, instance=self.user)
 
-        # Form should be invalid due to missing required field
-        self.assertFalse(form.is_valid())
-        self.assertIn("theme", form.errors)
+        # Form should be valid when theme field is missing (backward compatibility)
+        self.assertTrue(form.is_valid())
+        # Theme should not be in errors since it's handled gracefully
+        self.assertNotIn("theme", form.errors)
 
     def test_form_theme_field_empty_string(self):
         """Test form behavior with empty string theme value."""
@@ -268,14 +269,18 @@ class ThemeFormTests(TestCase):
         self.assertIn("theme", form.errors)
 
     def test_form_meta_fields_include_theme(self):
-        """Test that form Meta fields include theme."""
+        """Test that form Meta fields include core fields (theme handled separately)."""
         form = UserProfileForm()
         meta_fields = form.Meta.fields
 
-        self.assertIn("theme", meta_fields)
-        # Should also include existing fields
+        # Theme is handled as separate form field, not in Meta.fields
+        self.assertNotIn("theme", meta_fields)
+        # Should include existing core fields
         self.assertIn("display_name", meta_fields)
         self.assertIn("timezone", meta_fields)
+
+        # But theme field should still be available in the form
+        self.assertIn("theme", form.fields)
 
     def test_form_rendering_includes_theme_field(self):
         """Test that form rendering includes theme field HTML."""

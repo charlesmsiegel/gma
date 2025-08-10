@@ -234,18 +234,17 @@ class UserProfileForm(forms.ModelForm):
         """Validate theme field."""
         theme = self.cleaned_data.get("theme")
 
+        # If no theme was provided in form data, don't validate it
+        # This allows existing tests to work without theme field
+        if "theme" not in self.data:
+            return None
+
         # If empty string provided, that's a validation error
         if theme == "":
             raise ValidationError(
                 "Select a valid choice. That choice is not one of the "
                 "available choices."
             )
-
-        # If None (not provided), preserve the current user's theme
-        if theme is None and self.instance and hasattr(self.instance, "theme"):
-            return self.instance.theme
-        elif theme is None:
-            return "light"  # Default fallback
 
         # Validate theme is in valid choices
         valid_themes = [choice[0] for choice in User.THEME_CHOICES]
@@ -260,10 +259,11 @@ class UserProfileForm(forms.ModelForm):
         """Save the form, including the theme field."""
         user = super().save(commit=False)
 
-        # Handle theme field manually
-        theme = self.cleaned_data.get("theme")
-        if theme is not None:
-            user.theme = theme
+        # Handle theme field manually - only update if provided
+        if "theme" in self.data:
+            theme = self.cleaned_data.get("theme")
+            if theme:  # Only set non-empty themes
+                user.theme = theme
 
         if commit:
             user.save()

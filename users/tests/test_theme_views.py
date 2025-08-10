@@ -209,7 +209,7 @@ class UserThemeViewTests(TestCase):
 
         # Check for success message
         messages = list(get_messages(response.wsgi_request))
-        self.assertTrue(any("successfully updated" in str(m) for m in messages))
+        self.assertTrue(any("updated successfully" in str(m) for m in messages))
 
     def test_theme_persists_across_requests(self):
         """Test that theme change persists across multiple requests."""
