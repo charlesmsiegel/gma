@@ -176,7 +176,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(circle at 20% 80%, rgba(141, 110, 99, 0.03) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(161, 136, 127, 0.03) 0%, transparent 50%);
   border-radius: 8px;
@@ -194,7 +194,7 @@
 }
 
 [data-theme="warm"] .card-title,
-[data-theme="warm"] h1, [data-theme="warm"] h2, 
+[data-theme="warm"] h1, [data-theme="warm"] h2,
 [data-theme="warm"] h3, [data-theme="warm"] h4 {
   font-family: 'Georgia', serif;
   color: var(--theme-text-primary);
@@ -291,7 +291,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: 
+  background:
     radial-gradient(ellipse at top left, rgba(255, 193, 7, 0.05) 0%, transparent 50%),
     radial-gradient(ellipse at bottom right, rgba(255, 152, 0, 0.05) 0%, transparent 50%);
   pointer-events: none;
@@ -354,7 +354,7 @@
 /* Paper-like texture */
 [data-theme="warm"] .modal-content,
 [data-theme="warm"] .card {
-  background-image: 
+  background-image:
     repeating-linear-gradient(
       0deg,
       transparent,

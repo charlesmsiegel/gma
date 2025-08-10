@@ -66,7 +66,7 @@
 /* Vintage theme specific enhancements */
 [data-theme="vintage"] body {
   font-family: 'Crimson Text', 'Times New Roman', serif;
-  background: 
+  background:
     linear-gradient(135deg, #f4f1e8 0%, #ede7d3 100%),
     repeating-linear-gradient(
       45deg,
@@ -86,7 +86,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: 
+  background-image:
     radial-gradient(circle at 25% 25%, rgba(139, 69, 19, 0.05) 0%, transparent 50%),
     radial-gradient(circle at 75% 75%, rgba(218, 165, 32, 0.03) 0%, transparent 50%),
     radial-gradient(circle at 50% 50%, rgba(210, 180, 140, 0.02) 0%, transparent 70%);
@@ -142,7 +142,7 @@
 }
 
 [data-theme="vintage"] .card {
-  background: 
+  background:
     linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%),
     repeating-linear-gradient(
       0deg,
@@ -153,7 +153,7 @@
     );
   border: 2px solid #d2b48c;
   border-radius: 8px;
-  box-shadow: 
+  box-shadow:
     0 0.5rem 1rem rgba(139, 69, 19, 0.2),
     inset 0 1px 2px rgba(218, 165, 32, 0.1);
   position: relative;
@@ -182,7 +182,7 @@
 }
 
 [data-theme="vintage"] .card-header {
-  background: 
+  background:
     linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%),
     repeating-linear-gradient(
       90deg,
@@ -210,7 +210,7 @@
 }
 
 [data-theme="vintage"] .btn-primary {
-  background: 
+  background:
     linear-gradient(135deg, #8b4513 0%, #a0522d 100%),
     radial-gradient(ellipse at center, rgba(218, 165, 32, 0.1) 0%, transparent 70%);
   border-color: #654321;
@@ -219,7 +219,7 @@
 }
 
 [data-theme="vintage"] .btn-primary:hover {
-  background: 
+  background:
     linear-gradient(135deg, #654321 0%, #8b4513 100%),
     radial-gradient(ellipse at center, rgba(218, 165, 32, 0.2) 0%, transparent 70%);
   transform: translateY(-1px);
@@ -233,7 +233,7 @@
 }
 
 [data-theme="vintage"] .alert-warning {
-  background: 
+  background:
     linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%);
   border: 2px solid #daa520;
   border-left: 6px solid #daa520;
@@ -261,7 +261,7 @@
 }
 
 [data-theme="vintage"] .form-control {
-  background: 
+  background:
     linear-gradient(135deg, #faf8f1 0%, #f8f6e8 100%);
   border: 2px solid #d2b48c;
   border-radius: 4px;
@@ -271,7 +271,7 @@
 }
 
 [data-theme="vintage"] .form-control:focus {
-  background: 
+  background:
     linear-gradient(135deg, #ffffff 0%, #faf8f1 100%);
   border-color: var(--theme-primary);
   color: var(--theme-text-primary);
@@ -286,7 +286,7 @@
 }
 
 [data-theme="vintage"] .dropdown-menu {
-  background: 
+  background:
     linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%);
   border: 2px solid #d2b48c;
   border-radius: 4px;
@@ -301,13 +301,13 @@
 }
 
 [data-theme="vintage"] .dropdown-item:hover {
-  background: 
+  background:
     linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%);
   color: var(--theme-text-primary);
 }
 
 [data-theme="vintage"] .list-group-item {
-  background: 
+  background:
     linear-gradient(135deg, #faf8f1 0%, #f8f6e8 100%);
   border: 1px solid #d2b48c;
   color: var(--theme-text-primary);
@@ -316,14 +316,14 @@
 }
 
 [data-theme="vintage"] .list-group-item:hover {
-  background: 
+  background:
     linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%);
   transform: translateX(3px);
   box-shadow: inset 3px 0 0 #daa520;
 }
 
 [data-theme="vintage"] .progress {
-  background: 
+  background:
     linear-gradient(135deg, #ede7d3 0%, #d2b48c 100%);
   border: 1px solid #bc9a6a;
   border-radius: 6px;
@@ -331,7 +331,7 @@
 }
 
 [data-theme="vintage"] .progress-bar {
-  background: 
+  background:
     linear-gradient(90deg, #8b4513 0%, #daa520 50%, #8b4513 100%),
     repeating-linear-gradient(
       45deg,
@@ -359,7 +359,7 @@
 }
 
 [data-theme="vintage"] .modal-content {
-  background: 
+  background:
     linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%),
     repeating-linear-gradient(
       0deg,
@@ -374,7 +374,7 @@
 }
 
 [data-theme="vintage"] .modal-header {
-  background: 
+  background:
     linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%);
   border-bottom: 2px solid #d2b48c;
 }
@@ -393,7 +393,7 @@
 }
 
 [data-theme="vintage"] .table th {
-  background: 
+  background:
     linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%);
   border-color: #d2b48c;
   color: var(--theme-text-primary);
@@ -403,12 +403,12 @@
 }
 
 [data-theme="vintage"] .table-striped > tbody > tr:nth-of-type(odd) > td {
-  background: 
+  background:
     linear-gradient(135deg, rgba(210, 180, 140, 0.1), rgba(237, 231, 211, 0.1));
 }
 
 /* Vintage typography */
-[data-theme="vintage"] h1, [data-theme="vintage"] h2, 
+[data-theme="vintage"] h1, [data-theme="vintage"] h2,
 [data-theme="vintage"] h3, [data-theme="vintage"] h4 {
   font-family: 'Uncial Antiqua', 'Crimson Text', serif;
   color: var(--theme-text-primary);
@@ -429,7 +429,7 @@
 
 /* Campaign-specific styling for vintage theme */
 [data-theme="vintage"] .campaign-card {
-  background: 
+  background:
     linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%),
     repeating-linear-gradient(
       45deg,
@@ -440,7 +440,7 @@
     );
   border: 3px solid #d2b48c;
   border-radius: 12px;
-  box-shadow: 
+  box-shadow:
     0 0.5rem 1.5rem rgba(139, 69, 19, 0.3),
     inset 0 1px 2px rgba(218, 165, 32, 0.1);
   transition: all 0.3s ease;
@@ -460,13 +460,13 @@
 
 [data-theme="vintage"] .campaign-card:hover {
   transform: translateY(-3px) rotate(0.5deg);
-  box-shadow: 
+  box-shadow:
     0 1rem 2rem rgba(139, 69, 19, 0.4),
     inset 0 1px 2px rgba(218, 165, 32, 0.2);
 }
 
 [data-theme="vintage"] .character-sheet {
-  background: 
+  background:
     linear-gradient(135deg, #faf8f1 0%, #f4f1e8 100%),
     repeating-linear-gradient(
       0deg,
@@ -494,7 +494,7 @@
 }
 
 [data-theme="vintage"] .scene-chat {
-  background: 
+  background:
     linear-gradient(180deg, #f4f1e8 0%, #ede7d3 100%),
     repeating-linear-gradient(
       0deg,
@@ -509,7 +509,7 @@
 }
 
 [data-theme="vintage"] .dice-roller {
-  background: 
+  background:
     radial-gradient(circle, #faf8f1 0%, #ede7d3 70%, #d2b48c 100%),
     repeating-conic-gradient(
       from 0deg at 50% 50%,
@@ -520,7 +520,7 @@
     );
   border: 4px solid #8b4513;
   border-radius: 50%;
-  box-shadow: 
+  box-shadow:
     0 0.5rem 1rem rgba(139, 69, 19, 0.4),
     inset 0 2px 4px rgba(218, 165, 32, 0.2);
   position: relative;
@@ -540,10 +540,10 @@
 }
 
 @keyframes vintage-wobble {
-  0%, 100% { 
+  0%, 100% {
     transform: translate(-50%, -50%) rotate(-2deg);
   }
-  50% { 
+  50% {
     transform: translate(-50%, -50%) rotate(2deg);
   }
 }
@@ -616,7 +616,7 @@
   left: 2px;
   right: 2px;
   bottom: 2px;
-  background: 
+  background:
     repeating-linear-gradient(
       45deg,
       rgba(245, 245, 220, 0.1) 0px,
