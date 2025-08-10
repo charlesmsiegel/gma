@@ -43,7 +43,7 @@
             {% endif %}
           </span>
           {% if user.is_authenticated and user_role %}
-            <span class="badge bg-primary">
+            <span class="badge bg-primary role-{{ user_role|lower }}">
               <i class="bi bi-person-badge"></i> {{ user_role }}
             </span>
           {% endif %}
@@ -66,7 +66,7 @@
   </div>
 
   <!-- Detailed Campaign Information -->
-  <div class="card mb-4">
+  <div class="info-section card mb-4">
     <div class="card-header">
       <h3 class="card-title mb-0">Campaign Information</h3>
     </div>
@@ -101,68 +101,79 @@
       </div>
     </div>
   </div>
-  <!-- Campaign Management -->
+  <!-- Management Section -->
   {% if user.is_authenticated and user_role == "OWNER" or user_role == "GM" %}
+    <div class="campaign-management" role="region" aria-labelledby="campaign-management-heading">
     <div class="card mb-4">
       <div class="card-header">
-        <h3 class="card-title mb-0">Campaign Management</h3>
+        <h3 class="card-title mb-0" id="campaign-management-heading">Campaign Management</h3>
       </div>
       <div class="card-body">
-        <div class="row">
-          <div class="col-lg-3 col-md-6 mb-3">
+        <div class="row management-grid">
+          <div class="col-md-6 mb-3">
+            <div class="management-card characters-card">
             <div class="card h-100 text-center">
               <div class="card-body d-flex flex-column">
-                <div class="mb-3" style="font-size: 2rem;">👥</div>
+                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">👥</div>
                 <h5 class="card-title">Manage Characters</h5>
                 <p class="card-text flex-grow-1">Manage player and NPC characters</p>
                 <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">Characters</a>
               </div>
             </div>
+            </div>
           </div>
-          <div class="col-lg-3 col-md-6 mb-3">
+          <div class="col-md-6 mb-3">
+            <div class="management-card scenes-card">
             <div class="card h-100 text-center">
               <div class="card-body d-flex flex-column">
-                <div class="mb-3" style="font-size: 2rem;">🎭</div>
+                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">🎭</div>
                 <h5 class="card-title">Manage Scenes</h5>
                 <p class="card-text flex-grow-1">Create and manage campaign scenes</p>
                 <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="btn btn-primary">Scenes</a>
               </div>
             </div>
+            </div>
           </div>
-          <div class="col-lg-3 col-md-6 mb-3">
+          <div class="col-md-6 mb-3">
+            <div class="management-card locations-card">
             <div class="card h-100 text-center">
               <div class="card-body d-flex flex-column">
-                <div class="mb-3" style="font-size: 2rem;">🗺️</div>
+                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">🗺️</div>
                 <h5 class="card-title">Manage Locations</h5>
                 <p class="card-text flex-grow-1">Organize campaign locations and maps</p>
                 <a href="{% url 'campaigns:campaign_locations' slug=campaign.slug %}" class="btn btn-primary">Locations</a>
               </div>
             </div>
+            </div>
           </div>
-          <div class="col-lg-3 col-md-6 mb-3">
+          <div class="col-md-6 mb-3">
+            <div class="management-card items-card">
             <div class="card h-100 text-center">
               <div class="card-body d-flex flex-column">
-                <div class="mb-3" style="font-size: 2rem;">⚔️</div>
+                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">⚔️</div>
                 <h5 class="card-title">Manage Items</h5>
                 <p class="card-text flex-grow-1">Track items, equipment, and treasures</p>
                 <a href="{% url 'campaigns:campaign_items' slug=campaign.slug %}" class="btn btn-primary">Items</a>
               </div>
             </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+    </div>
   {% elif user.is_authenticated and user_role == "PLAYER" %}
+    <div class="campaign-management" role="region" aria-labelledby="campaign-management-heading">
     <div class="card mb-4">
       <div class="card-header">
-        <h3 class="card-title mb-0">Campaign Management</h3>
+        <h3 class="card-title mb-0" id="campaign-management-heading">Campaign Management</h3>
       </div>
       <div class="card-body">
         <div class="row">
           <div class="col-md-6">
             <div class="card text-center">
               <div class="card-body">
-                <div class="mb-3" style="font-size: 2rem;">👤</div>
+                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">👤</div>
                 <h5 class="card-title">My Characters</h5>
                 <p class="card-text">View and manage your characters</p>
                 <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">My Characters</a>
@@ -172,17 +183,19 @@
         </div>
       </div>
     </div>
+    </div>
   {% elif user.is_authenticated and user_role == "OBSERVER" %}
+    <div class="campaign-management" role="region" aria-labelledby="campaign-management-heading">
     <div class="card mb-4">
       <div class="card-header">
-        <h3 class="card-title mb-0">Campaign Management</h3>
+        <h3 class="card-title mb-0" id="campaign-management-heading">Campaign Management</h3>
       </div>
       <div class="card-body">
         <div class="row">
           <div class="col-md-6 mb-3">
             <div class="card h-100 text-center">
               <div class="card-body d-flex flex-column">
-                <div class="mb-3" style="font-size: 2rem;">👥</div>
+                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">👥</div>
                 <h5 class="card-title">View Characters</h5>
                 <p class="card-text flex-grow-1">Browse campaign characters</p>
                 <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">View Characters</a>
@@ -192,7 +205,7 @@
           <div class="col-md-6 mb-3">
             <div class="card h-100 text-center">
               <div class="card-body d-flex flex-column">
-                <div class="mb-3" style="font-size: 2rem;">🎭</div>
+                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">🎭</div>
                 <h5 class="card-title">View Scenes</h5>
                 <p class="card-text flex-grow-1">Browse campaign scenes</p>
                 <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="btn btn-primary">View Scenes</a>
@@ -202,9 +215,11 @@
         </div>
       </div>
     </div>
+    </div>
   {% endif %}
   <!-- Campaign Members -->
-  {% if is_member %}
+  {% if user.is_authenticated %}
+    <div class="member-list-section">
     <div class="card mb-4">
       <div class="card-header">
         <h3 class="card-title mb-0">Campaign Members ({{ campaign.memberships.count|add:1 }})</h3>
@@ -227,14 +242,18 @@
                 <div class="text-muted small">Joined {{ membership.joined_at|date:"M j, Y" }}</div>
               </div>
               <div class="d-flex gap-2 align-items-center">
-                <span class="badge bg-primary">{{ membership.role }}</span>
+                <span class="badge bg-primary role-{{ membership.role|lower }}">{{ membership.role }}</span>
                 {% if user.is_authenticated and is_owner %}
                   <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-secondary btn-sm" title="Change role for {{ membership.user.username }}">
-                      <i class="bi bi-pencil"></i>
+                    <button class="btn btn-outline-secondary btn-sm"
+                            title="Change role for {{ membership.user.username }}"
+                            aria-label="Change role for {{ membership.user.username }}">
+                      <i class="bi bi-pencil"></i> Change Role
                     </button>
-                    <button class="btn btn-outline-danger btn-sm" title="Remove {{ membership.user.username }}">
-                      <i class="bi bi-x-lg"></i>
+                    <button class="btn btn-outline-danger btn-sm"
+                            title="Remove {{ membership.user.username }}"
+                            aria-label="Remove {{ membership.user.username }}">
+                      <i class="bi bi-x-lg"></i> Remove
                     </button>
                   </div>
                 {% endif %}
@@ -243,6 +262,7 @@
           {% endfor %}
         </div>
       </div>
+    </div>
     </div>
   {% endif %}
 
@@ -255,7 +275,7 @@
       <div class="card-body">
         {% if user_role %}
           <p class="mb-3">
-            You are a <span class="badge bg-primary">{{ user_role }}</span> in this campaign.
+            You are a <span class="badge bg-primary role-{{ user_role|lower }}">{{ user_role }}</span> in this campaign.
           </p>
           {% if user_role == "OWNER" %}
             <p class="mb-0">
@@ -287,12 +307,8 @@
       <button class="btn btn-primary" disabled>
         <i class="bi bi-pencil"></i> Edit Campaign
       </button>
-      <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}" class="btn btn-secondary">
-        <i class="bi bi-person-plus"></i> Invite Users
-      </a>
-      <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}" class="btn btn-secondary">
-        <i class="bi bi-people"></i> Manage Members
-      </a>
+      <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}" class="btn btn-secondary" aria-label="Send campaign invitation"><i class="bi bi-person-plus"></i> Invite Users</a>
+      <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}" class="btn btn-secondary"><i class="bi bi-people"></i> Manage Members</a>
       <a href="{% url 'campaigns:settings' slug=campaign.slug %}" class="btn btn-secondary">
         <i class="bi bi-gear"></i> Campaign Settings
       </a>
