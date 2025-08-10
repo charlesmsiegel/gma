@@ -152,6 +152,7 @@ class UserProfileForm(forms.ModelForm):
         choices=User.THEME_CHOICES,
         widget=forms.Select(attrs={"class": "form-control"}),
         help_text="Choose your preferred theme for the interface",
+        required=False,
     )
 
     def __init__(self, *args, **kwargs):
@@ -177,7 +178,7 @@ class UserProfileForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ("display_name", "timezone", "theme")
+        fields = ("display_name", "timezone")
         widgets = {
             "display_name": forms.TextInput(
                 attrs={
@@ -224,3 +225,42 @@ class UserProfileForm(forms.ModelForm):
                 # Re-raise the validation error with proper message handling
                 raise ValidationError(str(e))
         return timezone
+
+    def clean_theme(self):
+        """Validate theme field."""
+        theme = self.cleaned_data.get("theme")
+
+        # If empty string provided, that's a validation error
+        if theme == "":
+            raise ValidationError(
+                "Select a valid choice. That choice is not one of the "
+                "available choices."
+            )
+
+        # If None (not provided), preserve the current user's theme
+        if theme is None and self.instance and hasattr(self.instance, "theme"):
+            return self.instance.theme
+        elif theme is None:
+            return "light"  # Default fallback
+
+        # Validate theme is in valid choices
+        valid_themes = [choice[0] for choice in User.THEME_CHOICES]
+        if theme not in valid_themes:
+            raise ValidationError(
+                f"Select a valid choice. {theme} is not one of the available choices."
+            )
+
+        return theme
+
+    def save(self, commit=True):
+        """Save the form, including the theme field."""
+        user = super().save(commit=False)
+
+        # Handle theme field manually
+        theme = self.cleaned_data.get("theme")
+        if theme is not None:
+            user.theme = theme
+
+        if commit:
+            user.save()
+        return user

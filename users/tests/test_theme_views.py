@@ -126,7 +126,7 @@ class UserThemeViewTests(TestCase):
         """Test that invalid theme values are rejected by the view."""
         self.client.login(username="testuser", password="testpass123")
 
-        invalid_themes = ["invalid", "neon", "", "LIGHT", None]
+        invalid_themes = ["invalid", "neon", "", "LIGHT"]
 
         for invalid_theme in invalid_themes:
             with self.subTest(theme=invalid_theme):
@@ -148,6 +148,31 @@ class UserThemeViewTests(TestCase):
                 self.user.refresh_from_db()
                 self.assertEqual(self.user.theme, original_theme)
 
+    def test_missing_theme_preserves_current_theme(self):
+        """Test that when theme field is not provided, current theme is preserved."""
+        self.client.login(username="testuser", password="testpass123")
+
+        # Set user to a specific theme first
+        self.user.theme = "cyberpunk"
+        self.user.save()
+
+        # Update profile without providing theme field (simulates old tests)
+        response = self.client.post(
+            self.profile_edit_url,
+            {
+                "display_name": "Updated Name",
+                "timezone": "Europe/London",
+                # Note: no theme field provided
+            },
+        )
+
+        # Should succeed (302 redirect)
+        self.assertEqual(response.status_code, 302)
+
+        # Theme should be preserved
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.theme, "cyberpunk")
+
     def test_theme_form_validation_errors_displayed(self):
         """Test that theme validation errors are properly displayed."""
         self.client.login(username="testuser", password="testpass123")
@@ -163,8 +188,7 @@ class UserThemeViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFormError(
-            response,
-            "form",
+            response.context["form"],
             "theme",
             "Select a valid choice. invalid_theme is not one of the available choices.",
         )
