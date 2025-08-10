@@ -4,46 +4,67 @@
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'campaigns/css/coming_soon.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="campaign-management-section">
-    <h1>{{ campaign.name }} - Items</h1>
+<div class="container">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Items</li>
+        </ol>
+    </nav>
 
-    <div class="breadcrumb">
-        <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
-        &gt; Items
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">{{ campaign.name }} - Items</h1>
+            <p class="text-muted mb-0">Track items, equipment, and treasures in your campaign.</p>
+        </div>
     </div>
 
-    <div class="management-area">
-        <div class="area-header">
-            <h2>Item Management</h2>
-            <p class="area-description">Track items, equipment, and treasures in your campaign.</p>
-        </div>
+    <!-- Coming Soon Card -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card text-center">
+                <div class="card-body p-5">
+                    <div class="mb-4">
+                        <h3 class="h4 text-primary">⚔️ Items Area Coming Soon</h3>
+                        <p class="text-muted">This area will allow you to:</p>
+                    </div>
 
-        <div class="coming-soon-message">
-            <h3>⚔️ Items Area Coming Soon</h3>
-            <p>This area will allow you to:</p>
-            <ul>
-                {% if can_manage_items %}
-                    <li>Create and categorize campaign items</li>
-                    <li>Manage item stats and descriptions</li>
-                    <li>Track item ownership and locations</li>
-                    <li>Set up treasure tables and loot</li>
-                {% else %}
-                    <li>View all accessible campaign items</li>
-                    <li>Browse item descriptions and stats</li>
-                    <li>See item availability and rarity</li>
-                {% endif %}
-            </ul>
-        </div>
+                    <div class="row">
+                        <div class="col-md-8 mx-auto">
+                            <ul class="list-unstyled text-start">
+                                {% if can_manage_items %}
+                                    <li class="mb-2"><i class="text-success">✓</i> Create and categorize campaign items</li>
+                                    <li class="mb-2"><i class="text-success">✓</i> Manage item stats and descriptions</li>
+                                    <li class="mb-2"><i class="text-success">✓</i> Track item ownership and locations</li>
+                                    <li class="mb-2"><i class="text-success">✓</i> Set up treasure tables and loot</li>
+                                {% else %}
+                                    <li class="mb-2"><i class="text-success">✓</i> View all accessible campaign items</li>
+                                    <li class="mb-2"><i class="text-success">✓</i> Browse item descriptions and stats</li>
+                                    <li class="mb-2"><i class="text-success">✓</i> See item availability and rarity</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
 
-        <div class="placeholder-actions">
-            {% if can_create_item %}
-                <a href="#" class="btn btn-primary disabled" title="Coming Soon">Create Item</a>
-            {% endif %}
-            <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-secondary">Back to Campaign</a>
+                    <div class="mt-4 d-flex gap-3 justify-content-center flex-wrap">
+                        {% if can_create_item %}
+                            <button class="btn btn-primary" disabled title="Coming Soon">
+                                <i class="bi bi-plus-circle"></i> Create Item
+                            </button>
+                        {% endif %}
+                        <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Campaign
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

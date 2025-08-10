@@ -3,177 +3,243 @@
 {% block title %}Campaigns - {{ block.super }}{% endblock %}
 
 {% block extra_css %}
-{% load static %}
-<link rel="stylesheet" href="{% static 'campaigns/css/campaign_list.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">Campaigns</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2 mb-0">Campaigns</h1>
     {% if user.is_authenticated %}
-        <a href="{% url 'campaigns:create' %}" class="btn btn-success">Create New Campaign</a>
+        <a href="{% url 'campaigns:create' %}" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Create New Campaign
+        </a>
     {% endif %}
 </div>
 
 <!-- Search and Filter Section -->
-<div class="search-filters">
-    <!-- Search Form -->
-    <form method="get" class="search-form">
-        <input
-            type="text"
-            name="q"
-            class="search-input"
-            placeholder="Search campaigns by name, description, or game system"
-            value="{{ search_query|default:'' }}"
-        >
-        <button type="submit" class="search-btn">Search</button>
+<div class="card mb-4">
+    <div class="card-body">
+        <!-- Search Form -->
+        <form method="get" class="row g-3 mb-3">
+            <div class="col-md-8">
+                <input
+                    type="text"
+                    name="q"
+                    class="form-control"
+                    placeholder="Search campaigns by name, description, or game system"
+                    value="{{ search_query|default:'' }}"
+                >
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
 
-        <!-- Preserve other parameters -->
-        {% if current_role_filter %}
-            <input type="hidden" name="role" value="{{ current_role_filter }}">
-        {% endif %}
-        {% if page_obj.number and page_obj.number != 1 %}
-            <input type="hidden" name="page" value="{{ page_obj.number }}">
-        {% endif %}
-    </form>
+            <!-- Preserve other parameters -->
+            {% if current_role_filter %}
+                <input type="hidden" name="role" value="{{ current_role_filter }}">
+            {% endif %}
+            {% if page_obj.number and page_obj.number != 1 %}
+                <input type="hidden" name="page" value="{{ page_obj.number }}">
+            {% endif %}
+        </form>
 
-    <!-- Role Filters (only for authenticated users) -->
-    {% if user.is_authenticated %}
-        <div class="role-filters">
-            <a href="?{% if search_query %}q={{ search_query|urlencode }}{% endif %}"
-               class="role-filter {% if not current_role_filter %}active{% endif %}">
-                All
-            </a>
-            <a href="?role=owner{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
-               class="role-filter {% if current_role_filter == 'owner' %}active{% endif %}">
-                Owner
-            </a>
-            <a href="?role=gm{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
-               class="role-filter {% if current_role_filter == 'gm' %}active{% endif %}">
-                GM
-            </a>
-            <a href="?role=player{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
-               class="role-filter {% if current_role_filter == 'player' %}active{% endif %}">
-                Player
-            </a>
-            <a href="?role=observer{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
-               class="role-filter {% if current_role_filter == 'observer' %}active{% endif %}">
-                Observer
-            </a>
-        </div>
-    {% endif %}
+        <!-- Role Filters (only for authenticated users) -->
+        {% if user.is_authenticated %}
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="?{% if search_query %}q={{ search_query|urlencode }}{% endif %}"
+                   class="btn btn-sm {% if not current_role_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    All
+                </a>
+                <a href="?role=owner{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
+                   class="btn btn-sm {% if current_role_filter == 'owner' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Owner
+                </a>
+                <a href="?role=gm{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
+                   class="btn btn-sm {% if current_role_filter == 'gm' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    GM
+                </a>
+                <a href="?role=player{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
+                   class="btn btn-sm {% if current_role_filter == 'player' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Player
+                </a>
+                <a href="?role=observer{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
+                   class="btn btn-sm {% if current_role_filter == 'observer' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Observer
+                </a>
+            </div>
+        {% endif %}
+    </div>
 </div>
 
 {% if campaigns %}
-    <div class="campaigns-grid">
+    <div class="row g-4">
         {% for campaign in campaigns %}
-            <div class="campaign-card">
-                <h3>
-                    <!-- Privacy and Member Indicators -->
-                    {% if user.is_authenticated %}
-                        <span class="privacy-indicator {% if campaign.is_public %}privacy-public{% else %}privacy-private{% endif %}">
-                            {% if campaign.is_public %}Public{% else %}Private{% endif %}
-                        </span>
-                        {% if campaign.user_is_member %}
-                            <span class="member-indicator">Member</span>
+            <div class="col-lg-4 col-md-6">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-start">
+                        <h5 class="card-title mb-0">
+                            <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="text-decoration-none">
+                                {{ campaign.name|truncatechars:30 }}
+                            </a>
+                        </h5>
+                        <!-- Privacy and Member Indicators -->
+                        {% if user.is_authenticated %}
+                            <div class="d-flex gap-1 flex-wrap">
+                                <span class="badge {% if campaign.is_public %}bg-success{% else %}bg-secondary{% endif %} d-flex align-items-center">
+                                    <i class="bi {% if campaign.is_public %}bi-globe{% else %}bi-lock{% endif %} me-1"></i>
+                                    {% if campaign.is_public %}Public{% else %}Private{% endif %}
+                                </span>
+                                {% if campaign.user_is_member %}
+                                    <span class="badge bg-primary d-flex align-items-center">
+                                        <i class="bi bi-person-check me-1"></i>Member
+                                    </span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div>
+                                <span class="badge {% if campaign.is_public %}bg-success{% else %}bg-secondary{% endif %} d-flex align-items-center">
+                                    <i class="bi {% if campaign.is_public %}bi-globe{% else %}bi-lock{% endif %} me-1"></i>
+                                    {% if campaign.is_public %}Public{% else %}Private{% endif %}
+                                </span>
+                            </div>
                         {% endif %}
-                    {% endif %}
-                    <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
-                </h3>
+                    </div>
 
-                <div class="campaign-meta">
-                    <span><strong>Owner:</strong> {{ campaign.owner.username }}</span>
-                    {% if campaign.game_system %}
-                        <span><strong>System:</strong> {{ campaign.game_system }}</span>
-                    {% endif %}
-                    <span><strong>Members:</strong> {{ campaign.member_count }} member{{ campaign.member_count|pluralize }}</span>
-                    <span><strong>Created:</strong> {{ campaign.created_at|date:"M j, Y" }}</span>
-                    {% if campaign.updated_at != campaign.created_at %}
-                        <span><strong>Last Updated:</strong> {{ campaign.updated_at|date:"M j, Y" }}</span>
-                    {% endif %}
-                </div>
+                    <div class="card-body d-flex flex-column">
+                        <div class="mb-3 small text-muted">
+                            <div class="mb-1">
+                                <i class="bi bi-person-circle me-1"></i>
+                                <strong>Owner:</strong> {{ campaign.owner.username }}
+                            </div>
+                            {% if campaign.game_system %}
+                                <div class="mb-1">
+                                    <i class="bi bi-dice-6 me-1"></i>
+                                    <strong>System:</strong> {{ campaign.game_system }}
+                                </div>
+                            {% endif %}
+                            <div class="mb-1">
+                                <i class="bi bi-people me-1"></i>
+                                <strong>Members:</strong> {{ campaign.member_count }} member{{ campaign.member_count|pluralize }}
+                            </div>
+                            <div class="mb-1">
+                                <i class="bi bi-calendar-plus me-1"></i>
+                                <strong>Created:</strong> {{ campaign.created_at|date:"M j, Y" }}
+                            </div>
+                            {% if campaign.updated_at != campaign.created_at %}
+                                <div>
+                                    <i class="bi bi-calendar-check me-1"></i>
+                                    <strong>Updated:</strong> {{ campaign.updated_at|date:"M j, Y" }}
+                                </div>
+                            {% endif %}
+                        </div>
 
-                {% if campaign.description %}
-                    <div class="campaign-description">{{ campaign.description }}</div>
-                {% else %}
-                    <div class="campaign-description empty">No description provided.</div>
-                {% endif %}
+                        {% if campaign.description %}
+                            <p class="card-text flex-grow-1">{{ campaign.description|truncatechars:120 }}</p>
+                        {% else %}
+                            <p class="card-text flex-grow-1 text-muted fst-italic">No description provided.</p>
+                        {% endif %}
+                    </div>
 
-                <div class="campaign-footer">
-                    <span class="campaign-status {% if campaign.is_active %}status-active{% else %}status-inactive{% endif %}">
-                        {% if campaign.is_active %}Active{% else %}Inactive{% endif %}
-                    </span>
-                    <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn-view">View Campaign</a>
+                    <div class="card-footer d-flex justify-content-between align-items-center">
+                        <span class="badge {% if campaign.is_active %}bg-success{% else %}bg-warning text-dark{% endif %} d-flex align-items-center">
+                            <i class="bi {% if campaign.is_active %}bi-check-circle{% else %}bi-pause-circle{% endif %} me-1"></i>
+                            {% if campaign.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                        <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-eye me-1"></i>View Campaign
+                        </a>
+                    </div>
                 </div>
             </div>
         {% endfor %}
     </div>
 
     {% if is_paginated %}
-        <div class="pagination-wrapper">
-            <div class="pagination">
+        <nav aria-label="Campaign pagination">
+            <ul class="pagination justify-content-center">
                 {% if page_obj.has_previous %}
-                    <a href="?page=1{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">First</a>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">Previous</a>
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">Previous</a>
+                    </li>
                 {% endif %}
 
                 {% for num in page_obj.paginator.page_range %}
                     {% if page_obj.number == num %}
-                        <span class="current">{{ num }}</span>
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <a href="?page={{ num }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">{{ num }}</a>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">{{ num }}</a>
+                        </li>
                     {% endif %}
                 {% endfor %}
 
                 {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">Next</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">Last</a>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if current_role_filter %}&role={{ current_role_filter }}{% endif %}">Last</a>
+                    </li>
                 {% endif %}
-            </div>
-        </div>
+            </ul>
+        </nav>
     {% endif %}
 
 {% else %}
-    <div class="empty-state">
-        {% if search_query or current_role_filter %}
-            <h3>No Results Found</h3>
-            {% if search_query and current_role_filter %}
-                <p>No campaigns match your search "{{ search_query }}" for {{ current_role_filter }} role.</p>
-            {% elif search_query %}
-                <p>No campaigns match your search "{{ search_query }}".</p>
-            {% elif current_role_filter %}
-                <p>You don't have any campaigns with the {{ current_role_filter }} role.</p>
-            {% endif %}
-            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem;">
-                <a href="{% url 'campaigns:list' %}" class="btn btn-secondary">Clear Filters</a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'campaigns:create' %}" class="btn btn-success">Create Campaign</a>
+    <div class="text-center py-5">
+        <div class="card">
+            <div class="card-body">
+                {% if search_query or current_role_filter %}
+                    <h3 class="h4">No Results Found</h3>
+                    {% if search_query and current_role_filter %}
+                        <p class="text-muted">No campaigns match your search "{{ search_query }}" for {{ current_role_filter }} role.</p>
+                    {% elif search_query %}
+                        <p class="text-muted">No campaigns match your search "{{ search_query }}".</p>
+                    {% elif current_role_filter %}
+                        <p class="text-muted">You don't have any campaigns with the {{ current_role_filter }} role.</p>
+                    {% endif %}
+                    <div class="d-flex gap-3 justify-content-center flex-wrap mt-3">
+                        <a href="{% url 'campaigns:list' %}" class="btn btn-secondary">Clear Filters</a>
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'campaigns:create' %}" class="btn btn-success">Create Campaign</a>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <h3 class="h4">No Campaigns Found</h3>
+                    <p class="text-muted">There are no campaigns available at the moment.</p>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'campaigns:create' %}" class="btn btn-success btn-lg mt-3">Create Your First Campaign</a>
+                    {% else %}
+                        <p class="mb-3">Sign up to create and participate in campaigns!</p>
+                        <div class="d-flex gap-3 justify-content-center flex-wrap">
+                            <a href="{% url 'users:login' %}" class="btn btn-primary">Login</a>
+                            <a href="{% url 'users:register' %}" class="btn btn-outline-primary">Create Account</a>
+                        </div>
+                    {% endif %}
                 {% endif %}
             </div>
-        {% else %}
-            <h3>No Campaigns Found</h3>
-            <p>There are no campaigns available at the moment.</p>
-            {% if user.is_authenticated %}
-                <a href="{% url 'campaigns:create' %}" class="btn btn-success">Create Your First Campaign</a>
-            {% else %}
-                <p>Sign up to create and participate in campaigns!</p>
-                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                    <a href="{% url 'users:login' %}" class="btn btn-primary">Login</a>
-                    <a href="{% url 'users:register' %}" class="btn btn-secondary">Create Account</a>
-                </div>
-            {% endif %}
-        {% endif %}
+        </div>
     </div>
 {% endif %}
 
 {% if user.is_authenticated %}
     <div class="card mt-4">
-        <h3>Campaign Tips</h3>
-        <ul>
-            <li><strong>Create:</strong> Start your own campaign and invite friends to join</li>
-            <li><strong>Join:</strong> Ask campaign owners for an invitation to participate</li>
-            <li><strong>Explore:</strong> Browse available campaigns to find ones that match your interests</li>
-        </ul>
+        <div class="card-header">
+            <h5 class="card-title mb-0">Campaign Tips</h5>
+        </div>
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><strong>Create:</strong> Start your own campaign and invite friends to join</li>
+                <li class="mb-2"><strong>Join:</strong> Ask campaign owners for an invitation to participate</li>
+                <li class="mb-0"><strong>Explore:</strong> Browse available campaigns to find ones that match your interests</li>
+            </ul>
+        </div>
     </div>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,476 @@
+/* Theme Overrides for Bootstrap Components */
+/* This file ensures that Bootstrap components respect our theme system */
+
+/* Force all elements to inherit theme colors */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Gap utility classes for older Bootstrap versions */
+.gap-1 {
+    gap: 0.25rem !important;
+}
+
+.gap-2 {
+    gap: 0.5rem !important;
+}
+
+.gap-3 {
+    gap: 1rem !important;
+}
+
+.gap-4 {
+    gap: 1.5rem !important;
+}
+
+.gap-5 {
+    gap: 3rem !important;
+}
+
+/* Margin start utility classes for Bootstrap compatibility */
+.ms-1 {
+    margin-left: 0.25rem !important;
+}
+
+.ms-2 {
+    margin-left: 0.5rem !important;
+}
+
+.ms-3 {
+    margin-left: 1rem !important;
+}
+
+.ms-4 {
+    margin-left: 1.5rem !important;
+}
+
+.ms-5 {
+    margin-left: 3rem !important;
+}
+
+/* Body and HTML */
+html, body {
+    background-color: var(--theme-bg-body) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+/* Override Bootstrap's default text colors */
+.text-muted {
+    color: var(--theme-text-muted) !important;
+}
+
+.text-secondary {
+    color: var(--theme-text-secondary) !important;
+}
+
+.text-primary {
+    color: var(--theme-primary) !important;
+}
+
+.text-success {
+    color: var(--theme-success) !important;
+}
+
+.text-danger {
+    color: var(--theme-danger) !important;
+}
+
+.text-warning {
+    color: var(--theme-warning) !important;
+}
+
+.text-info {
+    color: var(--theme-info) !important;
+}
+
+/* Links */
+a {
+    color: var(--theme-primary);
+}
+
+a:hover {
+    color: var(--theme-primary-dark);
+}
+
+/* Cards - Override Bootstrap */
+.card {
+    background-color: var(--theme-bg-card) !important;
+    border-color: var(--theme-border-color) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.card-header {
+    background-color: var(--theme-bg-surface) !important;
+    border-bottom-color: var(--theme-border-color) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.card-body {
+    color: var(--theme-text-primary) !important;
+}
+
+.card-footer {
+    background-color: var(--theme-bg-surface) !important;
+    border-top-color: var(--theme-border-color) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.card-title {
+    color: var(--theme-text-primary) !important;
+}
+
+.card-text {
+    color: var(--theme-text-primary) !important;
+}
+
+/* Forms - Override Bootstrap */
+.form-control,
+.form-select {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-input-focus-border) !important;
+    box-shadow: var(--theme-input-focus-shadow) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.form-control::placeholder {
+    color: var(--theme-input-placeholder) !important;
+}
+
+.form-label {
+    color: var(--theme-text-primary) !important;
+}
+
+.form-text {
+    color: var(--theme-text-muted) !important;
+}
+
+/* Buttons - Override Bootstrap */
+.btn-primary {
+    background-color: var(--theme-primary) !important;
+    border-color: var(--theme-primary) !important;
+    color: var(--theme-text-white) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--theme-primary-dark) !important;
+    border-color: var(--theme-primary-dark) !important;
+    color: var(--theme-text-white) !important;
+}
+
+.btn-secondary {
+    background-color: var(--theme-secondary) !important;
+    border-color: var(--theme-secondary) !important;
+    color: var(--theme-text-white) !important;
+}
+
+.btn-secondary:hover {
+    background-color: var(--theme-secondary-dark) !important;
+    border-color: var(--theme-secondary-dark) !important;
+    color: var(--theme-text-white) !important;
+}
+
+.btn-success {
+    background-color: var(--theme-success) !important;
+    border-color: var(--theme-success) !important;
+    color: var(--theme-text-white) !important;
+}
+
+.btn-danger {
+    background-color: var(--theme-danger) !important;
+    border-color: var(--theme-danger) !important;
+    color: var(--theme-text-white) !important;
+}
+
+.btn-warning {
+    background-color: var(--theme-warning) !important;
+    border-color: var(--theme-warning) !important;
+    color: var(--theme-dark) !important;
+}
+
+.btn-info {
+    background-color: var(--theme-info) !important;
+    border-color: var(--theme-info) !important;
+    color: var(--theme-text-white) !important;
+}
+
+.btn-outline-primary {
+    color: var(--theme-primary) !important;
+    border-color: var(--theme-primary) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--theme-primary) !important;
+    border-color: var(--theme-primary) !important;
+    color: var(--theme-text-white) !important;
+}
+
+/* Alerts - Override Bootstrap */
+.alert {
+    color: var(--theme-text-primary) !important;
+    border-color: var(--theme-border-color) !important;
+}
+
+.alert-primary {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+    color: var(--theme-primary) !important;
+    border-color: var(--theme-primary) !important;
+}
+
+.alert-success {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    color: var(--theme-success) !important;
+    border-color: var(--theme-success) !important;
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    color: var(--theme-danger) !important;
+    border-color: var(--theme-danger) !important;
+}
+
+.alert-warning {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+    color: var(--theme-warning) !important;
+    border-color: var(--theme-warning) !important;
+}
+
+.alert-info {
+    background-color: rgba(13, 202, 240, 0.1) !important;
+    color: var(--theme-info) !important;
+    border-color: var(--theme-info) !important;
+}
+
+/* Badges - Override Bootstrap */
+.badge {
+    color: var(--theme-text-white) !important;
+}
+
+.bg-primary {
+    background-color: var(--theme-primary) !important;
+}
+
+.bg-secondary {
+    background-color: var(--theme-secondary) !important;
+}
+
+.bg-success {
+    background-color: var(--theme-success) !important;
+}
+
+.bg-danger {
+    background-color: var(--theme-danger) !important;
+}
+
+.bg-warning {
+    background-color: var(--theme-warning) !important;
+}
+
+.bg-info {
+    background-color: var(--theme-info) !important;
+}
+
+/* Tables - Override Bootstrap */
+.table {
+    color: var(--theme-text-primary) !important;
+    border-color: var(--theme-border-color) !important;
+}
+
+.table > :not(caption) > * > * {
+    background-color: var(--theme-table-bg) !important;
+    border-color: var(--theme-table-border-color) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: var(--theme-table-striped-bg) !important;
+}
+
+.table-hover > tbody > tr:hover > * {
+    background-color: var(--theme-table-hover-bg) !important;
+}
+
+/* Breadcrumbs - Override Bootstrap */
+.breadcrumb {
+    background-color: var(--theme-bg-surface) !important;
+}
+
+.breadcrumb-item a {
+    color: var(--theme-nav-link-color) !important;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: var(--theme-nav-link-hover) !important;
+}
+
+.breadcrumb-item.active {
+    color: var(--theme-text-muted) !important;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    color: var(--theme-text-muted) !important;
+}
+
+/* Pagination - Override Bootstrap */
+.page-link {
+    color: var(--theme-primary) !important;
+    background-color: var(--theme-bg-card) !important;
+    border-color: var(--theme-border-color) !important;
+}
+
+.page-link:hover {
+    color: var(--theme-primary-dark) !important;
+    background-color: var(--theme-bg-hover) !important;
+    border-color: var(--theme-border-color) !important;
+}
+
+.page-item.active .page-link {
+    background-color: var(--theme-primary) !important;
+    border-color: var(--theme-primary) !important;
+    color: var(--theme-text-white) !important;
+}
+
+.page-item.disabled .page-link {
+    color: var(--theme-text-muted) !important;
+    background-color: var(--theme-bg-surface) !important;
+    border-color: var(--theme-border-color) !important;
+}
+
+/* Dropdowns - Override Bootstrap */
+.dropdown-menu {
+    background-color: var(--theme-bg-card) !important;
+    border-color: var(--theme-border-color) !important;
+    box-shadow: var(--theme-shadow) !important;
+}
+
+.dropdown-item {
+    color: var(--theme-text-primary) !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--theme-bg-hover) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.dropdown-divider {
+    border-color: var(--theme-border-color) !important;
+}
+
+/* Modals - Override Bootstrap */
+.modal-content {
+    background-color: var(--theme-bg-modal) !important;
+    border-color: var(--theme-border-color) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.modal-header {
+    border-bottom-color: var(--theme-border-color) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.modal-body {
+    color: var(--theme-text-primary) !important;
+}
+
+.modal-footer {
+    border-top-color: var(--theme-border-color) !important;
+}
+
+.modal-title {
+    color: var(--theme-text-primary) !important;
+}
+
+/* Close buttons */
+.btn-close {
+    filter: var(--theme-text-primary) == #ffffff ? invert(1) : none;
+}
+
+/* List groups - Override Bootstrap */
+.list-group-item {
+    background-color: var(--theme-bg-card) !important;
+    border-color: var(--theme-border-color) !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.list-group-item:hover {
+    background-color: var(--theme-bg-hover) !important;
+}
+
+/* Navigation - Override Bootstrap navbar */
+.navbar {
+    background-color: var(--theme-bg-navbar) !important;
+    border-bottom: 1px solid var(--theme-border-color) !important;
+}
+
+.navbar-brand,
+.navbar-brand a {
+    color: var(--theme-text-primary) !important;
+}
+
+.navbar-nav .nav-link {
+    color: var(--theme-nav-link-color) !important;
+}
+
+.navbar-nav .nav-link:hover {
+    color: var(--theme-nav-link-hover) !important;
+    background-color: var(--theme-bg-hover) !important;
+}
+
+.navbar-nav .nav-link.active {
+    color: var(--theme-nav-link-active) !important;
+}
+
+/* Ensure all text elements use theme colors */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--theme-text-primary) !important;
+}
+
+p, span, div, li, td, th {
+    color: inherit;
+}
+
+/* Ensure main content area has proper background */
+.main-content {
+    background-color: var(--theme-bg-body) !important;
+    color: var(--theme-text-primary) !important;
+    min-height: calc(100vh - 200px);
+}
+
+/* Footer */
+.main-footer {
+    background-color: var(--theme-bg-surface) !important;
+    color: var(--theme-text-secondary) !important;
+    border-top: 1px solid var(--theme-border-color) !important;
+}
+
+.main-footer p {
+    color: var(--theme-text-secondary) !important;
+}
+
+/* Container background for contrast */
+.container {
+    background-color: transparent !important;
+}
+
+/* Specific overrides for dark themes */
+[data-theme="dark"] body,
+[data-theme="midnight"] body,
+[data-theme="gothic"] body,
+[data-theme="cyberpunk"] body {
+    background-color: var(--theme-bg-body) !important;
+}
+
+[data-theme="dark"] .btn-close,
+[data-theme="midnight"] .btn-close,
+[data-theme="gothic"] .btn-close,
+[data-theme="cyberpunk"] .btn-close {
+    filter: invert(1);
+}

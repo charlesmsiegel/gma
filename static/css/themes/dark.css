@@ -64,6 +64,15 @@
 }
 
 /* Dark theme specific enhancements */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] body {
+  background-color: var(--theme-bg-body) !important;
+  color: var(--theme-text-primary) !important;
+}
+
 [data-theme="dark"] .navbar {
   border-bottom: 1px solid var(--theme-border-color);
   box-shadow: var(--theme-shadow-sm);
