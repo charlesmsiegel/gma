@@ -1,0 +1,38 @@
+/* Coming Soon Page Styles */
+/* Shared styles for campaign management areas that are not yet implemented */
+
+.coming-soon-message {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 2rem;
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.coming-soon-message h3 {
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+.coming-soon-message ul {
+    text-align: left;
+    max-width: 400px;
+    margin: 1rem auto;
+}
+
+.area-description {
+    color: #6c757d;
+    font-size: 1.1em;
+    margin-bottom: 2rem;
+}
+
+.placeholder-actions {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
