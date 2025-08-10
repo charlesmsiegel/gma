@@ -176,6 +176,10 @@ class UserProfileForm(forms.ModelForm):
 
         self.fields["timezone"].choices = timezone_choices
 
+        # Set initial value for theme field from current user
+        if self.instance and hasattr(self.instance, "theme"):
+            self.fields["theme"].initial = self.instance.theme
+
     class Meta:
         model = User
         fields = ("display_name", "timezone")
