@@ -155,6 +155,30 @@ class UserProfileForm(forms.ModelForm):
         required=False,
     )
 
+    def clean_theme(self):
+        """Validate theme field, allowing None but not empty string."""
+        theme = self.cleaned_data.get("theme")
+
+        # If theme field is missing from form data entirely, that's OK
+        if "theme" not in self.data:
+            return None
+
+        # If an empty string is explicitly provided, that's invalid
+        if theme == "":
+            raise ValidationError(
+                "Select a valid choice. That choice is not one of the "
+                "available choices."
+            )
+
+        # None is also invalid if explicitly provided in form data
+        if theme is None and "theme" in self.data:
+            raise ValidationError(
+                "Select a valid choice. That choice is not one of the "
+                "available choices."
+            )
+
+        return theme
+
     def __init__(self, *args, **kwargs):
         """Initialize form and populate timezone choices."""
         super().__init__(*args, **kwargs)
@@ -230,40 +254,13 @@ class UserProfileForm(forms.ModelForm):
                 raise ValidationError(str(e))
         return timezone
 
-    def clean_theme(self):
-        """Validate theme field."""
-        theme = self.cleaned_data.get("theme")
-
-        # If no theme was provided in form data, don't validate it
-        # This allows existing tests to work without theme field
-        if "theme" not in self.data:
-            return None
-
-        # If empty string provided, that's a validation error
-        if theme == "":
-            raise ValidationError(
-                "Select a valid choice. That choice is not one of the "
-                "available choices."
-            )
-
-        # Validate theme is in valid choices
-        valid_themes = [choice[0] for choice in User.THEME_CHOICES]
-        if theme not in valid_themes:
-            raise ValidationError(
-                f"Select a valid choice. {theme} is not one of the available choices."
-            )
-
-        return theme
-
     def save(self, commit=True):
         """Save the form, including the theme field."""
         user = super().save(commit=False)
 
-        # Handle theme field manually - only update if provided
-        if "theme" in self.data:
-            theme = self.cleaned_data.get("theme")
-            if theme:  # Only set non-empty themes
-                user.theme = theme
+        # Set theme if provided in cleaned_data
+        if self.cleaned_data.get("theme"):
+            user.theme = self.cleaned_data["theme"]
 
         if commit:
             user.save()

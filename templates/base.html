@@ -12,20 +12,8 @@
     <!-- Theme Variables CSS -->
     <link rel="stylesheet" href="{% static 'css/themes/variables.css' %}">
 
-    <!-- Theme CSS -->
-    <link rel="stylesheet" href="{% static 'css/themes/light.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/dark.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/forest.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/ocean.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/sunset.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/midnight.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/lavender.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/mint.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/high-contrast.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/warm.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/gothic.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/cyberpunk.css' %}">
-    <link rel="stylesheet" href="{% static 'css/themes/vintage.css' %}">
+    <!-- Dynamic Theme CSS - Load only the user's selected theme -->
+    <link rel="stylesheet" href="{% static 'css/themes/'|add:user_theme|add:'.css' %}">
 
     <!-- Base CSS -->
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
