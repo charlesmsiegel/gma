@@ -148,6 +148,12 @@ class UserProfileForm(forms.ModelForm):
         help_text="Select your timezone for accurate time displays.",
     )
 
+    theme = forms.ChoiceField(
+        choices=User.THEME_CHOICES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        help_text="Choose your preferred theme for the interface",
+    )
+
     def __init__(self, *args, **kwargs):
         """Initialize form and populate timezone choices."""
         super().__init__(*args, **kwargs)
@@ -171,7 +177,7 @@ class UserProfileForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ("display_name", "timezone")
+        fields = ("display_name", "timezone", "theme")
         widgets = {
             "display_name": forms.TextInput(
                 attrs={
