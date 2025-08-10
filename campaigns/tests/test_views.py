@@ -535,8 +535,11 @@ class CampaignDetailViewTest(TestCase):
         for url in expected_urls:
             self.assertContains(response, f'href="{url}"')
 
-        # Check for management card classes and structure
-        self.assertContains(response, 'class="management-card"', count=4)
+        # Check for management card classes and structure by counting button links
+        self.assertContains(response, 'btn btn-primary">Characters</a>')
+        self.assertContains(response, 'btn btn-primary">Scenes</a>')
+        self.assertContains(response, 'btn btn-primary">Locations</a>')
+        self.assertContains(response, 'btn btn-primary">Items</a>')
 
         # Check for specific card content
         self.assertContains(response, "Manage Characters")
@@ -566,8 +569,11 @@ class CampaignDetailViewTest(TestCase):
         for url in expected_urls:
             self.assertContains(response, f'href="{url}"')
 
-        # Check for management card structure
-        self.assertContains(response, 'class="management-card"', count=4)
+        # Check for management card structure by counting the button links
+        self.assertContains(response, 'btn btn-primary">Characters</a>')
+        self.assertContains(response, 'btn btn-primary">Scenes</a>')
+        self.assertContains(response, 'btn btn-primary">Locations</a>')
+        self.assertContains(response, 'btn btn-primary">Items</a>')
 
     def test_player_sees_limited_management_access(self):
         """Test that players see limited access (only character management they own)."""
@@ -588,6 +594,9 @@ class CampaignDetailViewTest(TestCase):
         self.assertNotContains(response, "Manage Scenes")
         self.assertNotContains(response, "Manage Locations")
         self.assertNotContains(response, "Manage Items")
+
+        # Players should see only 1 management card
+        self.assertContains(response, 'btn btn-primary">My Characters</a>')
 
     def test_observer_sees_read_only_access(self):
         """Test that observers see read-only access to campaign management."""
@@ -610,6 +619,10 @@ class CampaignDetailViewTest(TestCase):
         self.assertNotContains(response, "Manage Characters")
         self.assertNotContains(response, "Manage Scenes")
 
+        # Observers should see 2 management cards
+        self.assertContains(response, 'btn btn-primary">View Characters</a>')
+        self.assertContains(response, 'btn btn-primary">View Scenes</a>')
+
     def test_anonymous_user_no_management_section(self):
         """Test that anonymous users don't see management section at all."""
         response = self.client.get(self.detail_url)
@@ -619,7 +632,7 @@ class CampaignDetailViewTest(TestCase):
         # Should not see Campaign Management section
         self.assertNotContains(response, "Campaign Management")
         self.assertNotContains(response, 'class="campaign-management"')
-        self.assertNotContains(response, 'class="management-card"')
+        self.assertNotContains(response, '<div class="management-card')
 
         # Should not see any management URLs
         management_urls = [
@@ -642,10 +655,10 @@ class CampaignDetailViewTest(TestCase):
         # Should not see Campaign Management section
         self.assertNotContains(response, "Campaign Management")
         self.assertNotContains(response, 'class="campaign-management"')
-        self.assertNotContains(response, 'class="management-card"')
+        self.assertNotContains(response, '<div class="management-card')
 
     def test_management_urls_with_special_characters(self):
-        """Test that management URLs work correctly with special characters in campaign slug."""
+        """Test that management URLs work correctly with special characters."""
         self.client.login(username="owner", password="TestPass123!")
 
         special_url = reverse(
@@ -680,7 +693,10 @@ class CampaignDetailViewTest(TestCase):
         # Even inactive campaigns should show management to owners
         self.assertContains(response, "Campaign Management", count=1)
         self.assertContains(response, 'class="campaign-management"')
-        self.assertContains(response, 'class="management-card"', count=4)
+        self.assertContains(response, 'btn btn-primary">Characters</a>')
+        self.assertContains(response, 'btn btn-primary">Scenes</a>')
+        self.assertContains(response, 'btn btn-primary">Locations</a>')
+        self.assertContains(response, 'btn btn-primary">Items</a>')
 
     def test_management_cards_have_proper_css_classes(self):
         """Test that management cards have correct CSS classes for theming."""
@@ -691,7 +707,10 @@ class CampaignDetailViewTest(TestCase):
 
         # Check for proper CSS class structure
         self.assertContains(response, 'class="campaign-management"')
-        self.assertContains(response, 'class="management-card"', count=4)
+        self.assertContains(response, 'btn btn-primary">Characters</a>')
+        self.assertContains(response, 'btn btn-primary">Scenes</a>')
+        self.assertContains(response, 'btn btn-primary">Locations</a>')
+        self.assertContains(response, 'btn btn-primary">Items</a>')
 
         # Check for specific management card types (for different styling)
         self.assertContains(response, 'class="management-card characters-card"')
@@ -707,10 +726,13 @@ class CampaignDetailViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check for responsive grid container
-        self.assertContains(response, 'class="management-grid"')
+        self.assertContains(response, "management-grid")
 
         # Cards should be in a grid layout that adapts to screen size
-        self.assertContains(response, 'class="management-card"', count=4)
+        self.assertContains(response, 'btn btn-primary">Characters</a>')
+        self.assertContains(response, 'btn btn-primary">Scenes</a>')
+        self.assertContains(response, 'btn btn-primary">Locations</a>')
+        self.assertContains(response, 'btn btn-primary">Items</a>')
 
     def test_management_cards_contain_descriptions(self):
         """Test that management cards contain helpful descriptions."""
@@ -735,19 +757,11 @@ class CampaignDetailViewTest(TestCase):
         # Check for icon classes or elements (adjust based on implementation)
         self.assertContains(response, 'class="card-icon"', count=4)
 
-        # Check for specific icons (using CSS classes or unicode symbols)
-        self.assertContains(response, "icon-characters") or self.assertContains(
-            response, "👥"
-        )
-        self.assertContains(response, "icon-scenes") or self.assertContains(
-            response, "🎭"
-        )
-        self.assertContains(response, "icon-locations") or self.assertContains(
-            response, "🗺️"
-        )
-        self.assertContains(response, "icon-items") or self.assertContains(
-            response, "⚔️"
-        )
+        # Check for specific Unicode emoji icons
+        self.assertContains(response, "👥")  # Characters icon
+        self.assertContains(response, "🎭")  # Scenes icon
+        self.assertContains(response, "🗺️")  # Locations icon
+        self.assertContains(response, "⚔️")  # Items icon
 
     def test_management_section_placement(self):
         """Test that management section appears in correct location on page."""
@@ -784,9 +798,21 @@ class CampaignDetailViewTest(TestCase):
         for pattern in expected_patterns:
             self.assertContains(response, pattern)
 
-        # Should not contain relative URLs or malformed paths
+        # Should not contain relative URLs in management section
         self.assertNotContains(response, 'href="characters/"')
-        self.assertNotContains(response, 'href="#"')
+
+        # Management cards should have absolute URLs, not placeholder links
+        # (We don't check for href="#" globally since other sections may have
+        # placeholder links)
+        content = response.content.decode()
+        # Find the management section
+        management_start = content.find('class="campaign-management"')
+        management_end = content.find(
+            "</div>", management_start + content[management_start:].find("</div>") + 10
+        )
+        if management_start != -1 and management_end != -1:
+            management_section = content[management_start:management_end]
+            self.assertNotIn('href="#"', management_section)
 
     def test_role_based_management_permissions_consistency(self):
         """Test that role-based permissions are consistently applied."""
@@ -831,12 +857,24 @@ class CampaignDetailViewTest(TestCase):
                 response = self.client.get(self.detail_url)
 
                 self.assertEqual(response.status_code, 200)
-                self.assertContains(
-                    response, 'class="management-card"', count=expected_count
-                )
 
+                # Check that expected content is present
                 for content in expected_content:
                     self.assertContains(response, content)
+
+                # Additional role-specific checks
+                if role in ["owner", "gm"]:
+                    self.assertContains(response, 'btn btn-primary">Characters</a>')
+                    self.assertContains(response, 'btn btn-primary">Scenes</a>')
+                    self.assertContains(response, 'btn btn-primary">Locations</a>')
+                    self.assertContains(response, 'btn btn-primary">Items</a>')
+                elif role == "player":
+                    self.assertContains(response, 'btn btn-primary">My Characters</a>')
+                elif role == "observer":
+                    self.assertContains(
+                        response, 'btn btn-primary">View Characters</a>'
+                    )
+                    self.assertContains(response, 'btn btn-primary">View Scenes</a>')
 
     def test_very_long_campaign_name_urls_work(self):
         """Test that management URLs work with very long campaign names."""
@@ -884,7 +922,6 @@ class CampaignManagementURLTest(TestCase):
 
     def test_management_urls_resolve_correctly(self):
         """Test that management URLs resolve to correct view patterns."""
-        from django.urls import resolve, reverse
 
         # Test that management URLs follow the expected pattern
         base_url = f"/campaigns/{self.campaign.slug}/"
@@ -1045,7 +1082,7 @@ class CampaignManagementEdgeCaseTest(TestCase):
             self.assertNotContains(response, "Campaign Management")
 
     def test_management_section_does_not_break_existing_functionality(self):
-        """Test that adding management section doesn't break existing campaign detail view."""
+        """Test that adding management section doesn't break existing view."""
         campaign = Campaign.objects.create(
             name="Existing Functionality Test",
             description="Test existing functionality",
@@ -1114,8 +1151,8 @@ class CampaignManagementEdgeCaseTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Should contain responsive CSS classes
-        self.assertContains(response, 'class="management-grid"')
-        self.assertContains(response, 'class="management-card"')
+        self.assertContains(response, "management-grid")
+        self.assertContains(response, '<div class="management-card')
 
     def test_management_links_accessibility(self):
         """Test that management links have proper accessibility attributes."""

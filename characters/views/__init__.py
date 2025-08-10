@@ -28,7 +28,8 @@ class CampaignCharactersView(CampaignCharacterMixin, CampaignListView):
         """Add character-specific context."""
         context = super().get_context_data(**kwargs)
 
-        user_role = self.campaign.get_user_role(self.request.user)
+        # Use optimized role method from mixin to avoid repeated database query
+        user_role = self.get_user_role()
 
         context.update(
             {
