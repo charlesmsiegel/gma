@@ -1,0 +1,337 @@
+/* Mint Theme - Cool mint greens */
+[data-theme="mint"] {
+  /* Primary Colors */
+  --theme-primary: #00bfa5;
+  --theme-primary-dark: #00897b;
+  --theme-primary-light: #4dd0e1;
+  --theme-secondary: #26a69a;
+  --theme-secondary-dark: #00695c;
+  --theme-secondary-light: #80cbc4;
+  --theme-success: #4caf50;
+  --theme-info: #00acc1;
+  --theme-warning: #ffb74d;
+  --theme-danger: #f06292;
+  --theme-light: #e0f2f1;
+  --theme-dark: #004d40;
+
+  /* Background Colors */
+  --theme-bg-body: #e0f2f1;
+  --theme-bg-surface: #e8f5e8;
+  --theme-bg-card: #ffffff;
+  --theme-bg-modal: #ffffff;
+  --theme-bg-navbar: #00bfa5;
+  --theme-bg-sidebar: #e8f5e8;
+  --theme-bg-hover: rgba(0, 191, 165, 0.08);
+  --theme-bg-active: rgba(0, 191, 165, 0.16);
+
+  /* Text Colors */
+  --theme-text-primary: #004d40;
+  --theme-text-secondary: #00695c;
+  --theme-text-muted: #26a69a;
+  --theme-text-light: #4db6ac;
+  --theme-text-white: #ffffff;
+  --theme-text-inverse: #ffffff;
+
+  /* Border Colors */
+  --theme-border-color: #b2dfdb;
+  --theme-border-light: #e0f2f1;
+  --theme-border-dark: #4dd0e1;
+  --theme-border-focus: var(--theme-primary);
+
+  /* Form Controls */
+  --theme-input-bg: #ffffff;
+  --theme-input-border: #b2dfdb;
+  --theme-input-focus-border: var(--theme-primary);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(0, 191, 165, 0.25);
+  --theme-input-placeholder: #26a69a;
+
+  /* Navigation */
+  --theme-nav-link-color: #ffffff;
+  --theme-nav-link-hover: #e0f2f1;
+  --theme-nav-link-active: #b2dfdb;
+
+  /* Tables */
+  --theme-table-bg: transparent;
+  --theme-table-striped-bg: rgba(178, 223, 219, 0.1);
+  --theme-table-hover-bg: rgba(178, 223, 219, 0.15);
+  --theme-table-border-color: var(--theme-border-color);
+
+  /* Shadows */
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(0, 77, 64, 0.15);
+  --theme-shadow: 0 0.5rem 1rem rgba(0, 77, 64, 0.2);
+  --theme-shadow-lg: 0 1rem 3rem rgba(0, 77, 64, 0.25);
+  --theme-shadow-inset: inset 0 1px 2px rgba(0, 77, 64, 0.15);
+}
+
+/* Mint theme specific enhancements */
+[data-theme="mint"] .navbar {
+  background: linear-gradient(135deg, #00bfa5 0%, #26a69a 100%);
+  box-shadow: 0 2px 8px rgba(0, 191, 165, 0.3);
+}
+
+[data-theme="mint"] .navbar-brand {
+  color: #ffffff !important;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="mint"] .card {
+  background: linear-gradient(135deg, #ffffff 0%, #f0fffe 100%);
+  border: 1px solid var(--theme-border-color);
+  box-shadow: 0 0.25rem 1rem rgba(0, 191, 165, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+[data-theme="mint"] .card-header {
+  background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+  border-bottom: 1px solid var(--theme-border-color);
+  color: var(--theme-text-primary);
+  font-weight: 500;
+}
+
+[data-theme="mint"] .btn-primary {
+  background: linear-gradient(135deg, #00bfa5 0%, #26a69a 100%);
+  border-color: var(--theme-primary);
+  box-shadow: 0 3px 8px rgba(0, 191, 165, 0.3);
+  transition: all 0.3s ease;
+}
+
+[data-theme="mint"] .btn-primary:hover {
+  background: linear-gradient(135deg, #00897b 0%, #00695c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 191, 165, 0.4);
+}
+
+[data-theme="mint"] .btn-secondary {
+  background: linear-gradient(135deg, #26a69a 0%, #00695c 100%);
+  border-color: var(--theme-secondary);
+  color: #ffffff;
+}
+
+[data-theme="mint"] .alert-success {
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+  border-color: #a5d6a7;
+  color: #2e7d32;
+}
+
+[data-theme="mint"] .form-control {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+[data-theme="mint"] .form-control:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 0.2rem rgba(0, 191, 165, 0.25);
+  background-color: #f9fffe;
+}
+
+[data-theme="mint"] .dropdown-menu {
+  background-color: #ffffff;
+  border: 1px solid var(--theme-border-color);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 191, 165, 0.15);
+  border-radius: 8px;
+}
+
+[data-theme="mint"] .dropdown-item:hover {
+  background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+  color: var(--theme-text-primary);
+}
+
+[data-theme="mint"] .list-group-item:hover {
+  background: linear-gradient(135deg, #e0f2f1 0%, #f0fffe 100%);
+  transform: translateX(4px);
+  transition: all 0.2s ease;
+}
+
+[data-theme="mint"] .progress {
+  background-color: #e0f2f1;
+  border-radius: 15px;
+}
+
+[data-theme="mint"] .progress-bar {
+  background: linear-gradient(90deg, #00bfa5 0%, #4dd0e1 50%, #26a69a 100%);
+  border-radius: 15px;
+  box-shadow: 0 2px 4px rgba(0, 191, 165, 0.2);
+}
+
+[data-theme="mint"] .badge.bg-primary {
+  background: linear-gradient(135deg, #00bfa5 0%, #26a69a 100%) !important;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 191, 165, 0.2);
+}
+
+/* Fresh mint effects */
+[data-theme="mint"] .card:hover {
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 191, 165, 0.2);
+  transform: translateY(-2px) scale(1.01);
+}
+
+[data-theme="mint"] .btn {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="mint"] .btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+
+[data-theme="mint"] .btn:hover::after {
+  width: 200px;
+  height: 200px;
+}
+
+/* Campaign-specific styling for mint theme */
+[data-theme="mint"] .campaign-card {
+  background: linear-gradient(135deg, #ffffff 0%, #e0f2f1 50%, #f0fffe 100%);
+  border: 2px solid #80cbc4;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 191, 165, 0.15);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+[data-theme="mint"] .campaign-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--theme-primary), var(--theme-primary-light), var(--theme-primary));
+  border-radius: 16px 16px 0 0;
+}
+
+[data-theme="mint"] .campaign-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 1rem 2rem rgba(0, 191, 165, 0.25);
+}
+
+[data-theme="mint"] .character-sheet {
+  background: linear-gradient(135deg, #ffffff 0%, #f0fffe 100%);
+  border: 2px solid var(--theme-border-color);
+  border-radius: 16px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 191, 165, 0.1);
+}
+
+[data-theme="mint"] .scene-chat {
+  background: linear-gradient(180deg, #e0f2f1 0%, #e8f5e8 100%);
+  border: 1px solid var(--theme-border-color);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 3px rgba(0, 191, 165, 0.1);
+}
+
+[data-theme="mint"] .dice-roller {
+  background: linear-gradient(45deg, #e0f2f1, #b2dfdb, #80cbc4, #b2dfdb, #e0f2f1);
+  background-size: 300% 300%;
+  border: 3px solid var(--theme-primary);
+  border-radius: 16px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 191, 165, 0.3);
+  animation: mint-flow 4s ease-in-out infinite;
+  position: relative;
+}
+
+[data-theme="mint"] .dice-roller::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.6), rgba(224, 242, 241, 0.8), rgba(255, 255, 255, 0.6));
+  border-radius: 13px;
+  opacity: 0.7;
+}
+
+@keyframes mint-flow {
+  0%, 100% { background-position: 0% 50%; }
+  33% { background-position: 100% 0%; }
+  66% { background-position: 0% 100%; }
+}
+
+[data-theme="mint"] .modal-content {
+  background: linear-gradient(135deg, #ffffff 0%, #f0fffe 100%);
+  border: 2px solid var(--theme-border-color);
+  border-radius: 16px;
+  box-shadow: 0 1rem 3rem rgba(0, 191, 165, 0.2);
+}
+
+[data-theme="mint"] .table-striped > tbody > tr:nth-of-type(odd) > td {
+  background: linear-gradient(135deg, rgba(178, 223, 219, 0.1), rgba(224, 242, 241, 0.1));
+}
+
+/* Cool mint breathing animation */
+[data-theme="mint"] .navbar {
+  position: relative;
+}
+
+[data-theme="mint"] .navbar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.1) 100%);
+  opacity: 0;
+  animation: mint-breathe 3s ease-in-out infinite;
+}
+
+@keyframes mint-breathe {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Subtle parallax effect for cards */
+[data-theme="mint"] .campaign-card:hover::before {
+  animation: mint-shimmer 1s ease-in-out;
+}
+
+@keyframes mint-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Fresh mint scrollbar */
+[data-theme="mint"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-theme="mint"] ::-webkit-scrollbar-track {
+  background: #e0f2f1;
+  border-radius: 4px;
+}
+
+[data-theme="mint"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--theme-primary), var(--theme-primary-light));
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+[data-theme="mint"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--theme-primary-dark), var(--theme-primary));
+}
+
+/* Cool focus states */
+[data-theme="mint"] .btn:focus,
+[data-theme="mint"] .form-control:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(0, 191, 165, 0.25);
+}
+
+[data-theme="mint"] input:focus,
+[data-theme="mint"] textarea:focus,
+[data-theme="mint"] select:focus {
+  border-color: var(--theme-primary);
+  background-color: rgba(240, 255, 254, 0.5);
+}

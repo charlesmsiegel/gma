@@ -40,6 +40,23 @@ def validate_timezone(value: str) -> None:
 class User(AbstractUser):
     """Custom User model extending Django's AbstractUser."""
 
+    # Theme choices for interface customization
+    THEME_CHOICES = [
+        ("light", "Light"),
+        ("dark", "Dark"),
+        ("forest", "Forest"),
+        ("ocean", "Ocean"),
+        ("sunset", "Sunset"),
+        ("midnight", "Midnight"),
+        ("lavender", "Lavender"),
+        ("mint", "Mint"),
+        ("high-contrast", "High Contrast"),
+        ("warm", "Warm"),
+        ("gothic", "Gothic"),
+        ("cyberpunk", "Cyberpunk"),
+        ("vintage", "Vintage"),
+    ]
+
     display_name = models.CharField(  # type: ignore[var-annotated]
         max_length=100,
         blank=True,
@@ -49,6 +66,12 @@ class User(AbstractUser):
     )
     timezone = models.CharField(  # type: ignore[var-annotated]
         max_length=50, default="UTC", validators=[validate_timezone]
+    )
+    theme = models.CharField(  # type: ignore[var-annotated]
+        max_length=20,
+        choices=THEME_CHOICES,
+        default="light",
+        help_text="Choose your preferred theme for the interface",
     )
     notification_preferences = models.JSONField(
         default=dict, blank=True, help_text="User notification preferences"

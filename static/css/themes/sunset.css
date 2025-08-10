@@ -1,0 +1,263 @@
+/* Sunset Theme - Warm orange/red theme */
+[data-theme="sunset"] {
+  /* Primary Colors */
+  --theme-primary: #e65100;
+  --theme-primary-dark: #bf360c;
+  --theme-primary-light: #ff9800;
+  --theme-secondary: #8d6e63;
+  --theme-secondary-dark: #5d4037;
+  --theme-secondary-light: #bcaaa4;
+  --theme-success: #689f38;
+  --theme-info: #0277bd;
+  --theme-warning: #ffa000;
+  --theme-danger: #c62828;
+  --theme-light: #fff8e1;
+  --theme-dark: #bf360c;
+
+  /* Background Colors */
+  --theme-bg-body: #fff8e1;
+  --theme-bg-surface: #ffe0b2;
+  --theme-bg-card: #ffffff;
+  --theme-bg-modal: #ffffff;
+  --theme-bg-navbar: #e65100;
+  --theme-bg-sidebar: #ffe0b2;
+  --theme-bg-hover: rgba(230, 81, 0, 0.08);
+  --theme-bg-active: rgba(230, 81, 0, 0.16);
+
+  /* Text Colors */
+  --theme-text-primary: #bf360c;
+  --theme-text-secondary: #5d4037;
+  --theme-text-muted: #8d6e63;
+  --theme-text-light: #a1887f;
+  --theme-text-white: #ffffff;
+  --theme-text-inverse: #ffffff;
+
+  /* Border Colors */
+  --theme-border-color: #ffcc02;
+  --theme-border-light: #ffe0b2;
+  --theme-border-dark: #ff9800;
+  --theme-border-focus: var(--theme-primary);
+
+  /* Form Controls */
+  --theme-input-bg: #ffffff;
+  --theme-input-border: #ffcc02;
+  --theme-input-focus-border: var(--theme-primary);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(230, 81, 0, 0.25);
+  --theme-input-placeholder: #8d6e63;
+
+  /* Navigation */
+  --theme-nav-link-color: #ffffff;
+  --theme-nav-link-hover: #ffcc02;
+  --theme-nav-link-active: #ffd54f;
+
+  /* Tables */
+  --theme-table-bg: transparent;
+  --theme-table-striped-bg: rgba(255, 152, 0, 0.1);
+  --theme-table-hover-bg: rgba(255, 152, 0, 0.15);
+  --theme-table-border-color: var(--theme-border-color);
+
+  /* Shadows */
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(191, 54, 12, 0.2);
+  --theme-shadow: 0 0.5rem 1rem rgba(191, 54, 12, 0.3);
+  --theme-shadow-lg: 0 1rem 3rem rgba(191, 54, 12, 0.35);
+  --theme-shadow-inset: inset 0 1px 2px rgba(191, 54, 12, 0.2);
+}
+
+/* Sunset theme specific enhancements */
+[data-theme="sunset"] .navbar {
+  background: linear-gradient(135deg, #e65100 0%, #ff6f00 100%);
+  box-shadow: 0 2px 8px rgba(230, 81, 0, 0.4);
+}
+
+[data-theme="sunset"] .navbar-brand {
+  color: #ffffff !important;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="sunset"] .card {
+  background: linear-gradient(135deg, #ffffff 0%, #fff8e1 100%);
+  border: 1px solid var(--theme-border-color);
+  box-shadow: 0 0.25rem 0.75rem rgba(255, 152, 0, 0.2);
+  border-radius: 12px;
+}
+
+[data-theme="sunset"] .card-header {
+  background: linear-gradient(135deg, #ffe0b2 0%, #ffcc02 100%);
+  border-bottom: 1px solid var(--theme-border-color);
+  color: var(--theme-text-primary);
+  font-weight: 600;
+}
+
+[data-theme="sunset"] .btn-primary {
+  background: linear-gradient(135deg, #e65100 0%, #ff6f00 100%);
+  border-color: var(--theme-primary);
+  box-shadow: 0 4px 8px rgba(230, 81, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+[data-theme="sunset"] .btn-primary:hover {
+  background: linear-gradient(135deg, #bf360c 0%, #e65100 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(230, 81, 0, 0.4);
+}
+
+[data-theme="sunset"] .btn-secondary {
+  background: linear-gradient(135deg, #8d6e63 0%, #6d4c41 100%);
+  border-color: var(--theme-secondary);
+  color: #ffffff;
+}
+
+[data-theme="sunset"] .alert-warning {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+  border-color: #ffcc02;
+  color: #bf360c;
+}
+
+[data-theme="sunset"] .form-control:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 0.2rem rgba(230, 81, 0, 0.25);
+  background-color: #fffaf0;
+}
+
+[data-theme="sunset"] .dropdown-menu {
+  background-color: #ffffff;
+  border: 1px solid var(--theme-border-color);
+  box-shadow: 0 0.5rem 1.5rem rgba(255, 152, 0, 0.3);
+  border-radius: 8px;
+}
+
+[data-theme="sunset"] .list-group-item:hover {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+}
+
+[data-theme="sunset"] .progress-bar {
+  background: linear-gradient(90deg, #e65100 0%, #ff9800 50%, #ffc107 100%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="sunset"] .badge.bg-primary {
+  background: linear-gradient(135deg, #e65100 0%, #ff6f00 100%) !important;
+  box-shadow: 0 2px 4px rgba(230, 81, 0, 0.3);
+}
+
+/* Sunset glow effects */
+[data-theme="sunset"] .btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="sunset"] .btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: rotate(45deg);
+  transition: all 0.6s;
+  opacity: 0;
+}
+
+[data-theme="sunset"] .btn-primary:hover::after {
+  animation: sunset-shine 0.6s ease-in-out;
+}
+
+@keyframes sunset-shine {
+  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateX(100%) translateY(100%) rotate(45deg); opacity: 0; }
+}
+
+/* Campaign-specific styling for sunset theme */
+[data-theme="sunset"] .campaign-card {
+  background: linear-gradient(135deg, #ffffff 0%, #fff8e1 50%, #ffe0b2 100%);
+  border: 2px solid #ff9800;
+  box-shadow: 0 0.5rem 1.5rem rgba(255, 152, 0, 0.3);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+[data-theme="sunset"] .campaign-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%);
+  border-radius: 14px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+[data-theme="sunset"] .campaign-card:hover::before {
+  opacity: 1;
+}
+
+[data-theme="sunset"] .campaign-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 1rem 2rem rgba(255, 152, 0, 0.4);
+}
+
+[data-theme="sunset"] .character-sheet {
+  background: linear-gradient(135deg, #ffffff 0%, #fff8e1 100%);
+  border: 2px solid var(--theme-border-color);
+  border-radius: 16px;
+  box-shadow: 0 0.5rem 1rem rgba(255, 152, 0, 0.2);
+}
+
+[data-theme="sunset"] .scene-chat {
+  background: linear-gradient(180deg, #fff8e1 0%, #ffe0b2 100%);
+  border: 1px solid var(--theme-border-color);
+  border-radius: 12px;
+}
+
+[data-theme="sunset"] .dice-roller {
+  background: linear-gradient(45deg, #ffe0b2, #ffcc02);
+  border: 3px solid #ff9800;
+  border-radius: 16px;
+  box-shadow: 0 0.5rem 1rem rgba(255, 152, 0, 0.4);
+  position: relative;
+}
+
+[data-theme="sunset"] .dice-roller::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 193, 7, 0.3) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  border-radius: 16px;
+  animation: sunset-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sunset-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.3; }
+}
+
+[data-theme="sunset"] .modal-content {
+  background: linear-gradient(135deg, #ffffff 0%, #fff8e1 100%);
+  border: 2px solid var(--theme-border-color);
+  border-radius: 16px;
+  box-shadow: 0 1rem 3rem rgba(255, 152, 0, 0.4);
+}
+
+[data-theme="sunset"] .table-striped > tbody > tr:nth-of-type(odd) > td {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(255, 224, 178, 0.1));
+}
+
+/* Warm glow effects */
+[data-theme="sunset"] .card:hover {
+  box-shadow: 0 0.5rem 1.5rem rgba(255, 152, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+[data-theme="sunset"] .navbar-nav .nav-link:hover {
+  text-shadow: 0 0 8px rgba(255, 193, 7, 0.8);
+}

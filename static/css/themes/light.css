@@ -1,0 +1,127 @@
+/* Light Theme - Default Bootstrap 5 Style */
+[data-theme="light"] {
+  /* Primary Colors */
+  --theme-primary: #0d6efd;
+  --theme-primary-dark: #0b5ed7;
+  --theme-primary-light: #6ea8fe;
+  --theme-secondary: #6c757d;
+  --theme-secondary-dark: #5c636a;
+  --theme-secondary-light: #adb5bd;
+  --theme-success: #198754;
+  --theme-info: #0dcaf0;
+  --theme-warning: #ffc107;
+  --theme-danger: #dc3545;
+  --theme-light: #f8f9fa;
+  --theme-dark: #212529;
+
+  /* Background Colors */
+  --theme-bg-body: #ffffff;
+  --theme-bg-surface: #f8f9fa;
+  --theme-bg-card: #ffffff;
+  --theme-bg-modal: #ffffff;
+  --theme-bg-navbar: #ffffff;
+  --theme-bg-sidebar: #f8f9fa;
+  --theme-bg-hover: rgba(0, 0, 0, 0.04);
+  --theme-bg-active: rgba(0, 0, 0, 0.08);
+
+  /* Text Colors */
+  --theme-text-primary: #212529;
+  --theme-text-secondary: #6c757d;
+  --theme-text-muted: #868e96;
+  --theme-text-light: #adb5bd;
+  --theme-text-white: #ffffff;
+  --theme-text-inverse: #ffffff;
+
+  /* Border Colors */
+  --theme-border-color: #dee2e6;
+  --theme-border-light: #e9ecef;
+  --theme-border-dark: #adb5bd;
+  --theme-border-focus: var(--theme-primary);
+
+  /* Form Controls */
+  --theme-input-bg: #ffffff;
+  --theme-input-border: #ced4da;
+  --theme-input-focus-border: var(--theme-primary);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  --theme-input-placeholder: #6c757d;
+
+  /* Navigation */
+  --theme-nav-link-color: #495057;
+  --theme-nav-link-hover: var(--theme-primary);
+  --theme-nav-link-active: var(--theme-primary);
+
+  /* Tables */
+  --theme-table-bg: transparent;
+  --theme-table-striped-bg: rgba(0, 0, 0, 0.05);
+  --theme-table-hover-bg: rgba(0, 0, 0, 0.075);
+  --theme-table-border-color: var(--theme-border-color);
+
+  /* Shadows */
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  --theme-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  --theme-shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+  --theme-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.075);
+}
+
+/* Light theme specific enhancements */
+[data-theme="light"] .navbar {
+  box-shadow: var(--theme-shadow-sm);
+}
+
+[data-theme="light"] .card {
+  border: 1px solid var(--theme-border-light);
+}
+
+[data-theme="light"] .btn-outline-primary {
+  --bs-btn-color: var(--theme-primary);
+  --bs-btn-border-color: var(--theme-primary);
+  --bs-btn-hover-color: var(--theme-text-white);
+  --bs-btn-hover-bg: var(--theme-primary);
+  --bs-btn-hover-border-color: var(--theme-primary);
+  --bs-btn-focus-shadow-rgb: 13, 110, 253;
+  --bs-btn-active-color: var(--theme-text-white);
+  --bs-btn-active-bg: var(--theme-primary);
+  --bs-btn-active-border-color: var(--theme-primary);
+}
+
+[data-theme="light"] .list-group-item-action:hover {
+  background-color: #f8f9fa;
+}
+
+[data-theme="light"] .dropdown-menu {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .modal-content {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .toast {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--theme-border-light);
+}
+
+[data-theme="light"] .offcanvas {
+  border: 1px solid var(--theme-border-color);
+}
+
+/* Campaign-specific styling for light theme */
+[data-theme="light"] .campaign-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+}
+
+[data-theme="light"] .character-sheet {
+  background-color: #ffffff;
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .scene-chat {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+}
+
+[data-theme="light"] .dice-roller {
+  background: linear-gradient(45deg, #f8f9fa, #ffffff);
+  border: 2px solid #dee2e6;
+}

@@ -148,6 +148,37 @@ class UserProfileForm(forms.ModelForm):
         help_text="Select your timezone for accurate time displays.",
     )
 
+    theme = forms.ChoiceField(
+        choices=User.THEME_CHOICES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        help_text="Choose your preferred theme for the interface",
+        required=False,
+    )
+
+    def clean_theme(self):
+        """Validate theme field, allowing None but not empty string."""
+        theme = self.cleaned_data.get("theme")
+
+        # If theme field is missing from form data entirely, that's OK
+        if "theme" not in self.data:
+            return None
+
+        # If an empty string is explicitly provided, that's invalid
+        if theme == "":
+            raise ValidationError(
+                "Select a valid choice. That choice is not one of the "
+                "available choices."
+            )
+
+        # None is also invalid if explicitly provided in form data
+        if theme is None and "theme" in self.data:
+            raise ValidationError(
+                "Select a valid choice. That choice is not one of the "
+                "available choices."
+            )
+
+        return theme
+
     def __init__(self, *args, **kwargs):
         """Initialize form and populate timezone choices."""
         super().__init__(*args, **kwargs)
@@ -168,6 +199,10 @@ class UserProfileForm(forms.ModelForm):
         ]
 
         self.fields["timezone"].choices = timezone_choices
+
+        # Set initial value for theme field from current user
+        if self.instance and hasattr(self.instance, "theme"):
+            self.fields["theme"].initial = self.instance.theme
 
     class Meta:
         model = User
@@ -218,3 +253,15 @@ class UserProfileForm(forms.ModelForm):
                 # Re-raise the validation error with proper message handling
                 raise ValidationError(str(e))
         return timezone
+
+    def save(self, commit=True):
+        """Save the form, including the theme field."""
+        user = super().save(commit=False)
+
+        # Set theme if provided in cleaned_data
+        if self.cleaned_data.get("theme"):
+            user.theme = self.cleaned_data["theme"]
+
+        if commit:
+            user.save()
+        return user

@@ -1,0 +1,188 @@
+/* Forest Theme - Nature greens and earth tones */
+[data-theme="forest"] {
+  /* Primary Colors */
+  --theme-primary: #2d5016;
+  --theme-primary-dark: #1e3409;
+  --theme-primary-light: #4a7c59;
+  --theme-secondary: #8d6e63;
+  --theme-secondary-dark: #5d4037;
+  --theme-secondary-light: #bcaaa4;
+  --theme-success: #388e3c;
+  --theme-info: #00796b;
+  --theme-warning: #f57c00;
+  --theme-danger: #d32f2f;
+  --theme-light: #f1f8e9;
+  --theme-dark: #1b5e20;
+
+  /* Background Colors */
+  --theme-bg-body: #f1f8e9;
+  --theme-bg-surface: #e8f5e8;
+  --theme-bg-card: #ffffff;
+  --theme-bg-modal: #ffffff;
+  --theme-bg-navbar: #2d5016;
+  --theme-bg-sidebar: #e8f5e8;
+  --theme-bg-hover: rgba(45, 80, 22, 0.08);
+  --theme-bg-active: rgba(45, 80, 22, 0.16);
+
+  /* Text Colors */
+  --theme-text-primary: #1b5e20;
+  --theme-text-secondary: #4e342e;
+  --theme-text-muted: #795548;
+  --theme-text-light: #a1887f;
+  --theme-text-white: #ffffff;
+  --theme-text-inverse: #ffffff;
+
+  /* Border Colors */
+  --theme-border-color: #c8e6c9;
+  --theme-border-light: #dcedc8;
+  --theme-border-dark: #81c784;
+  --theme-border-focus: var(--theme-primary);
+
+  /* Form Controls */
+  --theme-input-bg: #ffffff;
+  --theme-input-border: #c8e6c9;
+  --theme-input-focus-border: var(--theme-primary);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(45, 80, 22, 0.25);
+  --theme-input-placeholder: #795548;
+
+  /* Navigation */
+  --theme-nav-link-color: #ffffff;
+  --theme-nav-link-hover: #c8e6c9;
+  --theme-nav-link-active: #a5d6a7;
+
+  /* Tables */
+  --theme-table-bg: transparent;
+  --theme-table-striped-bg: rgba(139, 195, 74, 0.1);
+  --theme-table-hover-bg: rgba(139, 195, 74, 0.15);
+  --theme-table-border-color: var(--theme-border-color);
+
+  /* Shadows */
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(27, 94, 32, 0.2);
+  --theme-shadow: 0 0.5rem 1rem rgba(27, 94, 32, 0.3);
+  --theme-shadow-lg: 0 1rem 3rem rgba(27, 94, 32, 0.35);
+  --theme-shadow-inset: inset 0 1px 2px rgba(27, 94, 32, 0.2);
+}
+
+/* Forest theme specific enhancements */
+[data-theme="forest"] .navbar {
+  background: linear-gradient(135deg, #2d5016 0%, #1b5e20 100%);
+  box-shadow: 0 2px 4px rgba(27, 94, 32, 0.3);
+}
+
+[data-theme="forest"] .navbar-brand {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+[data-theme="forest"] .card {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fbe7 100%);
+  border: 1px solid var(--theme-border-color);
+  box-shadow: 0 0.25rem 0.5rem rgba(76, 175, 80, 0.15);
+}
+
+[data-theme="forest"] .card-header {
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+  border-bottom: 1px solid var(--theme-border-color);
+  color: var(--theme-text-primary);
+  font-weight: 500;
+}
+
+[data-theme="forest"] .btn-primary {
+  background: linear-gradient(135deg, #2d5016 0%, #388e3c 100%);
+  border-color: var(--theme-primary);
+  box-shadow: 0 2px 4px rgba(45, 80, 22, 0.2);
+}
+
+[data-theme="forest"] .btn-primary:hover {
+  background: linear-gradient(135deg, #1e3409 0%, #2e7d32 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(45, 80, 22, 0.3);
+}
+
+[data-theme="forest"] .btn-secondary {
+  background: linear-gradient(135deg, #8d6e63 0%, #5d4037 100%);
+  border-color: var(--theme-secondary);
+  color: #ffffff;
+}
+
+[data-theme="forest"] .alert-success {
+  background-color: #e8f5e8;
+  border-color: #c8e6c9;
+  color: #1b5e20;
+}
+
+[data-theme="forest"] .form-control:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 0.2rem rgba(45, 80, 22, 0.25);
+  background-color: #f9fbe7;
+}
+
+[data-theme="forest"] .dropdown-menu {
+  background-color: #ffffff;
+  border: 1px solid var(--theme-border-color);
+  box-shadow: 0 0.5rem 1rem rgba(76, 175, 80, 0.2);
+}
+
+[data-theme="forest"] .list-group-item:hover {
+  background-color: #e8f5e8;
+}
+
+[data-theme="forest"] .progress-bar {
+  background: linear-gradient(90deg, #2d5016 0%, #388e3c 100%);
+}
+
+[data-theme="forest"] .badge.bg-primary {
+  background: linear-gradient(135deg, #2d5016 0%, #388e3c 100%) !important;
+}
+
+/* Campaign-specific styling for forest theme */
+[data-theme="forest"] .campaign-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f8e9 100%);
+  border: 2px solid #c8e6c9;
+  box-shadow: 0 0.5rem 1rem rgba(76, 175, 80, 0.2);
+  transition: all 0.3s ease;
+}
+
+[data-theme="forest"] .campaign-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.75rem 1.5rem rgba(76, 175, 80, 0.3);
+}
+
+[data-theme="forest"] .character-sheet {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fbe7 100%);
+  border: 2px solid var(--theme-border-color);
+  border-radius: 12px;
+}
+
+[data-theme="forest"] .scene-chat {
+  background: linear-gradient(180deg, #f1f8e9 0%, #e8f5e8 100%);
+  border: 1px solid var(--theme-border-color);
+  border-radius: 8px;
+}
+
+[data-theme="forest"] .dice-roller {
+  background: linear-gradient(45deg, #e8f5e8, #dcedc8);
+  border: 3px solid #81c784;
+  border-radius: 12px;
+  box-shadow: inset 0 2px 4px rgba(76, 175, 80, 0.1);
+}
+
+/* Nature-inspired accents */
+[data-theme="forest"] .btn:not(.btn-outline-primary):not(.btn-outline-secondary) {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+[data-theme="forest"] .btn:hover {
+  transform: translateY(-1px);
+}
+
+[data-theme="forest"] .modal-content {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fbe7 100%);
+  border: 2px solid var(--theme-border-color);
+  border-radius: 12px;
+}
+
+[data-theme="forest"] .table-striped > tbody > tr:nth-of-type(odd) > td {
+  background-color: rgba(200, 230, 201, 0.1);
+}
