@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'campaigns/css/coming_soon.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="campaign-management-section">
+    <h1>{{ campaign.name }} - Items</h1>
+
+    <div class="breadcrumb">
+        <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+        &gt; Items
+    </div>
+
+    <div class="management-area">
+        <div class="area-header">
+            <h2>Item Management</h2>
+            <p class="area-description">Track items, equipment, and treasures in your campaign.</p>
+        </div>
+
+        <div class="coming-soon-message">
+            <h3>⚔️ Items Area Coming Soon</h3>
+            <p>This area will allow you to:</p>
+            <ul>
+                {% if can_manage_items %}
+                    <li>Create and categorize campaign items</li>
+                    <li>Manage item stats and descriptions</li>
+                    <li>Track item ownership and locations</li>
+                    <li>Set up treasure tables and loot</li>
+                {% else %}
+                    <li>View all accessible campaign items</li>
+                    <li>Browse item descriptions and stats</li>
+                    <li>See item availability and rarity</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="placeholder-actions">
+            {% if can_create_item %}
+                <a href="#" class="btn btn-primary disabled" title="Coming Soon">Create Item</a>
+            {% endif %}
+            <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-secondary">Back to Campaign</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

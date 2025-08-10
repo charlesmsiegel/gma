@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'campaigns/css/coming_soon.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="campaign-management-section">
+    <h1>{{ campaign.name }} - Characters</h1>
+
+    <div class="breadcrumb">
+        <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+        &gt; Characters
+    </div>
+
+    <div class="management-area">
+        <div class="area-header">
+            <h2>Character Management</h2>
+            <p class="area-description">Manage player and NPC characters in this campaign.</p>
+        </div>
+
+        <div class="coming-soon-message">
+            <h3>🎭 Characters Area Coming Soon</h3>
+            <p>This area will allow you to:</p>
+            <ul>
+                {% if can_manage_all %}
+                    <li>View all characters in the campaign</li>
+                    <li>Create new player characters and NPCs</li>
+                    <li>Edit character sheets and stats</li>
+                    <li>Manage character permissions</li>
+                {% elif is_player %}
+                    <li>View and edit your characters</li>
+                    <li>Create new characters (within limits)</li>
+                    <li>View other players' characters</li>
+                {% else %}
+                    <li>View all characters in the campaign</li>
+                    <li>See character details and backstories</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="placeholder-actions">
+            {% if can_create_character %}
+                <a href="#" class="btn btn-primary disabled" title="Coming Soon">Create Character</a>
+            {% endif %}
+            <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-secondary">Back to Campaign</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

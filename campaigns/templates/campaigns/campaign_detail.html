@@ -90,6 +90,67 @@
       </div>
     </div>
   </div>
+  {% if user.is_authenticated and user_role == "OWNER" or user_role == "GM" %}
+    <div class="campaign-management">
+      <h3>Campaign Management</h3>
+      <div class="management-cards management-grid">
+        <div class="management-card characters-card">
+          <div class="card-icon">👥</div>
+          <h4>Manage Characters</h4>
+          <p>Manage player and NPC characters</p>
+          <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">Characters</a>
+        </div>
+        <div class="management-card scenes-card">
+          <div class="card-icon">🎭</div>
+          <h4>Manage Scenes</h4>
+          <p>Create and manage campaign scenes</p>
+          <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="btn btn-primary">Scenes</a>
+        </div>
+        <div class="management-card locations-card">
+          <div class="card-icon">🗺️</div>
+          <h4>Manage Locations</h4>
+          <p>Organize campaign locations and maps</p>
+          <a href="{% url 'campaigns:campaign_locations' slug=campaign.slug %}" class="btn btn-primary">Locations</a>
+        </div>
+        <div class="management-card items-card">
+          <div class="card-icon">⚔️</div>
+          <h4>Manage Items</h4>
+          <p>Track items, equipment, and treasures</p>
+          <a href="{% url 'campaigns:campaign_items' slug=campaign.slug %}" class="btn btn-primary">Items</a>
+        </div>
+      </div>
+    </div>
+  {% elif user.is_authenticated and user_role == "PLAYER" %}
+    <div class="campaign-management">
+      <h3>Campaign Management</h3>
+      <div class="management-cards management-grid">
+        <div class="management-card">
+          <div class="card-icon">👤</div>
+          <h4>My Characters</h4>
+          <p>View and manage your characters</p>
+          <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">My Characters</a>
+        </div>
+      </div>
+    </div>
+  {% elif user.is_authenticated and user_role == "OBSERVER" %}
+    <div class="campaign-management">
+      <h3>Campaign Management</h3>
+      <div class="management-cards management-grid">
+        <div class="management-card">
+          <div class="card-icon">👥</div>
+          <h4>View Characters</h4>
+          <p>Browse campaign characters</p>
+          <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">View Characters</a>
+        </div>
+        <div class="management-card">
+          <div class="card-icon">🎭</div>
+          <h4>View Scenes</h4>
+          <p>Browse campaign scenes</p>
+          <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="btn btn-primary">View Scenes</a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
   {% if is_member %}
     <div class="member-list-section">
       <h3>Campaign Members ({{ campaign.memberships.count|add:1 }})</h3>

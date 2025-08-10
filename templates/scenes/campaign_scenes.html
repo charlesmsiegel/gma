@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'campaigns/css/coming_soon.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="campaign-management-section">
+    <h1>{{ campaign.name }} - Scenes</h1>
+
+    <div class="breadcrumb">
+        <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+        &gt; Scenes
+    </div>
+
+    <div class="management-area">
+        <div class="area-header">
+            <h2>Scene Management</h2>
+            <p class="area-description">Create and manage campaign scenes and story sessions.</p>
+        </div>
+
+        <div class="coming-soon-message">
+            <h3>🎭 Scenes Area Coming Soon</h3>
+            <p>This area will allow you to:</p>
+            <ul>
+                {% if can_manage_scenes %}
+                    <li>Create new scenes and story sessions</li>
+                    <li>Manage scene participants and NPCs</li>
+                    <li>Run real-time scenes with chat and dice</li>
+                    <li>Archive completed scenes</li>
+                {% else %}
+                    <li>View all campaign scenes</li>
+                    <li>Participate in active scenes</li>
+                    <li>Review scene history and logs</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="placeholder-actions">
+            {% if can_create_scene %}
+                <a href="#" class="btn btn-primary disabled" title="Coming Soon">Create Scene</a>
+            {% endif %}
+            <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-secondary">Back to Campaign</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
