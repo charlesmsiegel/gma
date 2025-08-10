@@ -15,6 +15,12 @@ from campaigns.views import (
     SendInvitationView,
 )
 
+# Import campaign management views from other apps
+from characters.views import CampaignCharactersView
+from items.views import CampaignItemsView
+from locations.views import CampaignLocationsView
+from scenes.views import CampaignScenesView
+
 app_name = "campaigns"
 
 urlpatterns = [
@@ -66,5 +72,26 @@ urlpatterns = [
         "<slug:slug>/ajax/remove-member/",
         AjaxRemoveMemberView.as_view(),
         name="ajax_remove_member",
+    ),
+    # Campaign management views (for characters, scenes, locations, items)
+    path(
+        "<slug:slug>/characters/",
+        CampaignCharactersView.as_view(),
+        name="campaign_characters",
+    ),
+    path(
+        "<slug:slug>/scenes/",
+        CampaignScenesView.as_view(),
+        name="campaign_scenes",
+    ),
+    path(
+        "<slug:slug>/locations/",
+        CampaignLocationsView.as_view(),
+        name="campaign_locations",
+    ),
+    path(
+        "<slug:slug>/items/",
+        CampaignItemsView.as_view(),
+        name="campaign_items",
     ),
 ]

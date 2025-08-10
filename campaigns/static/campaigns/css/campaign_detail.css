@@ -186,6 +186,281 @@
     padding: 2rem;
 }
 
+/* Campaign Management Section */
+:root {
+    /* CSS Custom Properties for Theme Support */
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --accent-color: #e8f4fd;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+
+    /* Text colors */
+    --text-primary: #2c3e50;
+    --text-secondary: #666;
+    --text-muted: #999;
+    --text-inverse: #fff;
+
+    /* Background colors */
+    --background-primary: #fff;
+    --background-secondary: #f8f9fa;
+    --background-card: #fff;
+    --background-hover: #f0f7ff;
+
+    /* Border and shadow */
+    --border-color: #dee2e6;
+    --border-color-light: #eee;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --shadow-hover: rgba(0, 0, 0, 0.15);
+
+    /* Layout */
+    --border-radius: 8px;
+    --border-radius-small: 4px;
+    --spacing-unit: 1rem;
+    --spacing-small: 0.5rem;
+    --spacing-large: 2rem;
+
+    /* Transitions */
+    --transition-base: 0.3s ease;
+    --transition-fast: 0.15s ease;
+}
+
+.campaign-management {
+    margin-bottom: var(--spacing-large);
+}
+
+.campaign-management h3 {
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color-light);
+    padding-bottom: var(--spacing-small);
+    margin-bottom: var(--spacing-unit);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.management-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-unit);
+    margin-top: var(--spacing-unit);
+}
+
+.management-card {
+    background: var(--background-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    text-align: center;
+    transition: all var(--transition-base);
+    position: relative;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.management-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px var(--shadow-hover);
+    border-color: var(--primary-color);
+    background: var(--background-hover);
+}
+
+.management-card:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.card-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--spacing-unit);
+    display: block;
+    line-height: 1;
+    filter: grayscale(0.2);
+    transition: filter var(--transition-fast);
+}
+
+.management-card:hover .card-icon {
+    filter: grayscale(0);
+    transform: scale(1.1);
+    transition: all var(--transition-base);
+}
+
+.management-card h4 {
+    color: var(--text-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 var(--spacing-small) 0;
+    line-height: 1.3;
+}
+
+.management-card p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0 0 var(--spacing-unit) 0;
+    flex-grow: 1;
+}
+
+.management-card .btn {
+    margin-top: auto;
+    min-height: 44px; /* Touch target */
+    font-weight: 500;
+    border-radius: var(--border-radius-small);
+    transition: all var(--transition-base);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+}
+
+.management-card .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.management-card .btn:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Responsive Design - Mobile First */
+@media (max-width: 480px) {
+    .management-cards {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-small);
+    }
+
+    .management-card {
+        padding: var(--spacing-unit);
+        min-height: 180px;
+    }
+
+    .card-icon {
+        font-size: 2rem;
+        margin-bottom: var(--spacing-small);
+    }
+
+    .management-card h4 {
+        font-size: 1rem;
+    }
+
+    .management-card p {
+        font-size: 0.85rem;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .management-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-small);
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .management-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-unit);
+    }
+}
+
+@media (min-width: 1025px) {
+    .management-cards {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-unit);
+    }
+}
+
+/* Dark Theme Support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text-primary: #e8e9ea;
+        --text-secondary: #b0b3b8;
+        --text-muted: #8a8d91;
+        --background-primary: #18191a;
+        --background-secondary: #242526;
+        --background-card: #242526;
+        --background-hover: #2a2d2e;
+        --border-color: #3a3b3c;
+        --border-color-light: #3a3b3c;
+        --shadow-color: rgba(0, 0, 0, 0.3);
+        --shadow-hover: rgba(0, 0, 0, 0.4);
+    }
+
+    .management-card:hover {
+        background: var(--background-hover);
+        border-color: var(--primary-color);
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .management-card {
+        border-width: 2px;
+        border-color: var(--text-primary);
+    }
+
+    .management-card:hover {
+        border-color: var(--primary-color);
+        border-width: 3px;
+    }
+
+    .management-card h4 {
+        font-weight: 700;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .management-card,
+    .management-card:hover,
+    .card-icon,
+    .management-card:hover .card-icon,
+    .management-card .btn,
+    .management-card .btn:hover {
+        transition: none;
+        transform: none;
+    }
+
+    .management-card:hover {
+        box-shadow: 0 2px 8px var(--shadow-color);
+    }
+}
+
+/* Focus Management for Better Accessibility */
+.management-card .btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+}
+
+/* Print Styles */
+@media print {
+    .campaign-management {
+        page-break-inside: avoid;
+    }
+
+    .management-card {
+        border: 1px solid #000;
+        box-shadow: none;
+        background: white;
+        page-break-inside: avoid;
+        margin-bottom: 1rem;
+    }
+
+    .management-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .card-icon {
+        filter: grayscale(1);
+    }
+}
+
 @media (max-width: 768px) {
     .campaign-meta {
         flex-direction: column;
