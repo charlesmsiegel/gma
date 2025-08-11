@@ -18,21 +18,66 @@ User = get_user_model()
 class CampaignForm(forms.ModelForm):
     """Form for creating and editing campaigns."""
 
+    # Popular RPG systems for autocomplete
+    GAME_SYSTEMS = [
+        "Mage: The Ascension",
+        "Vampire: The Masquerade",
+        "Werewolf: The Apocalypse",
+        "Changeling: The Dreaming",
+        "Wraith: The Oblivion",
+        "Hunter: The Reckoning",
+        "Dungeons & Dragons 5th Edition",
+        "Pathfinder 2e",
+        "Call of Cthulhu",
+        "Shadowrun",
+        "Cyberpunk RED",
+        "GURPS",
+        "Savage Worlds",
+        "Fate Core",
+        "World of Darkness",
+        "Chronicles of Darkness",
+        "Star Wars RPG",
+        "Warhammer 40,000 RPG",
+        "The Witcher RPG",
+        "Alien RPG",
+        "Blades in the Dark",
+        "Powered by the Apocalypse",
+        "Custom/Homebrew System",
+    ]
+
     class Meta:
         model = Campaign
         fields = ["name", "description", "game_system"]
         widgets = {
-            "name": forms.TextInput(attrs={"placeholder": "Enter campaign name"}),
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-lg",
+                    "placeholder": "Enter your campaign name",
+                    "autocomplete": "off",
+                }
+            ),
             "description": forms.Textarea(
                 attrs={
+                    "class": "form-control",
                     "rows": 4,
-                    "placeholder": "Enter campaign description (optional)",
+                    "placeholder": "Describe your campaign setting, themes, or story hooks...",  # noqa: E501
+                    "style": "resize: vertical;",
                 }
             ),
             "game_system": forms.TextInput(
-                attrs={"placeholder": "e.g. Mage: The Ascension"}
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Start typing to see suggestions...",
+                    "list": "game-systems-list",
+                    "autocomplete": "off",
+                }
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add required asterisk styling
+        self.fields["name"].widget.attrs.update({"data-required": "true"})
 
     def save(self, owner=None, commit=True):
         """Save the campaign with the specified owner."""

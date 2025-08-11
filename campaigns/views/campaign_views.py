@@ -143,6 +143,12 @@ class CampaignCreateView(LoginRequiredMixin, CreateView):
     form_class = CampaignForm
     template_name = "campaigns/campaign_create.html"
 
+    def get_context_data(self, **kwargs):
+        """Add game systems list to context."""
+        context = super().get_context_data(**kwargs)
+        context["game_systems"] = CampaignForm.GAME_SYSTEMS
+        return context
+
     def form_valid(self, form):
         """Handle valid form submission by setting the owner."""
         campaign = form.save(owner=self.request.user)
