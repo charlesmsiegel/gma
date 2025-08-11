@@ -92,6 +92,13 @@ class CampaignForm(forms.ModelForm):
 class CampaignSettingsForm(forms.ModelForm):
     """Form for editing campaign settings."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make sure game system field has same autocomplete as create form
+        self.fields["game_system"].widget.attrs.update(
+            {"list": "game-systems-list", "autocomplete": "off"}
+        )
+
     class Meta:
         model = Campaign
         fields = [
@@ -104,15 +111,27 @@ class CampaignSettingsForm(forms.ModelForm):
             "allow_player_join",
         ]
         widgets = {
-            "name": forms.TextInput(attrs={"placeholder": "Enter campaign name"}),
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Enter campaign name",
+                }
+            ),
             "description": forms.Textarea(
                 attrs={
+                    "class": "form-control",
                     "rows": 4,
                     "placeholder": "Enter campaign description (optional)",
+                    "style": "resize: vertical;",
                 }
             ),
             "game_system": forms.TextInput(
-                attrs={"placeholder": "e.g. Mage: The Ascension"}
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Start typing to see suggestions...",
+                    "list": "game-systems-list",
+                    "autocomplete": "off",
+                }
             ),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
@@ -142,18 +161,28 @@ class SendInvitationForm(forms.Form):
 
     invited_user = forms.ModelChoiceField(
         queryset=User.objects.all(),
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.Select(attrs={"class": "form-select"}),
         label="User to invite",
+        help_text="Select a user to invite to this campaign",
     )
     role = forms.ChoiceField(
         choices=CampaignMembership.ROLE_CHOICES,
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.Select(attrs={"class": "form-select"}),
         label="Role",
+        help_text="Choose what role the user will have in the campaign",
     )
     message = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": "form-control",
+                "placeholder": "Add a personal message to your invitation (optional)",
+                "style": "resize: vertical;",
+            }
+        ),
         required=False,
         label="Optional message",
+        help_text="Personalize your invitation with a custom message",
     )
 
     def __init__(self, *args, **kwargs):
@@ -173,13 +202,15 @@ class ChangeMemberRoleForm(forms.Form):
 
     member = forms.ModelChoiceField(
         queryset=CampaignMembership.objects.none(),
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.Select(attrs={"class": "form-select"}),
         label="Member",
+        help_text="Select the member whose role you want to change",
     )
     new_role = forms.ChoiceField(
         choices=CampaignMembership.ROLE_CHOICES,
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.Select(attrs={"class": "form-select"}),
         label="New Role",
+        help_text="Choose the new role for this member",
     )
 
     def __init__(self, *args, **kwargs):
@@ -202,19 +233,24 @@ class BulkMemberManagementForm(forms.Form):
     ]
 
     action = forms.ChoiceField(
-        choices=ACTION_CHOICES, widget=forms.RadioSelect, label="Action"
+        choices=ACTION_CHOICES,
+        widget=forms.RadioSelect(attrs={"class": "form-check-input"}),
+        label="Action",
+        help_text="Choose what operation to perform on the selected users",
     )
     users = forms.ModelMultipleChoiceField(
         queryset=User.objects.all(),
-        widget=forms.CheckboxSelectMultiple,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
         required=False,
         label="Select Users",
+        help_text="Choose which users to apply the action to",
     )
     role = forms.ChoiceField(
         choices=CampaignMembership.ROLE_CHOICES,
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.Select(attrs={"class": "form-select"}),
         required=False,
         label="Role (for add/change operations)",
+        help_text="Select the role for add or change operations",
     )
 
     def __init__(self, *args, **kwargs):

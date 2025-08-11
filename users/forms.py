@@ -25,28 +25,41 @@ class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(
         required=True,
         help_text="Required. Enter a valid email address.",
-        widget=forms.EmailInput(attrs={"class": "form-control"}),
+        widget=forms.EmailInput(
+            attrs={"class": "form-control", "placeholder": "Enter your email address"}
+        ),
     )
 
     display_name = forms.CharField(
         max_length=100,
         required=False,
         help_text="Optional. A display name for your profile.",
-        widget=forms.TextInput(attrs={"class": "form-control"}),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Enter a display name (optional)",
+            }
+        ),
     )
 
     class Meta:
         model = User
         fields = ("username", "email", "display_name", "password1", "password2")
         widgets = {
-            "username": forms.TextInput(attrs={"class": "form-control"}),
+            "username": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Choose a username"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Add Bootstrap classes to password fields
-        self.fields["password1"].widget.attrs["class"] = "form-control"
-        self.fields["password2"].widget.attrs["class"] = "form-control"
+        # Add Bootstrap classes and placeholders to password fields
+        self.fields["password1"].widget.attrs.update(
+            {"class": "form-control", "placeholder": "Enter your password"}
+        )
+        self.fields["password2"].widget.attrs.update(
+            {"class": "form-control", "placeholder": "Confirm your password"}
+        )
 
     def clean_email(self):
         """Validate email is unique (case-insensitive)."""
@@ -144,13 +157,13 @@ class UserProfileForm(forms.ModelForm):
 
     timezone = forms.ChoiceField(
         choices=[],  # Will be populated in __init__
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.Select(attrs={"class": "form-select"}),
         help_text="Select your timezone for accurate time displays.",
     )
 
     theme = forms.ChoiceField(
         choices=User.THEME_CHOICES,
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.Select(attrs={"class": "form-select"}),
         help_text="Choose your preferred theme for the interface",
         required=False,
     )
