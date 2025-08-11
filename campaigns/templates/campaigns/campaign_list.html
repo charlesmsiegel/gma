@@ -608,8 +608,8 @@
 
 {% if campaigns %}
     <div class="campaigns-container">
-        {% if user.is_authenticated and not current_role_filter %}
-            <!-- Show separate sections for member campaigns and public campaigns -->
+        {% if user.is_authenticated %}
+            <!-- Always show separate sections for authenticated users -->
             {% regroup campaigns by user_is_member as campaign_groups %}
 
             {% for is_member, campaign_list in campaign_groups %}
@@ -618,9 +618,19 @@
                         <div class="section-header mb-4">
                             <h4 class="section-title">
                                 <i class="bi bi-person-check text-primary me-2"></i>
-                                My Campaigns
+                                {% if current_role_filter %}
+                                    My {{ current_role_filter|title }} Campaigns
+                                {% else %}
+                                    My Campaigns
+                                {% endif %}
                             </h4>
-                            <p class="section-subtitle text-muted mb-0">Campaigns where you are a member</p>
+                            <p class="section-subtitle text-muted mb-0">
+                                {% if current_role_filter %}
+                                    Campaigns where you are {{ current_role_filter|lower }}
+                                {% else %}
+                                    Campaigns where you are a member
+                                {% endif %}
+                            </p>
                         </div>
                         <div class="row">
                             {% for campaign in campaign_list %}
@@ -681,9 +691,19 @@
                         <div class="section-header mb-4">
                             <h4 class="section-title">
                                 <i class="bi bi-globe text-success me-2"></i>
-                                Discover Campaigns
+                                {% if current_role_filter %}
+                                    Public Campaigns
+                                {% else %}
+                                    Discover Campaigns
+                                {% endif %}
                             </h4>
-                            <p class="section-subtitle text-muted mb-0">Public campaigns you can explore and join</p>
+                            <p class="section-subtitle text-muted mb-0">
+                                {% if current_role_filter %}
+                                    Public campaigns where you're not a member
+                                {% else %}
+                                    Public campaigns you can explore and join
+                                {% endif %}
+                            </p>
                         </div>
                         <div class="row">
                             {% for campaign in campaign_list %}
