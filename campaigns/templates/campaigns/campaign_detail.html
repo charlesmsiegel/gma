@@ -1,365 +1,728 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{{ campaign.name }} - {{ block.super }}{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'campaigns/css/campaign_detail.css' %}">
+<style>
+/* Campaign Detail Page Specific Styles */
+
+/* Hero Section */
+.campaign-hero {
+    background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 100%);
+    color: white;
+    border-radius: var(--theme-border-radius-lg);
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.campaign-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="detail-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" stroke-width="0.5" opacity="0.1" /></pattern></defs><rect width="100" height="100" fill="url(%23detail-grid)" /></svg>') repeat;
+    pointer-events: none;
+}
+
+.campaign-hero .container {
+    position: relative;
+    z-index: 1;
+}
+
+.campaign-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.campaign-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+.campaign-meta .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.campaign-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-active {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.status-inactive {
+    background: rgba(255, 193, 7, 0.3);
+    border: 2px solid rgba(255, 193, 7, 0.5);
+}
+
+.visibility-badge {
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+.role-badge {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    font-weight: 700;
+}
+
+/* Responsive hero section */
+@media (max-width: 768px) {
+    .campaign-hero {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .campaign-title {
+        font-size: 2rem;
+    }
+
+    .campaign-meta {
+        justify-content: center;
+        gap: 1rem;
+    }
+}
+
+/* Other sections */
+
+.main-content-section {
+    background: var(--theme-bg-card);
+    border: 1px solid var(--theme-border-color);
+    border-radius: var(--theme-border-radius-lg);
+    box-shadow: var(--theme-shadow-sm);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    background: var(--theme-bg-surface);
+    border-bottom: 1px solid var(--theme-border-color);
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-title {
+    color: var(--theme-text-primary);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-content {
+    padding: 2rem;
+}
+
+.management-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+/* Balanced layouts for different numbers of cards */
+.management-grid.cards-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.management-grid.cards-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.management-grid.cards-1 {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.management-card {
+    background: var(--theme-bg-surface);
+    border: 1px solid var(--theme-border-light);
+    border-radius: var(--theme-border-radius);
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+}
+
+.management-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--theme-shadow);
+    border-color: var(--theme-primary);
+}
+
+.management-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--theme-primary);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.management-card:hover::before {
+    transform: scaleX(1);
+}
+
+.card-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.card-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: linear-gradient(135deg, var(--theme-primary), var(--theme-primary-dark));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 1rem;
+    box-shadow: var(--theme-shadow-sm);
+}
+
+.card-title {
+    color: var(--theme-text-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.card-description {
+    color: var(--theme-text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.4;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-button {
+    background: var(--theme-primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--theme-border-radius);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 3rem;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.card-button:hover {
+    background: var(--theme-primary-dark);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.member-item {
+    background: var(--theme-bg-surface);
+    border: 1px solid var(--theme-border-light);
+    border-radius: var(--theme-border-radius);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--theme-transition);
+}
+
+.member-item:hover {
+    background: var(--theme-bg-hover);
+}
+
+.member-info .member-name {
+    color: var(--theme-text-primary);
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.member-info .member-joined {
+    color: var(--theme-text-muted);
+    font-size: 0.875rem;
+}
+
+.member-role {
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-owner {
+    background: var(--theme-warning);
+    color: var(--theme-dark);
+}
+
+.role-gm {
+    background: var(--theme-info);
+    color: white;
+}
+
+.role-player {
+    background: var(--theme-primary);
+    color: white;
+}
+
+.role-observer {
+    background: var(--theme-secondary);
+    color: white;
+}
+
+.action-bar {
+    background: var(--theme-bg-surface);
+    border-top: 1px solid var(--theme-border-color);
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.primary-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.secondary-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.btn-hero {
+    background: linear-gradient(135deg, var(--theme-primary), var(--theme-primary-dark));
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--theme-border-radius);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: var(--theme-shadow-sm);
+}
+
+.btn-hero:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--theme-shadow);
+    color: white;
+}
+
+/* Tablet breakpoint - 4 cards become 2x2 */
+@media (max-width: 1024px) {
+    .management-grid.cards-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Small tablet breakpoint - all cards become single column */
+@media (max-width: 768px) {
+    .management-grid.cards-4,
+    .management-grid.cards-2,
+    .management-grid.cards-1 {
+        grid-template-columns: 1fr !important;
+        max-width: none !important;
+        margin: 0 !important;
+    }
+
+    .section-content {
+        padding: 1.5rem;
+    }
+
+    .member-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+
+    .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1.5rem;
+    }
+
+    .primary-actions,
+    .secondary-actions {
+        justify-content: center;
+    }
+}
+
+/* Ensure cards maintain minimum width on very wide screens */
+@media (min-width: 1200px) {
+    .management-grid.cards-4 .management-card {
+        min-width: 250px;
+    }
+    
+    .management-grid.cards-2 .management-card {
+        min-width: 300px;
+    }
+}
+</style>
 {% endblock %}
+
 {% block content %}
-<div class="container">
-  <!-- Campaign Header -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <div class="d-flex justify-content-between align-items-start">
-        <div>
-          <h1 class="h2 mb-2">
-            {{ campaign.name }}
-            <span class="badge {% if campaign.is_public %}bg-success{% else %}bg-secondary{% endif %} ms-2">
-              {% if campaign.is_public %}
-                <i class="bi bi-globe"></i> Public
-              {% else %}
-                <i class="bi bi-lock"></i> Private
-              {% endif %}
-            </span>
-          </h1>
-          <div class="row text-muted small">
-            <div class="col-md-6">
-              <div><strong>Owner:</strong> {{ campaign.owner.username }}</div>
-              <div><strong>System:</strong> {{ campaign.game_system|default:"Not specified" }}</div>
+
+<!-- Hero Section -->
+<div class="campaign-hero">
+  <div class="container">
+    <div class="py-4 py-md-5">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <h1 class="campaign-title">{{ campaign.name }}</h1>
+          <div class="campaign-meta">
+            <div class="meta-item">
+              <i class="bi bi-person-fill"></i>
+              <span>{{ campaign.owner.username }}</span>
             </div>
-            <div class="col-md-6">
-              <div><strong>Created:</strong> {{ campaign.created_at|date:"M j, Y" }}</div>
-              {% if campaign.updated_at != campaign.created_at %}
-                <div><strong>Updated:</strong> {{ campaign.updated_at|date:"M j, Y" }}</div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <span class="badge {% if campaign.is_active %}bg-success{% else %}bg-warning text-dark{% endif %}">
-            {% if campaign.is_active %}
-              <i class="bi bi-check-circle"></i> Active
-            {% else %}
-              <i class="bi bi-pause-circle"></i> Inactive
+            {% if campaign.game_system %}
+              <div class="meta-item">
+                <i class="bi bi-dice-6-fill"></i>
+                <span>{{ campaign.game_system }}</span>
+              </div>
             {% endif %}
-          </span>
-          {% if user.is_authenticated and user_role %}
-            <span class="badge bg-primary role-{{ user_role|lower }}">
-              <i class="bi bi-person-badge"></i> {{ user_role }}
-            </span>
-          {% endif %}
+            <div class="meta-item">
+              <i class="bi bi-calendar-fill"></i>
+              <span>{{ campaign.created_at|date:"M j, Y" }}</span>
+            </div>
+            <div class="meta-item">
+              <i class="bi bi-people-fill"></i>
+              <span>{{ campaign.memberships.count|add:1 }} member{{ campaign.memberships.count|add:1|pluralize }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+          <div class="campaign-badges">
+            <div class="status-badge {% if campaign.is_active %}status-active{% else %}status-inactive{% endif %}">
+              <i class="bi {% if campaign.is_active %}bi-play-circle{% else %}bi-pause-circle{% endif %}"></i>
+              {{ campaign.is_active|yesno:"Active,Inactive" }}
+            </div>
+            <div class="visibility-badge">
+              <i class="bi {% if campaign.is_public %}bi-globe{% else %}bi-lock{% endif %}"></i>
+              {{ campaign.is_public|yesno:"Public,Private" }}
+            </div>
+            {% if user.is_authenticated and user_role %}
+              <div class="role-badge">
+                <i class="bi bi-person-badge"></i>
+                {{ user_role }}
+              </div>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
   </div>
-  <!-- Campaign Description -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <h3 class="card-title mb-0">Campaign Description</h3>
-    </div>
-    <div class="card-body">
-      {% if campaign.description %}
-        <p class="mb-0">{{ campaign.description|linebreaks }}</p>
-      {% else %}
-        <p class="text-muted fst-italic mb-0">No description provided yet.</p>
-      {% endif %}
-    </div>
-  </div>
+</div>
 
-  <!-- Detailed Campaign Information -->
-  <div class="info-section card mb-4">
-    <div class="card-header">
-      <h3 class="card-title mb-0">Campaign Information</h3>
+<!-- Campaign Description -->
+{% if campaign.description %}
+  <div class="main-content-section">
+    <div class="section-header">
+      <h2 class="section-title">
+        <i class="bi bi-journal-text"></i>
+        Campaign Description
+      </h2>
     </div>
-    <div class="card-body">
-      <div class="row">
-        <div class="col-md-6">
-          <div class="mb-3">
-            <strong class="d-block text-muted small">Campaign Master:</strong>
-            <span>{{ campaign.owner.username }}</span>
-          </div>
-          <div class="mb-3">
-            <strong class="d-block text-muted small">Game System:</strong>
-            <span>{{ campaign.game_system|default:"Not specified" }}</span>
-          </div>
-          <div class="mb-3">
-            <strong class="d-block text-muted small">Status:</strong>
-            <span class="badge {% if campaign.is_active %}bg-success{% else %}bg-warning text-dark{% endif %}">
-              {% if campaign.is_active %}Active Campaign{% else %}Inactive Campaign{% endif %}
-            </span>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="mb-3">
-            <strong class="d-block text-muted small">Created:</strong>
-            <span>{{ campaign.created_at|date:"F j, Y \a\t g:i A" }}</span>
-          </div>
-          <div class="mb-3">
-            <strong class="d-block text-muted small">Last Updated:</strong>
-            <span>{{ campaign.updated_at|date:"F j, Y \a\t g:i A" }}</span>
-          </div>
-        </div>
-      </div>
+    <div class="section-content">
+      <p class="mb-0" style="line-height: 1.6; font-size: 1.05rem;">{{ campaign.description|linebreaks }}</p>
     </div>
   </div>
-  <!-- Management Section -->
-  {% if user.is_authenticated and user_role == "OWNER" or user_role == "GM" %}
-    <div class="campaign-management" role="region" aria-labelledby="campaign-management-heading">
-    <div class="card mb-4">
-      <div class="card-header">
-        <h3 class="card-title mb-0" id="campaign-management-heading">Campaign Management</h3>
-      </div>
-      <div class="card-body">
-        <div class="row management-grid">
-          <div class="col-md-6 mb-3">
-            <div class="management-card characters-card">
-            <div class="card h-100 text-center">
-              <div class="card-body d-flex flex-column">
-                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">👥</div>
-                <h5 class="card-title">Manage Characters</h5>
-                <p class="card-text flex-grow-1">Manage player and NPC characters</p>
-                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">Characters</a>
-              </div>
-            </div>
-            </div>
-          </div>
-          <div class="col-md-6 mb-3">
-            <div class="management-card scenes-card">
-            <div class="card h-100 text-center">
-              <div class="card-body d-flex flex-column">
-                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">🎭</div>
-                <h5 class="card-title">Manage Scenes</h5>
-                <p class="card-text flex-grow-1">Create and manage campaign scenes</p>
-                <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="btn btn-primary">Scenes</a>
-              </div>
-            </div>
-            </div>
-          </div>
-          <div class="col-md-6 mb-3">
-            <div class="management-card locations-card">
-            <div class="card h-100 text-center">
-              <div class="card-body d-flex flex-column">
-                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">🗺️</div>
-                <h5 class="card-title">Manage Locations</h5>
-                <p class="card-text flex-grow-1">Organize campaign locations and maps</p>
-                <a href="{% url 'campaigns:campaign_locations' slug=campaign.slug %}" class="btn btn-primary">Locations</a>
-              </div>
-            </div>
-            </div>
-          </div>
-          <div class="col-md-6 mb-3">
-            <div class="management-card items-card">
-            <div class="card h-100 text-center">
-              <div class="card-body d-flex flex-column">
-                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">⚔️</div>
-                <h5 class="card-title">Manage Items</h5>
-                <p class="card-text flex-grow-1">Track items, equipment, and treasures</p>
-                <a href="{% url 'campaigns:campaign_items' slug=campaign.slug %}" class="btn btn-primary">Items</a>
-              </div>
-            </div>
-            </div>
-          </div>
-        </div>
-      </div>
+{% endif %}
+<!-- Management Section -->
+{% if user.is_authenticated and is_member %}
+  <div class="main-content-section">
+    <div class="section-header">
+      <h2 class="section-title">
+        <i class="bi bi-gear-fill"></i>
+        Campaign Management
+      </h2>
     </div>
-    </div>
-  {% elif user.is_authenticated and user_role == "PLAYER" %}
-    <div class="campaign-management" role="region" aria-labelledby="campaign-management-heading">
-    <div class="card mb-4">
-      <div class="card-header">
-        <h3 class="card-title mb-0" id="campaign-management-heading">Campaign Management</h3>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="card text-center">
-              <div class="card-body">
-                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">👤</div>
-                <h5 class="card-title">My Characters</h5>
-                <p class="card-text">View and manage your characters</p>
-                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">My Characters</a>
+    <div class="section-content">
+      <div class="management-grid {% if user_role == 'OWNER' or user_role == 'GM' %}cards-4{% elif user_role == 'PLAYER' %}cards-2{% else %}cards-2{% endif %}">
+        {% if user_role == "OWNER" or user_role == "GM" %}
+          <!-- Full management access for owners and GMs -->
+          <div class="management-card">
+            <div class="card-top">
+              <div class="card-icon">
+                <i class="bi bi-people"></i>
               </div>
+              <h3 class="card-title">Characters</h3>
             </div>
+            <p class="card-description">Manage player and NPC characters</p>
+            <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="card-button">
+              <span>Manage Characters</span>
+            </a>
           </div>
-        </div>
-      </div>
-    </div>
-    </div>
-  {% elif user.is_authenticated and user_role == "OBSERVER" %}
-    <div class="campaign-management" role="region" aria-labelledby="campaign-management-heading">
-    <div class="card mb-4">
-      <div class="card-header">
-        <h3 class="card-title mb-0" id="campaign-management-heading">Campaign Management</h3>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <div class="card h-100 text-center">
-              <div class="card-body d-flex flex-column">
-                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">👥</div>
-                <h5 class="card-title">View Characters</h5>
-                <p class="card-text flex-grow-1">Browse campaign characters</p>
-                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">View Characters</a>
+          
+          <div class="management-card">
+            <div class="card-top">
+              <div class="card-icon">
+                <i class="bi bi-collection-play"></i>
               </div>
+              <h3 class="card-title">Scenes</h3>
             </div>
+            <p class="card-description">Create and manage campaign scenes</p>
+            <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="card-button">
+              <span>Manage Scenes</span>
+            </a>
           </div>
-          <div class="col-md-6 mb-3">
-            <div class="card h-100 text-center">
-              <div class="card-body d-flex flex-column">
-                <div class="card-icon" style="font-size: 2rem; margin-bottom: 1rem;" aria-hidden="true">🎭</div>
-                <h5 class="card-title">View Scenes</h5>
-                <p class="card-text flex-grow-1">Browse campaign scenes</p>
-                <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="btn btn-primary">View Scenes</a>
+          
+          <div class="management-card">
+            <div class="card-top">
+              <div class="card-icon">
+                <i class="bi bi-map"></i>
               </div>
+              <h3 class="card-title">Locations</h3>
             </div>
+            <p class="card-description">Organize campaign locations and maps</p>
+            <a href="{% url 'campaigns:campaign_locations' slug=campaign.slug %}" class="card-button">
+              <span>Manage Locations</span>
+            </a>
           </div>
-        </div>
-      </div>
-    </div>
-    </div>
-  {% endif %}
-  <!-- Campaign Members -->
-  {% if user.is_authenticated %}
-    <div class="member-list-section">
-    <div class="card mb-4">
-      <div class="card-header">
-        <h3 class="card-title mb-0">Campaign Members ({{ campaign.memberships.count|add:1 }})</h3>
-      </div>
-      <div class="card-body">
-        <div class="list-group list-group-flush">
-          <!-- Campaign Owner -->
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <strong>{{ campaign.owner.username }}</strong>
-              <div class="text-muted small">Owner since {{ campaign.created_at|date:"M j, Y" }}</div>
+          
+          <div class="management-card">
+            <div class="card-top">
+              <div class="card-icon">
+                <i class="bi bi-gem"></i>
+              </div>
+              <h3 class="card-title">Items</h3>
             </div>
-            <span class="badge bg-warning text-dark">Owner</span>
+            <p class="card-description">Track items, equipment, and treasure</p>
+            <a href="{% url 'campaigns:campaign_items' slug=campaign.slug %}" class="card-button">
+              <span>Manage Items</span>
+            </a>
           </div>
-          <!-- Other Members -->
-          {% for membership in campaign.memberships.all %}
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <strong>{{ membership.user.username }}</strong>
-                <div class="text-muted small">Joined {{ membership.joined_at|date:"M j, Y" }}</div>
+        {% elif user_role == "PLAYER" %}
+          <!-- Limited access for players -->
+          <div class="management-card">
+            <div class="card-top">
+              <div class="card-icon">
+                <i class="bi bi-person"></i>
               </div>
-              <div class="d-flex gap-2 align-items-center">
-                <span class="badge bg-primary role-{{ membership.role|lower }}">{{ membership.role }}</span>
-                {% if user.is_authenticated and is_owner %}
-                  <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-secondary btn-sm"
-                            title="Change role for {{ membership.user.username }}"
-                            aria-label="Change role for {{ membership.user.username }}">
-                      <i class="bi bi-pencil"></i> Change Role
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm"
-                            title="Remove {{ membership.user.username }}"
-                            aria-label="Remove {{ membership.user.username }}">
-                      <i class="bi bi-x-lg"></i> Remove
-                    </button>
-                  </div>
-                {% endif %}
-              </div>
+              <h3 class="card-title">My Characters</h3>
             </div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    </div>
-  {% endif %}
-
-  <!-- User Access Information -->
-  {% if user.is_authenticated %}
-    <div class="card mb-4">
-      <div class="card-header">
-        <h3 class="card-title mb-0">Your Access</h3>
-      </div>
-      <div class="card-body">
-        {% if user_role %}
-          <p class="mb-3">
-            You are a <span class="badge bg-primary role-{{ user_role|lower }}">{{ user_role }}</span> in this campaign.
-          </p>
-          {% if user_role == "OWNER" %}
-            <p class="mb-0">
-              As the campaign owner, you have full control over this campaign including settings, membership management, and content creation.
-            </p>
-          {% elif user_role == "GM" %}
-            <p class="mb-0">
-              As a Game Master, you can manage scenes, NPCs, and guide the story within this campaign.
-            </p>
-          {% elif user_role == "PLAYER" %}
-            <p class="mb-0">
-              As a Player, you can participate in scenes, manage your characters, and interact with the campaign world.
-            </p>
-          {% elif user_role == "OBSERVER" %}
-            <p class="mb-0">
-              As an Observer, you can view campaign content but have limited interaction privileges.
-            </p>
-          {% endif %}
-        {% else %}
-          <p class="text-muted fst-italic mb-0">You are not a member of this campaign.</p>
+            <p class="card-description">View and manage your characters</p>
+            <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="card-button">
+              <span>My Characters</span>
+            </a>
+          </div>
+          
+          <div class="management-card">
+            <div class="card-top">
+              <div class="card-icon">
+                <i class="bi bi-eye"></i>
+              </div>
+              <h3 class="card-title">Campaign Scenes</h3>
+            </div>
+            <p class="card-description">Browse and participate in scenes</p>
+            <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="card-button">
+              <span>View Scenes</span>
+            </a>
+          </div>
+        {% elif user_role == "OBSERVER" %}
+          <!-- Read-only access for observers -->
+          <div class="management-card">
+            <div class="card-top">
+              <div class="card-icon">
+                <i class="bi bi-eye"></i>
+              </div>
+              <h3 class="card-title">View Characters</h3>
+            </div>
+            <p class="card-description">Browse campaign characters and stories</p>
+            <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="card-button">
+              <span>View Characters</span>
+            </a>
+          </div>
+          
+          <div class="management-card">
+            <div class="card-top">
+              <div class="card-icon">
+                <i class="bi bi-eye"></i>
+              </div>
+              <h3 class="card-title">View Scenes</h3>
+            </div>
+            <p class="card-description">Follow along with scenes and story</p>
+            <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="card-button">
+              <span>View Scenes</span>
+            </a>
+          </div>
         {% endif %}
       </div>
     </div>
-  {% endif %}
-
-  <!-- Action Buttons -->
-  <div class="d-flex gap-2 flex-wrap mb-4">
-    {% if user.is_authenticated and is_owner %}
-      <button class="btn btn-primary" disabled>
-        <i class="bi bi-pencil"></i> Edit Campaign
-      </button>
-      <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}" class="btn btn-secondary" aria-label="Send campaign invitation"><i class="bi bi-person-plus"></i> Invite Users</a>
-      <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}" class="btn btn-secondary"><i class="bi bi-people"></i> Manage Members</a>
-      <a href="{% url 'campaigns:settings' slug=campaign.slug %}" class="btn btn-secondary">
-        <i class="bi bi-gear"></i> Campaign Settings
-      </a>
-    {% elif user.is_authenticated and user_role == "GM" %}
-      <button class="btn btn-primary" disabled>
-        <i class="bi bi-plus-circle"></i> Create Scene
-      </button>
-      <button class="btn btn-secondary" disabled>
-        <i class="bi bi-robot"></i> Manage NPCs
-      </button>
-    {% elif user.is_authenticated and user_role == "PLAYER" %}
-      <button class="btn btn-primary" disabled>
-        <i class="bi bi-eye"></i> View Scenes
-      </button>
-      <button class="btn btn-secondary" disabled>
-        <i class="bi bi-person"></i> My Character
-      </button>
-    {% elif user.is_authenticated and user_role == "OBSERVER" %}
-      <button class="btn btn-primary" disabled>
-        <i class="bi bi-eye"></i> View Scenes
-      </button>
-    {% elif user.is_authenticated %}
-      <button class="btn btn-secondary" disabled>
-        <i class="bi bi-door-open"></i> Request to Join
-      </button>
-    {% endif %}
-    <a href="{% url 'campaigns:list' %}" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left"></i> Back to Campaigns
-    </a>
   </div>
-
-  <!-- Join Campaign Card (for unauthenticated users) -->
-  {% if not user.is_authenticated %}
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title mb-0">Join This Campaign</h3>
+{% endif %}
+<!-- Campaign Members -->
+{% if user.is_authenticated %}
+  <div class="main-content-section">
+    <div class="section-header">
+      <h2 class="section-title">
+        <i class="bi bi-people-fill"></i>
+        Campaign Members ({{ campaign.memberships.count|add:1 }})
+      </h2>
+    </div>
+    <div class="section-content">
+      <div class="member-list">
+        <!-- Campaign Owner -->
+        <div class="member-item">
+          <div class="member-info">
+            <div class="member-name">{{ campaign.owner.username }}</div>
+            <div class="member-joined">Owner since {{ campaign.created_at|date:"M j, Y" }}</div>
+          </div>
+          <div class="member-role role-owner">
+            <i class="bi bi-crown"></i>
+            Owner
+          </div>
+        </div>
+        
+        <!-- Other Members -->
+        {% for membership in campaign.memberships.all %}
+          <div class="member-item">
+            <div class="member-info">
+              <div class="member-name">{{ membership.user.username }}</div>
+              <div class="member-joined">Joined {{ membership.joined_at|date:"M j, Y" }}</div>
+            </div>
+            <div class="member-role role-{{ membership.role|lower }}">
+              <i class="bi {% if membership.role == 'GM' %}bi-person-gear{% elif membership.role == 'PLAYER' %}bi-person{% else %}bi-eye{% endif %}"></i>
+              {{ membership.role }}
+            </div>
+          </div>
+        {% endfor %}
       </div>
-      <div class="card-body">
-        <p class="mb-3">
-          To participate in this campaign, you need to be logged in and have appropriate permissions.
-        </p>
-        <div class="d-flex gap-2">
-          <a href="{% url 'users:login' %}" class="btn btn-primary">
-            <i class="bi bi-box-arrow-in-right"></i> Login
-          </a>
-          <a href="{% url 'users:register' %}" class="btn btn-secondary">
-            <i class="bi bi-person-plus"></i> Create Account
+    </div>
+
+    <!-- Action Bar -->
+    {% if user.is_authenticated %}
+      <div class="action-bar">
+        <div class="primary-actions">
+          {% if is_owner %}
+            <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}" class="btn-hero">
+              <i class="bi bi-person-plus"></i>
+              Invite Members
+            </a>
+            <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}" class="btn btn-secondary">
+              <i class="bi bi-people"></i>
+              Manage Members
+            </a>
+            <a href="{% url 'campaigns:settings' slug=campaign.slug %}" class="btn btn-secondary">
+              <i class="bi bi-gear"></i>
+              Settings
+            </a>
+          {% elif user_role == "GM" %}
+            <button class="btn-hero" disabled>
+              <i class="bi bi-plus-circle"></i>
+              Create Scene
+            </button>
+          {% elif user_role == "PLAYER" %}
+            <button class="btn-hero" disabled>
+              <i class="bi bi-person"></i>
+              My Characters
+            </button>
+          {% elif user_role == "OBSERVER" %}
+            <p class="text-muted mb-0">
+              <i class="bi bi-eye me-1"></i>
+              You're observing this campaign
+            </p>
+          {% elif not user_role %}
+            <button class="btn btn-secondary" disabled>
+              <i class="bi bi-door-open"></i>
+              Request to Join
+            </button>
+          {% endif %}
+        </div>
+        
+        <div class="secondary-actions">
+          <a href="{% url 'campaigns:list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Back to Campaigns
           </a>
         </div>
       </div>
+    {% endif %}
+  </div>
+{% endif %}
+
+<!-- Join Campaign Card (for unauthenticated users) -->
+{% if not user.is_authenticated %}
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title mb-0">
+        <i class="bi bi-door-open me-2"></i>
+        Join This Campaign
+      </h3>
     </div>
-  {% endif %}
-</div>
+    <div class="card-body">
+      <p class="mb-4">
+        To participate in this campaign, you need to be logged in and have appropriate permissions.
+      </p>
+      <div class="d-flex gap-3">
+        <a href="{% url 'users:login' %}" class="btn btn-primary">
+          <i class="bi bi-box-arrow-in-right me-1"></i>Login
+        </a>
+        <a href="{% url 'users:register' %}" class="btn btn-secondary">
+          <i class="bi bi-person-plus me-1"></i>Create Account
+        </a>
+      </div>
+    </div>
+  </div>
+{% endif %}
 {% endblock %}
