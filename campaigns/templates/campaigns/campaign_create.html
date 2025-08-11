@@ -15,6 +15,42 @@
     overflow: hidden;
 }
 
+/* Ensure Bootstrap form styles are applied correctly */
+.create-form-card .form-control {
+    display: block !important;
+    width: 100% !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 1rem !important;
+    font-weight: 400 !important;
+    line-height: 1.5 !important;
+    background-color: var(--theme-input-bg) !important;
+    background-image: none !important;
+    border: 1px solid var(--theme-input-border) !important;
+    border-radius: var(--theme-border-radius) !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+    color: var(--theme-text-primary) !important;
+}
+
+.create-form-card .form-control:focus {
+    color: var(--theme-text-primary) !important;
+    background-color: var(--theme-input-bg) !important;
+    border-color: var(--theme-primary) !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.create-form-card .form-control-lg {
+    min-height: calc(1.5em + 1rem + 2px) !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 1.25rem !important;
+    border-radius: var(--theme-border-radius-lg) !important;
+}
+
+.create-form-card .form-control::placeholder {
+    color: var(--theme-input-placeholder) !important;
+    opacity: 1 !important;
+}
+
 .create-hero::before {
     content: '';
     position: absolute;
@@ -228,7 +264,7 @@
     margin-bottom: 0.5rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 576px) {
     .create-hero {
         text-align: center;
         margin-bottom: 1.5rem;
@@ -248,6 +284,19 @@
     .tips-sidebar {
         position: static;
         margin-top: 2rem;
+    }
+
+    /* Stack labels and inputs vertically on small screens */
+    .form-group .row {
+        flex-direction: column !important;
+    }
+
+    .form-group .col-sm-3 {
+        margin-bottom: 0.5rem;
+    }
+
+    .form-group .form-label {
+        font-size: 0.95rem;
     }
 }
 </style>
@@ -285,41 +334,57 @@
 
                         <!-- Campaign Name -->
                         <div class="form-group">
-                            <label for="{{ form.name.id_for_label }}" class="form-label">
-                                Campaign Name
-                                <span class="required-indicator">*</span>
-                            </label>
-                            {{ form.name }}
-                            {% if form.name.help_text %}
-                                <div class="form-help">{{ form.name.help_text }}</div>
-                            {% endif %}
-                            {% if form.name.errors %}
-                                {% for error in form.name.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            {% endif %}
+                            <div class="row align-items-center">
+                                <div class="col-sm-3">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label mb-0">
+                                        Campaign Name
+                                        <span class="required-indicator">*</span>
+                                        <i class="bi bi-info-circle text-primary ms-1"
+                                           data-bs-toggle="tooltip"
+                                           data-bs-placement="top"
+                                           title="Pick something that captures the essence of your story or setting. It's the first thing players will see!"
+                                           style="cursor: help;"></i>
+                                    </label>
+                                </div>
+                                <div class="col-sm-9">
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        {% for error in form.name.errors %}
+                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Game System -->
                         <div class="form-group">
-                            <label for="{{ form.game_system.id_for_label }}" class="form-label">
-                                <i class="bi bi-dice-6 text-primary me-1"></i>
-                                Game System
-                            </label>
-                            {{ form.game_system }}
-                            <datalist id="game-systems-list">
-                                {% for system in game_systems %}
-                                    <option value="{{ system }}">{{ system }}</option>
-                                {% endfor %}
-                            </datalist>
-                            <div class="form-help">
-                                Start typing to see popular RPG systems, or enter your own custom system
+                            <div class="row align-items-center">
+                                <div class="col-sm-3">
+                                    <label for="{{ form.game_system.id_for_label }}" class="form-label mb-0">
+                                        <i class="bi bi-dice-6 text-primary me-1"></i>
+                                        Game System
+                                        <i class="bi bi-info-circle text-primary ms-1"
+                                           data-bs-toggle="tooltip"
+                                           data-bs-placement="top"
+                                           title="Use the autocomplete to find popular RPG systems, or enter your own homebrew rules."
+                                           style="cursor: help;"></i>
+                                    </label>
+                                </div>
+                                <div class="col-sm-9">
+                                    {{ form.game_system }}
+                                    <datalist id="game-systems-list">
+                                        {% for system in game_systems %}
+                                            <option value="{{ system }}">{{ system }}</option>
+                                        {% endfor %}
+                                    </datalist>
+                                    {% if form.game_system.errors %}
+                                        {% for error in form.game_system.errors %}
+                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
                             </div>
-                            {% if form.game_system.errors %}
-                                {% for error in form.game_system.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            {% endif %}
                         </div>
 
                         <!-- Description -->
@@ -327,11 +392,13 @@
                             <label for="{{ form.description.id_for_label }}" class="form-label">
                                 <i class="bi bi-journal-text text-primary me-1"></i>
                                 Campaign Description
+                                <i class="bi bi-info-circle text-primary ms-1"
+                                   data-bs-toggle="tooltip"
+                                   data-bs-placement="top"
+                                   title="Describe your campaign's setting, themes, tone, or story hooks. This helps players understand what to expect."
+                                   style="cursor: help;"></i>
                             </label>
                             {{ form.description }}
-                            <div class="form-help">
-                                Describe your campaign's setting, themes, tone, or story hooks. This helps players understand what to expect.
-                            </div>
                             {% if form.description.errors %}
                                 {% for error in form.description.errors %}
                                     <div class="invalid-feedback d-block">{{ error }}</div>
@@ -381,20 +448,20 @@
                 </h4>
                 <ul class="tips-list">
                     <li>
-                        <div class="tip-title">Choose a Memorable Name</div>
-                        <p class="tip-content">Pick something that captures the essence of your story or setting. It's the first thing players will see!</p>
-                    </li>
-                    <li>
-                        <div class="tip-title">Select Your System</div>
-                        <p class="tip-content">Use the autocomplete to find popular RPG systems, or enter your own homebrew rules.</p>
-                    </li>
-                    <li>
-                        <div class="tip-title">Set the Tone</div>
-                        <p class="tip-content">Your description helps players understand the campaign's mood - horror, heroic fantasy, political intrigue, etc.</p>
+                        <div class="tip-title">Quick Tips</div>
+                        <p class="tip-content">Hover over the <i class="bi bi-info-circle text-primary"></i> icons next to field labels for helpful hints and tips about each field.</p>
                     </li>
                     <li>
                         <div class="tip-title">Plan Ahead</div>
                         <p class="tip-content">Think about themes, major NPCs, and plot hooks you want to explore in your campaign.</p>
+                    </li>
+                    <li>
+                        <div class="tip-title">Game Balance</div>
+                        <p class="tip-content">Consider the experience level of your players and choose appropriate difficulty for encounters and challenges.</p>
+                    </li>
+                    <li>
+                        <div class="tip-title">Session Zero</div>
+                        <p class="tip-content">Plan a session zero to discuss expectations, safety tools, and character creation with your players.</p>
                     </li>
                 </ul>
 
@@ -416,6 +483,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const nameInput = document.getElementById('{{ form.name.id_for_label }}');
     const gameSystemInput = document.getElementById('{{ form.game_system.id_for_label }}');
     const submitButton = form.querySelector('button[type="submit"]');
+
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 
     // Add loading state to submit button
     form.addEventListener('submit', function() {
