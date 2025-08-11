@@ -34,9 +34,52 @@
     background: var(--theme-bg-card);
     border: 1px solid var(--theme-border-color);
     border-radius: var(--theme-border-radius-lg);
-    padding: 1.5rem;
+    padding: 2rem;
     box-shadow: var(--theme-shadow-sm);
     margin-bottom: 2rem;
+}
+
+.search-section-title {
+    color: var(--theme-text-primary);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-section-title i {
+    color: var(--theme-primary);
+    font-size: 1.5rem;
+}
+
+/* Enhanced search input styling */
+.search-form .input-group-lg .form-control {
+    border-radius: 0 var(--theme-border-radius-lg) var(--theme-border-radius-lg) 0;
+    box-shadow: var(--theme-shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.search-form .input-group-lg .form-control:focus {
+    transform: translateY(-1px);
+    box-shadow: var(--theme-shadow);
+}
+
+.search-form .input-group-lg .input-group-text {
+    border-radius: var(--theme-border-radius-lg) 0 0 var(--theme-border-radius-lg);
+    box-shadow: var(--theme-shadow-sm);
+    border-right: none;
+}
+
+.search-form .btn {
+    box-shadow: var(--theme-shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.search-form .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--theme-shadow);
 }
 
 .filter-tabs {
@@ -445,9 +488,14 @@
 <!-- Search and Filter Section -->
 <div class="search-filters-wrapper">
     <div class="search-filters">
+    <div class="search-section-title">
+        <i class="bi bi-funnel"></i>
+        <span>Find Campaigns</span>
+    </div>
+
     <!-- Search Form -->
-    <form method="get" class="row g-3 mb-3">
-        <div class="col-md-9">
+    <form method="get" class="search-form row g-3 mb-4">
+        <div class="col-md-8">
             <div class="input-group input-group-lg">
                 <span class="input-group-text">
                     <i class="bi bi-search"></i>
@@ -456,14 +504,15 @@
                     type="text"
                     name="q"
                     class="form-control"
-                    placeholder="Search campaigns by name, description, or game system..."
+                    placeholder="Search by campaign name, game system, or description..."
                     value="{{ search_query|default:'' }}"
+                    autocomplete="off"
                 >
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <button type="submit" class="btn btn-primary btn-lg w-100">
-                Search
+                <i class="bi bi-search me-1"></i>Search
             </button>
         </div>
 
@@ -478,8 +527,9 @@
 
     <!-- Role Filters (only for authenticated users) -->
     {% if user.is_authenticated %}
+        <hr class="my-4" style="border-color: var(--theme-border-light);">
         <div class="d-flex align-items-center gap-3 flex-wrap">
-            <span class="text-muted fw-medium">Filter by role:</span>
+            <span class="text-muted fw-medium">Filter by your role:</span>
             <div class="filter-tabs">
                 <a href="?{% if search_query %}q={{ search_query|urlencode }}{% endif %}"
                    class="filter-tab {% if not current_role_filter %}active{% endif %}">

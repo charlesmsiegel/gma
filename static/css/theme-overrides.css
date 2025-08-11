@@ -151,6 +151,30 @@ a:hover {
     color: var(--theme-text-muted) !important;
 }
 
+/* Input Groups - Override Bootstrap */
+.input-group-text {
+    background-color: var(--theme-bg-surface) !important;
+    border-color: var(--theme-input-border) !important;
+    color: var(--theme-text-secondary) !important;
+}
+
+.input-group > .form-control:focus {
+    z-index: 3;
+}
+
+/* Enhanced styling for search inputs */
+.input-group-lg .form-control {
+    font-size: 1.125rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--theme-border-radius);
+}
+
+.input-group-lg .input-group-text {
+    padding: 0.75rem 1rem;
+    font-size: 1.125rem;
+    border-radius: var(--theme-border-radius) 0 0 var(--theme-border-radius);
+}
+
 /* Buttons - Override Bootstrap */
 .btn-primary {
     background-color: var(--theme-primary) !important;
