@@ -12,10 +12,13 @@ Key Features:
 - Reusable error response builders
 """
 
-from typing import Any, Dict, List, Optional, Union
+from __future__ import annotations
+
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Model, QuerySet
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -191,7 +194,7 @@ class FieldValidator:
         return None
 
     @staticmethod
-    def validate_user_exists(user_id: Any) -> Optional[User]:
+    def validate_user_exists(user_id: Any) -> Any:
         """
         Validate that a user exists by ID.
 
@@ -210,7 +213,9 @@ class FieldValidator:
             return None
 
     @staticmethod
-    def build_field_errors(**field_errors) -> Dict[str, List[str]]:
+    def build_field_errors(
+        **field_errors: Union[str, List[str]]
+    ) -> Dict[str, List[str]]:
         """
         Build a field errors dictionary from keyword arguments.
 
@@ -253,7 +258,12 @@ class SecurityResponseHelper:
         return APIError.not_found()
 
     @staticmethod
-    def safe_get_or_404(queryset, user, permission_check=None, **filter_kwargs):
+    def safe_get_or_404(
+        queryset: QuerySet[Model],
+        user: Any,
+        permission_check: Optional[Callable[[Any, Model], bool]] = None,
+        **filter_kwargs: Any,
+    ) -> Tuple[Optional[Model], Optional[Response]]:
         """
         Safely get an object or return 404 response, with optional permission check.
 
@@ -303,7 +313,7 @@ def handle_django_validation_error(e: DjangoValidationError) -> Response:
     return APIError.validation_error(e)
 
 
-def handle_common_api_exceptions(func):
+def handle_common_api_exceptions(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator to handle common API exceptions with standardized responses.
 
@@ -317,7 +327,7 @@ def handle_common_api_exceptions(func):
         Wrapped function with exception handling.
     """
 
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         try:
             return func(*args, **kwargs)
         except DjangoValidationError as e:

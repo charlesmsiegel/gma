@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from polymorphic.models import PolymorphicModel
+from polymorphic.models import PolymorphicModel  # type: ignore[import-untyped]
 
 from campaigns.models import Campaign
 
@@ -9,27 +11,29 @@ from campaigns.models import Campaign
 class Character(PolymorphicModel):
     """Base Character model for all game systems."""
 
-    name = models.CharField(max_length=100, help_text="Character name")
-    description = models.TextField(
+    name: models.CharField = models.CharField(
+        max_length=100, help_text="Character name"
+    )
+    description: models.TextField = models.TextField(
         blank=True, default="", help_text="Character description and background"
     )
-    campaign = models.ForeignKey(
+    campaign: models.ForeignKey = models.ForeignKey(
         Campaign,
         on_delete=models.CASCADE,
         related_name="characters",
         help_text="The campaign this character belongs to",
     )
-    player_owner = models.ForeignKey(
+    player_owner: models.ForeignKey = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="owned_characters",
         help_text="The player who owns this character",
     )
-    game_system = models.CharField(
+    game_system: models.CharField = models.CharField(
         max_length=100, help_text="The game system this character uses"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
+    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "characters_character"
