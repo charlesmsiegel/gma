@@ -1,93 +1,80 @@
 {% extends "base.html" %}
-
 {% block title %}Profile - {{ block.super }}{% endblock %}
-
 {% block content %}
-<div class="container mt-5">
+  <div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">User Profile</h4>
-                    <a href="{% url 'users:profile_edit' %}" class="btn btn-primary btn-sm">
-                        Edit Profile
-                    </a>
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">User Profile</h4>
+            <a href="{% url 'users:profile_edit' %}" class="btn btn-primary btn-sm">
+              Edit Profile
+            </a>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h5>Profile Information</h5>
+                <hr>
+                <div class="mb-3">
+                  <label class="form-label text-muted">Username:</label>
+                  <p class="mb-1">{{ user.username }}</p>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5>Profile Information</h5>
-                            <hr>
-
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Username:</label>
-                                <p class="mb-1">{{ user.username }}</p>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Display Name:</label>
-                                <p class="mb-1">
-                                    {% if user.display_name %}
-                                        {{ user.display_name }}
-                                    {% else %}
-                                        <em class="text-muted">Not set (showing username as fallback)</em>
-                                    {% endif %}
-                                </p>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Email:</label>
-                                <p class="mb-1">{{ user.email }}</p>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Timezone:</label>
-                                <p class="mb-1">{{ user.timezone }}</p>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <h5>Account Information</h5>
-                            <hr>
-
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Member Since:</label>
-                                <p class="mb-1">{{ user.created_at|date:"F j, Y" }}</p>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Last Updated:</label>
-                                <p class="mb-1">{{ user.updated_at|date:"F j, Y \a\t g:i A" }}</p>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label text-muted">Status:</label>
-                                <p class="mb-1">
-                                    {% if user.is_active %}
-                                        <span class="badge bg-success">Active</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Inactive</span>
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <h5>Quick Actions</h5>
-                        <hr>
-                        <div class="d-flex flex-wrap gap-2">
-                            <a href="{% url 'users:profile_edit' %}" class="btn btn-primary">
-                                Edit Profile
-                            </a>
-                            <a href="{% url 'users:password_change' %}" class="btn btn-secondary">
-                                Change Password
-                            </a>
-                        </div>
-                    </div>
+                <div class="mb-3">
+                  <label class="form-label text-muted">Display Name:</label>
+                  <p class="mb-1">
+                    {% if user.display_name %}
+                      {{ user.display_name }}
+                    {% else %}
+                      <em class="text-muted">Not set (showing username as fallback)</em>
+                    {% endif %}
+                  </p>
                 </div>
+                <div class="mb-3">
+                  <label class="form-label text-muted">Email:</label>
+                  <p class="mb-1">{{ user.email }}</p>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label text-muted">Timezone:</label>
+                  <p class="mb-1">{{ user.timezone }}</p>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <h5>Account Information</h5>
+                <hr>
+                <div class="mb-3">
+                  <label class="form-label text-muted">Member Since:</label>
+                  <p class="mb-1">{{ user.created_at|date:"F j, Y" }}</p>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label text-muted">Last Updated:</label>
+                  <p class="mb-1">{{ user.updated_at|date:"F j, Y \a\t g:i A" }}</p>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label text-muted">Status:</label>
+                  <p class="mb-1">
+                    {% if user.is_active %}
+                      <span class="badge bg-success">Active</span>
+                    {% else %}
+                      <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
             </div>
+            <div class="mt-4">
+              <h5>Quick Actions</h5>
+              <hr>
+              <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'users:profile_edit' %}" class="btn btn-primary">Edit Profile</a>
+                <a href="{% url 'users:password_change' %}" class="btn btn-secondary">
+                  Change Password
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
-</div>
+  </div>
 {% endblock %}

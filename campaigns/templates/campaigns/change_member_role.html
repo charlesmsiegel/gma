@@ -1,17 +1,15 @@
 {% extends "base.html" %}
-
 {% block title %}Change Member Role - {{ campaign.name }}{% endblock %}
-
 {% block content %}
-<div class="container">
+  <div class="container">
     <h1>Change Member Role</h1>
     <h2>{{ campaign.name }}</h2>
-
     <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Change Role</button>
-        <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}" class="btn btn-secondary">Cancel</a>
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Change Role</button>
+      <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}"
+         class="btn btn-secondary">Cancel</a>
     </form>
-</div>
+  </div>
 {% endblock %}

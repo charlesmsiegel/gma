@@ -1,85 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Game Master Application{% endblock %}</title>
-
+    <title>
+      {% block title %}Game Master Application{% endblock %}
+    </title>
     {% load static %}
     <!-- Bootstrap 5 CSS - Load first for base styles -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUa6c3LpVn4JfAaYT8nrBP6rCUW2KZeQaOz0cWVFDEBPJwS7HbOI5CxjLtaN" crossorigin="anonymous">
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-9ndCyUa6c3LpVn4JfAaYT8nrBP6rCUW2KZeQaOz0cWVFDEBPJwS7HbOI5CxjLtaN"
+          crossorigin="anonymous">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <!-- Theme Variables CSS - Base theme variables -->
     <link rel="stylesheet" href="{% static 'css/themes/variables.css' %}">
-
     <!-- Dynamic Theme CSS - Load the user's selected theme -->
-    <link rel="stylesheet" href="{% static 'css/themes/'|add:user_theme|add:'.css' %}">
-
+    <link rel="stylesheet"
+          href="{% static 'css/themes/'|add:user_theme|add:'.css' %}">
     <!-- Base CSS - Our custom styles -->
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
-
     <!-- Theme Override CSS - Final overrides for Bootstrap with !important -->
     <link rel="stylesheet" href="{% static 'css/theme-overrides.css' %}">
     {% block extra_css %}{% endblock %}
-</head>
-<body data-theme="{{ user_theme }}">
+  </head>
+  <body data-theme="{{ user_theme }}">
     <header class="navbar navbar-expand-lg main-header">
-        <div class="container">
-            <nav class="d-flex justify-content-between align-items-center w-100 main-nav">
-                <h1 class="navbar-brand mb-0"><a href="{% url 'core:index' %}" class="text-decoration-none">Game Master Application</a></h1>
-                <ul class="navbar-nav d-flex flex-row nav-links">
-                    <li class="nav-item"><a href="{% url 'core:index' %}" class="nav-link">Home</a></li>
-                    {% if user.is_authenticated %}
-                        <li class="nav-item"><a href="{% url 'campaigns:list' %}" class="nav-link">Campaigns</a></li>
-                        <li class="nav-item"><a href="#" class="nav-link">Characters</a></li>
-                        <li class="nav-item"><a href="{% url 'users:profile' %}" class="nav-link">Profile</a></li>
-                        <li class="nav-item"><a href="{% url 'admin:index' %}" class="nav-link">Admin</a></li>
-                        <li class="nav-item"><a href="{% url 'users:logout' %}" class="nav-link">Logout</a></li>
-                    {% else %}
-                        <li class="nav-item"><a href="{% url 'users:login' %}" class="nav-link">Login</a></li>
-                        <li class="nav-item"><a href="{% url 'users:register' %}" class="nav-link">Register</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-    </header>
-
-    <main class="main-content">
-        <div class="container">
-            {% if messages %}
-                <div class="messages">
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show message" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                </div>
+      <div class="container">
+        <nav class="d-flex justify-content-between align-items-center w-100 main-nav">
+          <h1 class="navbar-brand mb-0">
+            <a href="{% url 'core:index' %}" class="text-decoration-none">Game Master Application</a>
+          </h1>
+          <ul class="navbar-nav d-flex flex-row nav-links">
+            <li class="nav-item">
+              <a href="{% url 'core:index' %}" class="nav-link">Home</a>
+            </li>
+            {% if user.is_authenticated %}
+              <li class="nav-item">
+                <a href="{% url 'campaigns:list' %}" class="nav-link">Campaigns</a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">Characters</a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'users:profile' %}" class="nav-link">Profile</a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'admin:index' %}" class="nav-link">Admin</a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'users:logout' %}" class="nav-link">Logout</a>
+              </li>
+            {% else %}
+              <li class="nav-item">
+                <a href="{% url 'users:login' %}" class="nav-link">Login</a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'users:register' %}" class="nav-link">Register</a>
+              </li>
             {% endif %}
-
-            {% block content %}{% endblock %}
-        </div>
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main class="main-content">
+      <div class="container">
+        {% if messages %}
+          <div class="messages">
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show message"
+                   role="alert">
+                {{ message }}
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"
+                        aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </div>
     </main>
-
     <footer class="main-footer">
-        <div class="container">
-            <p class="text-center mb-0">&copy; {% now "Y" %} Game Master Application. A World of Darkness campaign management system.</p>
-        </div>
+      <div class="container">
+        <p class="text-center mb-0">
+          &copy; {% now "Y" %} Game Master Application. A World of Darkness campaign management system.
+        </p>
+      </div>
     </footer>
-
     <!-- Bootstrap 5 JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+            crossorigin="anonymous"></script>
     <script src="{% static 'js/base.js' %}"></script>
-
     <!-- React Components (only load in development for now) -->
     {% if debug %}
-        <script src="http://localhost:3000/static/js/bundle.js"></script>
+      <script src="http://localhost:3000/static/js/bundle.js"></script>
     {% endif %}
-
     {% block extra_js %}{% endblock %}
-</body>
+  </body>
 </html>

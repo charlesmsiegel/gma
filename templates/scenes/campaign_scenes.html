@@ -1,72 +1,78 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}{{ page_title }}{% endblock %}
-
-{% block extra_css %}
-{% endblock %}
-
+{% block extra_css %}{% endblock %}
 {% block content %}
-<div class="container">
+  <div class="container">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">Scenes</li>
-        </ol>
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Scenes</li>
+      </ol>
     </nav>
-
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h2 mb-1">{{ campaign.name }} - Scenes</h1>
-            <p class="text-muted mb-0">Create and manage campaign scenes and story sessions.</p>
-        </div>
+      <div>
+        <h1 class="h2 mb-1">{{ campaign.name }} - Scenes</h1>
+        <p class="text-muted mb-0">Create and manage campaign scenes and story sessions.</p>
+      </div>
     </div>
-
     <!-- Coming Soon Card -->
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card text-center">
-                <div class="card-body p-5">
-                    <div class="mb-4">
-                        <h3 class="h4 text-primary">🎭 Scenes Area Coming Soon</h3>
-                        <p class="text-muted">This area will allow you to:</p>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-8 mx-auto">
-                            <ul class="list-unstyled text-start">
-                                {% if can_manage_scenes %}
-                                    <li class="mb-2"><i class="text-success">✓</i> Create new scenes and story sessions</li>
-                                    <li class="mb-2"><i class="text-success">✓</i> Manage scene participants and NPCs</li>
-                                    <li class="mb-2"><i class="text-success">✓</i> Run real-time scenes with chat and dice</li>
-                                    <li class="mb-2"><i class="text-success">✓</i> Archive completed scenes</li>
-                                {% else %}
-                                    <li class="mb-2"><i class="text-success">✓</i> View all campaign scenes</li>
-                                    <li class="mb-2"><i class="text-success">✓</i> Participate in active scenes</li>
-                                    <li class="mb-2"><i class="text-success">✓</i> Review scene history and logs</li>
-                                {% endif %}
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 d-flex gap-3 justify-content-center flex-wrap">
-                        {% if can_create_scene %}
-                            <button class="btn btn-primary" disabled title="Coming Soon">
-                                <i class="bi bi-plus-circle"></i> Create Scene
-                            </button>
-                        {% endif %}
-                        <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Back to Campaign
-                        </a>
-                    </div>
-                </div>
+      <div class="col-lg-8">
+        <div class="card text-center">
+          <div class="card-body p-5">
+            <div class="mb-4">
+              <h3 class="h4 text-primary">🎭 Scenes Area Coming Soon</h3>
+              <p class="text-muted">This area will allow you to:</p>
             </div>
+            <div class="row">
+              <div class="col-md-8 mx-auto">
+                <ul class="list-unstyled text-start">
+                  {% if can_manage_scenes %}
+                    <li class="mb-2">
+                      <i class="text-success">✓</i> Create new scenes and story sessions
+                    </li>
+                    <li class="mb-2">
+                      <i class="text-success">✓</i> Manage scene participants and NPCs
+                    </li>
+                    <li class="mb-2">
+                      <i class="text-success">✓</i> Run real-time scenes with chat and dice
+                    </li>
+                    <li class="mb-2">
+                      <i class="text-success">✓</i> Archive completed scenes
+                    </li>
+                  {% else %}
+                    <li class="mb-2">
+                      <i class="text-success">✓</i> View all campaign scenes
+                    </li>
+                    <li class="mb-2">
+                      <i class="text-success">✓</i> Participate in active scenes
+                    </li>
+                    <li class="mb-2">
+                      <i class="text-success">✓</i> Review scene history and logs
+                    </li>
+                  {% endif %}
+                </ul>
+              </div>
+            </div>
+            <div class="mt-4 d-flex gap-3 justify-content-center flex-wrap">
+              {% if can_create_scene %}
+                <button class="btn btn-primary" disabled title="Coming Soon">
+                  <i class="bi bi-plus-circle"></i> Create Scene
+                </button>
+              {% endif %}
+              <a href="{% url 'campaigns:detail' slug=campaign.slug %}"
+                 class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Campaign
+              </a>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
-</div>
-
+  </div>
 {% endblock %}

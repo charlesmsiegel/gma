@@ -1,27 +1,27 @@
 {% extends "base.html" %}
-
 {% block title %}Send Invitation - {{ campaign.name }}{% endblock %}
-
 {% block content %}
-<div class="container">
+  <div class="container">
     <h1>Send Invitation</h1>
     <h2>{{ campaign.name }}</h2>
-
     <div class="form-group">
-        <label for="user_search">User Search</label>
-        <input type="text" id="user_search" name="user_search" class="form-control" placeholder="Start typing to search users...">
-        <div id="search_results" class="list-group mt-2"></div>
+      <label for="user_search">User Search</label>
+      <input type="text"
+             id="user_search"
+             name="user_search"
+             class="form-control"
+             placeholder="Start typing to search users...">
+      <div id="search_results" class="list-group mt-2"></div>
     </div>
-
     <form method="post" id="invitation_form">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Send Invitation</button>
-        <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}" class="btn btn-secondary">Cancel</a>
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Send Invitation</button>
+      <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}"
+         class="btn btn-secondary">Cancel</a>
     </form>
-</div>
-
-<script>
+  </div>
+  <script>
 // User search functionality
 document.getElementById('user_search').addEventListener('input', function() {
     var query = this.value;
@@ -61,5 +61,5 @@ document.getElementById('user_search').addEventListener('input', function() {
             });
         });
 });
-</script>
+  </script>
 {% endblock %}

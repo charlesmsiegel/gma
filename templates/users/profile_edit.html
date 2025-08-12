@@ -1,94 +1,77 @@
 {% extends "base.html" %}
-
 {% block title %}Edit Profile - {{ block.super }}{% endblock %}
-
 {% block content %}
-<div class="container mt-5">
+  <div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="mb-0">Edit Profile</h4>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h4 class="mb-0">Edit Profile</h4>
+          </div>
+          <div class="card-body">
+            <form method="post">
+              {% csrf_token %}
+              {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+              {% endif %}
+              <div class="mb-3">
+                <label for="{{ form.display_name.id_for_label }}" class="form-label">
+                  {{ form.display_name.label }}
+                </label>
+                {{ form.display_name }}
+                {% if form.display_name.help_text %}
+                  <div class="form-text">{{ form.display_name.help_text }}</div>
+                {% endif %}
+                {% if form.display_name.errors %}
+                  <div class="text-danger">{{ form.display_name.errors }}</div>
+                {% endif %}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form.timezone.id_for_label }}" class="form-label">
+                  {{ form.timezone.label }}
+                </label>
+                {{ form.timezone }}
+                {% if form.timezone.help_text %}
+                  <div class="form-text">{{ form.timezone.help_text }}</div>
+                {% endif %}
+                <div class="form-text text-info">
+                  <small>
+                    <i class="bi bi-info-circle"></i>
+                    Note: If your current timezone isn't listed, it will be preserved as a custom option.
+                    The system supports all IANA timezone identifiers.
+                  </small>
                 </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
-                            </div>
-                        {% endif %}
-
-                        <div class="mb-3">
-                            <label for="{{ form.display_name.id_for_label }}" class="form-label">
-                                {{ form.display_name.label }}
-                            </label>
-                            {{ form.display_name }}
-                            {% if form.display_name.help_text %}
-                                <div class="form-text">{{ form.display_name.help_text }}</div>
-                            {% endif %}
-                            {% if form.display_name.errors %}
-                                <div class="text-danger">
-                                    {{ form.display_name.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.timezone.id_for_label }}" class="form-label">
-                                {{ form.timezone.label }}
-                            </label>
-                            {{ form.timezone }}
-                            {% if form.timezone.help_text %}
-                                <div class="form-text">{{ form.timezone.help_text }}</div>
-                            {% endif %}
-                            <div class="form-text text-info">
-                                <small>
-                                    <i class="bi bi-info-circle"></i>
-                                    Note: If your current timezone isn't listed, it will be preserved as a custom option.
-                                    The system supports all IANA timezone identifiers.
-                                </small>
-                            </div>
-                            {% if form.timezone.errors %}
-                                <div class="text-danger">
-                                    {{ form.timezone.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.theme.id_for_label }}" class="form-label">
-                                {{ form.theme.label }}
-                            </label>
-                            {{ form.theme }}
-                            {% if form.theme.help_text %}
-                                <div class="form-text">{{ form.theme.help_text }}</div>
-                            {% endif %}
-                            {% if form.theme.errors %}
-                                <div class="text-danger">
-                                    {{ form.theme.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Update Profile</button>
-                            <a href="{% url 'users:profile' %}" class="btn btn-secondary">Cancel</a>
-                        </div>
-                    </form>
-
-                    <hr>
-
-                    <div class="text-center">
-                        <small class="text-muted">
-                            <strong>Note:</strong> Your username and email cannot be changed here.
-                            Contact an administrator if you need to change these fields.
-                        </small>
-                    </div>
-                </div>
+                {% if form.timezone.errors %}
+                  <div class="text-danger">{{ form.timezone.errors }}</div>
+                {% endif %}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form.theme.id_for_label }}" class="form-label">
+                  {{ form.theme.label }}
+                </label>
+                {{ form.theme }}
+                {% if form.theme.help_text %}
+                  <div class="form-text">{{ form.theme.help_text }}</div>
+                {% endif %}
+                {% if form.theme.errors %}
+                  <div class="text-danger">{{ form.theme.errors }}</div>
+                {% endif %}
+              </div>
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">Update Profile</button>
+                <a href="{% url 'users:profile' %}" class="btn btn-secondary">Cancel</a>
+              </div>
+            </form>
+            <hr>
+            <div class="text-center">
+              <small class="text-muted">
+                <strong>Note:</strong> Your username and email cannot be changed here.
+                Contact an administrator if you need to change these fields.
+              </small>
             </div>
+          </div>
         </div>
+      </div>
     </div>
-</div>
+  </div>
 {% endblock %}

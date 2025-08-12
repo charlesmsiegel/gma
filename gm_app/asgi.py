@@ -21,7 +21,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gm_app.settings")
 django_asgi_app = get_asgi_application()
 
 # Import routing after Django setup
-from core import routing
+from core import routing  # noqa: E402
 
 application = ProtocolTypeRouter(
     {
