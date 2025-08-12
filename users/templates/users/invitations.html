@@ -1,38 +1,42 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% block title %}My Invitations{% endblock %}
-
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'users/css/invitations.css' %}">
+{% endblock %}
 {% block content %}
-<div class="container">
+  <div class="container">
     <h1>My Invitations</h1>
-
     <div class="invitations-list">
-        {% if invitations %}
-            {% for invitation in invitations %}
-                <div class="invitation-item">
-                    <h3>{{ invitation.campaign.name }}</h3>
-                    <p>Invited by: {{ invitation.invited_by.username }}</p>
-                    <p>Role: {{ invitation.role }}</p>
-                    <p>Status: {{ invitation.status }}</p>
-                    <p>Created: {{ invitation.created_at }}</p>
-
-                    {% if invitation.status == "PENDING" %}
-                        <div class="invitation-actions">
-                            <form method="post" action="{% url 'api:campaigns:accept_invitation' invitation.id %}" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success">Accept</button>
-                            </form>
-                            <form method="post" action="{% url 'api:campaigns:decline_invitation' invitation.id %}" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-danger">Decline</button>
-                            </form>
-                        </div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>No invitations found.</p>
-        {% endif %}
+      {% if invitations %}
+        {% for invitation in invitations %}
+          <div class="invitation-item">
+            <h3>{{ invitation.campaign.name }}</h3>
+            <p>Invited by: {{ invitation.invited_by.username }}</p>
+            <p>Role: {{ invitation.role }}</p>
+            <p>Status: {{ invitation.status }}</p>
+            <p>Created: {{ invitation.created_at }}</p>
+            {% if invitation.status == "PENDING" %}
+              <div class="invitation-actions">
+                <form method="post"
+                      action="{% url 'api:campaigns:accept_invitation' invitation.id %}"
+                      class="invitation-form">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-success">Accept</button>
+                </form>
+                <form method="post"
+                      action="{% url 'api:campaigns:decline_invitation' invitation.id %}"
+                      style="display: inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger">Decline</button>
+                </form>
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>No invitations found.</p>
+      {% endif %}
     </div>
-</div>
+  </div>
 {% endblock %}

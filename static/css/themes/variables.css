@@ -16,6 +16,17 @@
   --theme-light: #f8f9fa;
   --theme-dark: #212529;
 
+  /* RGB Values for rgba() usage */
+  --theme-primary-rgb: 13, 110, 253;
+  --theme-primary-dark-rgb: 11, 94, 215;
+  --theme-secondary-rgb: 108, 117, 125;
+  --theme-secondary-dark-rgb: 92, 99, 106;
+  --theme-success-rgb: 25, 135, 84;
+  --theme-info-rgb: 13, 202, 240;
+  --theme-warning-rgb: 255, 193, 7;
+  --theme-danger-rgb: 220, 53, 69;
+  --theme-dark-rgb: 33, 37, 41;
+
   /* Background Colors */
   --theme-bg-body: #ffffff;
   --theme-bg-surface: #f8f9fa;
@@ -25,6 +36,15 @@
   --theme-bg-sidebar: #f8f9fa;
   --theme-bg-hover: rgba(0, 0, 0, 0.04);
   --theme-bg-active: rgba(0, 0, 0, 0.08);
+
+  /* Hero section overlays */
+  --theme-hero-overlay-light: rgba(255, 255, 255, 0.2);
+  --theme-hero-overlay-medium: rgba(255, 255, 255, 0.15);
+  --theme-hero-border-light: rgba(255, 255, 255, 0.25);
+  --theme-hero-border-medium: rgba(255, 255, 255, 0.3);
+  --theme-hero-border-heavy: rgba(255, 255, 255, 0.5);
+  --theme-warning-overlay: rgba(255, 193, 7, 0.3);
+  --theme-warning-border: rgba(255, 193, 7, 0.5);
 
   /* Text Colors */
   --theme-text-primary: #212529;

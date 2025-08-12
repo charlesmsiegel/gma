@@ -1,0 +1,170 @@
+/* Email Template Styles - Inline-ready for email clients */
+
+/* Base email styles */
+.email-body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333333;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 20px;
+}
+
+.email-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.email-header {
+    background-color: #f8f9fa;
+    padding: 20px;
+    text-align: center;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.email-header h2 {
+    color: #495057;
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.email-content {
+    padding: 20px 0;
+}
+
+.email-content p {
+    color: #495057;
+    margin-bottom: 16px;
+    font-size: 16px;
+}
+
+.email-button {
+    display: inline-block;
+    padding: 12px 24px;
+    background-color: #007bff;
+    color: #ffffff !important;
+    text-decoration: none;
+    border-radius: 5px;
+    margin: 20px 0;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.email-button:hover {
+    background-color: #0056b3;
+    color: #ffffff !important;
+}
+
+.email-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 20px 0;
+    border-left: 4px solid #ffc107;
+}
+
+.email-warning strong {
+    color: #856404;
+}
+
+.email-warning ul {
+    margin: 10px 0 0 20px;
+    color: #856404;
+}
+
+.email-warning li {
+    margin-bottom: 5px;
+}
+
+.email-link-fallback {
+    word-break: break-all;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 3px;
+    border: 1px solid #dee2e6;
+    font-family: monospace;
+    font-size: 14px;
+    color: #495057;
+}
+
+.email-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #dee2e6;
+    font-size: 14px;
+    color: #6c757d;
+    text-align: center;
+}
+
+.email-footer hr {
+    border: none;
+    border-top: 1px solid #dee2e6;
+    margin: 15px 0;
+}
+
+.email-footer small {
+    font-size: 12px;
+    color: #868e96;
+}
+
+/* Dark mode support for email clients that support it */
+@media (prefers-color-scheme: dark) {
+    .email-body {
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+    }
+
+    .email-container {
+        background-color: #2d2d2d;
+        color: #e0e0e0;
+    }
+
+    .email-header {
+        background-color: #3a3a3a;
+    }
+
+    .email-header h2 {
+        color: #e0e0e0;
+    }
+
+    .email-content p {
+        color: #e0e0e0;
+    }
+
+    .email-warning {
+        background-color: #3d3516;
+        border-color: #5a4a00;
+    }
+
+    .email-warning strong,
+    .email-warning ul,
+    .email-warning li {
+        color: #f4c430;
+    }
+
+    .email-link-fallback {
+        background-color: #3a3a3a;
+        border-color: #555555;
+        color: #e0e0e0;
+    }
+
+    .email-footer {
+        border-top-color: #555555;
+        color: #b0b0b0;
+    }
+
+    .email-footer hr {
+        border-top-color: #555555;
+    }
+
+    .email-footer small {
+        color: #888888;
+    }
+}

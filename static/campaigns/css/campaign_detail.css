@@ -30,13 +30,13 @@
 }
 
 .visibility-public {
-    background-color: rgba(25, 135, 84, 0.1);
+    background-color: rgba(var(--theme-success-rgb), 0.1);
     color: var(--theme-success);
     border: 1px solid var(--theme-success);
 }
 
 .visibility-private {
-    background-color: rgba(108, 117, 125, 0.1);
+    background-color: rgba(var(--theme-secondary-rgb), 0.1);
     color: var(--theme-secondary);
     border: 1px solid var(--theme-secondary);
 }
@@ -67,13 +67,13 @@
 }
 
 .status-active {
-    background-color: rgba(25, 135, 84, 0.1);
+    background-color: rgba(var(--theme-success-rgb), 0.1);
     color: var(--theme-success);
     border: 1px solid var(--theme-success);
 }
 
 .status-inactive {
-    background-color: rgba(255, 193, 7, 0.1);
+    background-color: rgba(var(--theme-warning-rgb), 0.1);
     color: var(--theme-warning);
     border: 1px solid var(--theme-warning);
 }
@@ -299,8 +299,8 @@
 }
 
 .member-controls .btn-danger:hover {
-    background-color: rgba(220, 53, 69, 0.8);
-    border-color: rgba(220, 53, 69, 0.8);
+    background-color: rgba(var(--theme-danger-rgb), 0.8);
+    border-color: rgba(var(--theme-danger-rgb), 0.8);
 }
 
 .action-buttons {
