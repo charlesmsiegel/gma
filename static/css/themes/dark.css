@@ -21,8 +21,8 @@
   --theme-bg-modal: #21262d;
   --theme-bg-navbar: #161b22;
   --theme-bg-sidebar: #0d1117;
-  --theme-bg-hover: rgba(177, 186, 196, 0.08);
-  --theme-bg-active: rgba(177, 186, 196, 0.16);
+  --theme-bg-hover: rgb(177 186 196  / 8%);
+  --theme-bg-active: rgb(177 186 196  / 16%);
 
   /* Text Colors */
   --theme-text-primary: #f0f6fc;
@@ -42,7 +42,7 @@
   --theme-input-bg: #0d1117;
   --theme-input-border: #30363d;
   --theme-input-focus-border: var(--theme-primary);
-  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(88, 166, 255, 0.25);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgb(88 166 255  / 25%);
   --theme-input-placeholder: #8b949e;
 
   /* Navigation */
@@ -52,15 +52,15 @@
 
   /* Tables */
   --theme-table-bg: transparent;
-  --theme-table-striped-bg: rgba(177, 186, 196, 0.05);
-  --theme-table-hover-bg: rgba(177, 186, 196, 0.075);
+  --theme-table-striped-bg: rgb(177 186 196  / 5%);
+  --theme-table-hover-bg: rgb(177 186 196  / 7%);
   --theme-table-border-color: var(--theme-border-color);
 
   /* Shadows */
-  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
-  --theme-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.4);
-  --theme-shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.5);
-  --theme-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgb(0 0 0  / 30%);
+  --theme-shadow: 0 0.5rem 1rem rgb(0 0 0  / 40%);
+  --theme-shadow-lg: 0 1rem 3rem rgb(0 0 0  / 50%);
+  --theme-shadow-inset: inset 0 1px 2px rgb(0 0 0  / 30%);
 }
 
 /* Dark theme specific enhancements */
@@ -165,7 +165,7 @@
 [data-theme="dark"] .campaign-card {
   background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
   border: 1px solid #30363d;
-  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0.25rem 0.5rem rgb(0 0 0  / 40%);
 }
 
 [data-theme="dark"] .character-sheet {
@@ -182,7 +182,7 @@
 [data-theme="dark"] .dice-roller {
   background: linear-gradient(45deg, #21262d, #161b22);
   border: 2px solid var(--theme-border-color);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 2px rgb(0 0 0  / 40%);
 }
 
 /* Scrollbar styling for dark theme */

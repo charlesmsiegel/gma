@@ -7,7 +7,7 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   background-color: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgb(0 0 0  / 10%);
 }
 
 .auth-form-header {
@@ -65,13 +65,13 @@
 .form-group select:focus {
   outline: none;
   border-color: #4a90e2;
-  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+  box-shadow: 0 0 0 2px rgb(74 144 226  / 20%);
 }
 
 .form-group input.error,
 .form-group select.error {
   border-color: #e74c3c;
-  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+  box-shadow: 0 0 0 2px rgb(231 76 60  / 20%);
 }
 
 .form-group input:disabled,

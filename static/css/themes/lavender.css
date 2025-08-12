@@ -21,8 +21,8 @@
   --theme-bg-modal: #ffffff;
   --theme-bg-navbar: #7c4dff;
   --theme-bg-sidebar: #f3e5f5;
-  --theme-bg-hover: rgba(124, 77, 255, 0.08);
-  --theme-bg-active: rgba(124, 77, 255, 0.16);
+  --theme-bg-hover: rgb(124 77 255  / 8%);
+  --theme-bg-active: rgb(124 77 255  / 16%);
 
   /* Text Colors */
   --theme-text-primary: #4a148c;
@@ -42,7 +42,7 @@
   --theme-input-bg: #ffffff;
   --theme-input-border: #e1bee7;
   --theme-input-focus-border: var(--theme-primary);
-  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(124, 77, 255, 0.25);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgb(124 77 255  / 25%);
   --theme-input-placeholder: #8e24aa;
 
   /* Navigation */
@@ -52,33 +52,33 @@
 
   /* Tables */
   --theme-table-bg: transparent;
-  --theme-table-striped-bg: rgba(206, 147, 216, 0.1);
-  --theme-table-hover-bg: rgba(206, 147, 216, 0.15);
+  --theme-table-striped-bg: rgb(206 147 216  / 10%);
+  --theme-table-hover-bg: rgb(206 147 216  / 15%);
   --theme-table-border-color: var(--theme-border-color);
 
   /* Shadows */
-  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(124, 77, 255, 0.15);
-  --theme-shadow: 0 0.5rem 1rem rgba(124, 77, 255, 0.25);
-  --theme-shadow-lg: 0 1rem 3rem rgba(124, 77, 255, 0.3);
-  --theme-shadow-inset: inset 0 1px 2px rgba(124, 77, 255, 0.15);
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgb(124 77 255  / 15%);
+  --theme-shadow: 0 0.5rem 1rem rgb(124 77 255  / 25%);
+  --theme-shadow-lg: 0 1rem 3rem rgb(124 77 255  / 30%);
+  --theme-shadow-inset: inset 0 1px 2px rgb(124 77 255  / 15%);
 }
 
 /* Lavender theme specific enhancements */
 [data-theme="lavender"] .navbar {
   background: linear-gradient(135deg, #7c4dff 0%, #9c27b0 100%);
-  box-shadow: 0 2px 10px rgba(124, 77, 255, 0.3);
+  box-shadow: 0 2px 10px rgb(124 77 255  / 30%);
 }
 
 [data-theme="lavender"] .navbar-brand {
   color: #ffffff !important;
   font-weight: 600;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 3px rgb(0 0 0  / 30%);
 }
 
 [data-theme="lavender"] .card {
   background: linear-gradient(135deg, #ffffff 0%, #fce4ec 100%);
   border: 1px solid var(--theme-border-color);
-  box-shadow: 0 0.25rem 1rem rgba(156, 39, 176, 0.15);
+  box-shadow: 0 0.25rem 1rem rgb(156 39 176  / 15%);
   border-radius: 16px;
   position: relative;
 }
@@ -104,21 +104,21 @@
 [data-theme="lavender"] .btn-primary {
   background: linear-gradient(135deg, #7c4dff 0%, #9c27b0 100%);
   border-color: var(--theme-primary);
-  box-shadow: 0 4px 12px rgba(124, 77, 255, 0.4);
+  box-shadow: 0 4px 12px rgb(124 77 255  / 40%);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 [data-theme="lavender"] .btn-primary:hover {
   background: linear-gradient(135deg, #651fff 0%, #7b1fa2 100%);
   transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(124, 77, 255, 0.5);
+  box-shadow: 0 8px 20px rgb(124 77 255  / 50%);
 }
 
 [data-theme="lavender"] .btn-secondary {
   background: linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%);
   border-color: var(--theme-secondary);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(142, 36, 170, 0.4);
+  box-shadow: 0 4px 12px rgb(142 36 170  / 40%);
 }
 
 [data-theme="lavender"] .alert-primary {
@@ -134,7 +134,7 @@
 
 [data-theme="lavender"] .form-control:focus {
   border-color: var(--theme-primary);
-  box-shadow: 0 0 0 0.2rem rgba(124, 77, 255, 0.25);
+  box-shadow: 0 0 0 0.2rem rgb(124 77 255  / 25%);
   background-color: #fafafa;
   transform: scale(1.02);
 }
@@ -142,7 +142,7 @@
 [data-theme="lavender"] .dropdown-menu {
   background: linear-gradient(135deg, #ffffff 0%, #fce4ec 100%);
   border: 1px solid var(--theme-border-color);
-  box-shadow: 0 1rem 2rem rgba(156, 39, 176, 0.2);
+  box-shadow: 0 1rem 2rem rgb(156 39 176  / 20%);
   border-radius: 12px;
 }
 
@@ -168,13 +168,13 @@
 [data-theme="lavender"] .progress {
   background-color: #f3e5f5;
   border-radius: 20px;
-  box-shadow: inset 0 2px 4px rgba(124, 77, 255, 0.1);
+  box-shadow: inset 0 2px 4px rgb(124 77 255  / 10%);
 }
 
 [data-theme="lavender"] .progress-bar {
   background: linear-gradient(90deg, #7c4dff 0%, #9c27b0 50%, #e91e63 100%);
   border-radius: 20px;
-  box-shadow: 0 2px 8px rgba(124, 77, 255, 0.3);
+  box-shadow: 0 2px 8px rgb(124 77 255  / 30%);
   animation: lavender-shimmer 2s ease-in-out infinite;
 }
 
@@ -186,7 +186,7 @@
 [data-theme="lavender"] .badge.bg-primary {
   background: linear-gradient(135deg, #7c4dff 0%, #9c27b0 100%) !important;
   border-radius: 20px;
-  box-shadow: 0 2px 8px rgba(124, 77, 255, 0.3);
+  box-shadow: 0 2px 8px rgb(124 77 255  / 30%);
 }
 
 /* Romantic floating effects */
@@ -203,7 +203,7 @@
   width: 0;
   height: 0;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
+  background: radial-gradient(circle, rgb(255 255 255  / 40%) 0%, transparent 70%);
   transform: translate(-50%, -50%);
   transition: all 0.4s ease;
 }
@@ -217,7 +217,7 @@
 [data-theme="lavender"] .campaign-card {
   background: linear-gradient(135deg, #ffffff 0%, #fce4ec 50%, #f3e5f5 100%);
   border: 2px solid #e1bee7;
-  box-shadow: 0 1rem 2rem rgba(156, 39, 176, 0.2);
+  box-shadow: 0 1rem 2rem rgb(156 39 176  / 20%);
   border-radius: 20px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -240,21 +240,21 @@
 
 [data-theme="lavender"] .campaign-card:hover {
   transform: translateY(-5px) rotate(1deg);
-  box-shadow: 0 2rem 3rem rgba(156, 39, 176, 0.3);
+  box-shadow: 0 2rem 3rem rgb(156 39 176  / 30%);
 }
 
 [data-theme="lavender"] .character-sheet {
   background: linear-gradient(135deg, #ffffff 0%, #fce4ec 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 20px;
-  box-shadow: 0 1rem 2rem rgba(124, 77, 255, 0.15);
+  box-shadow: 0 1rem 2rem rgb(124 77 255  / 15%);
 }
 
 [data-theme="lavender"] .scene-chat {
   background: linear-gradient(180deg, #fce4ec 0%, #f3e5f5 100%);
   border: 1px solid var(--theme-border-color);
   border-radius: 16px;
-  box-shadow: inset 0 2px 4px rgba(124, 77, 255, 0.1);
+  box-shadow: inset 0 2px 4px rgb(124 77 255  / 10%);
 }
 
 [data-theme="lavender"] .dice-roller {
@@ -262,7 +262,7 @@
   background-size: 400% 400%;
   border: 3px solid var(--theme-primary);
   border-radius: 50%;
-  box-shadow: 0 0.5rem 2rem rgba(124, 77, 255, 0.4);
+  box-shadow: 0 0.5rem 2rem rgb(124 77 255  / 40%);
   animation: lavender-gradient 3s ease infinite;
   position: relative;
 }
@@ -291,16 +291,16 @@
   background: linear-gradient(135deg, #ffffff 0%, #fce4ec 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 20px;
-  box-shadow: 0 2rem 4rem rgba(124, 77, 255, 0.3);
+  box-shadow: 0 2rem 4rem rgb(124 77 255  / 30%);
 }
 
 [data-theme="lavender"] .table-striped > tbody > tr:nth-of-type(odd) > td {
-  background: linear-gradient(135deg, rgba(206, 147, 216, 0.1), rgba(243, 229, 245, 0.1));
+  background: linear-gradient(135deg, rgb(206 147 216  / 10%), rgb(243 229 245  / 10%));
 }
 
 /* Soft animations */
 [data-theme="lavender"] .card:hover {
-  box-shadow: 0 1rem 2rem rgba(156, 39, 176, 0.25);
+  box-shadow: 0 1rem 2rem rgb(156 39 176  / 25%);
   transform: translateY(-2px);
 }
 
@@ -320,9 +320,9 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 20% 20%, rgba(124, 77, 255, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 80% 80%, rgba(156, 39, 176, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 40% 60%, rgba(233, 30, 99, 0.1) 0%, transparent 50%);
+  background: radial-gradient(circle at 20% 20%, rgb(124 77 255  / 10%) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgb(156 39 176  / 10%) 0%, transparent 50%),
+              radial-gradient(circle at 40% 60%, rgb(233 30 99  / 10%) 0%, transparent 50%);
   pointer-events: none;
   z-index: -1;
 }

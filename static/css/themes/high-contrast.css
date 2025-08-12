@@ -42,7 +42,7 @@
   --theme-input-bg: #ffffff;
   --theme-input-border: #000000;
   --theme-input-focus-border: #0066cc;
-  --theme-input-focus-shadow: 0 0 0 3px rgba(0, 102, 204, 0.5);
+  --theme-input-focus-shadow: 0 0 0 3px rgb(0 102 204  / 50%);
   --theme-input-placeholder: #666666;
 
   /* Navigation - Strong contrast */
@@ -175,7 +175,7 @@
   background-color: #ffffff;
   border-color: #0066cc;
   color: #000000;
-  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.5);
+  box-shadow: 0 0 0 3px rgb(0 102 204  / 50%);
 }
 
 [data-theme="high-contrast"] .form-control::placeholder {

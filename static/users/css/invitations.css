@@ -66,8 +66,8 @@
 }
 
 .invitation-actions .btn-success:hover {
-    background-color: rgba(var(--theme-success-rgb), 0.8);
-    border-color: rgba(var(--theme-success-rgb), 0.8);
+    background-color: rgb(var(--theme-success-rgb)  / 80%);
+    border-color: rgb(var(--theme-success-rgb)  / 80%);
     color: var(--theme-text-white);
 }
 
@@ -78,8 +78,8 @@
 }
 
 .invitation-actions .btn-danger:hover {
-    background-color: rgba(var(--theme-danger-rgb), 0.8);
-    border-color: rgba(var(--theme-danger-rgb), 0.8);
+    background-color: rgb(var(--theme-danger-rgb)  / 80%);
+    border-color: rgb(var(--theme-danger-rgb)  / 80%);
     color: var(--theme-text-white);
 }
 

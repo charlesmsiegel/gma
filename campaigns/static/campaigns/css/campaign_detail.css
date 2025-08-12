@@ -211,8 +211,8 @@
     /* Border and shadow */
     --border-color: #dee2e6;
     --border-color-light: #eee;
-    --shadow-color: rgba(0, 0, 0, 0.1);
-    --shadow-hover: rgba(0, 0, 0, 0.15);
+    --shadow-color: rgb(0 0 0  / 10%);
+    --shadow-hover: rgb(0 0 0  / 15%);
 
     /* Layout */
     --border-radius: 8px;
@@ -319,7 +319,7 @@
 
 .management-card .btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 2px 8px rgb(52 152 219  / 30%);
 }
 
 .management-card .btn:focus {
@@ -386,8 +386,8 @@
         --background-hover: #2a2d2e;
         --border-color: #3a3b3c;
         --border-color-light: #3a3b3c;
-        --shadow-color: rgba(0, 0, 0, 0.3);
-        --shadow-hover: rgba(0, 0, 0, 0.4);
+        --shadow-color: rgb(0 0 0  / 30%);
+        --shadow-hover: rgb(0 0 0  / 40%);
     }
 
     .management-card:hover {
@@ -434,7 +434,7 @@
 .management-card .btn:focus-visible {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+    box-shadow: 0 0 0 4px rgb(52 152 219  / 20%);
 }
 
 /* Print Styles */

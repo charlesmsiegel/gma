@@ -25,7 +25,7 @@
 .form-control:focus {
     outline: none;
     border-color: var(--theme-primary);
-    box-shadow: 0 0 0 2px rgba(var(--theme-primary-rgb), 0.2);
+    box-shadow: 0 0 0 2px rgb(var(--theme-primary-rgb)  / 20%);
 }
 
 .form-help {

@@ -21,8 +21,8 @@
   --theme-bg-modal: #ffffff;
   --theme-bg-navbar: #2d5016;
   --theme-bg-sidebar: #e8f5e8;
-  --theme-bg-hover: rgba(45, 80, 22, 0.08);
-  --theme-bg-active: rgba(45, 80, 22, 0.16);
+  --theme-bg-hover: rgb(45 80 22  / 8%);
+  --theme-bg-active: rgb(45 80 22  / 16%);
 
   /* Text Colors */
   --theme-text-primary: #1b5e20;
@@ -42,7 +42,7 @@
   --theme-input-bg: #ffffff;
   --theme-input-border: #c8e6c9;
   --theme-input-focus-border: var(--theme-primary);
-  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(45, 80, 22, 0.25);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgb(45 80 22  / 25%);
   --theme-input-placeholder: #795548;
 
   /* Navigation */
@@ -52,21 +52,21 @@
 
   /* Tables */
   --theme-table-bg: transparent;
-  --theme-table-striped-bg: rgba(139, 195, 74, 0.1);
-  --theme-table-hover-bg: rgba(139, 195, 74, 0.15);
+  --theme-table-striped-bg: rgb(139 195 74  / 10%);
+  --theme-table-hover-bg: rgb(139 195 74  / 15%);
   --theme-table-border-color: var(--theme-border-color);
 
   /* Shadows */
-  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(27, 94, 32, 0.2);
-  --theme-shadow: 0 0.5rem 1rem rgba(27, 94, 32, 0.3);
-  --theme-shadow-lg: 0 1rem 3rem rgba(27, 94, 32, 0.35);
-  --theme-shadow-inset: inset 0 1px 2px rgba(27, 94, 32, 0.2);
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgb(27 94 32  / 20%);
+  --theme-shadow: 0 0.5rem 1rem rgb(27 94 32  / 30%);
+  --theme-shadow-lg: 0 1rem 3rem rgb(27 94 32  / 35%);
+  --theme-shadow-inset: inset 0 1px 2px rgb(27 94 32  / 20%);
 }
 
 /* Forest theme specific enhancements */
 [data-theme="forest"] .navbar {
   background: linear-gradient(135deg, #2d5016 0%, #1b5e20 100%);
-  box-shadow: 0 2px 4px rgba(27, 94, 32, 0.3);
+  box-shadow: 0 2px 4px rgb(27 94 32  / 30%);
 }
 
 [data-theme="forest"] .navbar-brand {
@@ -77,7 +77,7 @@
 [data-theme="forest"] .card {
   background: linear-gradient(135deg, #ffffff 0%, #f9fbe7 100%);
   border: 1px solid var(--theme-border-color);
-  box-shadow: 0 0.25rem 0.5rem rgba(76, 175, 80, 0.15);
+  box-shadow: 0 0.25rem 0.5rem rgb(76 175 80  / 15%);
 }
 
 [data-theme="forest"] .card-header {
@@ -90,13 +90,13 @@
 [data-theme="forest"] .btn-primary {
   background: linear-gradient(135deg, #2d5016 0%, #388e3c 100%);
   border-color: var(--theme-primary);
-  box-shadow: 0 2px 4px rgba(45, 80, 22, 0.2);
+  box-shadow: 0 2px 4px rgb(45 80 22  / 20%);
 }
 
 [data-theme="forest"] .btn-primary:hover {
   background: linear-gradient(135deg, #1e3409 0%, #2e7d32 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(45, 80, 22, 0.3);
+  box-shadow: 0 4px 8px rgb(45 80 22  / 30%);
 }
 
 [data-theme="forest"] .btn-secondary {
@@ -113,14 +113,14 @@
 
 [data-theme="forest"] .form-control:focus {
   border-color: var(--theme-primary);
-  box-shadow: 0 0 0 0.2rem rgba(45, 80, 22, 0.25);
+  box-shadow: 0 0 0 0.2rem rgb(45 80 22  / 25%);
   background-color: #f9fbe7;
 }
 
 [data-theme="forest"] .dropdown-menu {
   background-color: #ffffff;
   border: 1px solid var(--theme-border-color);
-  box-shadow: 0 0.5rem 1rem rgba(76, 175, 80, 0.2);
+  box-shadow: 0 0.5rem 1rem rgb(76 175 80  / 20%);
 }
 
 [data-theme="forest"] .list-group-item:hover {
@@ -139,13 +139,13 @@
 [data-theme="forest"] .campaign-card {
   background: linear-gradient(135deg, #ffffff 0%, #f1f8e9 100%);
   border: 2px solid #c8e6c9;
-  box-shadow: 0 0.5rem 1rem rgba(76, 175, 80, 0.2);
+  box-shadow: 0 0.5rem 1rem rgb(76 175 80  / 20%);
   transition: all 0.3s ease;
 }
 
 [data-theme="forest"] .campaign-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0.75rem 1.5rem rgba(76, 175, 80, 0.3);
+  box-shadow: 0 0.75rem 1.5rem rgb(76 175 80  / 30%);
 }
 
 [data-theme="forest"] .character-sheet {
@@ -164,12 +164,12 @@
   background: linear-gradient(45deg, #e8f5e8, #dcedc8);
   border: 3px solid #81c784;
   border-radius: 12px;
-  box-shadow: inset 0 2px 4px rgba(76, 175, 80, 0.1);
+  box-shadow: inset 0 2px 4px rgb(76 175 80  / 10%);
 }
 
 /* Nature-inspired accents */
 [data-theme="forest"] .btn:not(.btn-outline-primary):not(.btn-outline-secondary) {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0  / 10%);
   transition: all 0.2s ease;
 }
 
@@ -184,5 +184,5 @@
 }
 
 [data-theme="forest"] .table-striped > tbody > tr:nth-of-type(odd) > td {
-  background-color: rgba(200, 230, 201, 0.1);
+  background-color: rgb(200 230 201  / 10%);
 }

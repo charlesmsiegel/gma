@@ -21,8 +21,8 @@
   --theme-bg-modal: #ffffff;
   --theme-bg-navbar: #ffffff;
   --theme-bg-sidebar: #f8f9fa;
-  --theme-bg-hover: rgba(0, 0, 0, 0.04);
-  --theme-bg-active: rgba(0, 0, 0, 0.08);
+  --theme-bg-hover: rgb(0 0 0  / 4%);
+  --theme-bg-active: rgb(0 0 0  / 8%);
 
   /* Text Colors */
   --theme-text-primary: #212529;
@@ -42,7 +42,7 @@
   --theme-input-bg: #ffffff;
   --theme-input-border: #ced4da;
   --theme-input-focus-border: var(--theme-primary);
-  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgb(13 110 253  / 25%);
   --theme-input-placeholder: #6c757d;
 
   /* Navigation */
@@ -52,15 +52,15 @@
 
   /* Tables */
   --theme-table-bg: transparent;
-  --theme-table-striped-bg: rgba(0, 0, 0, 0.05);
-  --theme-table-hover-bg: rgba(0, 0, 0, 0.075);
+  --theme-table-striped-bg: rgb(0 0 0  / 5%);
+  --theme-table-hover-bg: rgb(0 0 0  / 7%);
   --theme-table-border-color: var(--theme-border-color);
 
   /* Shadows */
-  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  --theme-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-  --theme-shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
-  --theme-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.075);
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgb(0 0 0  / 7%);
+  --theme-shadow: 0 0.5rem 1rem rgb(0 0 0  / 15%);
+  --theme-shadow-lg: 0 1rem 3rem rgb(0 0 0  / 17%);
+  --theme-shadow-inset: inset 0 1px 2px rgb(0 0 0  / 7%);
 }
 
 /* Light theme specific enhancements */
@@ -89,15 +89,15 @@
 }
 
 [data-theme="light"] .dropdown-menu {
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid rgb(0 0 0  / 15%);
 }
 
 [data-theme="light"] .modal-content {
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0.5rem 1rem rgb(0 0 0  / 15%);
 }
 
 [data-theme="light"] .toast {
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: rgb(255 255 255  / 95%);
   border: 1px solid var(--theme-border-light);
 }
 
@@ -113,7 +113,7 @@
 
 [data-theme="light"] .character-sheet {
   background-color: #ffffff;
-  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0.25rem 0.5rem rgb(0 0 0  / 10%);
 }
 
 [data-theme="light"] .scene-chat {

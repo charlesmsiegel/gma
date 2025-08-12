@@ -21,8 +21,8 @@
   --theme-bg-modal: #1e1e1e;
   --theme-bg-navbar: #000000;
   --theme-bg-sidebar: #121212;
-  --theme-bg-hover: rgba(156, 39, 176, 0.12);
-  --theme-bg-active: rgba(156, 39, 176, 0.24);
+  --theme-bg-hover: rgb(156 39 176  / 12%);
+  --theme-bg-active: rgb(156 39 176  / 24%);
 
   /* Text Colors */
   --theme-text-primary: #ffffff;
@@ -42,7 +42,7 @@
   --theme-input-bg: #1e1e1e;
   --theme-input-border: #333333;
   --theme-input-focus-border: var(--theme-primary);
-  --theme-input-focus-shadow: 0 0 0 0.2rem rgba(156, 39, 176, 0.25);
+  --theme-input-focus-shadow: 0 0 0 0.2rem rgb(156 39 176  / 25%);
   --theme-input-placeholder: #78909c;
 
   /* Navigation */
@@ -52,34 +52,34 @@
 
   /* Tables */
   --theme-table-bg: transparent;
-  --theme-table-striped-bg: rgba(156, 39, 176, 0.1);
-  --theme-table-hover-bg: rgba(156, 39, 176, 0.15);
+  --theme-table-striped-bg: rgb(156 39 176  / 10%);
+  --theme-table-hover-bg: rgb(156 39 176  / 15%);
   --theme-table-border-color: var(--theme-border-color);
 
   /* Shadows */
-  --theme-shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.7);
-  --theme-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.8);
-  --theme-shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.9);
-  --theme-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+  --theme-shadow-sm: 0 0.125rem 0.25rem rgb(0 0 0  / 70%);
+  --theme-shadow: 0 0.5rem 1rem rgb(0 0 0  / 80%);
+  --theme-shadow-lg: 0 1rem 3rem rgb(0 0 0  / 90%);
+  --theme-shadow-inset: inset 0 1px 2px rgb(0 0 0  / 70%);
 }
 
 /* Midnight theme specific enhancements */
 [data-theme="midnight"] .navbar {
   background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
   border-bottom: 1px solid #333333;
-  box-shadow: 0 2px 10px rgba(156, 39, 176, 0.3);
+  box-shadow: 0 2px 10px rgb(156 39 176  / 30%);
 }
 
 [data-theme="midnight"] .navbar-brand {
   color: #ffffff !important;
   font-weight: 700;
-  text-shadow: 0 0 10px rgba(156, 39, 176, 0.8);
+  text-shadow: 0 0 10px rgb(156 39 176  / 80%);
 }
 
 [data-theme="midnight"] .card {
   background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
   border: 1px solid var(--theme-border-color);
-  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0  / 80%);
   border-radius: 12px;
   position: relative;
 }
@@ -105,7 +105,7 @@
 [data-theme="midnight"] .btn-primary {
   background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
   border-color: var(--theme-primary);
-  box-shadow: 0 4px 15px rgba(156, 39, 176, 0.4);
+  box-shadow: 0 4px 15px rgb(156 39 176  / 40%);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -118,7 +118,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255  / 30%), transparent);
   transition: left 0.5s;
 }
 
@@ -129,14 +129,14 @@
 [data-theme="midnight"] .btn-primary:hover {
   background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(156, 39, 176, 0.6);
+  box-shadow: 0 8px 25px rgb(156 39 176  / 60%);
 }
 
 [data-theme="midnight"] .btn-secondary {
   background: linear-gradient(135deg, #455a64 0%, #263238 100%);
   border-color: var(--theme-secondary);
   color: #ffffff;
-  box-shadow: 0 4px 15px rgba(69, 90, 100, 0.4);
+  box-shadow: 0 4px 15px rgb(69 90 100  / 40%);
 }
 
 [data-theme="midnight"] .alert-info {
@@ -149,20 +149,20 @@
   background-color: var(--theme-input-bg);
   border: 1px solid var(--theme-input-border);
   color: var(--theme-text-primary);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 2px 4px rgb(0 0 0  / 50%);
 }
 
 [data-theme="midnight"] .form-control:focus {
   background-color: #2a2a2a;
   border-color: var(--theme-primary);
-  box-shadow: 0 0 0 0.2rem rgba(156, 39, 176, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 0.2rem rgb(156 39 176  / 25%), inset 0 2px 4px rgb(0 0 0  / 50%);
   color: var(--theme-text-primary);
 }
 
 [data-theme="midnight"] .dropdown-menu {
   background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
   border: 1px solid var(--theme-border-color);
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.9);
+  box-shadow: 0 1rem 3rem rgb(0 0 0  / 90%);
   border-radius: 8px;
 }
 
@@ -172,7 +172,7 @@
 }
 
 [data-theme="midnight"] .dropdown-item:hover {
-  background: linear-gradient(135deg, rgba(156, 39, 176, 0.2) 0%, rgba(123, 31, 162, 0.2) 100%);
+  background: linear-gradient(135deg, rgb(156 39 176  / 20%) 0%, rgb(123 31 162  / 20%) 100%);
   color: var(--theme-primary-light);
 }
 
@@ -183,22 +183,22 @@
 }
 
 [data-theme="midnight"] .list-group-item:hover {
-  background: linear-gradient(135deg, rgba(156, 39, 176, 0.1) 0%, rgba(123, 31, 162, 0.1) 100%);
+  background: linear-gradient(135deg, rgb(156 39 176  / 10%) 0%, rgb(123 31 162  / 10%) 100%);
 }
 
 [data-theme="midnight"] .progress {
   background-color: #1e1e1e;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 2px 4px rgb(0 0 0  / 50%);
 }
 
 [data-theme="midnight"] .progress-bar {
   background: linear-gradient(90deg, #9c27b0 0%, #e1bee7 100%);
-  box-shadow: 0 2px 4px rgba(156, 39, 176, 0.5);
+  box-shadow: 0 2px 4px rgb(156 39 176  / 50%);
 }
 
 [data-theme="midnight"] .badge.bg-primary {
   background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%) !important;
-  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.5);
+  box-shadow: 0 2px 8px rgb(156 39 176  / 50%);
 }
 
 /* Neon glow effects */
@@ -207,18 +207,18 @@
 }
 
 [data-theme="midnight"] .btn-primary {
-  box-shadow: 0 0 20px rgba(156, 39, 176, 0.3);
+  box-shadow: 0 0 20px rgb(156 39 176  / 30%);
 }
 
 [data-theme="midnight"] .btn-primary:hover {
-  box-shadow: 0 0 30px rgba(156, 39, 176, 0.6);
+  box-shadow: 0 0 30px rgb(156 39 176  / 60%);
 }
 
 /* Campaign-specific styling for midnight theme */
 [data-theme="midnight"] .campaign-card {
   background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 50%, #1e1e1e 100%);
   border: 2px solid #333333;
-  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.8), 0 0 30px rgba(156, 39, 176, 0.2);
+  box-shadow: 0 1rem 2rem rgb(0 0 0  / 80%), 0 0 30px rgb(156 39 176  / 20%);
   border-radius: 16px;
   transition: all 0.4s ease;
   position: relative;
@@ -244,28 +244,28 @@
 
 [data-theme="midnight"] .campaign-card:hover {
   transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 2rem 4rem rgba(0, 0, 0, 0.9), 0 0 50px rgba(156, 39, 176, 0.4);
+  box-shadow: 0 2rem 4rem rgb(0 0 0  / 90%), 0 0 50px rgb(156 39 176  / 40%);
 }
 
 [data-theme="midnight"] .character-sheet {
   background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 16px;
-  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.8);
+  box-shadow: 0 1rem 2rem rgb(0 0 0  / 80%);
 }
 
 [data-theme="midnight"] .scene-chat {
   background: linear-gradient(180deg, #121212 0%, #1e1e1e 100%);
   border: 1px solid var(--theme-border-color);
   border-radius: 12px;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 2px 4px rgb(0 0 0  / 50%);
 }
 
 [data-theme="midnight"] .dice-roller {
   background: linear-gradient(45deg, #1e1e1e, #333333);
   border: 3px solid var(--theme-primary);
   border-radius: 50%;
-  box-shadow: 0 0 30px rgba(156, 39, 176, 0.6), inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 30px rgb(156 39 176  / 60%), inset 0 2px 4px rgb(0 0 0  / 50%);
   position: relative;
 }
 
@@ -291,11 +291,11 @@
   background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 16px;
-  box-shadow: 0 2rem 4rem rgba(0, 0, 0, 0.9);
+  box-shadow: 0 2rem 4rem rgb(0 0 0  / 90%);
 }
 
 [data-theme="midnight"] .table-striped > tbody > tr:nth-of-type(odd) > td {
-  background: linear-gradient(135deg, rgba(156, 39, 176, 0.1), rgba(123, 31, 162, 0.05));
+  background: linear-gradient(135deg, rgb(156 39 176  / 10%), rgb(123 31 162  / 5%));
 }
 
 /* Scrollbar styling for midnight theme */
@@ -312,7 +312,7 @@
 [data-theme="midnight"] ::-webkit-scrollbar-thumb {
   background: linear-gradient(135deg, var(--theme-primary), var(--theme-primary-dark));
   border-radius: 5px;
-  box-shadow: 0 0 10px rgba(156, 39, 176, 0.5);
+  box-shadow: 0 0 10px rgb(156 39 176  / 50%);
 }
 
 [data-theme="midnight"] ::-webkit-scrollbar-thumb:hover {

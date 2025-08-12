@@ -242,31 +242,31 @@ a:hover {
 }
 
 .alert-primary {
-    background-color: rgba(13, 110, 253, 0.1) !important;
+    background-color: rgb(13 110 253  / 10%) !important;
     color: var(--theme-primary) !important;
     border-color: var(--theme-primary) !important;
 }
 
 .alert-success {
-    background-color: rgba(25, 135, 84, 0.1) !important;
+    background-color: rgb(25 135 84  / 10%) !important;
     color: var(--theme-success) !important;
     border-color: var(--theme-success) !important;
 }
 
 .alert-danger {
-    background-color: rgba(220, 53, 69, 0.1) !important;
+    background-color: rgb(220 53 69  / 10%) !important;
     color: var(--theme-danger) !important;
     border-color: var(--theme-danger) !important;
 }
 
 .alert-warning {
-    background-color: rgba(255, 193, 7, 0.1) !important;
+    background-color: rgb(255 193 7  / 10%) !important;
     color: var(--theme-warning) !important;
     border-color: var(--theme-warning) !important;
 }
 
 .alert-info {
-    background-color: rgba(13, 202, 240, 0.1) !important;
+    background-color: rgb(13 202 240  / 10%) !important;
     color: var(--theme-info) !important;
     border-color: var(--theme-info) !important;
 }

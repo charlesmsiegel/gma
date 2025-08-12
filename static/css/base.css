@@ -95,25 +95,25 @@ body {
 }
 
 .message.success {
-    background-color: rgba(25, 135, 84, 0.1);
+    background-color: rgb(25 135 84  / 10%);
     color: var(--theme-success);
     border-left-color: var(--theme-success);
 }
 
 .message.error {
-    background-color: rgba(220, 53, 69, 0.1);
+    background-color: rgb(220 53 69  / 10%);
     color: var(--theme-danger);
     border-left-color: var(--theme-danger);
 }
 
 .message.warning {
-    background-color: rgba(255, 193, 7, 0.1);
+    background-color: rgb(255 193 7  / 10%);
     color: var(--theme-warning);
     border-left-color: var(--theme-warning);
 }
 
 .message.info {
-    background-color: rgba(13, 202, 240, 0.1);
+    background-color: rgb(13 202 240  / 10%);
     color: var(--theme-info);
     border-left-color: var(--theme-info);
 }
