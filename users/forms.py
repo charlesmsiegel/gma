@@ -163,7 +163,7 @@ class UserProfileForm(forms.ModelForm):
 
     theme = forms.ChoiceField(
         choices=User.THEME_CHOICES,
-        widget=forms.Select(attrs={"class": "form-select"}),
+        widget=forms.Select(attrs={"class": "form-control"}),
         help_text="Choose your preferred theme for the interface",
         required=False,
     )
