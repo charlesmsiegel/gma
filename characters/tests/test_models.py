@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
 from django.test import TestCase, TransactionTestCase
+from django.test.utils import skipIf
 from polymorphic.models import PolymorphicModel
 
 from campaigns.models import Campaign, CampaignMembership
@@ -2186,6 +2187,10 @@ class CharacterRaceConditionTest(TransactionTestCase):
             campaign=self.campaign, user=self.player1, role="PLAYER"
         )
 
+    @skipIf(
+        connection.vendor == 'sqlite',
+        "SQLite has limited concurrent transaction support, skipping race condition test"
+    )
     def test_concurrent_character_creation_with_atomic_validation(self):
         """Test atomic transactions prevent race conditions in creation."""
         import time
