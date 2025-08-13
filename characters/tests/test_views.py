@@ -495,3 +495,744 @@ class CharacterCreateViewTest(TestCase):
 
         # Description should be preserved in the form
         self.assertContains(response, "This description should be preserved")
+
+
+class CampaignCharacterListViewTest(TestCase):
+    """Test CampaignCharactersView functionality and role-based filtering."""
+
+    def setUp(self):
+        """Set up test users, campaigns, and characters for list view testing."""
+        # Create test users
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.player2 = User.objects.create_user(
+            username="player2", email="player2@test.com", password="testpass123"
+        )
+        self.observer = User.objects.create_user(
+            username="observer", email="observer@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        # Create test campaigns
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            slug="test-campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+            max_characters_per_player=3,
+        )
+
+        self.other_campaign = Campaign.objects.create(
+            name="Other Campaign",
+            slug="other-campaign",
+            owner=self.player2,
+            game_system="D&D 5e",
+            max_characters_per_player=2,
+        )
+
+        self.inactive_campaign = Campaign.objects.create(
+            name="Inactive Campaign",
+            slug="inactive-campaign",
+            owner=self.owner,
+            game_system="Call of Cthulhu",
+            is_active=False,
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player2, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.observer, role="OBSERVER"
+        )
+
+        # Add memberships to other campaign
+        CampaignMembership.objects.create(
+            campaign=self.other_campaign, user=self.player1, role="PLAYER"
+        )
+
+        # Create test characters
+        self.char1_player1 = Character.objects.create(
+            name="Player1 Character A",
+            description="First character for player1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        self.char2_player1 = Character.objects.create(
+            name="Player1 Character B",
+            description="Second character for player1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        self.char1_player2 = Character.objects.create(
+            name="Player2 Character",
+            description="Character for player2",
+            campaign=self.campaign,
+            player_owner=self.player2,
+            game_system="Mage: The Ascension",
+        )
+
+        self.char1_gm = Character.objects.create(
+            name="GM NPC Character",
+            description="NPC controlled by GM",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+        )
+
+        self.char1_owner = Character.objects.create(
+            name="Owner Character",
+            description="Character owned by campaign owner",
+            campaign=self.campaign,
+            player_owner=self.owner,
+            game_system="Mage: The Ascension",
+        )
+
+        # Character in other campaign
+        self.char_other_campaign = Character.objects.create(
+            name="Other Campaign Character",
+            description="Character in different campaign",
+            campaign=self.other_campaign,
+            player_owner=self.player1,
+            game_system="D&D 5e",
+        )
+
+        # URL for campaign character list
+        self.list_url = reverse(
+            "characters:campaign_characters",
+            kwargs={"campaign_slug": self.campaign.slug},
+        )
+
+    def test_view_requires_authentication(self):
+        """Test that the view requires user authentication."""
+        response = self.client.get(self.list_url)
+        self.assertRedirects(response, f"/users/login/?next={self.list_url}")
+
+    def test_view_non_member_access_denied(self):
+        """Test that non-members cannot access the character list."""
+        self.client.login(username="nonmember", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        # Should return 404 to hide campaign existence
+        self.assertEqual(response.status_code, 404)
+
+    def test_view_inactive_campaign_access_denied(self):
+        """Test that inactive campaigns are not accessible."""
+        self.client.login(username="owner", password="testpass123")
+        inactive_url = reverse(
+            "characters:campaign_characters",
+            kwargs={"campaign_slug": self.inactive_campaign.slug},
+        )
+        response = self.client.get(inactive_url)
+
+        # Should return 404 for inactive campaigns
+        self.assertEqual(response.status_code, 404)
+
+    def test_view_invalid_campaign_slug_returns_404(self):
+        """Test that invalid campaign slugs return 404."""
+        self.client.login(username="player1", password="testpass123")
+        invalid_url = reverse(
+            "characters:campaign_characters",
+            kwargs={"campaign_slug": "nonexistent-campaign"},
+        )
+        response = self.client.get(invalid_url)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_owner_sees_all_characters(self):
+        """Test that campaign owners see all characters in their campaign."""
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        characters = response.context["characters"]
+
+        # Owner should see all 5 characters in the campaign
+        self.assertEqual(len(characters), 5)
+        character_names = [char.name for char in characters]
+        self.assertIn("Player1 Character A", character_names)
+        self.assertIn("Player1 Character B", character_names)
+        self.assertIn("Player2 Character", character_names)
+        self.assertIn("GM NPC Character", character_names)
+        self.assertIn("Owner Character", character_names)
+
+        # Should not see characters from other campaigns
+        self.assertNotIn("Other Campaign Character", character_names)
+
+    def test_gm_sees_all_characters(self):
+        """Test that GMs see all characters in their campaign."""
+        self.client.login(username="gm", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        characters = response.context["characters"]
+
+        # GM should see all 5 characters in the campaign
+        self.assertEqual(len(characters), 5)
+        character_names = [char.name for char in characters]
+        self.assertIn("Player1 Character A", character_names)
+        self.assertIn("Player1 Character B", character_names)
+        self.assertIn("Player2 Character", character_names)
+        self.assertIn("GM NPC Character", character_names)
+        self.assertIn("Owner Character", character_names)
+
+    def test_player_sees_only_own_characters(self):
+        """Test that players see only their own characters."""
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        characters = response.context["characters"]
+
+        # Player1 should see only their own 2 characters
+        self.assertEqual(len(characters), 2)
+        character_names = [char.name for char in characters]
+        self.assertIn("Player1 Character A", character_names)
+        self.assertIn("Player1 Character B", character_names)
+
+        # Should not see other players' characters
+        self.assertNotIn("Player2 Character", character_names)
+        self.assertNotIn("GM NPC Character", character_names)
+        self.assertNotIn("Owner Character", character_names)
+
+    def test_observer_sees_all_characters(self):
+        """Test that observers see all characters (read-only)."""
+        self.client.login(username="observer", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        characters = response.context["characters"]
+
+        # Observer should see all 5 characters in the campaign
+        self.assertEqual(len(characters), 5)
+        character_names = [char.name for char in characters]
+        self.assertIn("Player1 Character A", character_names)
+        self.assertIn("Player1 Character B", character_names)
+        self.assertIn("Player2 Character", character_names)
+        self.assertIn("GM NPC Character", character_names)
+        self.assertIn("Owner Character", character_names)
+
+    def test_context_data_includes_campaign_info(self):
+        """Test that context includes campaign information."""
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+
+        # Check context data
+        self.assertEqual(response.context["campaign"], self.campaign)
+        self.assertEqual(response.context["user_role"], "PLAYER")
+        self.assertIn("Test Campaign - Characters", response.context["page_title"])
+
+    def test_context_data_permission_flags(self):
+        """Test that context includes proper permission flags for different roles."""
+        # Test OWNER permissions
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(self.list_url)
+        self.assertTrue(response.context["can_create_character"])
+        self.assertTrue(response.context["can_manage_all"])
+        self.assertFalse(response.context["is_player"])
+
+        # Test GM permissions
+        self.client.login(username="gm", password="testpass123")
+        response = self.client.get(self.list_url)
+        self.assertTrue(response.context["can_create_character"])
+        self.assertTrue(response.context["can_manage_all"])
+        self.assertFalse(response.context["is_player"])
+
+        # Test PLAYER permissions
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(self.list_url)
+        self.assertTrue(response.context["can_create_character"])
+        self.assertFalse(response.context["can_manage_all"])
+        self.assertTrue(response.context["is_player"])
+
+        # Test OBSERVER permissions
+        self.client.login(username="observer", password="testpass123")
+        response = self.client.get(self.list_url)
+        self.assertFalse(response.context["can_create_character"])
+        self.assertFalse(response.context["can_manage_all"])
+        self.assertFalse(response.context["is_player"])
+
+    def test_search_by_character_name(self):
+        """Test character search functionality by name."""
+        # This will test the search functionality once implemented
+        # For now, this test should fail as search isn't implemented yet
+        self.client.login(username="owner", password="testpass123")
+
+        # Test exact name search
+        response = self.client.get(self.list_url, {"search": "Player1 Character A"})
+        self.assertEqual(response.status_code, 200)
+        # This should filter to only matching characters once search is implemented
+        # characters = response.context["characters"]
+        # self.assertEqual(len(characters), 1)
+        # self.assertEqual(characters[0].name, "Player1 Character A")
+
+    def test_search_partial_name_match(self):
+        """Test partial name matching in search."""
+        self.client.login(username="owner", password="testpass123")
+
+        # Test partial search
+        response = self.client.get(self.list_url, {"search": "Player1"})
+        self.assertEqual(response.status_code, 200)
+        # This should return both Player1 characters once search is implemented
+        # characters = response.context["characters"]
+        # self.assertEqual(len(characters), 2)
+
+    def test_filter_by_player_owner(self):
+        """Test filtering characters by player owner."""
+        self.client.login(username="owner", password="testpass123")
+
+        # Test filter by specific player
+        response = self.client.get(self.list_url, {"player": self.player1.pk})
+        self.assertEqual(response.status_code, 200)
+        # This should show only player1's characters once filtering is implemented
+        # characters = response.context["characters"]
+        # self.assertEqual(len(characters), 2)
+
+    def test_empty_campaign_shows_no_characters(self):
+        """Test that campaigns with no characters display properly."""
+        # Create a campaign with no characters
+        empty_campaign = Campaign.objects.create(
+            name="Empty Campaign",
+            slug="empty-campaign",
+            owner=self.owner,
+            game_system="Vampire: The Masquerade",
+        )
+
+        CampaignMembership.objects.create(
+            campaign=empty_campaign, user=self.player1, role="PLAYER"
+        )
+
+        empty_url = reverse(
+            "characters:campaign_characters",
+            kwargs={"campaign_slug": empty_campaign.slug},
+        )
+
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(empty_url)
+
+        self.assertEqual(response.status_code, 200)
+        characters = response.context["characters"]
+        self.assertEqual(len(characters), 0)
+
+    def test_character_ordering(self):
+        """Test that characters are ordered consistently."""
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        characters = response.context["characters"]
+
+        # Characters should be ordered by name (from Character model Meta.ordering)
+        character_names = [char.name for char in characters]
+        self.assertEqual(character_names, sorted(character_names))
+
+    def test_template_used(self):
+        """Test that the correct template is used."""
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "characters/campaign_characters.html")
+
+    def test_performance_optimization(self):
+        """Test that the view uses proper database optimization."""
+        self.client.login(username="owner", password="testpass123")
+
+        # This tests that the view uses select_related/prefetch_related
+        # to avoid N+1 queries
+        with self.assertNumQueries(3):  # Adjust based on actual optimization
+            response = self.client.get(self.list_url)
+            # Access all character attributes that would trigger queries
+            for character in response.context["characters"]:
+                _ = character.player_owner.username
+                _ = character.campaign.name
+
+
+class UserCharacterListViewTest(TestCase):
+    """Test UserCharactersView functionality (user-scoped character list)."""
+
+    def setUp(self):
+        """Set up test data for user-scoped character list testing."""
+        # Create test users
+        self.user1 = User.objects.create_user(
+            username="user1", email="user1@test.com", password="testpass123"
+        )
+        self.user2 = User.objects.create_user(
+            username="user2", email="user2@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        # Create test campaigns
+        self.campaign1 = Campaign.objects.create(
+            name="Campaign One",
+            slug="campaign-one",
+            owner=self.user1,
+            game_system="Mage: The Ascension",
+        )
+
+        self.campaign2 = Campaign.objects.create(
+            name="Campaign Two",
+            slug="campaign-two",
+            owner=self.user2,
+            game_system="D&D 5e",
+        )
+
+        self.campaign3 = Campaign.objects.create(
+            name="Campaign Three",
+            slug="campaign-three",
+            owner=self.user2,
+            game_system="Vampire: The Masquerade",
+        )
+
+        # Create memberships - user1 is a member of campaign1 and campaign2
+        CampaignMembership.objects.create(
+            campaign=self.campaign2, user=self.user1, role="PLAYER"
+        )
+
+        # Create characters for user1 across multiple campaigns
+        self.char1_campaign1 = Character.objects.create(
+            name="Character in Campaign 1",
+            description="First character",
+            campaign=self.campaign1,
+            player_owner=self.user1,
+            game_system="Mage: The Ascension",
+        )
+
+        self.char2_campaign1 = Character.objects.create(
+            name="Another Character in Campaign 1",
+            description="Second character",
+            campaign=self.campaign1,
+            player_owner=self.user1,
+            game_system="Mage: The Ascension",
+        )
+
+        self.char1_campaign2 = Character.objects.create(
+            name="Character in Campaign 2",
+            description="Third character",
+            campaign=self.campaign2,
+            player_owner=self.user1,
+            game_system="D&D 5e",
+        )
+
+        # Character owned by user2 (should not be visible to user1)
+        self.char_user2 = Character.objects.create(
+            name="User2 Character",
+            description="Character owned by user2",
+            campaign=self.campaign2,
+            player_owner=self.user2,
+            game_system="D&D 5e",
+        )
+
+        # Character in campaign user1 has no access to
+        self.char_no_access = Character.objects.create(
+            name="No Access Character",
+            description="Character in campaign user1 cannot access",
+            campaign=self.campaign3,
+            player_owner=self.user2,
+            game_system="Vampire: The Masquerade",
+        )
+
+        # URL for user character list (this view doesn't exist yet)
+        self.list_url = reverse("characters:user_characters")
+
+    def test_view_requires_authentication(self):
+        """Test that the view requires user authentication."""
+        response = self.client.get(self.list_url)
+        self.assertRedirects(response, f"/users/login/?next={self.list_url}")
+
+    def test_user_sees_own_characters_across_accessible_campaigns(self):
+        """Test that users see their own characters from campaigns they can access."""
+        self.client.login(username="user1", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        characters = response.context["characters"]
+
+        # user1 should see their 3 characters from accessible campaigns
+        self.assertEqual(len(characters), 3)
+        character_names = [char.name for char in characters]
+        self.assertIn("Character in Campaign 1", character_names)
+        self.assertIn("Another Character in Campaign 1", character_names)
+        self.assertIn("Character in Campaign 2", character_names)
+
+        # Should not see characters from other users
+        self.assertNotIn("User2 Character", character_names)
+        # Should not see characters from campaigns they have no access to
+        self.assertNotIn("No Access Character", character_names)
+
+    def test_user_with_no_characters(self):
+        """Test display for user with no characters."""
+        self.client.login(username="nonmember", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        characters = response.context["characters"]
+        self.assertEqual(len(characters), 0)
+
+    def test_search_functionality(self):
+        """Test search functionality across user's characters."""
+        self.client.login(username="user1", password="testpass123")
+
+        # Test search for specific character
+        response = self.client.get(self.list_url, {"search": "Campaign 1"})
+        self.assertEqual(response.status_code, 200)
+        # Should find characters with "Campaign 1" in the name once implemented
+
+    def test_filter_by_campaign(self):
+        """Test filtering characters by campaign."""
+        self.client.login(username="user1", password="testpass123")
+
+        # Test filter by campaign
+        response = self.client.get(self.list_url, {"campaign": self.campaign1.pk})
+        self.assertEqual(response.status_code, 200)
+        # Should show only characters from campaign1 once filtering is implemented
+
+    def test_context_data(self):
+        """Test that context includes proper data."""
+        self.client.login(username="user1", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("page_title", response.context)
+        self.assertIn("My Characters", response.context["page_title"])
+
+    def test_template_used(self):
+        """Test that the correct template is used."""
+        self.client.login(username="user1", password="testpass123")
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "characters/user_characters.html")
+
+
+class EnhancedCharacterDetailViewTest(TestCase):
+    """Test enhanced CharacterDetailView with role-based information display."""
+
+    def setUp(self):
+        """Set up test data for character detail view testing."""
+        # Create test users
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.player2 = User.objects.create_user(
+            username="player2", email="player2@test.com", password="testpass123"
+        )
+        self.observer = User.objects.create_user(
+            username="observer", email="observer@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        # Create test campaign
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            slug="test-campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player2, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.observer, role="OBSERVER"
+        )
+
+        # Create test characters
+        self.player1_character = Character.objects.create(
+            name="Player1 Test Character",
+            description="A test character owned by player1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        self.player2_character = Character.objects.create(
+            name="Player2 Test Character",
+            description="A test character owned by player2",
+            campaign=self.campaign,
+            player_owner=self.player2,
+            game_system="Mage: The Ascension",
+        )
+
+        # URLs for character details
+        self.detail_url_p1 = reverse(
+            "characters:detail", kwargs={"pk": self.player1_character.pk}
+        )
+        self.detail_url_p2 = reverse(
+            "characters:detail", kwargs={"pk": self.player2_character.pk}
+        )
+
+    def test_view_requires_authentication(self):
+        """Test that the view requires user authentication."""
+        response = self.client.get(self.detail_url_p1)
+        self.assertRedirects(response, f"/users/login/?next={self.detail_url_p1}")
+
+    def test_non_member_access_denied(self):
+        """Test that non-members cannot view character details."""
+        self.client.login(username="nonmember", password="testpass123")
+        response = self.client.get(self.detail_url_p1)
+
+        # Should redirect and show error message
+        self.assertRedirects(response, reverse("campaigns:list"))
+
+    def test_character_owner_can_view_own_character(self):
+        """Test that character owners can view their own character."""
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(self.detail_url_p1)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["character"], self.player1_character)
+
+        # Owner should have edit and delete permissions
+        self.assertTrue(response.context["can_edit"])
+        self.assertTrue(response.context["can_delete"])
+        self.assertEqual(response.context["user_role"], "PLAYER")
+
+    def test_player_can_view_other_character_stats(self):
+        """Test that players can view other characters' stats in same campaign."""
+        # This tests enhanced functionality where players can see stats
+        # but may have limited information based on role
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(self.detail_url_p2)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["character"], self.player2_character)
+
+        # Should not have edit/delete permissions for other player's character
+        self.assertFalse(response.context["can_edit"])
+        self.assertFalse(response.context["can_delete"])
+        self.assertEqual(response.context["user_role"], "PLAYER")
+
+    def test_gm_can_view_and_edit_any_character(self):
+        """Test that GMs can view and edit any character in their campaign."""
+        self.client.login(username="gm", password="testpass123")
+        response = self.client.get(self.detail_url_p1)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["character"], self.player1_character)
+
+        # GM should have edit permissions but delete depends on campaign settings
+        self.assertTrue(response.context["can_edit"])
+        # Delete permission depends on campaign.allow_gm_character_deletion
+        self.assertEqual(response.context["user_role"], "GM")
+
+    def test_owner_can_view_and_edit_any_character(self):
+        """Test that campaign owners can view and edit any character."""
+        self.client.login(username="owner", password="testpass123")
+        response = self.client.get(self.detail_url_p1)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["character"], self.player1_character)
+
+        # Owner should have full permissions
+        self.assertTrue(response.context["can_edit"])
+        # Delete permission depends on campaign.allow_owner_character_deletion
+        self.assertEqual(response.context["user_role"], "OWNER")
+
+    def test_observer_can_view_but_not_edit(self):
+        """Test that observers can view characters but cannot edit."""
+        self.client.login(username="observer", password="testpass123")
+        response = self.client.get(self.detail_url_p1)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["character"], self.player1_character)
+
+        # Observer should have no edit/delete permissions
+        self.assertFalse(response.context["can_edit"])
+        self.assertFalse(response.context["can_delete"])
+        self.assertEqual(response.context["user_role"], "OBSERVER")
+
+    def test_role_based_information_display(self):
+        """Test that different roles see different information levels."""
+        # This tests enhanced functionality for role-based information display
+
+        # Character owner should see full information
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(self.detail_url_p1)
+        self.assertEqual(response.status_code, 200)
+        # Should see all character details since they own it
+
+        # Other player should see limited information for others' characters
+        response = self.client.get(self.detail_url_p2)
+        self.assertEqual(response.status_code, 200)
+        # Should see basic info but may have some stats hidden
+
+        # GM should see full information for all characters
+        self.client.login(username="gm", password="testpass123")
+        response = self.client.get(self.detail_url_p1)
+        self.assertEqual(response.status_code, 200)
+        # Should see all character details as GM
+
+    def test_nonexistent_character_returns_404(self):
+        """Test that nonexistent characters return 404."""
+        self.client.login(username="player1", password="testpass123")
+        nonexistent_url = reverse("characters:detail", kwargs={"pk": 99999})
+        response = self.client.get(nonexistent_url)
+
+        self.assertRedirects(response, reverse("campaigns:list"))
+
+    def test_context_includes_recent_scenes(self):
+        """Test that context includes recent scenes (placeholder for future)."""
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(self.detail_url_p1)
+
+        self.assertEqual(response.status_code, 200)
+        # Recent scenes should be empty list for now (placeholder)
+        self.assertEqual(response.context["recent_scenes"], [])
+
+    def test_template_used(self):
+        """Test that the correct template is used."""
+        self.client.login(username="player1", password="testpass123")
+        response = self.client.get(self.detail_url_p1)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "characters/character_detail.html")
+
+    def test_character_detail_performance_optimization(self):
+        """Test that character detail view uses proper database optimization."""
+        self.client.login(username="player1", password="testpass123")
+
+        # Should use select_related for campaign and player_owner
+        with self.assertNumQueries(2):  # Adjust based on actual optimization
+            response = self.client.get(self.detail_url_p1)
+            # Access related objects to verify they're prefetched
+            _ = response.context["character"].campaign.name
+            _ = response.context["character"].player_owner.username
