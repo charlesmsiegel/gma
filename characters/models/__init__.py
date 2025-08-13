@@ -350,14 +350,72 @@ class Character(PolymorphicModel):
     def can_be_deleted_by(self, user: Optional["AbstractUser"]) -> bool:
         """Check if a user can delete this character.
 
+        Character deletion follows a more restrictive policy than editing to
+        protect campaign continuity and player investment in tabletop RPG
+        contexts:
+
+        DELETION POLICY:
+        ================
+        1. CHARACTER OWNERS: Can always delete their own characters
+           - Players maintain control over their character's existence
+           - Prevents loss of player agency
+
+        2. CAMPAIGN OWNERS: Can delete characters only if setting allows
+           - allow_owner_character_deletion=True (default: True for
+             backwards compatibility)
+           - Provides campaign-level control while respecting player
+             investment
+
+        3. GAME MASTERS: Can delete characters only if setting allows
+           - allow_gm_character_deletion=True (default: False for player
+             protection)
+           - Protects players from accidental or malicious GM deletion
+           - Can be enabled for campaigns that need GM cleanup authority
+
+        4. OTHER USERS: Cannot delete characters they don't own
+           - Players, observers, non-members have no deletion rights
+           - Maintains clear permission boundaries
+
+        RATIONALE:
+        ==========
+        - Unlike editing, deletion is irreversible and can disrupt campaign
+          history
+        - Characters often represent significant player time investment
+        - Campaign continuity may depend on character persistence
+        - Scene history and storylines may reference deleted characters
+        - More restrictive than edit permissions to prevent accidental data loss
+
         Args:
             user: The user to check delete permissions for
 
         Returns:
             True if the user can delete this character, False otherwise
         """
-        # Same logic as edit permissions for now
-        return self.can_be_edited_by(user)
+        if user is None:
+            return False
+
+        # Character owners can always delete their own characters
+        if self.player_owner == user:
+            return True
+
+        # Get user's role in the campaign
+        user_role = self._get_cached_user_role(user)
+
+        if user_role is None:
+            return False
+
+        # Check campaign settings for GM/Owner deletion permissions
+        if user_role == "OWNER":
+            # Campaign owners can delete if setting allows (default: True for
+            # backwards compatibility)
+            return getattr(self.campaign, "allow_owner_character_deletion", True)
+        elif user_role == "GM":
+            # GMs can delete if setting allows (default: False for player
+            # protection)
+            return getattr(self.campaign, "allow_gm_character_deletion", False)
+
+        # Players, observers, and others cannot delete characters they don't own
+        return False
 
     def get_permission_level(
         self, user: Optional["AbstractUser"], user_role: Optional[str] = None

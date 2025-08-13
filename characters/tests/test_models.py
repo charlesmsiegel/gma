@@ -874,16 +874,46 @@ class CharacterPermissionTest(TestCase):
         self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
 
     def test_can_be_deleted_by_campaign_owner(self):
-        """Test that campaign owners can delete all characters in their campaign."""
-        # Campaign owner can delete all characters
+        """Test that campaign owners can delete characters when setting allows."""
+        # By default, campaign owners CAN delete characters
+        # (allow_owner_character_deletion=True)
         self.assertTrue(self.player1_character.can_be_deleted_by(self.owner))
         self.assertTrue(self.player2_character.can_be_deleted_by(self.owner))
         self.assertTrue(self.gm_character.can_be_deleted_by(self.owner))
         self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
 
+    def test_can_be_deleted_by_campaign_owner_disabled(self):
+        """Test that campaign owners cannot delete when setting is disabled."""
+        # Disable owner character deletion
+        self.campaign.allow_owner_character_deletion = False
+        self.campaign.save()
+
+        # Campaign owner can still delete their own characters
+        self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
+
+        # But cannot delete other characters
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertFalse(self.player2_character.can_be_deleted_by(self.owner))
+        self.assertFalse(self.gm_character.can_be_deleted_by(self.owner))
+
     def test_can_be_deleted_by_campaign_gm(self):
-        """Test that campaign GMs can delete all characters in their campaign."""
-        # GM can delete all characters in the campaign
+        """Test that GMs cannot delete characters by default."""
+        # By default, GMs CANNOT delete other characters
+        # (allow_gm_character_deletion=False)
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.gm))
+        self.assertFalse(self.player2_character.can_be_deleted_by(self.gm))
+        self.assertFalse(self.owner_character.can_be_deleted_by(self.gm))
+
+        # But GMs can still delete their own characters
+        self.assertTrue(self.gm_character.can_be_deleted_by(self.gm))
+
+    def test_can_be_deleted_by_campaign_gm_enabled(self):
+        """Test that GMs can delete characters when setting is enabled."""
+        # Enable GM character deletion
+        self.campaign.allow_gm_character_deletion = True
+        self.campaign.save()
+
+        # GM can now delete all characters in the campaign
         self.assertTrue(self.player1_character.can_be_deleted_by(self.gm))
         self.assertTrue(self.player2_character.can_be_deleted_by(self.gm))
         self.assertTrue(self.gm_character.can_be_deleted_by(self.gm))
@@ -922,6 +952,165 @@ class CharacterPermissionTest(TestCase):
     def test_can_be_deleted_by_with_none_user(self):
         """Test can_be_deleted_by with None user."""
         self.assertFalse(self.player1_character.can_be_deleted_by(None))
+
+    def test_can_be_deleted_by_mixed_settings(self):
+        """Test deletion permissions with mixed campaign settings."""
+        # Start with both settings enabled
+        self.campaign.allow_owner_character_deletion = True
+        self.campaign.allow_gm_character_deletion = True
+        self.campaign.save()
+
+        # Both owner and GM can delete characters
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.gm))
+
+        # Disable GM deletion but keep owner deletion
+        self.campaign.allow_gm_character_deletion = False
+        self.campaign.save()
+
+        # Owner can still delete, GM cannot (except their own)
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.gm))
+        self.assertTrue(self.gm_character.can_be_deleted_by(self.gm))
+
+        # Disable owner deletion but enable GM deletion
+        self.campaign.allow_owner_character_deletion = False
+        self.campaign.allow_gm_character_deletion = True
+        self.campaign.save()
+
+        # GM can delete, owner cannot (except their own)
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.gm))
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
+
+        # Disable both settings
+        self.campaign.allow_owner_character_deletion = False
+        self.campaign.allow_gm_character_deletion = False
+        self.campaign.save()
+
+        # Only character owners can delete their own characters
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.gm))
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.player1))
+        self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
+        self.assertTrue(self.gm_character.can_be_deleted_by(self.gm))
+
+    def test_can_be_deleted_by_different_campaign_roles(self):
+        """Test that users from different campaigns cannot delete characters."""
+        # Create another campaign with the same users in different roles
+        other_campaign = Campaign.objects.create(
+            name="Other Campaign",
+            owner=self.player1,  # player1 is owner of other campaign
+            game_system="Test System",
+        )
+
+        # Add owner as GM in other campaign
+        CampaignMembership.objects.create(
+            campaign=other_campaign, user=self.owner, role="GM"
+        )
+
+        # Create character in other campaign
+        Character.objects.create(
+            name="Other Character",
+            campaign=other_campaign,
+            player_owner=self.owner,
+            game_system="Test System",
+        )
+
+        # Users can only delete characters in campaigns where they have proper roles
+        # Owner (who is GM in other campaign) cannot delete characters in main campaign
+        # if they don't have proper permissions
+        self.assertTrue(
+            self.player1_character.can_be_deleted_by(self.owner)
+        )  # owner in main campaign
+
+        # Player1 (who is owner in other campaign) cannot delete characters in
+        # main campaign
+        self.assertFalse(
+            self.player2_character.can_be_deleted_by(self.player1)
+        )  # just player in main campaign
+
+    def test_bulk_can_be_deleted_by(self):
+        """Test bulk deletion permission checking optimization."""
+        # Create additional characters for bulk testing
+        char1 = Character.objects.create(
+            name="Bulk Delete Test Char 1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        char2 = Character.objects.create(
+            name="Bulk Delete Test Char 2",
+            campaign=self.campaign,
+            player_owner=self.player2,
+            game_system="Mage: The Ascension",
+        )
+
+        characters = [
+            self.player1_character,
+            self.player2_character,
+            self.owner_character,
+            self.gm_character,
+            char1,
+            char2,
+        ]
+
+        # Test bulk deletion permissions for campaign owner
+        bulk_delete_perms = {}
+        for char in characters:
+            bulk_delete_perms[char.id] = char.can_be_deleted_by(self.owner)
+
+        self.assertEqual(len(bulk_delete_perms), 6)
+        # Campaign owner should be able to delete all characters (default setting)
+        for char_id, can_delete in bulk_delete_perms.items():
+            self.assertTrue(can_delete)
+
+        # Test bulk deletion permissions for GM (default: cannot delete others)
+        bulk_delete_perms_gm = {}
+        for char in characters:
+            bulk_delete_perms_gm[char.id] = char.can_be_deleted_by(self.gm)
+
+        self.assertEqual(len(bulk_delete_perms_gm), 6)
+        # GM should only be able to delete their own character by default
+        self.assertTrue(bulk_delete_perms_gm[self.gm_character.id])
+        self.assertFalse(bulk_delete_perms_gm[self.player1_character.id])
+        self.assertFalse(bulk_delete_perms_gm[self.player2_character.id])
+        self.assertFalse(bulk_delete_perms_gm[self.owner_character.id])
+        self.assertFalse(bulk_delete_perms_gm[char1.id])
+        self.assertFalse(bulk_delete_perms_gm[char2.id])
+
+        # Test bulk deletion permissions for player
+        bulk_delete_perms_player = {}
+        for char in characters:
+            bulk_delete_perms_player[char.id] = char.can_be_deleted_by(self.player1)
+
+        self.assertEqual(len(bulk_delete_perms_player), 6)
+        # Player1 should only be able to delete their own characters
+        self.assertTrue(bulk_delete_perms_player[self.player1_character.id])
+        self.assertTrue(bulk_delete_perms_player[char1.id])
+        self.assertFalse(bulk_delete_perms_player[self.player2_character.id])
+        self.assertFalse(bulk_delete_perms_player[self.owner_character.id])
+        self.assertFalse(bulk_delete_perms_player[self.gm_character.id])
+        self.assertFalse(bulk_delete_perms_player[char2.id])
+
+        # Test with observer
+        bulk_delete_perms_observer = {}
+        for char in characters:
+            bulk_delete_perms_observer[char.id] = char.can_be_deleted_by(self.observer)
+
+        self.assertEqual(len(bulk_delete_perms_observer), 6)
+        # Observer should not be able to delete any characters
+        for char_id, can_delete in bulk_delete_perms_observer.items():
+            self.assertFalse(can_delete)
+
+        # Test with None user
+        bulk_delete_perms_none = {}
+        for char in characters:
+            bulk_delete_perms_none[char.id] = char.can_be_deleted_by(None)
+
+        self.assertEqual(len(bulk_delete_perms_none), 6)
+        for char_id, can_delete in bulk_delete_perms_none.items():
+            self.assertFalse(can_delete)
 
     def test_get_permission_level_character_owner(self):
         """Test get_permission_level for character owners."""
