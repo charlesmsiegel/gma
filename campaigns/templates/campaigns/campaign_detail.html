@@ -120,8 +120,12 @@
                   <h3 class="card-title">Manage Characters</h3>
                 </div>
                 <p class="card-description">Manage player and NPC characters</p>
-                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
-                   class="btn btn-primary">Characters</a>
+                <div class="btn-group d-flex" role="group">
+                  <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                     class="btn btn-primary">Characters</a>
+                  <a href="{% url 'characters:create' %}"
+                     class="btn btn-outline-primary">Create</a>
+                </div>
               </div>
               <div class="management-card scenes-card" role="article">
                 <div class="card-top">
@@ -158,8 +162,12 @@
                   <h3 class="card-title">My Characters</h3>
                 </div>
                 <p class="card-description">View and manage your characters</p>
-                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
-                   class="btn btn-primary">My Characters</a>
+                <div class="btn-group d-flex" role="group">
+                  <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                     class="btn btn-primary">My Characters</a>
+                  <a href="{% url 'characters:create' %}"
+                     class="btn btn-outline-primary">Create</a>
+                </div>
               </div>
               <div class="management-card" role="article">
                 <div class="card-top">
