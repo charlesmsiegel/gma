@@ -213,6 +213,7 @@ class Command(BaseCommand):
                         description="A test campaign for development",
                         game_system="generic_wod",
                         owner=owner,
+                        max_characters_per_player=5,  # Allow more for testing
                     )
                     campaigns.append(campaign)
                     if verbosity >= 2:
@@ -227,6 +228,7 @@ class Command(BaseCommand):
                             description=f"Test campaign #{i} for development",
                             game_system="generic_wod",
                             owner=owner,
+                            max_characters_per_player=5,  # Allow more for testing
                         )
                         campaigns.append(campaign)
                         if verbosity >= 2:
