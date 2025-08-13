@@ -192,9 +192,9 @@ class SendInvitationForm(forms.Form):
         if self.campaign:
             # Use service to get available users
             membership_service = MembershipService(self.campaign)
-            self.fields["invited_user"].queryset = (
-                membership_service.get_available_users_for_invitation()
-            )
+            self.fields[
+                "invited_user"
+            ].queryset = membership_service.get_available_users_for_invitation()
 
 
 class ChangeMemberRoleForm(forms.Form):

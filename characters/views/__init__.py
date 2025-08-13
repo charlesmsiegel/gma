@@ -136,7 +136,8 @@ class CharacterCreateView(LoginRequiredMixin, CreateView):
         """Handle form validation errors."""
         messages.error(
             self.request,
-            "There were errors in your character creation form. Please correct them below.",
+            "There were errors in your character creation form. "
+            "Please correct them below.",
         )
         return super().form_invalid(form)
 
@@ -150,7 +151,7 @@ class CharacterCreateView(LoginRequiredMixin, CreateView):
 class CharacterDetailView(LoginRequiredMixin, DetailView):
     """
     Display character details with proper permission checking.
-    
+
     - Shows character information, description, and metadata
     - Provides edit/delete buttons based on user permissions
     - Shows recent scenes the character has participated in
@@ -164,40 +165,39 @@ class CharacterDetailView(LoginRequiredMixin, DetailView):
     def get_object(self, queryset=None):
         """Get character with related data and permission checking."""
         character = super().get_object(queryset)
-        
+
         # Check if user has permission to view this character
         user_role = character.campaign.get_user_role(self.request.user)
-        
+
         if user_role is None:
             # Non-members cannot view characters - redirect to hide existence
             messages.error(
-                self.request,
-                "You don't have permission to view this character."
+                self.request, "You don't have permission to view this character."
             )
             # This will be handled in the dispatch method
             return None
-            
+
         return character
 
     def dispatch(self, request, *args, **kwargs):
         """Handle permission checking at dispatch level."""
         try:
             character = Character.objects.select_related(
-                'campaign', 'player_owner'
-            ).get(pk=kwargs['pk'])
-            
+                "campaign", "player_owner"
+            ).get(pk=kwargs["pk"])
+
             user_role = character.campaign.get_user_role(request.user)
             if user_role is None:
                 messages.error(
                     request,
-                    "You don't have permission to view this character."
+                    "You don't have permission to view this character.",
                 )
-                return redirect('campaigns:list')
-                
+                return redirect("campaigns:list")
+
         except Character.DoesNotExist:
             messages.error(request, "Character not found.")
-            return redirect('campaigns:list')
-            
+            return redirect("campaigns:list")
+
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -205,23 +205,25 @@ class CharacterDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         character = self.object
         user = self.request.user
-        
+
         # Get user's role for permission checking
         user_role = character.campaign.get_user_role(user)
-        
+
         # Determine edit/delete permissions
         can_edit = character.can_be_edited_by(user, user_role)
         can_delete = character.can_be_deleted_by(user)
-        
+
         # Get recent scenes (placeholder for future implementation)
         # This will be replaced when scene functionality is implemented
         recent_scenes = []
-        
-        context.update({
-            'can_edit': can_edit,
-            'can_delete': can_delete,
-            'user_role': user_role,
-            'recent_scenes': recent_scenes,
-        })
-        
+
+        context.update(
+            {
+                "can_edit": can_edit,
+                "can_delete": can_delete,
+                "user_role": user_role,
+                "recent_scenes": recent_scenes,
+            }
+        )
+
         return context

@@ -30,7 +30,7 @@ class CharacterCreateForm(forms.ModelForm):
             "description": forms.Textarea(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Describe your character's background and personality",
+                    "placeholder": "Describe your character's background",
                     "rows": 4,
                 }
             ),
@@ -67,7 +67,8 @@ class CharacterCreateForm(forms.ModelForm):
         # If no campaigns available, show helpful message
         if not user_campaigns.exists():
             self.fields["campaign"].empty_label = (
-                "No campaigns available - you must be a member of a campaign to create characters"
+                "No campaigns available - you must be a member of a campaign "
+                "to create characters"
             )
         else:
             self.fields["campaign"].empty_label = "Select a campaign"
@@ -135,8 +136,11 @@ class CharacterCreateForm(forms.ModelForm):
             if existing_character:
                 raise ValidationError(
                     {
-                        "name": f"A character named '{name}' already exists in this campaign. "
-                        "Character names must be unique within each campaign."
+                        "name": (
+                            f"A character named '{name}' already exists in this "
+                            "campaign. Character names must be unique within "
+                            "each campaign."
+                        )
                     }
                 )
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from django.conf import settings
-from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from polymorphic.managers import PolymorphicManager  # type: ignore[import-untyped]
@@ -173,7 +172,7 @@ class Character(PolymorphicModel):
 
     objects = CharacterManager()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the model and store original field values for change tracking."""
         super().__init__(*args, **kwargs)
         # Store original values for key fields to track changes
@@ -245,21 +244,16 @@ class Character(PolymorphicModel):
                     "characters in this campaign."
                 )
 
-        # Validate max characters per player limit with atomic transaction
+        # Validate max characters per player limit
         if self.campaign and self.player_owner:
             max_chars = self.campaign.max_characters_per_player
             if max_chars > 0:  # 0 means unlimited
-                self._validate_character_limit_atomic(max_chars)
+                self._validate_character_limit(max_chars)
 
     @transaction.atomic
-    def _validate_character_limit_atomic(self, max_chars: int) -> None:
+    def _validate_character_limit(self, max_chars: int) -> None:
         """
-        Validate character limit with atomic transaction and row-level locking.
-
-        This method prevents race conditions by:
-        1. Using an atomic transaction
-        2. Locking the campaign row with select_for_update
-        3. Counting existing characters within the locked transaction
+        Validate character limit with atomic protection.
 
         Args:
             max_chars: Maximum characters allowed per player
@@ -269,20 +263,13 @@ class Character(PolymorphicModel):
         """
         from campaigns.models import Campaign
 
-        # Lock the campaign row to prevent concurrent character creation
-        # that could bypass the limit check
-        try:
-            locked_campaign = Campaign.objects.select_for_update().get(
-                pk=self.campaign.pk
-            )
-        except Campaign.DoesNotExist:
-            raise ValidationError("Campaign does not exist.")
+        # Lock the campaign to prevent concurrent character creation
+        Campaign.objects.select_for_update().get(pk=self.campaign.pk)
 
         # Count existing characters for this player in this campaign
-        # within the locked transaction
         existing_count = (
             Character.objects.filter(
-                campaign=locked_campaign, player_owner=self.player_owner
+                campaign=self.campaign, player_owner=self.player_owner
             )
             .exclude(pk=self.pk or 0)
             .count()
@@ -295,14 +282,12 @@ class Character(PolymorphicModel):
                 "Please delete an existing character before creating a new one."
             )
 
-    @transaction.atomic
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """
-        Save the character with validation and atomic transaction protection.
+        Save the character with validation.
 
         Only runs full_clean() for new characters (those without a pk) or when
-        explicitly requested via validate=True parameter. This prevents
-        breaking existing test patterns while ensuring race condition protection.
+        explicitly requested via validate=True parameter.
         """
         # Run validation for new characters or when explicitly requested
         validate = kwargs.pop("validate", self.pk is None)
@@ -314,7 +299,7 @@ class Character(PolymorphicModel):
         self._original_campaign_id = self.campaign_id
         self._original_player_owner_id = self.player_owner_id
 
-    def refresh_from_db(self, using=None, fields=None):
+    def refresh_from_db(self, using: Optional[str] = None, fields: Optional[List[str]] = None) -> None:
         """Refresh the instance from the database and reset change tracking."""
         super().refresh_from_db(using=using, fields=fields)
         # Reset change tracking after refresh
@@ -350,41 +335,6 @@ class Character(PolymorphicModel):
     def can_be_deleted_by(self, user: Optional["AbstractUser"]) -> bool:
         """Check if a user can delete this character.
 
-        Character deletion follows a more restrictive policy than editing to
-        protect campaign continuity and player investment in tabletop RPG
-        contexts:
-
-        DELETION POLICY:
-        ================
-        1. CHARACTER OWNERS: Can always delete their own characters
-           - Players maintain control over their character's existence
-           - Prevents loss of player agency
-
-        2. CAMPAIGN OWNERS: Can delete characters only if setting allows
-           - allow_owner_character_deletion=True (default: True for
-             backwards compatibility)
-           - Provides campaign-level control while respecting player
-             investment
-
-        3. GAME MASTERS: Can delete characters only if setting allows
-           - allow_gm_character_deletion=True (default: False for player
-             protection)
-           - Protects players from accidental or malicious GM deletion
-           - Can be enabled for campaigns that need GM cleanup authority
-
-        4. OTHER USERS: Cannot delete characters they don't own
-           - Players, observers, non-members have no deletion rights
-           - Maintains clear permission boundaries
-
-        RATIONALE:
-        ==========
-        - Unlike editing, deletion is irreversible and can disrupt campaign
-          history
-        - Characters often represent significant player time investment
-        - Campaign continuity may depend on character persistence
-        - Scene history and storylines may reference deleted characters
-        - More restrictive than edit permissions to prevent accidental data loss
-
         Args:
             user: The user to check delete permissions for
 
@@ -406,12 +356,8 @@ class Character(PolymorphicModel):
 
         # Check campaign settings for GM/Owner deletion permissions
         if user_role == "OWNER":
-            # Campaign owners can delete if setting allows (default: True for
-            # backwards compatibility)
             return getattr(self.campaign, "allow_owner_character_deletion", True)
         elif user_role == "GM":
-            # GMs can delete if setting allows (default: False for player
-            # protection)
             return getattr(self.campaign, "allow_gm_character_deletion", False)
 
         # Players, observers, and others cannot delete characters they don't own
@@ -452,10 +398,7 @@ class Character(PolymorphicModel):
             return "none"
 
     def _get_cached_user_role(self, user: "AbstractUser") -> Optional[str]:
-        """Get user's role in the campaign with caching to prevent N+1 queries.
-
-        This method implements a request-level cache to avoid repeated database
-        queries for the same user-campaign combination within a single request.
+        """Get user's role in the campaign.
 
         Args:
             user: The user to check role for
@@ -466,112 +409,4 @@ class Character(PolymorphicModel):
         if not user or not user.is_authenticated:
             return None
 
-        # Create a cache key for this user-campaign combination
-        cache_key = f"user_role_{user.id}_{self.campaign_id}"
-
-        # Try to get from cache first
-        cached_role = cache.get(cache_key)
-        if cached_role is not None:
-            return cached_role if cached_role != "__NONE__" else None
-
-        # If not cached, get from campaign and cache the result
-        role = self.campaign.get_user_role(user)
-
-        # Cache for 300 seconds (5 minutes) to balance freshness and performance
-        # Use '__NONE__' as a sentinel value for None to distinguish from cache miss
-        cache_value = role if role is not None else "__NONE__"
-        cache.set(cache_key, cache_value, timeout=300)
-
-        return role
-
-    @classmethod
-    def bulk_get_permission_levels(
-        cls, characters: List["Character"], user: Optional["AbstractUser"]
-    ) -> Dict[int, str]:
-        """Get permission levels for multiple characters efficiently.
-
-        This method optimizes permission checking for multiple characters by:
-        1. Prefetching all required campaign memberships in one query
-        2. Caching user roles to avoid repeated database hits
-        3. Processing all characters in memory
-
-        Args:
-            characters: List of Character instances to check permissions for
-            user: The user to check permissions for
-
-        Returns:
-            Dict mapping character IDs to permission levels
-        """
-        if not user or not user.is_authenticated:
-            return {char.id: "none" for char in characters}
-
-        if not characters:
-            return {}
-
-        # Group characters by campaign to minimize queries
-        campaign_chars: Dict[int, List[Character]] = {}
-        for char in characters:
-            if char.campaign_id not in campaign_chars:
-                campaign_chars[char.campaign_id] = []
-            campaign_chars[char.campaign_id].append(char)
-
-        # Cache user roles for each campaign
-        role_cache: Dict[int, Optional[str]] = {}
-        for campaign_id in campaign_chars.keys():
-            # Get the first character's campaign (they're all the same campaign)
-            campaign = campaign_chars[campaign_id][0].campaign
-            role_cache[campaign_id] = campaign.get_user_role(user)
-
-        # Calculate permission levels for all characters
-        result = {}
-        for char in characters:
-            user_role = role_cache.get(char.campaign_id)
-            result[char.id] = char.get_permission_level(user, user_role)
-
-        return result
-
-    @classmethod
-    def bulk_can_be_edited_by(
-        cls, characters: List["Character"], user: Optional["AbstractUser"]
-    ) -> Dict[int, bool]:
-        """Check edit permissions for multiple characters efficiently.
-
-        This method optimizes permission checking for multiple characters by:
-        1. Prefetching all required campaign memberships in one query
-        2. Caching user roles to avoid repeated database hits
-        3. Processing all characters in memory
-
-        Args:
-            characters: List of Character instances to check edit permissions for
-            user: The user to check edit permissions for
-
-        Returns:
-            Dict mapping character IDs to whether they can be edited
-        """
-        if not user or not user.is_authenticated:
-            return {char.id: False for char in characters}
-
-        if not characters:
-            return {}
-
-        # Group characters by campaign to minimize queries
-        campaign_chars: Dict[int, List[Character]] = {}
-        for char in characters:
-            if char.campaign_id not in campaign_chars:
-                campaign_chars[char.campaign_id] = []
-            campaign_chars[char.campaign_id].append(char)
-
-        # Cache user roles for each campaign
-        role_cache: Dict[int, Optional[str]] = {}
-        for campaign_id in campaign_chars.keys():
-            # Get the first character's campaign (they're all the same campaign)
-            campaign = campaign_chars[campaign_id][0].campaign
-            role_cache[campaign_id] = campaign.get_user_role(user)
-
-        # Calculate edit permissions for all characters
-        result = {}
-        for char in characters:
-            user_role = role_cache.get(char.campaign_id)
-            result[char.id] = char.can_be_edited_by(user, user_role)
-
-        return result
+        return self.campaign.get_user_role(user)
