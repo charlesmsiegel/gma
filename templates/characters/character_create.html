@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'campaigns/css/campaign_create.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title h3 mb-0">{{ page_title }}</h1>
+                </div>
+                <div class="card-body">
+                    {% if not has_available_campaigns %}
+                        <div class="alert alert-warning" role="alert">
+                            <h4 class="alert-heading">No campaigns available</h4>
+                            <p>You must be a member of at least one campaign to create characters.</p>
+                            <hr>
+                            <p class="mb-0">Ask a campaign owner or GM to invite you to their campaign.</p>
+                        </div>
+                    {% else %}
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                                            Character Name <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.name }}
+                                        {% if form.name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.name.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        {% if form.name.help_text %}
+                                            <div class="form-text">{{ form.name.help_text }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.campaign.id_for_label }}" class="form-label">
+                                            Campaign <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.campaign }}
+                                        {% if form.campaign.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.campaign.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        {% if form.campaign.help_text %}
+                                            <div class="form-text">{{ form.campaign.help_text }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">
+                                    Description
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.description.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                {% if form.description.help_text %}
+                                    <div class="form-text">{{ form.description.help_text }}</div>
+                                {% endif %}
+                            </div>
+
+                            {% if campaigns_info %}
+                                <div class="mb-3">
+                                    <h5>Campaign Character Limits</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Campaign</th>
+                                                    <th>Your Characters</th>
+                                                    <th>Limit</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for info in campaigns_info %}
+                                                    <tr class="{% if info.at_limit %}table-warning{% endif %}">
+                                                        <td>{{ info.campaign.name }}</td>
+                                                        <td>{{ info.current_count }}</td>
+                                                        <td>
+                                                            {% if info.limit == 0 %}
+                                                                Unlimited
+                                                            {% else %}
+                                                                {{ info.limit }}
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% if info.can_create %}
+                                                                <span class="badge bg-success">Available</span>
+                                                            {% else %}
+                                                                <span class="badge bg-warning">At Limit</span>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'core:index' %}" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary">Create Character</button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
