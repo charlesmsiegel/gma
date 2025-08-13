@@ -3,6 +3,9 @@ Tests for character views.
 
 Tests the CharacterCreateView with comprehensive scenarios including
 authentication, permissions, validation, and edge cases.
+
+Security Note: Hardcoded passwords in this file are for testing only
+and are not used in production code.
 """
 
 from django.contrib.auth import get_user_model
