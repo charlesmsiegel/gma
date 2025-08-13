@@ -259,6 +259,9 @@ class Command(BaseCommand):
                     )
                 return characters
 
+            # Track characters per user per campaign to respect limits
+            char_counts = {}
+
             # Create test characters
             for i in range(1, count + 1):
                 character_name = f"{ADDITIONAL_CHARACTER_PREFIX}{i}"
@@ -276,6 +279,25 @@ class Command(BaseCommand):
                             campaign=campaign, user=user, defaults={"role": "PLAYER"}
                         )
 
+                    # Check character limit for this user-campaign combination
+                    key = (user.id, campaign.id)
+                    if key not in char_counts:
+                        # Count existing characters for this user in this campaign
+                        existing = Character.objects.filter(
+                            campaign=campaign, player_owner=user
+                        ).count()
+                        char_counts[key] = existing
+
+                    # Skip if user already has max characters in this campaign
+                    max_chars = campaign.max_characters_per_player
+                    if max_chars > 0 and char_counts[key] >= max_chars:
+                        if verbosity >= 2:
+                            self.stdout.write(
+                                f"  Skipping character for {user.username} in "
+                                f"{campaign.name} (has {max_chars} character(s))"
+                            )
+                        continue
+
                     character = Character.objects.create(
                         name=character_name,
                         description=f"Test character #{i} for development",
@@ -284,6 +306,7 @@ class Command(BaseCommand):
                         game_system=campaign.game_system or "Generic",
                     )
                     characters.append(character)
+                    char_counts[key] += 1
                     if verbosity >= 2:
                         self.stdout.write(
                             f"  Created character: {character.name} in {campaign.name}"

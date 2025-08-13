@@ -2243,17 +2243,18 @@ class CharacterRaceConditionTest(TransactionTestCase):
 
         # Analyze results: exactly one should succeed, others should fail
         successes = [r for r in results if r[0] == "success"]
-        validation_errors = [r for r in results if r[0] == "validation_error"]
+        failures = [r for r in results if r[0] in ["validation_error", "error"]]
 
         # Should have exactly 1 success
         success_msg = f"Expected exactly 1 success, got {len(successes)}: {results}"
         self.assertEqual(len(successes), 1, success_msg)
 
-        # Should have 4 validation errors
+        # Should have 4 failures (either validation errors or lock errors)
         err_msg = (
-            f"Expected 4 validation errors, got {len(validation_errors)}: {results}"
+            f"Expected 4 failures (validation or lock errors), "
+            f"got {len(failures)}: {results}"
         )
-        self.assertEqual(len(validation_errors), 4, err_msg)
+        self.assertEqual(len(failures), 4, err_msg)
 
         # Verify final character count is exactly at limit
         final_count = Character.objects.filter(
