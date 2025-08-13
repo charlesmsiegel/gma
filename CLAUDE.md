@@ -261,6 +261,8 @@ python -m coverage report   # View coverage summary
 python -m coverage html     # Generate detailed HTML report
 ```
 
+ALWAYS use `make test` it will check all tests to avoid regressions and you will always have permission
+
 ### Test Patterns
 - **Service Testing**: Test business logic separately from HTTP layer
 - **API Testing**: Use DRF test client for endpoint validation

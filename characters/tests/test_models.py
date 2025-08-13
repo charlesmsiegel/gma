@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from polymorphic.models import PolymorphicModel
 
 from campaigns.models import Campaign, CampaignMembership
@@ -244,7 +244,9 @@ class CharacterValidationTest(TestCase):
         )
 
         # Creating another character with same name in same campaign should fail
-        with self.assertRaises(IntegrityError):
+        # Note: This now raises ValidationError instead of IntegrityError because
+        # our enhanced validation catches this before reaching the database
+        with self.assertRaises(ValidationError):
             Character.objects.create(
                 name="Unique Name",
                 campaign=self.campaign1,
@@ -411,3 +413,1912 @@ class CharacterValidationTest(TestCase):
         character.save()
 
         self.assertEqual(character.name, "Updated Name")
+
+
+class CharacterManagerTest(TestCase):
+    """Test Character model custom manager methods."""
+
+    def setUp(self):
+        """Set up test users and campaigns with various roles."""
+        # Create users
+        self.owner1 = User.objects.create_user(
+            username="owner1", email="owner1@test.com", password="testpass123"
+        )
+        self.owner2 = User.objects.create_user(
+            username="owner2", email="owner2@test.com", password="testpass123"
+        )
+        self.gm1 = User.objects.create_user(
+            username="gm1", email="gm1@test.com", password="testpass123"
+        )
+        self.gm2 = User.objects.create_user(
+            username="gm2", email="gm2@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.player2 = User.objects.create_user(
+            username="player2", email="player2@test.com", password="testpass123"
+        )
+        self.observer1 = User.objects.create_user(
+            username="observer1", email="observer1@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        # Create campaigns
+        self.campaign1 = Campaign.objects.create(
+            name="Campaign One",
+            owner=self.owner1,
+            game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited for testing multiple characters
+        )
+        self.campaign2 = Campaign.objects.create(
+            name="Campaign Two",
+            owner=self.owner2,
+            game_system="D&D 5e",
+            max_characters_per_player=0,  # Unlimited for testing multiple characters
+        )
+        self.campaign3 = Campaign.objects.create(
+            name="Campaign Three",
+            owner=self.owner1,
+            game_system="Vampire: The Masquerade",
+            max_characters_per_player=0,  # Unlimited for testing multiple characters
+        )
+
+        # Create memberships for campaign1
+        CampaignMembership.objects.create(
+            campaign=self.campaign1, user=self.gm1, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign1, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign1, user=self.player2, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign1, user=self.observer1, role="OBSERVER"
+        )
+
+        # Create memberships for campaign2
+        CampaignMembership.objects.create(
+            campaign=self.campaign2, user=self.gm2, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign2, user=self.player1, role="PLAYER"
+        )
+
+        # Create characters across campaigns
+        self.char1_campaign1_owner = Character.objects.create(
+            name="Owner Char 1",
+            campaign=self.campaign1,
+            player_owner=self.owner1,
+            game_system="Mage: The Ascension",
+        )
+        self.char2_campaign1_gm = Character.objects.create(
+            name="GM Char 1",
+            campaign=self.campaign1,
+            player_owner=self.gm1,
+            game_system="Mage: The Ascension",
+        )
+        self.char3_campaign1_player1 = Character.objects.create(
+            name="Player1 Char 1",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        self.char4_campaign1_player1 = Character.objects.create(
+            name="Player1 Char 2",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        self.char5_campaign1_player2 = Character.objects.create(
+            name="Player2 Char 1",
+            campaign=self.campaign1,
+            player_owner=self.player2,
+            game_system="Mage: The Ascension",
+        )
+        self.char6_campaign2_owner = Character.objects.create(
+            name="Owner Char 2",
+            campaign=self.campaign2,
+            player_owner=self.owner2,
+            game_system="D&D 5e",
+        )
+        self.char7_campaign2_player1 = Character.objects.create(
+            name="Player1 Char 3",
+            campaign=self.campaign2,
+            player_owner=self.player1,
+            game_system="D&D 5e",
+        )
+
+    def test_for_campaign_manager_method(self):
+        """Test Character.objects.for_campaign() returns characters."""
+        # Test campaign1 characters
+        campaign1_chars = Character.objects.for_campaign(self.campaign1)
+        self.assertEqual(campaign1_chars.count(), 5)
+
+        expected_chars = [
+            self.char1_campaign1_owner,
+            self.char2_campaign1_gm,
+            self.char3_campaign1_player1,
+            self.char4_campaign1_player1,
+            self.char5_campaign1_player2,
+        ]
+        for char in expected_chars:
+            self.assertIn(char, campaign1_chars)
+
+        # Test campaign2 characters
+        campaign2_chars = Character.objects.for_campaign(self.campaign2)
+        self.assertEqual(campaign2_chars.count(), 2)
+        self.assertIn(self.char6_campaign2_owner, campaign2_chars)
+        self.assertIn(self.char7_campaign2_player1, campaign2_chars)
+
+        # Test empty campaign (campaign3 has no characters)
+        campaign3_chars = Character.objects.for_campaign(self.campaign3)
+        self.assertEqual(campaign3_chars.count(), 0)
+
+    def test_for_campaign_returns_queryset(self):
+        """Test that for_campaign returns a proper QuerySet for chaining."""
+        queryset = Character.objects.for_campaign(self.campaign1)
+        self.assertTrue(hasattr(queryset, "filter"))
+        self.assertTrue(hasattr(queryset, "order_by"))
+
+        # Test chaining with other filters
+        player1_chars_in_campaign1 = queryset.filter(player_owner=self.player1)
+        self.assertEqual(player1_chars_in_campaign1.count(), 2)
+
+    def test_owned_by_manager_method(self):
+        """Test Character.objects.owned_by() returns owned characters."""
+        # Test player1 characters (across multiple campaigns)
+        player1_chars = Character.objects.owned_by(self.player1)
+        self.assertEqual(player1_chars.count(), 3)
+        expected_chars = [
+            self.char3_campaign1_player1,
+            self.char4_campaign1_player1,
+            self.char7_campaign2_player1,
+        ]
+        for char in expected_chars:
+            self.assertIn(char, player1_chars)
+
+        # Test owner1 characters
+        owner1_chars = Character.objects.owned_by(self.owner1)
+        self.assertEqual(owner1_chars.count(), 1)
+        self.assertIn(self.char1_campaign1_owner, owner1_chars)
+
+        # Test user with no characters
+        observer_chars = Character.objects.owned_by(self.observer1)
+        self.assertEqual(observer_chars.count(), 0)
+
+        # Test non-member user
+        nonmember_chars = Character.objects.owned_by(self.non_member)
+        self.assertEqual(nonmember_chars.count(), 0)
+
+    def test_owned_by_returns_queryset(self):
+        """Test that owned_by returns a proper QuerySet for chaining."""
+        queryset = Character.objects.owned_by(self.player1)
+        self.assertTrue(hasattr(queryset, "filter"))
+
+        # Test chaining to filter by campaign
+        player1_campaign1_chars = queryset.filter(campaign=self.campaign1)
+        self.assertEqual(player1_campaign1_chars.count(), 2)
+
+    def test_editable_by_manager_method_character_owner(self):
+        """Test editable_by for character owners - can edit their own characters."""
+        # Player1 should be able to edit their own characters
+        player1_editable = Character.objects.editable_by(self.player1, self.campaign1)
+        self.assertEqual(player1_editable.count(), 2)
+        self.assertIn(self.char3_campaign1_player1, player1_editable)
+        self.assertIn(self.char4_campaign1_player1, player1_editable)
+
+        # Should not include other players' characters
+        self.assertNotIn(self.char5_campaign1_player2, player1_editable)
+        self.assertNotIn(self.char2_campaign1_gm, player1_editable)
+
+    def test_editable_by_manager_method_campaign_owner(self):
+        """Test editable_by for campaign owners."""
+        owner_editable = Character.objects.editable_by(self.owner1, self.campaign1)
+        self.assertEqual(owner_editable.count(), 5)
+
+        # Should include all characters in the campaign
+        all_campaign1_chars = [
+            self.char1_campaign1_owner,
+            self.char2_campaign1_gm,
+            self.char3_campaign1_player1,
+            self.char4_campaign1_player1,
+            self.char5_campaign1_player2,
+        ]
+        for char in all_campaign1_chars:
+            self.assertIn(char, owner_editable)
+
+    def test_editable_by_manager_method_campaign_gm(self):
+        """Test editable_by for campaign GMs."""
+        gm_editable = Character.objects.editable_by(self.gm1, self.campaign1)
+        self.assertEqual(gm_editable.count(), 5)
+
+        # Should include all characters in the campaign
+        all_campaign1_chars = [
+            self.char1_campaign1_owner,
+            self.char2_campaign1_gm,
+            self.char3_campaign1_player1,
+            self.char4_campaign1_player1,
+            self.char5_campaign1_player2,
+        ]
+        for char in all_campaign1_chars:
+            self.assertIn(char, gm_editable)
+
+    def test_editable_by_manager_method_observer(self):
+        """Test editable_by for observers - cannot edit any characters."""
+        observer_editable = Character.objects.editable_by(
+            self.observer1, self.campaign1
+        )
+        self.assertEqual(observer_editable.count(), 0)
+
+    def test_editable_by_manager_method_non_member(self):
+        """Test editable_by for non-members - cannot edit any characters."""
+        nonmember_editable = Character.objects.editable_by(
+            self.non_member, self.campaign1
+        )
+        self.assertEqual(nonmember_editable.count(), 0)
+
+    def test_editable_by_manager_method_cross_campaign(self):
+        """Test editable_by respects campaign boundaries."""
+        # Player1 should only see editable chars from specified campaign
+        player1_campaign2_editable = Character.objects.editable_by(
+            self.player1, self.campaign2
+        )
+        self.assertEqual(player1_campaign2_editable.count(), 1)
+        self.assertIn(self.char7_campaign2_player1, player1_campaign2_editable)
+
+        # Should not see characters from campaign1
+        self.assertNotIn(self.char3_campaign1_player1, player1_campaign2_editable)
+
+    def test_editable_by_returns_queryset(self):
+        """Test that editable_by returns a proper QuerySet for chaining."""
+        queryset = Character.objects.editable_by(self.owner1, self.campaign1)
+        self.assertTrue(hasattr(queryset, "filter"))
+
+        # Test chaining with additional filters
+        filtered = queryset.filter(name__icontains="Player")
+        self.assertEqual(
+            filtered.count(), 3
+        )  # Player1 Char 1, Player1 Char 2, Player2 Char 1
+
+    def test_manager_methods_with_none_parameters(self):
+        """Test manager methods handle None parameters gracefully."""
+        # Test for_campaign with None
+        with self.assertRaises(ValueError):
+            Character.objects.for_campaign(None)
+
+        # Test owned_by with None
+        none_owned = Character.objects.owned_by(None)
+        self.assertEqual(none_owned.count(), 0)
+
+        # Test editable_by with None user
+        none_user_editable = Character.objects.editable_by(None, self.campaign1)
+        self.assertEqual(none_user_editable.count(), 0)
+
+        # Test editable_by with None campaign
+        with self.assertRaises(ValueError):
+            Character.objects.editable_by(self.player1, None)
+
+
+class CharacterPermissionTest(TestCase):
+    """Test Character model permission methods."""
+
+    def setUp(self):
+        """Set up test users and campaigns with various roles."""
+        # Create users
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.player2 = User.objects.create_user(
+            username="player2", email="player2@test.com", password="testpass123"
+        )
+        self.observer = User.objects.create_user(
+            username="observer", email="observer@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+        self.different_campaign_owner = User.objects.create_user(
+            username="other_owner", email="other_owner@test.com", password="testpass123"
+        )
+
+        # Create campaigns
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited for testing
+        )
+        self.other_campaign = Campaign.objects.create(
+            name="Other Campaign",
+            owner=self.different_campaign_owner,
+            game_system="D&D 5e",
+            max_characters_per_player=0,  # Unlimited for testing
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player2, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.observer, role="OBSERVER"
+        )
+
+        # Create characters
+        self.owner_character = Character.objects.create(
+            name="Owner Character",
+            campaign=self.campaign,
+            player_owner=self.owner,
+            game_system="Mage: The Ascension",
+        )
+        self.gm_character = Character.objects.create(
+            name="GM Character",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+        )
+        self.player1_character = Character.objects.create(
+            name="Player1 Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        self.player2_character = Character.objects.create(
+            name="Player2 Character",
+            campaign=self.campaign,
+            player_owner=self.player2,
+            game_system="Mage: The Ascension",
+        )
+
+    def test_can_be_edited_by_character_owner(self):
+        """Test that character owners can edit their own characters."""
+        # Player1 can edit their own character
+        self.assertTrue(self.player1_character.can_be_edited_by(self.player1))
+
+        # Player2 can edit their own character
+        self.assertTrue(self.player2_character.can_be_edited_by(self.player2))
+
+        # GM can edit their own character
+        self.assertTrue(self.gm_character.can_be_edited_by(self.gm))
+
+        # Owner can edit their own character
+        self.assertTrue(self.owner_character.can_be_edited_by(self.owner))
+
+    def test_can_be_edited_by_campaign_owner(self):
+        """Test that campaign owners can edit all characters in their campaign."""
+        # Campaign owner can edit all characters
+        self.assertTrue(self.player1_character.can_be_edited_by(self.owner))
+        self.assertTrue(self.player2_character.can_be_edited_by(self.owner))
+        self.assertTrue(self.gm_character.can_be_edited_by(self.owner))
+        self.assertTrue(self.owner_character.can_be_edited_by(self.owner))
+
+    def test_can_be_edited_by_campaign_gm(self):
+        """Test that campaign GMs can edit all characters in their campaign."""
+        # GM can edit all characters in the campaign
+        self.assertTrue(self.player1_character.can_be_edited_by(self.gm))
+        self.assertTrue(self.player2_character.can_be_edited_by(self.gm))
+        self.assertTrue(self.gm_character.can_be_edited_by(self.gm))
+        self.assertTrue(self.owner_character.can_be_edited_by(self.gm))
+
+    def test_can_be_edited_by_other_players(self):
+        """Test that players cannot edit other players' characters."""
+        # Player1 cannot edit Player2's character
+        self.assertFalse(self.player2_character.can_be_edited_by(self.player1))
+
+        # Player2 cannot edit Player1's character
+        self.assertFalse(self.player1_character.can_be_edited_by(self.player2))
+
+        # Player1 cannot edit GM's character
+        self.assertFalse(self.gm_character.can_be_edited_by(self.player1))
+
+        # Player1 cannot edit Owner's character
+        self.assertFalse(self.owner_character.can_be_edited_by(self.player1))
+
+    def test_can_be_edited_by_observer(self):
+        """Test that observers cannot edit any characters."""
+        # Observer cannot edit any characters
+        self.assertFalse(self.player1_character.can_be_edited_by(self.observer))
+        self.assertFalse(self.player2_character.can_be_edited_by(self.observer))
+        self.assertFalse(self.gm_character.can_be_edited_by(self.observer))
+        self.assertFalse(self.owner_character.can_be_edited_by(self.observer))
+
+    def test_can_be_edited_by_non_member(self):
+        """Test that non-members cannot edit any characters."""
+        # Non-member cannot edit any characters
+        self.assertFalse(self.player1_character.can_be_edited_by(self.non_member))
+        self.assertFalse(self.player2_character.can_be_edited_by(self.non_member))
+        self.assertFalse(self.gm_character.can_be_edited_by(self.non_member))
+        self.assertFalse(self.owner_character.can_be_edited_by(self.non_member))
+
+    def test_can_be_edited_by_different_campaign_owner(self):
+        """Test that owners of different campaigns cannot edit characters."""
+        # Owner of different campaign cannot edit characters
+        self.assertFalse(
+            self.player1_character.can_be_edited_by(self.different_campaign_owner)
+        )
+        self.assertFalse(
+            self.gm_character.can_be_edited_by(self.different_campaign_owner)
+        )
+
+    def test_can_be_edited_by_with_none_user(self):
+        """Test can_be_edited_by with None user."""
+        self.assertFalse(self.player1_character.can_be_edited_by(None))
+
+    def test_can_be_deleted_by_character_owner(self):
+        """Test that character owners can delete their own characters."""
+        # Player1 can delete their own character
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.player1))
+
+        # Player2 can delete their own character
+        self.assertTrue(self.player2_character.can_be_deleted_by(self.player2))
+
+        # GM can delete their own character
+        self.assertTrue(self.gm_character.can_be_deleted_by(self.gm))
+
+        # Owner can delete their own character
+        self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
+
+    def test_can_be_deleted_by_campaign_owner(self):
+        """Test that campaign owners can delete characters when setting allows."""
+        # By default, campaign owners CAN delete characters
+        # (allow_owner_character_deletion=True)
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertTrue(self.player2_character.can_be_deleted_by(self.owner))
+        self.assertTrue(self.gm_character.can_be_deleted_by(self.owner))
+        self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
+
+    def test_can_be_deleted_by_campaign_owner_disabled(self):
+        """Test that campaign owners cannot delete when setting is disabled."""
+        # Disable owner character deletion
+        self.campaign.allow_owner_character_deletion = False
+        self.campaign.save()
+
+        # Campaign owner can still delete their own characters
+        self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
+
+        # But cannot delete other characters
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertFalse(self.player2_character.can_be_deleted_by(self.owner))
+        self.assertFalse(self.gm_character.can_be_deleted_by(self.owner))
+
+    def test_can_be_deleted_by_campaign_gm(self):
+        """Test that GMs cannot delete characters by default."""
+        # By default, GMs CANNOT delete other characters
+        # (allow_gm_character_deletion=False)
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.gm))
+        self.assertFalse(self.player2_character.can_be_deleted_by(self.gm))
+        self.assertFalse(self.owner_character.can_be_deleted_by(self.gm))
+
+        # But GMs can still delete their own characters
+        self.assertTrue(self.gm_character.can_be_deleted_by(self.gm))
+
+    def test_can_be_deleted_by_campaign_gm_enabled(self):
+        """Test that GMs can delete characters when setting is enabled."""
+        # Enable GM character deletion
+        self.campaign.allow_gm_character_deletion = True
+        self.campaign.save()
+
+        # GM can now delete all characters in the campaign
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.gm))
+        self.assertTrue(self.player2_character.can_be_deleted_by(self.gm))
+        self.assertTrue(self.gm_character.can_be_deleted_by(self.gm))
+        self.assertTrue(self.owner_character.can_be_deleted_by(self.gm))
+
+    def test_can_be_deleted_by_other_players(self):
+        """Test that players cannot delete other players' characters."""
+        # Player1 cannot delete Player2's character
+        self.assertFalse(self.player2_character.can_be_deleted_by(self.player1))
+
+        # Player2 cannot delete Player1's character
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.player2))
+
+        # Player1 cannot delete GM's character
+        self.assertFalse(self.gm_character.can_be_deleted_by(self.player1))
+
+        # Player1 cannot delete Owner's character
+        self.assertFalse(self.owner_character.can_be_deleted_by(self.player1))
+
+    def test_can_be_deleted_by_observer(self):
+        """Test that observers cannot delete any characters."""
+        # Observer cannot delete any characters
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.observer))
+        self.assertFalse(self.player2_character.can_be_deleted_by(self.observer))
+        self.assertFalse(self.gm_character.can_be_deleted_by(self.observer))
+        self.assertFalse(self.owner_character.can_be_deleted_by(self.observer))
+
+    def test_can_be_deleted_by_non_member(self):
+        """Test that non-members cannot delete any characters."""
+        # Non-member cannot delete any characters
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.non_member))
+        self.assertFalse(self.player2_character.can_be_deleted_by(self.non_member))
+        self.assertFalse(self.gm_character.can_be_deleted_by(self.non_member))
+        self.assertFalse(self.owner_character.can_be_deleted_by(self.non_member))
+
+    def test_can_be_deleted_by_with_none_user(self):
+        """Test can_be_deleted_by with None user."""
+        self.assertFalse(self.player1_character.can_be_deleted_by(None))
+
+    def test_can_be_deleted_by_mixed_settings(self):
+        """Test deletion permissions with mixed campaign settings."""
+        # Start with both settings enabled
+        self.campaign.allow_owner_character_deletion = True
+        self.campaign.allow_gm_character_deletion = True
+        self.campaign.save()
+
+        # Both owner and GM can delete characters
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.gm))
+
+        # Disable GM deletion but keep owner deletion
+        self.campaign.allow_gm_character_deletion = False
+        self.campaign.save()
+
+        # Owner can still delete, GM cannot (except their own)
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.gm))
+        self.assertTrue(self.gm_character.can_be_deleted_by(self.gm))
+
+        # Disable owner deletion but enable GM deletion
+        self.campaign.allow_owner_character_deletion = False
+        self.campaign.allow_gm_character_deletion = True
+        self.campaign.save()
+
+        # GM can delete, owner cannot (except their own)
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.gm))
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
+
+        # Disable both settings
+        self.campaign.allow_owner_character_deletion = False
+        self.campaign.allow_gm_character_deletion = False
+        self.campaign.save()
+
+        # Only character owners can delete their own characters
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.owner))
+        self.assertFalse(self.player1_character.can_be_deleted_by(self.gm))
+        self.assertTrue(self.player1_character.can_be_deleted_by(self.player1))
+        self.assertTrue(self.owner_character.can_be_deleted_by(self.owner))
+        self.assertTrue(self.gm_character.can_be_deleted_by(self.gm))
+
+    def test_can_be_deleted_by_different_campaign_roles(self):
+        """Test that users from different campaigns cannot delete characters."""
+        # Create another campaign with the same users in different roles
+        other_campaign = Campaign.objects.create(
+            name="Other Campaign",
+            owner=self.player1,  # player1 is owner of other campaign
+            game_system="Test System",
+        )
+
+        # Add owner as GM in other campaign
+        CampaignMembership.objects.create(
+            campaign=other_campaign, user=self.owner, role="GM"
+        )
+
+        # Create character in other campaign
+        Character.objects.create(
+            name="Other Character",
+            campaign=other_campaign,
+            player_owner=self.owner,
+            game_system="Test System",
+        )
+
+        # Users can only delete characters in campaigns where they have proper roles
+        # Owner (who is GM in other campaign) cannot delete characters in main campaign
+        # if they don't have proper permissions
+        self.assertTrue(
+            self.player1_character.can_be_deleted_by(self.owner)
+        )  # owner in main campaign
+
+        # Player1 (who is owner in other campaign) cannot delete characters in
+        # main campaign
+        self.assertFalse(
+            self.player2_character.can_be_deleted_by(self.player1)
+        )  # just player in main campaign
+
+    def test_bulk_can_be_deleted_by(self):
+        """Test bulk deletion permission checking optimization."""
+        # Create additional characters for bulk testing
+        char1 = Character.objects.create(
+            name="Bulk Delete Test Char 1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        char2 = Character.objects.create(
+            name="Bulk Delete Test Char 2",
+            campaign=self.campaign,
+            player_owner=self.player2,
+            game_system="Mage: The Ascension",
+        )
+
+        characters = [
+            self.player1_character,
+            self.player2_character,
+            self.owner_character,
+            self.gm_character,
+            char1,
+            char2,
+        ]
+
+        # Test bulk deletion permissions for campaign owner
+        bulk_delete_perms = {}
+        for char in characters:
+            bulk_delete_perms[char.id] = char.can_be_deleted_by(self.owner)
+
+        self.assertEqual(len(bulk_delete_perms), 6)
+        # Campaign owner should be able to delete all characters (default setting)
+        for char_id, can_delete in bulk_delete_perms.items():
+            self.assertTrue(can_delete)
+
+        # Test bulk deletion permissions for GM (default: cannot delete others)
+        bulk_delete_perms_gm = {}
+        for char in characters:
+            bulk_delete_perms_gm[char.id] = char.can_be_deleted_by(self.gm)
+
+        self.assertEqual(len(bulk_delete_perms_gm), 6)
+        # GM should only be able to delete their own character by default
+        self.assertTrue(bulk_delete_perms_gm[self.gm_character.id])
+        self.assertFalse(bulk_delete_perms_gm[self.player1_character.id])
+        self.assertFalse(bulk_delete_perms_gm[self.player2_character.id])
+        self.assertFalse(bulk_delete_perms_gm[self.owner_character.id])
+        self.assertFalse(bulk_delete_perms_gm[char1.id])
+        self.assertFalse(bulk_delete_perms_gm[char2.id])
+
+        # Test bulk deletion permissions for player
+        bulk_delete_perms_player = {}
+        for char in characters:
+            bulk_delete_perms_player[char.id] = char.can_be_deleted_by(self.player1)
+
+        self.assertEqual(len(bulk_delete_perms_player), 6)
+        # Player1 should only be able to delete their own characters
+        self.assertTrue(bulk_delete_perms_player[self.player1_character.id])
+        self.assertTrue(bulk_delete_perms_player[char1.id])
+        self.assertFalse(bulk_delete_perms_player[self.player2_character.id])
+        self.assertFalse(bulk_delete_perms_player[self.owner_character.id])
+        self.assertFalse(bulk_delete_perms_player[self.gm_character.id])
+        self.assertFalse(bulk_delete_perms_player[char2.id])
+
+        # Test with observer
+        bulk_delete_perms_observer = {}
+        for char in characters:
+            bulk_delete_perms_observer[char.id] = char.can_be_deleted_by(self.observer)
+
+        self.assertEqual(len(bulk_delete_perms_observer), 6)
+        # Observer should not be able to delete any characters
+        for char_id, can_delete in bulk_delete_perms_observer.items():
+            self.assertFalse(can_delete)
+
+        # Test with None user
+        bulk_delete_perms_none = {}
+        for char in characters:
+            bulk_delete_perms_none[char.id] = char.can_be_deleted_by(None)
+
+        self.assertEqual(len(bulk_delete_perms_none), 6)
+        for char_id, can_delete in bulk_delete_perms_none.items():
+            self.assertFalse(can_delete)
+
+    def test_get_permission_level_character_owner(self):
+        """Test get_permission_level for character owners."""
+        # Character owners get 'owner' permission level
+        self.assertEqual(
+            self.player1_character.get_permission_level(self.player1), "owner"
+        )
+        self.assertEqual(
+            self.player2_character.get_permission_level(self.player2), "owner"
+        )
+        self.assertEqual(self.gm_character.get_permission_level(self.gm), "owner")
+
+    def test_get_permission_level_campaign_owner(self):
+        """Test get_permission_level for campaign owners."""
+        # Campaign owner gets 'campaign_owner' permission level for all characters
+        self.assertEqual(
+            self.player1_character.get_permission_level(self.owner), "campaign_owner"
+        )
+        self.assertEqual(
+            self.player2_character.get_permission_level(self.owner), "campaign_owner"
+        )
+        self.assertEqual(
+            self.gm_character.get_permission_level(self.owner), "campaign_owner"
+        )
+        # Note: owner's own character should return 'owner' not 'campaign_owner'
+        self.assertEqual(self.owner_character.get_permission_level(self.owner), "owner")
+
+    def test_get_permission_level_campaign_gm(self):
+        """Test get_permission_level for campaign GMs."""
+        # GM gets 'gm' permission level for other characters, 'owner' for their own
+        self.assertEqual(self.player1_character.get_permission_level(self.gm), "gm")
+        self.assertEqual(self.player2_character.get_permission_level(self.gm), "gm")
+        self.assertEqual(self.owner_character.get_permission_level(self.gm), "gm")
+        # GM's own character should return 'owner'
+        self.assertEqual(self.gm_character.get_permission_level(self.gm), "owner")
+
+    def test_get_permission_level_other_players(self):
+        """Test get_permission_level for other players."""
+        # Players get 'read' permission for other players' characters
+        self.assertEqual(
+            self.player2_character.get_permission_level(self.player1), "read"
+        )
+        self.assertEqual(
+            self.player1_character.get_permission_level(self.player2), "read"
+        )
+        self.assertEqual(self.gm_character.get_permission_level(self.player1), "read")
+        self.assertEqual(
+            self.owner_character.get_permission_level(self.player1), "read"
+        )
+
+    def test_get_permission_level_observer(self):
+        """Test get_permission_level for observers."""
+        # Observers get 'read' permission for all characters
+        self.assertEqual(
+            self.player1_character.get_permission_level(self.observer), "read"
+        )
+        self.assertEqual(
+            self.player2_character.get_permission_level(self.observer), "read"
+        )
+        self.assertEqual(self.gm_character.get_permission_level(self.observer), "read")
+        self.assertEqual(
+            self.owner_character.get_permission_level(self.observer), "read"
+        )
+
+    def test_get_permission_level_non_member(self):
+        """Test get_permission_level for non-members."""
+        # Non-members get 'none' permission level
+        self.assertEqual(
+            self.player1_character.get_permission_level(self.non_member), "none"
+        )
+        self.assertEqual(
+            self.player2_character.get_permission_level(self.non_member), "none"
+        )
+        self.assertEqual(
+            self.gm_character.get_permission_level(self.non_member), "none"
+        )
+        self.assertEqual(
+            self.owner_character.get_permission_level(self.non_member), "none"
+        )
+
+    def test_get_permission_level_different_campaign_owner(self):
+        """Test get_permission_level for owners of different campaigns."""
+        # Owners of different campaigns get 'none' permission level
+        self.assertEqual(
+            self.player1_character.get_permission_level(self.different_campaign_owner),
+            "none",
+        )
+        self.assertEqual(
+            self.gm_character.get_permission_level(self.different_campaign_owner),
+            "none",
+        )
+
+    def test_get_permission_level_with_none_user(self):
+        """Test get_permission_level with None user."""
+        self.assertEqual(self.player1_character.get_permission_level(None), "none")
+
+    def test_permission_levels_hierarchy(self):
+        """Test that permission levels follow the expected hierarchy."""
+        # Test permission level values for hierarchy checking
+        permission_hierarchy = {
+            "none": 0,
+            "read": 1,
+            "gm": 2,
+            "campaign_owner": 3,
+            "owner": 4,
+        }
+
+        # Character owner should have highest permission
+        owner_level = self.player1_character.get_permission_level(self.player1)
+        campaign_owner_level = self.player1_character.get_permission_level(self.owner)
+        gm_level = self.player1_character.get_permission_level(self.gm)
+        other_player_level = self.player1_character.get_permission_level(self.player2)
+        observer_level = self.player1_character.get_permission_level(self.observer)
+        non_member_level = self.player1_character.get_permission_level(self.non_member)
+
+        # Verify hierarchy
+        self.assertGreater(
+            permission_hierarchy[owner_level],
+            permission_hierarchy[campaign_owner_level],
+        )
+        self.assertGreater(
+            permission_hierarchy[campaign_owner_level], permission_hierarchy[gm_level]
+        )
+        self.assertGreater(
+            permission_hierarchy[gm_level], permission_hierarchy[other_player_level]
+        )
+        self.assertEqual(other_player_level, observer_level)  # Same level
+        self.assertGreater(
+            permission_hierarchy[observer_level], permission_hierarchy[non_member_level]
+        )
+
+    def test_bulk_get_permission_levels(self):
+        """Test bulk permission level checking optimization."""
+        # Create additional characters for bulk testing
+        char1 = Character.objects.create(
+            name="Bulk Test Char 1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        char2 = Character.objects.create(
+            name="Bulk Test Char 2",
+            campaign=self.campaign,
+            player_owner=self.player2,
+            game_system="Mage: The Ascension",
+        )
+
+        characters = [
+            self.player1_character,
+            self.player2_character,
+            self.owner_character,
+            char1,
+            char2,
+        ]
+
+        # Test bulk permission levels for campaign owner
+        bulk_permissions = Character.bulk_get_permission_levels(characters, self.owner)
+
+        self.assertEqual(len(bulk_permissions), 5)
+        # Owner character should get 'owner' level
+        self.assertEqual(bulk_permissions[self.owner_character.id], "owner")
+        # Other characters should get 'campaign_owner' level
+        self.assertEqual(bulk_permissions[self.player1_character.id], "campaign_owner")
+        self.assertEqual(bulk_permissions[self.player2_character.id], "campaign_owner")
+        self.assertEqual(bulk_permissions[char1.id], "campaign_owner")
+        self.assertEqual(bulk_permissions[char2.id], "campaign_owner")
+
+        # Test bulk permission levels for player
+        bulk_permissions_player = Character.bulk_get_permission_levels(
+            characters, self.player1
+        )
+
+        self.assertEqual(len(bulk_permissions_player), 5)
+        # Player1's characters should get 'owner' level
+        self.assertEqual(bulk_permissions_player[self.player1_character.id], "owner")
+        self.assertEqual(bulk_permissions_player[char1.id], "owner")
+        # Other characters should get 'read' level
+        self.assertEqual(bulk_permissions_player[self.player2_character.id], "read")
+        self.assertEqual(bulk_permissions_player[self.owner_character.id], "read")
+        self.assertEqual(bulk_permissions_player[char2.id], "read")
+
+        # Test with None user
+        bulk_permissions_none = Character.bulk_get_permission_levels(characters, None)
+        self.assertEqual(len(bulk_permissions_none), 5)
+        for char_id in bulk_permissions_none.values():
+            self.assertEqual(char_id, "none")
+
+    def test_bulk_can_be_edited_by(self):
+        """Test bulk edit permission checking optimization."""
+        # Create additional characters for bulk testing
+        char1 = Character.objects.create(
+            name="Bulk Edit Test Char 1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        char2 = Character.objects.create(
+            name="Bulk Edit Test Char 2",
+            campaign=self.campaign,
+            player_owner=self.player2,
+            game_system="Mage: The Ascension",
+        )
+
+        characters = [
+            self.player1_character,
+            self.player2_character,
+            self.owner_character,
+            char1,
+            char2,
+        ]
+
+        # Test bulk edit permissions for campaign owner
+        bulk_edit_perms = Character.bulk_can_be_edited_by(characters, self.owner)
+
+        self.assertEqual(len(bulk_edit_perms), 5)
+        # Campaign owner should be able to edit all characters
+        for char_id, can_edit in bulk_edit_perms.items():
+            self.assertTrue(can_edit)
+
+        # Test bulk edit permissions for GM
+        bulk_edit_perms_gm = Character.bulk_can_be_edited_by(characters, self.gm)
+
+        self.assertEqual(len(bulk_edit_perms_gm), 5)
+        # GM should be able to edit all characters
+        for char_id, can_edit in bulk_edit_perms_gm.items():
+            self.assertTrue(can_edit)
+
+        # Test bulk edit permissions for player
+        bulk_edit_perms_player = Character.bulk_can_be_edited_by(
+            characters, self.player1
+        )
+
+        self.assertEqual(len(bulk_edit_perms_player), 5)
+        # Player1 should only be able to edit their own characters
+        self.assertTrue(bulk_edit_perms_player[self.player1_character.id])
+        self.assertTrue(bulk_edit_perms_player[char1.id])
+        self.assertFalse(bulk_edit_perms_player[self.player2_character.id])
+        self.assertFalse(bulk_edit_perms_player[self.owner_character.id])
+        self.assertFalse(bulk_edit_perms_player[char2.id])
+
+        # Test with observer
+        bulk_edit_perms_observer = Character.bulk_can_be_edited_by(
+            characters, self.observer
+        )
+
+        self.assertEqual(len(bulk_edit_perms_observer), 5)
+        # Observer should not be able to edit any characters
+        for char_id, can_edit in bulk_edit_perms_observer.items():
+            self.assertFalse(can_edit)
+
+        # Test with None user
+        bulk_edit_perms_none = Character.bulk_can_be_edited_by(characters, None)
+        self.assertEqual(len(bulk_edit_perms_none), 5)
+        for char_id, can_edit in bulk_edit_perms_none.items():
+            self.assertFalse(can_edit)
+
+    def test_with_campaign_memberships_queryset_optimization(self):
+        """Test that with_campaign_memberships() properly prefetches data."""
+        # This test verifies that the QuerySet method returns expected results
+        # In a real scenario, we'd use django-debug-toolbar or connection.queries
+        # to verify that it actually reduces queries
+
+        queryset = Character.objects.with_campaign_memberships().filter(
+            campaign=self.campaign
+        )
+
+        # Should be able to access campaign and membership data without extra queries
+        characters = list(queryset)
+
+        # Verify we got the expected characters
+        self.assertGreater(len(characters), 0)
+
+        # Verify campaign data is accessible (would trigger query if not prefetched)
+        for character in characters:
+            self.assertIsNotNone(character.campaign.name)
+            self.assertIsNotNone(character.campaign.owner.username)
+
+
+class CharacterEnhancedValidationTest(TestCase):
+    """Test enhanced Character model validation edge cases and error messages."""
+
+    def setUp(self):
+        """Set up test users and campaigns for validation testing."""
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.player2 = User.objects.create_user(
+            username="player2", email="player2@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+            max_characters_per_player=2,
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player1, role="PLAYER"
+        )
+
+    def test_validation_error_messages_content(self):
+        """Test that validation error messages contain expected content."""
+        # Test empty name validation message
+        with self.assertRaises(ValidationError) as context:
+            character = Character(
+                name="",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            )
+            character.full_clean()
+
+        error_messages = str(context.exception)
+        self.assertIn("Character name cannot be empty", error_messages)
+
+        # Test blank name validation message
+        with self.assertRaises(ValidationError) as context:
+            character = Character(
+                name="   ",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            )
+            character.full_clean()
+
+        error_messages = str(context.exception)
+        self.assertIn("Character name cannot be empty", error_messages)
+
+        # Test non-member validation message
+        with self.assertRaises(ValidationError) as context:
+            character = Character(
+                name="Non-member Character",
+                campaign=self.campaign,
+                player_owner=self.non_member,
+                game_system="Mage: The Ascension",
+            )
+            character.full_clean()
+
+        error_messages = str(context.exception)
+        self.assertIn("Only campaign members", error_messages)
+        self.assertIn("players, GMs, owners", error_messages)
+        self.assertIn("can own characters", error_messages)
+
+    def test_max_characters_validation_error_message(self):
+        """Test max characters per player validation error message."""
+        # Create maximum allowed characters
+        Character.objects.create(
+            name="Character 1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        Character.objects.create(
+            name="Character 2",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Try to create one more
+        with self.assertRaises(ValidationError) as context:
+            character = Character(
+                name="Character 3",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            )
+            character.full_clean()
+
+        error_messages = str(context.exception)
+        self.assertIn("cannot have more than 2 characters", error_messages)
+        self.assertIn("in this campaign", error_messages)
+
+    def test_permission_validation_during_character_updates(self):
+        """Test permission checks during character updates."""
+        # Create a character
+        character = Character.objects.create(
+            name="Original Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Test updating character name - should work for owner
+        character.name = "Updated Character"
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+        self.assertEqual(character.name, "Updated Character")
+
+        # Test updating campaign - existing character should still validate
+        character.description = "Updated description"
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+    def test_validation_when_campaign_membership_changes(self):
+        """Test validation when campaign membership status changes."""
+        # Create a character
+        character = Character.objects.create(
+            name="Member Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Remove player from campaign
+        CampaignMembership.objects.filter(
+            campaign=self.campaign, user=self.player1
+        ).delete()
+
+        # Character should still be valid for updates
+        character.name = "Updated Name"
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # But creating a new character for the removed player should fail
+        with self.assertRaises(ValidationError):
+            new_character = Character(
+                name="New Character",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            )
+            new_character.full_clean()
+
+    def test_character_validation_with_campaign_owner_changes(self):
+        """Test character validation when campaign ownership changes."""
+        # Create a character owned by a player
+        character = Character.objects.create(
+            name="Player Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Transfer campaign ownership to another user
+        new_owner = User.objects.create_user(
+            username="new_owner", email="new_owner@test.com", password="testpass123"
+        )
+        self.campaign.owner = new_owner
+        self.campaign.save()
+
+        # Existing character should still be valid
+        character.name = "Updated Player Character"
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # Original owner should still be able to own characters if they remain a member
+        # (campaign owner change doesn't affect existing memberships)
+
+    def test_character_name_with_special_characters(self):
+        """Test character validation with special characters in names."""
+        # Test names with special characters (should be allowed)
+        special_names = [
+            "Character with spaces",
+            "Character-with-hyphens",
+            "Character_with_underscores",
+            "Character with 'quotes'",
+            'Character with "double quotes"',
+            "Character with numbers 123",
+            "Character with symbols !@#$%",
+            "Character with unicode: café",
+            "Character with emojis: 🧙‍♂️",
+        ]
+
+        for i, name in enumerate(special_names):
+            with self.subTest(name=name):
+                character = Character.objects.create(
+                    name=name,
+                    campaign=self.campaign,
+                    player_owner=self.player1,
+                    game_system="Mage: The Ascension",
+                )
+                self.assertEqual(character.name, name)
+                # Clean up for next iteration
+                character.delete()
+
+    def test_character_validation_with_very_long_descriptions(self):
+        """Test character validation with very long descriptions."""
+        # Very long description should be allowed
+        long_description = "A" * 10000  # 10,000 characters
+
+        character = Character.objects.create(
+            name="Long Description Character",
+            description=long_description,
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        self.assertEqual(len(character.description), 10000)
+
+    def test_character_validation_with_campaign_limit_changes(self):
+        """Test character validation when campaign character limits change."""
+        # Create a character when limit is 2
+        character = Character.objects.create(
+            name="First Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Lower the campaign limit to 1
+        self.campaign.max_characters_per_player = 1
+        self.campaign.save()
+
+        # Existing character should still be valid for updates
+        character.name = "Updated First Character"
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # But creating a new character should fail if it exceeds the new limit
+        with self.assertRaises(ValidationError):
+            Character(
+                name="Second Character",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            ).full_clean()
+
+    def test_character_validation_edge_case_empty_campaign(self):
+        """Test character creation in campaigns with no other members."""
+        # Create a campaign with just the owner
+        solo_campaign = Campaign.objects.create(
+            name="Solo Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+        )
+
+        # Owner should be able to create characters in their own campaign
+        character = Character.objects.create(
+            name="Solo Character",
+            campaign=solo_campaign,
+            player_owner=self.owner,
+            game_system="Mage: The Ascension",
+        )
+        self.assertEqual(character.campaign, solo_campaign)
+
+    def test_character_validation_with_null_max_characters(self):
+        """Test character validation when max_characters_per_player is None."""
+        # Create campaign with None max_characters (should default to 0 = unlimited)
+        unlimited_campaign = Campaign.objects.create(
+            name="Unlimited Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # 0 means unlimited
+        )
+
+        # Add player to campaign
+        CampaignMembership.objects.create(
+            campaign=unlimited_campaign, user=self.player1, role="PLAYER"
+        )
+
+        # Should be able to create many characters
+        for i in range(10):
+            Character.objects.create(
+                name=f"Character {i+1}",
+                campaign=unlimited_campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            )
+
+        # Verify all characters were created
+        self.assertEqual(
+            Character.objects.filter(
+                campaign=unlimited_campaign, player_owner=self.player1
+            ).count(),
+            10,
+        )
+
+    def test_character_validation_concurrent_creation_edge_case(self):
+        """Test character validation in potential race condition scenarios."""
+        # Set campaign limit to 1
+        self.campaign.max_characters_per_player = 1
+        self.campaign.save()
+
+        # Create first character
+        Character.objects.create(
+            name="First Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Attempt to create second character should fail
+        with self.assertRaises(ValidationError):
+            Character(
+                name="Second Character",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            ).full_clean()
+
+    def test_character_creation_race_condition_prevention(self):
+        """Test atomic transactions prevent race conditions in character creation."""
+        # This test verifies the logic but doesn't actually test threading
+        # due to Django test transaction limitations. See the TransactionTestCase
+        # version for actual threading tests.
+
+        # Set campaign limit to 2
+        self.campaign.max_characters_per_player = 2
+        self.campaign.save()
+
+        # Create one character to start with (1/2 limit)
+        Character.objects.create(
+            name="Existing Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Should be able to create one more character
+        Character.objects.create(
+            name="Second Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Third character should fail validation
+        with self.assertRaises(ValidationError):
+            Character(
+                name="Third Character",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            ).full_clean()
+
+        # Verify final character count is exactly at limit
+        final_count = Character.objects.filter(
+            campaign=self.campaign, player_owner=self.player1
+        ).count()
+        expected_msg = f"Expected 2 characters total, got {final_count}"
+        self.assertEqual(final_count, 2, expected_msg)
+
+    def test_character_limit_validation_with_atomic_protection(self):
+        """Test that character limit validation uses atomic transaction protection."""
+        # Set strict limit
+        self.campaign.max_characters_per_player = 1
+        self.campaign.save()
+
+        # First character should succeed
+        Character.objects.create(
+            name="First Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Second character should fail due to limit
+        with self.assertRaises(ValidationError) as context:
+            Character.objects.create(
+                name="Second Character",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            )
+
+        # Verify error message mentions the limit
+        error_message = str(context.exception)
+        self.assertIn("cannot have more than 1 character", error_message)
+
+        # Verify only one character exists
+        final_count = Character.objects.filter(
+            campaign=self.campaign, player_owner=self.player1
+        ).count()
+        expected_msg = f"Expected 1 character, got {final_count}"
+        self.assertEqual(final_count, 1, expected_msg)
+
+    def test_character_update_does_not_affect_limit_validation(self):
+        """Test that updating existing characters doesn't trigger limit validation."""
+        from django.db import transaction
+
+        # Set limit to 1
+        self.campaign.max_characters_per_player = 1
+        self.campaign.save()
+
+        # Create one character at limit
+        character = Character.objects.create(
+            name="Original Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Updating should work fine even with atomic transactions
+        with transaction.atomic():
+            character.name = "Updated Character"
+            character.description = "Updated description"
+            character.full_clean()  # Should not raise ValidationError
+            character.save()
+
+        # Verify update succeeded
+        character.refresh_from_db()
+        self.assertEqual(character.name, "Updated Character")
+        self.assertEqual(character.description, "Updated description")
+
+    def test_character_permission_validation_with_role_changes(self):
+        """Test how character permissions are affected by campaign role changes."""
+        # Create a character owned by a player
+        character = Character.objects.create(
+            name="Player Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Player1 should be able to edit their character
+        self.assertTrue(character.can_be_edited_by(self.player1))
+
+        # Change player1's role to observer
+        membership = CampaignMembership.objects.get(
+            campaign=self.campaign, user=self.player1
+        )
+        membership.role = "OBSERVER"
+        membership.save()
+
+        # Player1 should still be able to edit their own character even as observer
+        self.assertTrue(character.can_be_edited_by(self.player1))
+
+        # Player1 should get 'owner' permission level
+        self.assertEqual(character.get_permission_level(self.player1), "owner")
+
+    def test_error_message_localization_compatibility(self):
+        """Test that error messages work with Django's localization system."""
+        # Test that validation error messages are strings (not lazy translation objects)
+        with self.assertRaises(ValidationError) as context:
+            Character(
+                name="",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            ).full_clean()
+
+        # Error message should be a proper string
+        error_messages = (
+            context.exception.message_dict
+            if hasattr(context.exception, "message_dict")
+            else str(context.exception)
+        )
+        self.assertIsInstance(str(error_messages), str)
+
+
+class CharacterUpdateValidationTest(TestCase):
+    """Test Character model validation on updates, not just creation."""
+
+    def setUp(self):
+        """Set up test users and campaigns for update validation testing."""
+        self.owner1 = User.objects.create_user(
+            username="owner1", email="owner1@test.com", password="testpass123"
+        )
+        self.owner2 = User.objects.create_user(
+            username="owner2", email="owner2@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.player2 = User.objects.create_user(
+            username="player2", email="player2@test.com", password="testpass123"
+        )
+        self.non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+
+        # Create campaigns
+        self.campaign1 = Campaign.objects.create(
+            name="Campaign One",
+            owner=self.owner1,
+            game_system="Mage: The Ascension",
+        )
+        self.campaign2 = Campaign.objects.create(
+            name="Campaign Two",
+            owner=self.owner2,
+            game_system="D&D 5e",
+        )
+
+        # Create memberships for campaign1
+        CampaignMembership.objects.create(
+            campaign=self.campaign1, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign1, user=self.player2, role="PLAYER"
+        )
+
+        # Create memberships for campaign2 (only player1)
+        CampaignMembership.objects.create(
+            campaign=self.campaign2, user=self.player1, role="PLAYER"
+        )
+
+    def test_change_character_owner_to_non_member_should_fail(self):
+        """Test changing character owner to a non-member should fail validation."""
+        # Create character owned by player1
+        character = Character.objects.create(
+            name="Original Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Try to change owner to non-member - should fail
+        character.player_owner = self.non_member
+        with self.assertRaises(ValidationError) as context:
+            character.full_clean()
+
+        error_messages = str(context.exception)
+        self.assertIn("Only campaign members", error_messages)
+        self.assertIn("can own characters", error_messages)
+
+    def test_change_character_owner_to_campaign_member_should_succeed(self):
+        """Test changing character owner to another campaign member should succeed."""
+        # Create character owned by player1
+        character = Character.objects.create(
+            name="Transfer Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Change owner to player2 (also a member) - should succeed
+        character.player_owner = self.player2
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # Verify change was successful
+        character.refresh_from_db()
+        self.assertEqual(character.player_owner, self.player2)
+
+    def test_move_character_to_campaign_where_owner_is_not_member_should_fail(self):
+        """Test moving character to campaign where owner is not a member should fail."""
+        # Create character in campaign1 owned by player1
+        character = Character.objects.create(
+            name="Movable Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Create a new campaign where player1 is not a member
+        campaign3 = Campaign.objects.create(
+            name="Campaign Three",
+            owner=self.owner2,
+            game_system="Vampire: The Masquerade",
+        )
+
+        # Try to move character to campaign3 - should fail
+        character.campaign = campaign3
+        with self.assertRaises(ValidationError) as context:
+            character.full_clean()
+
+        error_messages = str(context.exception)
+        self.assertIn("Only campaign members", error_messages)
+        self.assertIn("can own characters", error_messages)
+
+    def test_move_character_to_campaign_where_owner_is_member_should_succeed(self):
+        """Test moving character to campaign where owner is a member should succeed."""
+        # Create character in campaign1 owned by player1
+        character = Character.objects.create(
+            name="Transferable Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Move character to campaign2 where player1 is also a member - should succeed
+        character.campaign = self.campaign2
+        character.game_system = "D&D 5e"  # Update game system to match campaign
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # Verify change was successful
+        character.refresh_from_db()
+        self.assertEqual(character.campaign, self.campaign2)
+
+    def test_simultaneous_campaign_and_owner_change_both_invalid_should_fail(self):
+        """Test changing both campaign and owner to invalid combination should fail."""
+        # Create character in campaign1 owned by player1
+        character = Character.objects.create(
+            name="Double Change Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Try to change both campaign and owner to invalid combination
+        character.campaign = self.campaign2  # campaign2 exists
+        character.player_owner = self.player2  # player2 is NOT a member of campaign2
+
+        with self.assertRaises(ValidationError) as context:
+            character.full_clean()
+
+        error_messages = str(context.exception)
+        self.assertIn("Only campaign members", error_messages)
+
+    def test_simultaneous_campaign_and_owner_change_both_valid_should_succeed(self):
+        """Test changing both campaign and owner to valid combination should succeed."""
+        # Create character in campaign1 owned by player1
+        character = Character.objects.create(
+            name="Valid Double Change Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Change both campaign and owner to valid combination
+        character.campaign = self.campaign2  # campaign2 exists
+        character.player_owner = self.player1  # player1 IS a member of campaign2
+        character.game_system = "D&D 5e"  # Update game system to match campaign
+
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # Verify changes were successful
+        character.refresh_from_db()
+        self.assertEqual(character.campaign, self.campaign2)
+        self.assertEqual(character.player_owner, self.player1)
+
+    def test_no_validation_when_neither_campaign_nor_owner_change(self):
+        """Test membership validation is skipped when neither field changes."""
+        # Create character
+        character = Character.objects.create(
+            name="No Change Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Change only description (no campaign or owner change)
+        character.description = "Updated description"
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # Verify change was successful
+        character.refresh_from_db()
+        self.assertEqual(character.description, "Updated description")
+
+    def test_change_to_campaign_owner_should_succeed(self):
+        """Test changing character owner to campaign owner should succeed."""
+        # Create character owned by player1
+        character = Character.objects.create(
+            name="Owner Change Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Change owner to campaign owner - should succeed (owners are always members)
+        character.player_owner = self.owner1
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # Verify change was successful
+        character.refresh_from_db()
+        self.assertEqual(character.player_owner, self.owner1)
+
+    def test_validation_error_message_includes_field_context_on_update(self):
+        """Test validation error messages are clear about what changed."""
+        # Create character
+        character = Character.objects.create(
+            name="Context Error Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Try invalid owner change
+        character.player_owner = self.non_member
+        with self.assertRaises(ValidationError) as context:
+            character.full_clean()
+
+        error_messages = str(context.exception)
+        self.assertIn("Only campaign members", error_messages)
+        self.assertIn("can own characters", error_messages)
+
+    def test_update_validation_preserves_existing_character_limits(self):
+        """Test character limit validation still works during updates."""
+        # Set campaign limit to 1
+        self.campaign1.max_characters_per_player = 1
+        self.campaign1.save()
+
+        # Create character at limit
+        character = Character.objects.create(
+            name="Limited Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Update character (should work since we're not creating new)
+        character.description = "Updated with limits"
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # Verify update succeeded
+        character.refresh_from_db()
+        self.assertEqual(character.description, "Updated with limits")
+
+    def test_membership_removal_after_character_creation_allows_updates(self):
+        """Test removing membership after creation still allows updates."""
+        # Create character
+        character = Character.objects.create(
+            name="Membership Removal Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Remove player1's membership from campaign1
+        CampaignMembership.objects.filter(
+            campaign=self.campaign1, user=self.player1
+        ).delete()
+
+        # Update character (should still work for existing characters)
+        character.description = "Updated after membership removal"
+        character.full_clean()  # Should not raise ValidationError
+        character.save()
+
+        # Verify update succeeded
+        character.refresh_from_db()
+        expected_desc = "Updated after membership removal"
+        self.assertEqual(character.description, expected_desc)
+
+    def test_membership_removal_prevents_owner_change_to_non_member(self):
+        """Test that membership removal prevents changing owner to non-members."""
+        # Create character
+        character = Character.objects.create(
+            name="Ownership Change Character",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Try to change character owner to non-member
+        character.player_owner = self.non_member
+
+        with self.assertRaises(ValidationError) as context:
+            character.full_clean()
+
+        error_messages = str(context.exception)
+        self.assertIn("Only campaign members", error_messages)
+
+
+class CharacterRaceConditionTest(TransactionTestCase):
+    """Test Character race condition prevention using real DB transactions."""
+
+    def setUp(self):
+        """Set up test users and campaigns for race condition testing."""
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+            max_characters_per_player=2,
+        )
+        # Create membership
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player1, role="PLAYER"
+        )
+
+    def test_concurrent_character_creation_with_atomic_validation(self):
+        """Test atomic transactions prevent race conditions in creation."""
+        import time
+        from threading import Event, Thread
+
+        from django.db import transaction
+
+        # Set strict limit
+        self.campaign.max_characters_per_player = 1
+        self.campaign.save()
+
+        # Track results from concurrent operations
+        results = []
+        start_event = Event()
+
+        def create_character_atomically(character_name):
+            """Create a character with atomic validation."""
+            # Wait for all threads to be ready
+            start_event.wait()
+
+            try:
+                # Use atomic transaction for the entire operation
+                with transaction.atomic():
+                    character = Character(
+                        name=character_name,
+                        campaign=self.campaign,
+                        player_owner=self.player1,
+                        game_system="Mage: The Ascension",
+                    )
+                    # Add small delay to increase race condition potential
+                    time.sleep(0.01)
+                    character.save()  # Calls full_clean() with atomic validation
+                    results.append(("success", character_name))
+            except ValidationError:
+                results.append(("validation_error", character_name))
+            except Exception as ex:
+                results.append(("error", f"{character_name}: {str(ex)}"))
+
+        # Create multiple threads attempting to create characters simultaneously
+        threads = []
+        for i in range(5):  # Try to create 5 characters simultaneously
+            thread = Thread(
+                target=create_character_atomically,
+                args=(f"Concurrent Character {i+1}",),
+            )
+            threads.append(thread)
+            thread.start()
+
+        # Start all threads simultaneously
+        start_event.set()
+
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join()
+
+        # Analyze results: exactly one should succeed, others should fail
+        successes = [r for r in results if r[0] == "success"]
+        failures = [r for r in results if r[0] in ["validation_error", "error"]]
+
+        # Should have exactly 1 success
+        success_msg = f"Expected exactly 1 success, got {len(successes)}: {results}"
+        self.assertEqual(len(successes), 1, success_msg)
+
+        # Should have 4 failures (either validation errors or lock errors)
+        err_msg = (
+            f"Expected 4 failures (validation or lock errors), "
+            f"got {len(failures)}: {results}"
+        )
+        self.assertEqual(len(failures), 4, err_msg)
+
+        # Verify final character count is exactly at limit
+        final_count = Character.objects.filter(
+            campaign=self.campaign, player_owner=self.player1
+        ).count()
+        final_msg = f"Expected 1 character total, got {final_count}"
+        self.assertEqual(final_count, 1, final_msg)
+
+    def test_concurrent_character_creation_at_higher_limit(self):
+        """Test race condition prevention with higher character limits."""
+        from threading import Event, Thread
+
+        # Set limit to 3
+        self.campaign.max_characters_per_player = 3
+        self.campaign.save()
+
+        # Create 2 characters first (leaving 1 slot)
+        for i in range(2):
+            Character.objects.create(
+                name=f"Pre-existing Character {i+1}",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            )
+
+        results = []
+        start_event = Event()
+
+        def create_character(character_name):
+            """Create a character."""
+            start_event.wait()
+
+            try:
+                Character.objects.create(
+                    name=character_name,
+                    campaign=self.campaign,
+                    player_owner=self.player1,
+                    game_system="Mage: The Ascension",
+                )
+                results.append(("success", character_name))
+            except ValidationError:
+                results.append(("validation_error", character_name))
+            except Exception as ex:
+                results.append(("error", f"{character_name}: {str(ex)}"))
+
+        # Try to create 3 more characters (should only succeed for 1)
+        threads = []
+        for i in range(3):
+            thread = Thread(target=create_character, args=(f"Race Character {i+1}",))
+            threads.append(thread)
+            thread.start()
+
+        start_event.set()
+
+        for thread in threads:
+            thread.join()
+
+        # Verify exactly one succeeded
+        successes = [r for r in results if r[0] == "success"]
+        self.assertEqual(len(successes), 1, f"Expected 1 success, got: {results}")
+
+        # Verify total character count
+        final_count = Character.objects.filter(
+            campaign=self.campaign, player_owner=self.player1
+        ).count()
+        final_msg = f"Expected 3 characters total, got {final_count}"
+        self.assertEqual(final_count, 3, final_msg)

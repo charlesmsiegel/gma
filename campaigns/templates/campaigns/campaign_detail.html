@@ -79,13 +79,13 @@
       </div>
     </div>
   </div>
-  <!-- Campaign Description -->
+  <!-- Campaign Information -->
   {% if campaign.description %}
-    <div class="main-content-section">
+    <div class="main-content-section info-section">
       <div class="section-header">
         <h2 class="section-title">
           <i class="bi bi-journal-text"></i>
-          Campaign Description
+          Campaign Information
         </h2>
       </div>
       <div class="section-content">
@@ -114,36 +114,36 @@
                       {% endif %}">
             {% if user_role == "OWNER" or user_role == "GM" %}
               <!-- Full management access for owners and GMs -->
-              <div class="management-card characters-card">
+              <div class="management-card characters-card" role="article">
                 <div class="card-top">
-                  <div class="card-icon">👥</div>
+                  <div class="card-icon" aria-hidden="true">👥</div>
                   <h3 class="card-title">Manage Characters</h3>
                 </div>
                 <p class="card-description">Manage player and NPC characters</p>
                 <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
                    class="btn btn-primary">Characters</a>
               </div>
-              <div class="management-card scenes-card">
+              <div class="management-card scenes-card" role="article">
                 <div class="card-top">
-                  <div class="card-icon">🎭</div>
+                  <div class="card-icon" aria-hidden="true">🎭</div>
                   <h3 class="card-title">Manage Scenes</h3>
                 </div>
                 <p class="card-description">Create and manage campaign scenes</p>
                 <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
                    class="btn btn-primary">Scenes</a>
               </div>
-              <div class="management-card locations-card">
+              <div class="management-card locations-card" role="article">
                 <div class="card-top">
-                  <div class="card-icon">🗺️</div>
+                  <div class="card-icon" aria-hidden="true">🗺️</div>
                   <h3 class="card-title">Manage Locations</h3>
                 </div>
                 <p class="card-description">Organize campaign locations and maps</p>
                 <a href="{% url 'campaigns:campaign_locations' slug=campaign.slug %}"
                    class="btn btn-primary">Locations</a>
               </div>
-              <div class="management-card items-card">
+              <div class="management-card items-card" role="article">
                 <div class="card-top">
-                  <div class="card-icon">⚔️</div>
+                  <div class="card-icon" aria-hidden="true">⚔️</div>
                   <h3 class="card-title">Manage Items</h3>
                 </div>
                 <p class="card-description">Track items, equipment, and treasures</p>
@@ -152,18 +152,18 @@
               </div>
             {% elif user_role == "PLAYER" %}
               <!-- Limited access for players -->
-              <div class="management-card">
+              <div class="management-card" role="article">
                 <div class="card-top">
-                  <div class="card-icon">👤</div>
+                  <div class="card-icon" aria-hidden="true">👤</div>
                   <h3 class="card-title">My Characters</h3>
                 </div>
                 <p class="card-description">View and manage your characters</p>
                 <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
                    class="btn btn-primary">My Characters</a>
               </div>
-              <div class="management-card">
+              <div class="management-card" role="article">
                 <div class="card-top">
-                  <div class="card-icon">🎭</div>
+                  <div class="card-icon" aria-hidden="true">🎭</div>
                   <h3 class="card-title">Campaign Scenes</h3>
                 </div>
                 <p class="card-description">Browse and participate in scenes</p>
@@ -172,18 +172,18 @@
               </div>
             {% elif user_role == "OBSERVER" %}
               <!-- Read-only access for observers -->
-              <div class="management-card">
+              <div class="management-card" role="article">
                 <div class="card-top">
-                  <div class="card-icon">👥</div>
+                  <div class="card-icon" aria-hidden="true">👥</div>
                   <h3 class="card-title">View Characters</h3>
                 </div>
                 <p class="card-description">Browse campaign characters and stories</p>
                 <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
                    class="btn btn-primary">View Characters</a>
               </div>
-              <div class="management-card">
+              <div class="management-card" role="article">
                 <div class="card-top">
-                  <div class="card-icon">🎭</div>
+                  <div class="card-icon" aria-hidden="true">🎭</div>
                   <h3 class="card-title">View Scenes</h3>
                 </div>
                 <p class="card-description">Follow along with scenes and story</p>
@@ -198,7 +198,7 @@
   {% endif %}
   <!-- Campaign Members -->
   {% if user.is_authenticated %}
-    <div class="main-content-section">
+    <div class="member-list-section">
       <div class="section-header">
         <h2 class="section-title">
           <i class="bi bi-people-fill"></i>
@@ -236,6 +236,18 @@
                           {% endif %}"></i>
                 {{ membership.role }}
               </div>
+              {% if is_owner %}
+                <div class="member-actions">
+                  <button class="btn btn-sm btn-outline-primary"
+                          aria-label="Change role for {{ membership.user.username }}">
+                    Change Role
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger"
+                          aria-label="Remove {{ membership.user.username }} from campaign">
+                    Remove
+                  </button>
+                </div>
+              {% endif %}
             </div>
           {% endfor %}
         </div>
@@ -250,15 +262,10 @@
                 Edit Campaign
               </button>
               <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}"
-                 class="btn-hero">
-                <i class="bi bi-person-plus"></i>
-                Invite Users
-              </a>
+                 class="btn-hero"
+                 aria-label="Send invitations to new players"><i class="bi bi-person-plus"></i>Invite Users</a>
               <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}"
-                 class="btn btn-secondary">
-                <i class="bi bi-people"></i>
-                Manage Members
-              </a>
+                 class="btn btn-secondary"><i class="bi bi-people"></i>Manage Members</a>
               <a href="{% url 'campaigns:settings' slug=campaign.slug %}"
                  class="btn btn-secondary">
                 <i class="bi bi-gear"></i>

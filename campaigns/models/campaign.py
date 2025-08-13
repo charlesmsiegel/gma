@@ -139,6 +139,27 @@ class Campaign(models.Model):
         help_text="Maximum number of characters each player can have in this campaign",
     )
 
+    # Character deletion permissions
+    # These settings provide granular control over character deletion to protect
+    # player investment and campaign continuity in tabletop RPG contexts
+    allow_owner_character_deletion = models.BooleanField(  # type: ignore[var-annotated]
+        default=True,
+        help_text=(
+            "Allow campaign owner to delete any character in this campaign. "
+            "Default True for backwards compatibility. Players can always "
+            "delete their own characters."
+        ),
+    )
+
+    allow_gm_character_deletion = models.BooleanField(  # type: ignore[var-annotated]
+        default=False,
+        help_text=(
+            "Allow Game Masters to delete any character in this campaign. "
+            "Default False to protect player investment. GMs can always "
+            "delete their own characters."
+        ),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
     updated_at = models.DateTimeField(auto_now=True)  # type: ignore[var-annotated]
 
