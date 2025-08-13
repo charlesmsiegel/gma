@@ -2,7 +2,6 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, connection
 from django.test import TestCase, TransactionTestCase
-from django.test.utils import skipIf
 from polymorphic.models import PolymorphicModel
 
 from campaigns.models import Campaign, CampaignMembership
@@ -2187,10 +2186,6 @@ class CharacterRaceConditionTest(TransactionTestCase):
             campaign=self.campaign, user=self.player1, role="PLAYER"
         )
 
-    @skipIf(
-        connection.vendor == 'sqlite',
-        "SQLite has limited concurrent transaction support, skipping race condition test"
-    )
     def test_concurrent_character_creation_with_atomic_validation(self):
         """Test atomic transactions prevent race conditions in creation."""
         import time
@@ -2227,7 +2222,13 @@ class CharacterRaceConditionTest(TransactionTestCase):
             except ValidationError:
                 results.append(("validation_error", character_name))
             except Exception as ex:
-                results.append(("error", f"{character_name}: {str(ex)}"))
+                # Handle both database lock errors and validation errors
+                error_msg = str(ex).lower()
+                if "locked" in error_msg or "database is locked" in error_msg:
+                    # SQLite lock errors are expected and valid protection
+                    results.append(("lock_error", character_name))
+                else:
+                    results.append(("error", f"{character_name}: {str(ex)}"))
 
         # Create multiple threads attempting to create characters simultaneously
         threads = []
@@ -2246,27 +2247,57 @@ class CharacterRaceConditionTest(TransactionTestCase):
         for thread in threads:
             thread.join()
 
-        # Analyze results: exactly one should succeed, others should fail
+        # Analyze results based on database vendor
         successes = [r for r in results if r[0] == "success"]
-        failures = [r for r in results if r[0] in ["validation_error", "error"]]
-
-        # Should have exactly 1 success
-        success_msg = f"Expected exactly 1 success, got {len(successes)}: {results}"
-        self.assertEqual(len(successes), 1, success_msg)
-
-        # Should have 4 failures (either validation errors or lock errors)
-        err_msg = (
-            f"Expected 4 failures (validation or lock errors), "
-            f"got {len(failures)}: {results}"
-        )
-        self.assertEqual(len(failures), 4, err_msg)
-
-        # Verify final character count is exactly at limit
+        validation_failures = [r for r in results if r[0] == "validation_error"]
+        lock_failures = [r for r in results if r[0] == "lock_error"]
+        other_errors = [r for r in results if r[0] == "error"]
+        
+        # The key invariant: at most one character should be created
         final_count = Character.objects.filter(
             campaign=self.campaign, player_owner=self.player1
         ).count()
-        final_msg = f"Expected 1 character total, got {final_count}"
-        self.assertEqual(final_count, 1, final_msg)
+        
+        if connection.vendor == 'sqlite':
+            # SQLite may prevent all transactions due to database-level locking
+            # OR allow exactly one to succeed
+            self.assertLessEqual(
+                len(successes), 1,
+                f"SQLite should allow at most 1 success, got {len(successes)}: {results}"
+            )
+            
+            # All other attempts should fail (either lock or validation errors)
+            total_failures = len(validation_failures) + len(lock_failures) + len(other_errors)
+            self.assertGreaterEqual(
+                total_failures, 4,
+                f"Expected at least 4 failures, got {total_failures}: {results}"
+            )
+        else:
+            # PostgreSQL and other databases should allow exactly one success
+            self.assertEqual(
+                len(successes), 1,
+                f"Expected exactly 1 success, got {len(successes)}: {results}"
+            )
+            
+            # Should have 4 failures (validation errors)
+            total_failures = len(validation_failures) + len(lock_failures) + len(other_errors)
+            self.assertEqual(
+                total_failures, 4,
+                f"Expected 4 failures, got {total_failures}: {results}"
+            )
+        
+        # The critical test: verify final character count is at most the limit
+        self.assertLessEqual(
+            final_count, 1,
+            f"Character count ({final_count}) exceeds limit (1) - race condition not prevented!"
+        )
+        
+        # If we got a success, the count should be exactly 1
+        if successes:
+            self.assertEqual(
+                final_count, 1,
+                f"Success reported but character count is {final_count}"
+            )
 
     def test_concurrent_character_creation_at_higher_limit(self):
         """Test race condition prevention with higher character limits."""
