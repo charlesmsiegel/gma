@@ -1242,6 +1242,418 @@ class CharacterPermissionTest(TestCase):
             permission_hierarchy[observer_level], permission_hierarchy[non_member_level]
         )
 
+
+class CharacterSoftDeleteTest(TestCase):
+    """Test Character soft delete functionality."""
+
+    def setUp(self):
+        """Set up test users and campaigns for soft delete testing."""
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.player2 = User.objects.create_user(
+            username="player2", email="player2@test.com", password="testpass123"
+        )
+        self.admin_user = User.objects.create_user(
+            username="admin",
+            email="admin@test.com",
+            password="testpass123",
+            is_staff=True,
+            is_superuser=True,
+        )
+
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player2, role="PLAYER"
+        )
+
+    def test_character_has_soft_delete_fields(self):
+        """Test that Character model has soft delete fields."""
+        character = Character.objects.create(
+            name="Test Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Check for soft delete fields (these will fail until implemented)
+        self.assertTrue(hasattr(character, "is_deleted"))
+        self.assertTrue(hasattr(character, "deleted_at"))
+        self.assertTrue(hasattr(character, "deleted_by"))
+
+        # New character should not be deleted
+        self.assertFalse(character.is_deleted)
+        self.assertIsNone(character.deleted_at)
+        self.assertIsNone(character.deleted_by)
+
+    def test_soft_delete_character_as_owner(self):
+        """Test soft deleting character as owner."""
+        character = Character.objects.create(
+            name="Owner Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Owner should be able to soft delete their character
+        result = character.soft_delete(self.player1)
+        self.assertTrue(result)
+
+        character.refresh_from_db()
+        self.assertTrue(character.is_deleted)
+        self.assertIsNotNone(character.deleted_at)
+        self.assertEqual(character.deleted_by, self.player1)
+
+        # Character should still exist in database but be marked deleted
+        self.assertTrue(Character.objects.filter(pk=character.pk).exists())
+        self.assertTrue(Character.all_objects.filter(pk=character.pk).exists())
+
+    def test_soft_delete_character_as_campaign_owner(self):
+        """Test soft deleting character as campaign owner."""
+        character = Character.objects.create(
+            name="Player Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Campaign owner should be able to soft delete if setting allows
+        result = character.soft_delete(self.owner)
+        self.assertTrue(result)
+
+        character.refresh_from_db()
+        self.assertTrue(character.is_deleted)
+        self.assertEqual(character.deleted_by, self.owner)
+
+    def test_soft_delete_denies_unauthorized_users(self):
+        """Test that unauthorized users cannot soft delete characters."""
+        character = Character.objects.create(
+            name="Protected Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Another player should not be able to soft delete
+        result = character.soft_delete(self.player2)
+        self.assertFalse(result)
+
+        character.refresh_from_db()
+        self.assertFalse(character.is_deleted)
+
+    def test_hard_delete_admin_only(self):
+        """Test that only admins can hard delete characters."""
+        character = Character.objects.create(
+            name="Permanent Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Regular user cannot hard delete
+        with self.assertRaises(PermissionError):
+            character.hard_delete(self.player1)
+
+        # Admin can hard delete
+        result = character.hard_delete(self.admin_user)
+        self.assertTrue(result)
+
+        # Character should be completely removed from database
+        self.assertFalse(Character.objects.filter(pk=character.pk).exists())
+        self.assertFalse(Character.all_objects.filter(pk=character.pk).exists())
+
+    def test_soft_deleted_characters_excluded_from_default_queryset(self):
+        """Test that soft deleted characters are excluded from default queries."""
+        character1 = Character.objects.create(
+            name="Active Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        character2 = Character.objects.create(
+            name="Deleted Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Soft delete one character
+        character2.soft_delete(self.player1)
+
+        # Default queryset should only show active characters
+        active_characters = Character.objects.all()
+        self.assertEqual(active_characters.count(), 1)
+        self.assertIn(character1, active_characters)
+        self.assertNotIn(character2, active_characters)
+
+        # All objects queryset should show both
+        all_characters = Character.all_objects.all()
+        self.assertEqual(all_characters.count(), 2)
+        self.assertIn(character1, all_characters)
+        self.assertIn(character2, all_characters)
+
+    def test_restore_soft_deleted_character(self):
+        """Test restoring a soft deleted character."""
+        character = Character.objects.create(
+            name="Restorable Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Soft delete character
+        character.soft_delete(self.player1)
+        self.assertTrue(character.is_deleted)
+
+        # Restore character
+        result = character.restore(self.player1)
+        self.assertTrue(result)
+
+        character.refresh_from_db()
+        self.assertFalse(character.is_deleted)
+        self.assertIsNone(character.deleted_at)
+        self.assertIsNone(character.deleted_by)
+
+        # Character should appear in default queryset again
+        self.assertIn(character, Character.objects.all())
+
+    def test_character_deletion_with_confirmation_name(self):
+        """Test character deletion requires typing character name for confirmation."""
+        character = Character.objects.create(
+            name="Confirmation Required Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Deletion without confirmation should fail
+        with self.assertRaises(ValueError):
+            character.soft_delete(self.player1, confirmation_name="")
+
+        # Deletion with wrong name should fail
+        with self.assertRaises(ValueError):
+            character.soft_delete(self.player1, confirmation_name="Wrong Name")
+
+        # Deletion with correct name should succeed
+        result = character.soft_delete(
+            self.player1, confirmation_name="Confirmation Required Character"
+        )
+        self.assertTrue(result)
+        self.assertTrue(character.is_deleted)
+
+
+class CharacterAuditTrailTest(TestCase):
+    """Test Character audit trail functionality."""
+
+    def setUp(self):
+        """Set up test users and campaigns for audit trail testing."""
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player1, role="PLAYER"
+        )
+
+    def test_character_creation_creates_audit_entry(self):
+        """Test that character creation creates an audit trail entry."""
+        character = Character.objects.create(
+            name="Audited Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            description="Initial description",
+        )
+
+        # Check for audit trail entry (this will fail until implemented)
+        from characters.models import CharacterAuditLog
+
+        audit_entries = CharacterAuditLog.objects.filter(character=character)
+        self.assertEqual(audit_entries.count(), 1)
+
+        audit_entry = audit_entries.first()
+        self.assertEqual(audit_entry.action, "CREATE")
+        self.assertEqual(audit_entry.user, self.player1)
+        self.assertIsNotNone(audit_entry.timestamp)
+        self.assertIn("name", audit_entry.changes)
+        self.assertEqual(audit_entry.changes["name"]["new"], "Audited Character")
+
+    def test_character_update_creates_audit_entry(self):
+        """Test that character updates create audit trail entries."""
+        character = Character.objects.create(
+            name="Original Name",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            description="Original description",
+        )
+
+        # Update character
+        character.name = "Updated Name"
+        character.description = "Updated description"
+        character.save(update_user=self.gm)
+
+        from characters.models import CharacterAuditLog
+
+        audit_entries = CharacterAuditLog.objects.filter(character=character).order_by(
+            "timestamp"
+        )
+        self.assertEqual(audit_entries.count(), 2)  # CREATE + UPDATE
+
+        update_entry = audit_entries.last()
+        self.assertEqual(update_entry.action, "UPDATE")
+        self.assertEqual(update_entry.user, self.gm)
+        self.assertIn("name", update_entry.changes)
+        self.assertEqual(update_entry.changes["name"]["old"], "Original Name")
+        self.assertEqual(update_entry.changes["name"]["new"], "Updated Name")
+        self.assertIn("description", update_entry.changes)
+
+    def test_character_deletion_creates_audit_entry(self):
+        """Test that character deletion creates audit trail entry."""
+        character = Character.objects.create(
+            name="Delete Me",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Soft delete character
+        character.soft_delete(self.owner)
+
+        from characters.models import CharacterAuditLog
+
+        audit_entries = CharacterAuditLog.objects.filter(character=character).order_by(
+            "timestamp"
+        )
+        self.assertEqual(audit_entries.count(), 2)  # CREATE + DELETE
+
+        delete_entry = audit_entries.last()
+        self.assertEqual(delete_entry.action, "DELETE")
+        self.assertEqual(delete_entry.user, self.owner)
+        self.assertIn("is_deleted", delete_entry.changes)
+        self.assertEqual(delete_entry.changes["is_deleted"]["new"], True)
+
+    def test_audit_trail_tracks_only_changed_fields(self):
+        """Test that audit trail only tracks fields that actually changed."""
+        character = Character.objects.create(
+            name="Selective Audit",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            description="Original description",
+        )
+
+        # Update only the description
+        character.description = "Updated description"
+        character.save(update_user=self.player1)
+
+        from characters.models import CharacterAuditLog
+
+        update_entry = CharacterAuditLog.objects.filter(
+            character=character, action="UPDATE"
+        ).first()
+
+        # Should only track description change, not name
+        self.assertIn("description", update_entry.changes)
+        self.assertNotIn("name", update_entry.changes)
+        self.assertEqual(
+            update_entry.changes["description"]["old"], "Original description"
+        )
+        self.assertEqual(
+            update_entry.changes["description"]["new"], "Updated description"
+        )
+
+    def test_audit_trail_permission_access(self):
+        """Test that audit trail access is properly restricted."""
+        character = Character.objects.create(
+            name="Audit Access Test",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        from characters.models import CharacterAuditLog
+
+        # Character owner should see audit trail
+        audit_entries = CharacterAuditLog.get_for_user(character, self.player1)
+        self.assertGreater(audit_entries.count(), 0)
+
+        # Campaign owner should see audit trail
+        audit_entries = CharacterAuditLog.get_for_user(character, self.owner)
+        self.assertGreater(audit_entries.count(), 0)
+
+        # GM should see audit trail
+        audit_entries = CharacterAuditLog.get_for_user(character, self.gm)
+        self.assertGreater(audit_entries.count(), 0)
+
+        # Non-member should not see audit trail
+        non_member = User.objects.create_user(
+            username="nonmember", email="nonmember@test.com", password="testpass123"
+        )
+        audit_entries = CharacterAuditLog.get_for_user(character, non_member)
+        self.assertEqual(audit_entries.count(), 0)
+
+    def test_audit_trail_data_integrity(self):
+        """Test that audit trail maintains data integrity."""
+        character = Character.objects.create(
+            name="Data Integrity Test",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Make multiple changes
+        for i in range(5):
+            character.description = f"Description update {i}"
+            character.save(update_user=self.player1)
+
+        from characters.models import CharacterAuditLog
+
+        audit_entries = CharacterAuditLog.objects.filter(character=character).order_by(
+            "timestamp"
+        )
+
+        # Should have CREATE + 5 UPDATEs
+        self.assertEqual(audit_entries.count(), 6)
+
+        # Verify sequence of changes
+        create_entry = audit_entries.first()
+        self.assertEqual(create_entry.action, "CREATE")
+
+        for i, update_entry in enumerate(audit_entries[1:]):
+            self.assertEqual(update_entry.action, "UPDATE")
+            self.assertEqual(
+                update_entry.changes["description"]["new"], f"Description update {i}"
+            )
+
     def test_with_campaign_memberships_queryset_optimization(self):
         """Test that with_campaign_memberships() properly prefetches data."""
         # This test verifies that the QuerySet method returns expected results
@@ -2247,8 +2659,7 @@ class CharacterRaceConditionTest(TransactionTestCase):
             self.assertLessEqual(
                 final_count,
                 4,  # Might get one extra due to race condition
-                f"Character count ({final_count}) significantly exceeds "
-                "limit (3)",
+                f"Character count ({final_count}) significantly exceeds " "limit (3)",
             )
         else:
             # PostgreSQL with proper locking should enforce the limit strictly
