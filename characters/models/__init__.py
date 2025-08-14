@@ -617,7 +617,8 @@ class Character(PolymorphicModel):
             return False
 
         if self.is_deleted:
-            raise ValueError("Character is already deleted")
+            # Return self to indicate success - idempotent operation
+            return self
 
         # Validate confirmation name if provided
         if confirmation_name is not None:

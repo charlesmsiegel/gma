@@ -55,7 +55,7 @@ class BaseCharacterAPITestCase(APITestCase):
             slug="test-campaign",
             owner=self.owner,
             game_system="Mage: The Ascension",
-            max_characters_per_player=3,
+            max_characters_per_player=0,  # 0 = unlimited for testing pagination
         )
 
         # Create memberships

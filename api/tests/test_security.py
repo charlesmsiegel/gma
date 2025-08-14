@@ -395,22 +395,22 @@ class GlobalAPIErrorHandlingTest(TestCase):
         self.client = APIClient()
         self.protected_url = reverse("api:api_user_info")
 
-    def test_401_error_not_returned_by_drf(self):
-        """Test that DRF returns 403 instead of 401 for unauthenticated requests."""
+    def test_401_error_returned_for_unauthenticated_requests(self):
+        """Test that our custom exception handler returns 401 for unauthenticated requests."""
         # Make unauthenticated request to protected endpoint
         response = self.client.get(self.protected_url)
 
-        # DRF with IsAuthenticated permission returns 403, not 401
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Our custom exception handler returns 401 for anonymous users
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        # Document that frontend should handle 403 as "not authenticated"
+        # This provides clearer semantics for frontend authentication handling
 
     def test_error_response_format_consistency(self):
         """Test that all error responses have consistent format."""
         # Test various error scenarios
         test_cases = [
             # Unauthenticated request
-            (self.protected_url, "GET", None, status.HTTP_403_FORBIDDEN),
+            (self.protected_url, "GET", None, status.HTTP_401_UNAUTHORIZED),
             # Invalid login
             (
                 reverse("api:api_login"),

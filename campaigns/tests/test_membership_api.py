@@ -74,7 +74,7 @@ class ListMembersAPITest(TestCase):
         """Test that listing members requires authentication."""
         response = self.client.get(self.list_members_url)
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_campaign_member_can_list_members(self):
         """Test that campaign members can list other members."""
@@ -243,7 +243,7 @@ class ChangeMemberRoleAPITest(TestCase):
 
         response = self.client.patch(change_role_url, role_data, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_owner_can_change_any_role(self):
         """Test that campaign owner can change any member's role."""
@@ -431,7 +431,7 @@ class RemoveMemberAPITest(TestCase):
 
         response = self.client.delete(remove_member_url)
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_owner_can_remove_any_member(self):
         """Test that campaign owner can remove any member."""
@@ -603,7 +603,7 @@ class BulkMembershipOperationsAPITest(TestCase):
 
         response = self.client.post(bulk_add_url, member_data, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_owner_can_bulk_add_members(self):
         """Test that campaign owner can bulk add members."""
@@ -643,7 +643,7 @@ class BulkMembershipOperationsAPITest(TestCase):
 
         response = self.client.patch(bulk_change_url, role_data, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_owner_can_bulk_change_roles(self):
         """Test that campaign owner can bulk change roles."""
@@ -678,7 +678,7 @@ class BulkMembershipOperationsAPITest(TestCase):
 
         response = self.client.delete(bulk_remove_url, remove_data, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_owner_can_bulk_remove_members(self):
         """Test that campaign owner can bulk remove members."""

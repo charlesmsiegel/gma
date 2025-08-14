@@ -249,6 +249,7 @@ REST_FRAMEWORK = {
         "rest_framework.parsers.FormParser",
         "rest_framework.parsers.MultiPartParser",
     ],
+    "EXCEPTION_HANDLER": "api.authentication.custom_exception_handler",
 }
 
 # CORS settings for React frontend

@@ -37,8 +37,8 @@ class CampaignCreateAPITest(TestCase):
 
         response = self.client.post(self.create_url, campaign_data, format="json")
 
-        # DRF returns 403 for IsAuthenticated permission denied
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Custom exception handler returns 401 for unauthenticated requests
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_authenticated_user_can_create_campaign(self):
         """Test that authenticated users can create campaigns via API."""
@@ -243,8 +243,8 @@ class CampaignListAPITest(TestCase):
         """Test that unauthenticated users get 403 error (DRF default)."""
         response = self.client.get(self.list_url)
 
-        # DRF returns 403 for IsAuthenticated permission denied
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Custom exception handler returns 401 for unauthenticated requests
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_authenticated_user_can_list_campaigns(self):
         """Test that authenticated users can list campaigns."""

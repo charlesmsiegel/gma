@@ -129,19 +129,16 @@ class CharacterCreateForm(forms.ModelForm):
 
         if name and campaign:
             # Check for unique character name per campaign
-            existing_character = Character.objects.filter(
+            existing_character = Character.all_objects.filter(
                 campaign=campaign, name=name
             ).first()
 
             if existing_character:
-                raise ValidationError(
-                    {
-                        "name": (
-                            f"A character named '{name}' already exists in this "
-                            "campaign. Character names must be unique within "
-                            "each campaign."
-                        )
-                    }
+                self.add_error(
+                    "name",
+                    f"A character named '{name}' already exists in this "
+                    "campaign. Character names must be unique within "
+                    "each campaign."
                 )
 
         return cleaned_data
@@ -220,6 +217,12 @@ class CharacterEditForm(forms.ModelForm):
         self.user = user
         self.character = character
 
+        # Store original values for change tracking
+        self._original_values = {}
+        if character:
+            for field_name in self._meta.fields:
+                self._original_values[field_name] = getattr(character, field_name, None)
+
         # Check permissions
         if not character.can_be_edited_by(user):
             raise PermissionError(f"You don't have permission to edit {character.name}")
@@ -251,20 +254,17 @@ class CharacterEditForm(forms.ModelForm):
         if name and self.character:
             # Check for unique character name per campaign (excluding current character)
             existing_character = (
-                Character.objects.filter(campaign=self.character.campaign, name=name)
+                Character.all_objects.filter(campaign=self.character.campaign, name=name)
                 .exclude(pk=self.character.pk)
                 .first()
             )
 
             if existing_character:
-                raise ValidationError(
-                    {
-                        "name": (
-                            f"A character named '{name}' already exists in this "
-                            "campaign. Character names must be unique within "
-                            "each campaign."
-                        )
-                    }
+                self.add_error(
+                    "name",
+                    f"A character named '{name}' already exists in this "
+                    "campaign. Character names must be unique within "
+                    "each campaign."
                 )
 
         return cleaned_data
@@ -285,11 +285,27 @@ class CharacterEditForm(forms.ModelForm):
             return []
         return self.changed_data
 
+    def get_field_changes(self):
+        """Get detailed field changes for audit tracking.
+        
+        Returns:
+            dict: Dictionary with field names as keys, each containing 'old' and 'new' values
+        """
+        changes = {}
+        if hasattr(self, "changed_data"):
+            for field_name in self.changed_data:
+                if field_name in self._original_values and field_name in self.cleaned_data:
+                    changes[field_name] = {
+                        "old": self._original_values[field_name],
+                        "new": self.cleaned_data[field_name]
+                    }
+        return changes
+
 
 class CharacterDeleteForm(forms.Form):
     """Form for deleting characters with confirmation."""
 
-    character_name_confirmation = forms.CharField(
+    confirmation_name = forms.CharField(
         max_length=100,
         widget=forms.TextInput(
             attrs={
@@ -304,7 +320,7 @@ class CharacterDeleteForm(forms.Form):
         """Initialize form with character and user for validation."""
         # Support both character= and instance= patterns
         if character is None:
-            character = kwargs.get("instance")
+            character = kwargs.pop("instance", None)
         if character is None:
             raise TypeError(
                 "CharacterDeleteForm requires 'character' parameter or instance"
@@ -314,11 +330,31 @@ class CharacterDeleteForm(forms.Form):
 
         self.character = character
         self.user = user
+
+        # Check permissions before allowing form creation
+        if not character.can_be_deleted_by(user):
+            raise PermissionError(f"You don't have permission to delete {character.name}")
+
         super().__init__(*args, **kwargs)
 
-    def clean_character_name_confirmation(self):
+        # Update help text to include character name
+        self.fields["confirmation_name"].help_text = (
+            f"Type the character name exactly to confirm deletion: {character.name}"
+        )
+
+    @property
+    def character_name(self):
+        """Get the character's name for template display."""
+        return self.character.name
+
+    @property
+    def character_campaign(self):
+        """Get the character's campaign name for template display."""
+        return self.character.campaign.name
+
+    def clean_confirmation_name(self):
         """Validate that the confirmation matches the character name exactly."""
-        confirmation = self.cleaned_data.get("character_name_confirmation")
+        confirmation = self.cleaned_data.get("confirmation_name")
 
         if not confirmation:
             raise ValidationError(
@@ -328,10 +364,22 @@ class CharacterDeleteForm(forms.Form):
         # Case-sensitive comparison as required
         if confirmation != self.character.name:
             raise ValidationError(
-                f"You must type '{self.character.name}' exactly to confirm deletion."
+                f"You must type '{self.character.name}' - must match the character name exactly."
             )
 
         return confirmation
+
+    def delete(self):
+        """Execute soft delete on the character.
+        
+        Returns:
+            bool: True if deletion was successful
+            
+        Raises:
+            PermissionError: If user doesn't have permission (already checked in __init__)
+        """
+        self.character.soft_delete(self.user)
+        return True
 
     def delete_character(self, hard_delete=False):
         """Delete the character (soft delete by default, hard delete for admins).

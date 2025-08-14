@@ -7,6 +7,7 @@ audit trail, and confirmation requirements.
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import UpdateView, View
@@ -35,10 +36,7 @@ class CharacterEditView(LoginRequiredMixin, UpdateView):
 
         # Check if user has permission to edit this character
         if not character.can_be_edited_by(self.request.user):
-            messages.error(
-                self.request, "You don't have permission to edit this character."
-            )
-            return redirect("characters:detail", pk=character.pk)
+            raise PermissionDenied("You don't have permission to edit this character.")
 
         return character
 
@@ -148,18 +146,18 @@ class CharacterDeleteView(LoginRequiredMixin, View):
                     messages.success(
                         request,
                         f"Character '{deleted_character.name}' was "
-                        "permanently deleted.",
+                        "permanently and successfully deleted.",
                     )
                 else:
                     messages.success(
                         request,
-                        f"Character '{deleted_character.name}' was deleted and can be "
+                        f"Character '{deleted_character.name}' was successfully deleted and can be "
                         "restored by campaign staff.",
                     )
 
                 # Redirect to campaign characters list
                 return redirect(
-                    "characters:campaign_list",
+                    "characters:campaign_characters",
                     campaign_slug=character.campaign.slug,
                 )
 

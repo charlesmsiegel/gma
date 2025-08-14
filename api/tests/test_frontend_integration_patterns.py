@@ -306,8 +306,8 @@ class FrontendIntegrationPatternsTest(TestCase):
         )
         self.assertEqual(invalid_login.status_code, 400)
 
-        # 403 for authentication required
+        # 401 for authentication required (unauthenticated user)
         protected_response = self.client.get(self.user_info_url)
-        self.assertEqual(protected_response.status_code, 403)
+        self.assertEqual(protected_response.status_code, 401)
 
         # Note: CSRF protection testing is covered in test_auth_integration.py

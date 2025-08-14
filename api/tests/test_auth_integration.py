@@ -172,7 +172,7 @@ class AuthenticationIntegrationTest(TestCase):
 
         # Verify we can't access protected endpoints after logout
         user_info_response = self.client.get(self.user_info_url)
-        self.assertEqual(user_info_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(user_info_response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_session_persistence_across_requests(self):
         """Test that sessions persist across multiple API requests."""
@@ -324,7 +324,7 @@ class AuthenticationIntegrationTest(TestCase):
         """Test that protected endpoints properly reject unauthenticated requests."""
         # User info endpoint should require authentication
         user_info_response = self.client.get(self.user_info_url)
-        self.assertEqual(user_info_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(user_info_response.status_code, status.HTTP_401_UNAUTHORIZED)
 
         # Logout endpoint should require authentication
         csrf_response = self.client.get(self.csrf_url)
@@ -335,7 +335,7 @@ class AuthenticationIntegrationTest(TestCase):
             content_type="application/json",
             HTTP_X_CSRFTOKEN=csrf_token,
         )
-        self.assertEqual(logout_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(logout_response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_concurrent_session_handling(self):
         """Test that the system handles concurrent sessions properly."""
@@ -386,7 +386,7 @@ class AuthenticationIntegrationTest(TestCase):
 
         # Client1 should be logged out
         user_info_response1 = client1.get(self.user_info_url)
-        self.assertEqual(user_info_response1.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(user_info_response1.status_code, status.HTTP_401_UNAUTHORIZED)
 
         # Client2 should still be logged in
         user_info_response2 = client2.get(self.user_info_url)

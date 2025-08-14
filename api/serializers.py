@@ -3,9 +3,11 @@ API serializers for the GMA application.
 """
 
 from django.contrib.auth import get_user_model
+from django.db import models
 from rest_framework import serializers
 
 from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
+from characters.models import Character
 
 User = get_user_model()
 
@@ -452,3 +454,292 @@ class BulkRemoveMemberResponseSerializer(serializers.Serializer):
 
     removed = BulkRemoveMemberSuccessSerializer(many=True, read_only=True)
     errors = BulkOperationErrorSerializer(many=True, read_only=True, required=False)
+
+
+# Character API serializers
+class CharacterCampaignSerializer(serializers.ModelSerializer):
+    """Lightweight campaign serializer for character responses."""
+
+    class Meta:
+        model = Campaign
+        fields = ("id", "name", "game_system")
+
+
+class CharacterUserSerializer(serializers.ModelSerializer):
+    """Lightweight user serializer for character responses."""
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "email")
+
+
+class CharacterSerializer(serializers.ModelSerializer):
+    """Serializer for Character model with nested relationships."""
+
+    campaign = CharacterCampaignSerializer(read_only=True)
+    player_owner = CharacterUserSerializer(read_only=True)
+    deleted_by = CharacterUserSerializer(read_only=True)
+    character_type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Character
+        fields = (
+            "id",
+            "name",
+            "description", 
+            "game_system",
+            "created_at",
+            "updated_at",
+            "campaign",
+            "player_owner",
+            "is_deleted",
+            "deleted_at",
+            "deleted_by",
+            "character_type",
+        )
+        read_only_fields = (
+            "id",
+            "game_system",
+            "created_at", 
+            "updated_at",
+            "campaign",
+            "player_owner",
+            "is_deleted",
+            "deleted_at", 
+            "deleted_by",
+            "character_type",
+        )
+
+    def get_character_type(self, obj):
+        """Get the polymorphic character type."""
+        return obj.__class__.__name__
+
+
+class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating characters."""
+
+    campaign = serializers.PrimaryKeyRelatedField(
+        queryset=Campaign.objects.none(),  # Will be set in view
+        write_only=True,
+        required=False  # Not required for updates
+    )
+
+    class Meta:
+        model = Character
+        fields = (
+            "name",
+            "description",
+            "campaign",
+        )
+
+    def __init__(self, *args, **kwargs):
+        """Initialize with user-accessible campaigns."""
+        super().__init__(*args, **kwargs)
+        
+        # Set campaign queryset based on user in context
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            # User can create characters in campaigns they're a member of
+            user_campaigns = Campaign.objects.filter(
+                models.Q(owner=request.user) |
+                models.Q(memberships__user=request.user)
+            ).distinct()
+            self.fields['campaign'].queryset = user_campaigns
+
+    def validate_name(self, value):
+        """Validate character name."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Character name cannot be empty.")
+        
+        if len(value) > 100:
+            raise serializers.ValidationError("Character name cannot exceed 100 characters.")
+        
+        name = value.strip()
+        
+        # Check uniqueness for creation or when name changes during update
+        if self.context.get('request'):
+            request = self.context['request']
+            
+            # Get campaign for uniqueness check
+            if not self.instance:  # Creating new character
+                # This will be set by the parent validate method after this field validation runs
+                # For now, we can't check uniqueness at field level for creation
+                pass
+            else:  # Updating existing character
+                campaign = self.instance.campaign
+                # Check if this name conflicts with another character
+                existing_qs = Character.all_objects.filter(campaign=campaign, name=name)
+                existing_qs = existing_qs.exclude(pk=self.instance.pk)
+                
+                if existing_qs.exists():
+                    raise serializers.ValidationError(
+                        "A character with this name already exists in this campaign."
+                    )
+        
+        return name
+
+    def validate(self, data):
+        """Validate character data including uniqueness and campaign limits."""
+        # Get campaign for validation
+        if not self.instance:  # Creating new character
+            campaign = data.get('campaign')
+            if not campaign:
+                raise serializers.ValidationError({"campaign": ["Campaign is required."]})
+
+            # Get the user from context
+            request = self.context.get('request')
+            if not request or not request.user.is_authenticated:
+                raise serializers.ValidationError("Authentication required.")
+
+            user = request.user
+
+            # Campaign membership is checked in the view's perform_create method
+
+            # Check character limit for the campaign
+            if campaign.max_characters_per_player > 0:
+                existing_count = Character.objects.filter(
+                    campaign=campaign, 
+                    player_owner=user
+                ).count()
+                    
+                if existing_count >= campaign.max_characters_per_player:
+                    raise serializers.ValidationError({
+                        "campaign": [
+                            f"You cannot have more than {campaign.max_characters_per_player} "
+                            f"character{'s' if campaign.max_characters_per_player != 1 else ''} "
+                            "in this campaign."
+                        ]
+                    })
+        else:  # Updating existing character
+            campaign = self.instance.campaign
+            
+        # Check character name uniqueness within campaign - this is critical validation
+        name = data.get('name', '').strip()
+        if name and campaign:
+            # Use all_objects to include soft-deleted characters in uniqueness check
+            existing_qs = Character.all_objects.filter(campaign=campaign, name=name)
+            if self.instance:
+                existing_qs = existing_qs.exclude(pk=self.instance.pk)
+            
+            if existing_qs.exists():
+                # This should prevent the model constraint validation from running
+                raise serializers.ValidationError({
+                    "name": ["A character with this name already exists in this campaign."]
+                })
+
+        return data
+
+    def create(self, validated_data):
+        """Create character with proper owner and game system."""
+        from django.db import IntegrityError
+        from django.core.exceptions import ValidationError
+        
+        request = self.context.get('request')
+        campaign = validated_data['campaign']
+        
+        # Set player_owner and game_system
+        validated_data['player_owner'] = request.user
+        validated_data['game_system'] = campaign.game_system
+        
+        # Create character with audit user
+        try:
+            character = Character(**validated_data)
+            # Skip model validation since serializer validation already handled it
+            character.save(audit_user=request.user, validate=False)
+            return character
+        except IntegrityError as e:
+            error_message = str(e)
+            if 'unique_character_name_per_campaign' in error_message:
+                raise serializers.ValidationError({
+                    "name": ["A character with this name already exists in this campaign."]
+                })
+            raise
+        except ValidationError as e:
+            # Handle Django model validation errors
+            if hasattr(e, 'error_dict'):
+                # Check for name-specific errors first
+                if 'name' in e.error_dict:
+                    raise serializers.ValidationError({
+                        "name": [str(error) for error in e.error_dict['name']]
+                    })
+                # Check for constraint violations in non_field_errors
+                elif '__all__' in e.error_dict:
+                    for error in e.error_dict['__all__']:
+                        error_msg = str(error)
+                        if ('Campaign and Name' in error_msg and 'unique' in error_msg.lower()) or \
+                           ('fields campaign, name must make a unique set' in error_msg) or \
+                           ('campaign, name must make a unique set' in error_msg) or \
+                           ('The fields campaign, name must make a unique set' in error_msg):
+                            raise serializers.ValidationError({
+                                "name": ["A character with this name already exists in this campaign."]
+                            })
+            # Check for single error messages as well
+            if hasattr(e, 'message'):
+                error_msg = str(e.message)
+                if ('Campaign and Name' in error_msg and 'unique' in error_msg.lower()):
+                    raise serializers.ValidationError({
+                        "name": ["A character with this name already exists in this campaign."]
+                    })
+            # Re-raise the original error if we can't handle it
+            raise
+
+    def update(self, instance, validated_data):
+        """Update character with audit trail."""
+        from django.db import IntegrityError
+        from django.core.exceptions import ValidationError
+        
+        request = self.context.get('request')
+        
+        # Remove campaign from validated_data if present (shouldn't be changed)
+        validated_data.pop('campaign', None)
+        
+        # Update fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Save with audit user
+        try:
+            # Skip model validation since serializer validation already handled it
+            instance.save(audit_user=request.user, validate=False)
+            return instance
+        except IntegrityError as e:
+            error_message = str(e)
+            if 'unique_character_name_per_campaign' in error_message:
+                raise serializers.ValidationError({
+                    "name": ["A character with this name already exists in this campaign."]
+                })
+            raise
+        except ValidationError as e:
+            # Handle Django model validation errors
+            if hasattr(e, 'error_dict'):
+                # Check for name-specific errors first
+                if 'name' in e.error_dict:
+                    raise serializers.ValidationError({
+                        "name": [str(error) for error in e.error_dict['name']]
+                    })
+                # Check for constraint violations in non_field_errors
+                elif '__all__' in e.error_dict:
+                    for error in e.error_dict['__all__']:
+                        error_msg = str(error)
+                        if ('Campaign and Name' in error_msg and 'unique' in error_msg.lower()) or \
+                           ('fields campaign, name must make a unique set' in error_msg) or \
+                           ('campaign, name must make a unique set' in error_msg) or \
+                           ('The fields campaign, name must make a unique set' in error_msg):
+                            raise serializers.ValidationError({
+                                "name": ["A character with this name already exists in this campaign."]
+                            })
+            # Check for single error messages as well
+            if hasattr(e, 'message'):
+                error_msg = str(e.message)
+                if ('Campaign and Name' in error_msg and 'unique' in error_msg.lower()):
+                    raise serializers.ValidationError({
+                        "name": ["A character with this name already exists in this campaign."]
+                    })
+            # Re-raise the original error if we can't handle it
+            raise
+
+    def to_representation(self, instance):
+        """Return full character representation."""
+        # Use the main CharacterSerializer for response
+        serializer = CharacterSerializer(instance, context=self.context)
+        return serializer.data
