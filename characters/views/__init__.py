@@ -44,22 +44,27 @@ class CampaignCharactersView(CampaignCharacterMixin, CampaignListView):
 
         # Mixin already applies select_related optimizations
 
-        # Search functionality
+        # Search functionality with input validation
         search_query = self.request.GET.get("search", "").strip()
         if search_query:
-            queryset = queryset.filter(name__icontains=search_query)
+            # Limit search query length to prevent potential abuse
+            if len(search_query) <= 100:
+                queryset = queryset.filter(name__icontains=search_query)
 
-        # Filter by player owner
+        # Filter by player owner with input validation
         player_id = self.request.GET.get("player")
         if player_id:
             try:
-                from django.contrib.auth import get_user_model
+                # Validate player_id is a positive integer
+                player_id_int = int(player_id)
+                if player_id_int > 0:
+                    from django.contrib.auth import get_user_model
 
-                User = get_user_model()
-                player = User.objects.get(pk=player_id)
-                # Only filter if the player is a member of the campaign
-                if self.campaign.is_member(player):
-                    queryset = queryset.filter(player_owner=player)
+                    User = get_user_model()
+                    player = User.objects.get(pk=player_id_int)
+                    # Only filter if the player is a member of the campaign
+                    if self.campaign.is_member(player):
+                        queryset = queryset.filter(player_owner=player)
             except (ValueError, User.DoesNotExist):
                 # Invalid player ID, ignore filter
                 pass
@@ -135,10 +140,12 @@ class UserCharactersView(LoginRequiredMixin, ListView):
             .order_by("name")
         )
 
-        # Search functionality
+        # Search functionality with input validation
         search_query = self.request.GET.get("search", "").strip()
         if search_query:
-            queryset = queryset.filter(name__icontains=search_query)
+            # Limit search query length to prevent potential abuse
+            if len(search_query) <= 100:
+                queryset = queryset.filter(name__icontains=search_query)
 
         # Filter by campaign
         campaign_id = self.request.GET.get("campaign")

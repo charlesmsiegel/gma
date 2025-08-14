@@ -24,23 +24,27 @@ class BaseCharacterTestCase(TestCase):
 
     def create_standard_users(self):
         """Create standard set of test users used across character tests."""
+        # Use consistent test password across all test users
+        # Note: This is only used in tests, not production code
+        test_password = "testpass123"  # nosec - test only
+
         self.owner = User.objects.create_user(
-            username="owner", email="owner@test.com", password="testpass123"
+            username="owner", email="owner@test.com", password=test_password
         )
         self.gm = User.objects.create_user(
-            username="gm", email="gm@test.com", password="testpass123"
+            username="gm", email="gm@test.com", password=test_password
         )
         self.player1 = User.objects.create_user(
-            username="player1", email="player1@test.com", password="testpass123"
+            username="player1", email="player1@test.com", password=test_password
         )
         self.player2 = User.objects.create_user(
-            username="player2", email="player2@test.com", password="testpass123"
+            username="player2", email="player2@test.com", password=test_password
         )
         self.observer = User.objects.create_user(
-            username="observer", email="observer@test.com", password="testpass123"
+            username="observer", email="observer@test.com", password=test_password
         )
         self.non_member = User.objects.create_user(
-            username="nonmember", email="nonmember@test.com", password="testpass123"
+            username="nonmember", email="nonmember@test.com", password=test_password
         )
 
     def create_campaign_with_memberships(
