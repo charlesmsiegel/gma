@@ -19,12 +19,11 @@ from characters.models import Character
 User = get_user_model()
 
 
-class CharacterCreateViewTest(TestCase):
-    """Test CharacterCreateView functionality and permissions."""
+class BaseCharacterTestCase(TestCase):
+    """Base test case with common setup for character-related tests."""
 
-    def setUp(self):
-        """Set up test users and campaigns with various membership scenarios."""
-        # Create users
+    def create_standard_users(self):
+        """Create standard set of test users used across character tests."""
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
         )
@@ -44,40 +43,115 @@ class CharacterCreateViewTest(TestCase):
             username="nonmember", email="nonmember@test.com", password="testpass123"
         )
 
+    def create_campaign_with_memberships(
+        self,
+        name,
+        slug=None,
+        owner=None,
+        game_system="Mage: The Ascension",
+        max_characters=0,
+        is_active=True,
+        include_memberships=True,
+    ):
+        """Create a campaign with standard membership setup.
+
+        Args:
+            name: Campaign name
+            slug: Campaign slug (generated from name if None)
+            owner: Campaign owner (defaults to self.owner)
+            game_system: Game system name
+            max_characters: Maximum characters per player (0 = unlimited)
+            is_active: Whether campaign is active
+            include_memberships: Whether to create standard memberships
+
+        Returns:
+            Campaign instance
+        """
+        if owner is None:
+            owner = self.owner
+        if slug is None:
+            slug = name.lower().replace(" ", "-")
+
+        campaign = Campaign.objects.create(
+            name=name,
+            slug=slug,
+            owner=owner,
+            game_system=game_system,
+            max_characters_per_player=max_characters,
+            is_active=is_active,
+        )
+
+        if include_memberships:
+            self.create_standard_memberships(campaign)
+
+        return campaign
+
+    def create_standard_memberships(self, campaign):
+        """Create standard memberships for a campaign."""
+        CampaignMembership.objects.create(campaign=campaign, user=self.gm, role="GM")
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.player2, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=campaign, user=self.observer, role="OBSERVER"
+        )
+
+    def create_character(
+        self, name, campaign, player_owner, description="", game_system=None
+    ):
+        """Create a character with standard setup.
+
+        Args:
+            name: Character name
+            campaign: Campaign instance
+            player_owner: User who owns the character
+            description: Character description
+            game_system: Game system (defaults to campaign's game system)
+
+        Returns:
+            Character instance
+        """
+        if game_system is None:
+            game_system = campaign.game_system
+
+        return Character.objects.create(
+            name=name,
+            description=description,
+            campaign=campaign,
+            player_owner=player_owner,
+            game_system=game_system,
+        )
+
+
+class CharacterCreateViewTest(BaseCharacterTestCase):
+    """Test CharacterCreateView functionality and permissions."""
+
+    def setUp(self):
+        """Set up test users and campaigns with various membership scenarios."""
+        # Create standard users
+        self.create_standard_users()
+
         # Create campaigns with different character limits
-        self.campaign_limited = Campaign.objects.create(
-            name="Limited Campaign",
-            owner=self.owner,
-            game_system="Mage: The Ascension",
-            max_characters_per_player=2,
+        self.campaign_limited = self.create_campaign_with_memberships(
+            "Limited Campaign", max_characters=2
         )
-        self.campaign_unlimited = Campaign.objects.create(
-            name="Unlimited Campaign",
-            owner=self.owner,
+        self.campaign_unlimited = self.create_campaign_with_memberships(
+            "Unlimited Campaign",
             game_system="D&D 5e",
-            max_characters_per_player=0,  # 0 means unlimited
+            max_characters=0,  # 0 means unlimited
+            include_memberships=False,
         )
-        self.campaign_single = Campaign.objects.create(
-            name="Single Character Campaign",
-            owner=self.owner,
+        self.campaign_single = self.create_campaign_with_memberships(
+            "Single Character Campaign",
             game_system="Call of Cthulhu",
-            max_characters_per_player=1,
+            max_characters=1,
+            include_memberships=False,
         )
 
-        # Create memberships for various roles
-        CampaignMembership.objects.create(
-            campaign=self.campaign_limited, user=self.gm, role="GM"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign_limited, user=self.player1, role="PLAYER"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign_limited, user=self.player2, role="PLAYER"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign_limited, user=self.observer, role="OBSERVER"
-        )
-
+        # Add specific memberships for unlimited and single campaigns
         CampaignMembership.objects.create(
             campaign=self.campaign_unlimited, user=self.player1, role="PLAYER"
         )
@@ -125,10 +199,10 @@ class CharacterCreateViewTest(TestCase):
     def test_view_get_shows_character_limit_warning(self):
         """Test that view shows warning when character limit is reached."""
         # Create character up to limit in single character campaign
-        Character.objects.create(
-            name="Existing Character",
-            campaign=self.campaign_single,
-            player_owner=self.player1,
+        self.create_character(
+            "Existing Character",
+            self.campaign_single,
+            self.player1,
             game_system="Call of Cthulhu",
         )
 
@@ -211,12 +285,7 @@ class CharacterCreateViewTest(TestCase):
     def test_view_post_validates_character_name_uniqueness(self):
         """Test that character name uniqueness is validated per campaign."""
         # Create existing character
-        Character.objects.create(
-            name="Existing Character",
-            campaign=self.campaign_limited,
-            player_owner=self.player2,
-            game_system="Mage: The Ascension",
-        )
+        self.create_character("Existing Character", self.campaign_limited, self.player2)
 
         self.client.login(username="player1", password="testpass123")
 
@@ -234,10 +303,10 @@ class CharacterCreateViewTest(TestCase):
     def test_view_post_validates_character_limit_enforcement(self):
         """Test that character limits are enforced on POST."""
         # Create character up to limit
-        Character.objects.create(
-            name="Character 1",
-            campaign=self.campaign_single,
-            player_owner=self.player1,
+        self.create_character(
+            "Character 1",
+            self.campaign_single,
+            self.player1,
             game_system="Call of Cthulhu",
         )
 
@@ -382,12 +451,7 @@ class CharacterCreateViewTest(TestCase):
     def test_view_context_data_includes_character_counts(self):
         """Test that view provides character count information in context."""
         # Create some characters
-        Character.objects.create(
-            name="Character 1",
-            campaign=self.campaign_limited,
-            player_owner=self.player1,
-            game_system="Mage: The Ascension",
-        )
+        self.create_character("Character 1", self.campaign_limited, self.player1)
 
         self.client.login(username="player1", password="testpass123")
         response = self.client.get(self.create_url)
@@ -427,10 +491,10 @@ class CharacterCreateViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Another user creates a character that puts player1 at limit
-        Character.objects.create(
-            name="Concurrent Character",
-            campaign=self.campaign_single,
-            player_owner=self.player1,
+        self.create_character(
+            "Concurrent Character",
+            self.campaign_single,
+            self.player1,
             game_system="Call of Cthulhu",
         )
 
@@ -500,123 +564,78 @@ class CharacterCreateViewTest(TestCase):
         self.assertContains(response, "This description should be preserved")
 
 
-class CampaignCharacterListViewTest(TestCase):
+class CampaignCharacterListViewTest(BaseCharacterTestCase):
     """Test CampaignCharactersView functionality and role-based filtering."""
 
     def setUp(self):
         """Set up test users, campaigns, and characters for list view testing."""
-        # Create test users
-        self.owner = User.objects.create_user(
-            username="owner", email="owner@test.com", password="testpass123"
-        )
-        self.gm = User.objects.create_user(
-            username="gm", email="gm@test.com", password="testpass123"
-        )
-        self.player1 = User.objects.create_user(
-            username="player1", email="player1@test.com", password="testpass123"
-        )
-        self.player2 = User.objects.create_user(
-            username="player2", email="player2@test.com", password="testpass123"
-        )
-        self.observer = User.objects.create_user(
-            username="observer", email="observer@test.com", password="testpass123"
-        )
-        self.non_member = User.objects.create_user(
-            username="nonmember", email="nonmember@test.com", password="testpass123"
-        )
+        # Create standard users
+        self.create_standard_users()
 
         # Create test campaigns
-        self.campaign = Campaign.objects.create(
-            name="Test Campaign",
-            slug="test-campaign",
-            owner=self.owner,
-            game_system="Mage: The Ascension",
-            max_characters_per_player=3,
+        self.campaign = self.create_campaign_with_memberships(
+            "Test Campaign", slug="test-campaign", max_characters=3
         )
 
-        self.other_campaign = Campaign.objects.create(
-            name="Other Campaign",
+        self.other_campaign = self.create_campaign_with_memberships(
+            "Other Campaign",
             slug="other-campaign",
             owner=self.player2,
             game_system="D&D 5e",
-            max_characters_per_player=2,
+            max_characters=2,
+            include_memberships=False,
         )
 
-        self.inactive_campaign = Campaign.objects.create(
-            name="Inactive Campaign",
+        self.inactive_campaign = self.create_campaign_with_memberships(
+            "Inactive Campaign",
             slug="inactive-campaign",
-            owner=self.owner,
             game_system="Call of Cthulhu",
             is_active=False,
+            include_memberships=False,
         )
 
-        # Create memberships
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.gm, role="GM"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player1, role="PLAYER"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player2, role="PLAYER"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.observer, role="OBSERVER"
-        )
-
-        # Add memberships to other campaign
+        # Add membership to other campaign
         CampaignMembership.objects.create(
             campaign=self.other_campaign, user=self.player1, role="PLAYER"
         )
 
         # Create test characters
-        self.char1_player1 = Character.objects.create(
-            name="Player1 Character A",
-            description="First character for player1",
-            campaign=self.campaign,
-            player_owner=self.player1,
-            game_system="Mage: The Ascension",
+        self.char1_player1 = self.create_character(
+            "Player1 Character A",
+            self.campaign,
+            self.player1,
+            "First character for player1",
         )
 
-        self.char2_player1 = Character.objects.create(
-            name="Player1 Character B",
-            description="Second character for player1",
-            campaign=self.campaign,
-            player_owner=self.player1,
-            game_system="Mage: The Ascension",
+        self.char2_player1 = self.create_character(
+            "Player1 Character B",
+            self.campaign,
+            self.player1,
+            "Second character for player1",
         )
 
-        self.char1_player2 = Character.objects.create(
-            name="Player2 Character",
-            description="Character for player2",
-            campaign=self.campaign,
-            player_owner=self.player2,
-            game_system="Mage: The Ascension",
+        self.char1_player2 = self.create_character(
+            "Player2 Character", self.campaign, self.player2, "Character for player2"
         )
 
-        self.char1_gm = Character.objects.create(
-            name="GM NPC Character",
-            description="NPC controlled by GM",
-            campaign=self.campaign,
-            player_owner=self.gm,
-            game_system="Mage: The Ascension",
+        self.char1_gm = self.create_character(
+            "GM NPC Character", self.campaign, self.gm, "NPC controlled by GM"
         )
 
-        self.char1_owner = Character.objects.create(
-            name="Owner Character",
-            description="Character owned by campaign owner",
-            campaign=self.campaign,
-            player_owner=self.owner,
-            game_system="Mage: The Ascension",
+        self.char1_owner = self.create_character(
+            "Owner Character",
+            self.campaign,
+            self.owner,
+            "Character owned by campaign owner",
         )
 
         # Character in other campaign
-        self.char_other_campaign = Character.objects.create(
-            name="Other Campaign Character",
-            description="Character in different campaign",
-            campaign=self.other_campaign,
-            player_owner=self.player1,
-            game_system="D&D 5e",
+        self.char_other_campaign = self.create_character(
+            "Other Campaign Character",
+            self.other_campaign,
+            self.player1,
+            "Character in different campaign",
+            "D&D 5e",
         )
 
         # URL for campaign character list
@@ -817,11 +836,11 @@ class CampaignCharacterListViewTest(TestCase):
     def test_empty_campaign_shows_no_characters(self):
         """Test that campaigns with no characters display properly."""
         # Create a campaign with no characters
-        empty_campaign = Campaign.objects.create(
-            name="Empty Campaign",
+        empty_campaign = self.create_campaign_with_memberships(
+            "Empty Campaign",
             slug="empty-campaign",
-            owner=self.owner,
             game_system="Vampire: The Masquerade",
+            include_memberships=False,
         )
 
         CampaignMembership.objects.create(
@@ -876,12 +895,12 @@ class CampaignCharacterListViewTest(TestCase):
                 _ = character.campaign.name
 
 
-class UserCharacterListViewTest(TestCase):
+class UserCharacterListViewTest(BaseCharacterTestCase):
     """Test UserCharactersView functionality (user-scoped character list)."""
 
     def setUp(self):
         """Set up test data for user-scoped character list testing."""
-        # Create test users
+        # Create test users (using different names for this test)
         self.user1 = User.objects.create_user(
             username="user1", email="user1@test.com", password="testpass123"
         )
@@ -893,28 +912,27 @@ class UserCharacterListViewTest(TestCase):
         )
 
         # Create test campaigns
-        self.campaign1 = Campaign.objects.create(
-            name="Campaign One",
+        self.campaign1 = self.create_campaign_with_memberships(
+            "Campaign One",
             slug="campaign-one",
             owner=self.user1,
-            game_system="Mage: The Ascension",
-            max_characters_per_player=0,  # Unlimited characters
+            include_memberships=False,
         )
 
-        self.campaign2 = Campaign.objects.create(
-            name="Campaign Two",
+        self.campaign2 = self.create_campaign_with_memberships(
+            "Campaign Two",
             slug="campaign-two",
             owner=self.user2,
             game_system="D&D 5e",
-            max_characters_per_player=0,  # Unlimited characters
+            include_memberships=False,
         )
 
-        self.campaign3 = Campaign.objects.create(
-            name="Campaign Three",
+        self.campaign3 = self.create_campaign_with_memberships(
+            "Campaign Three",
             slug="campaign-three",
             owner=self.user2,
             game_system="Vampire: The Masquerade",
-            max_characters_per_player=0,  # Unlimited characters
+            include_memberships=False,
         )
 
         # Create memberships - user1 is a member of campaign1 and campaign2
@@ -923,46 +941,41 @@ class UserCharacterListViewTest(TestCase):
         )
 
         # Create characters for user1 across multiple campaigns
-        self.char1_campaign1 = Character.objects.create(
-            name="Character in Campaign 1",
-            description="First character",
-            campaign=self.campaign1,
-            player_owner=self.user1,
-            game_system="Mage: The Ascension",
+        self.char1_campaign1 = self.create_character(
+            "Character in Campaign 1", self.campaign1, self.user1, "First character"
         )
 
-        self.char2_campaign1 = Character.objects.create(
-            name="Another Character in Campaign 1",
-            description="Second character",
-            campaign=self.campaign1,
-            player_owner=self.user1,
-            game_system="Mage: The Ascension",
+        self.char2_campaign1 = self.create_character(
+            "Another Character in Campaign 1",
+            self.campaign1,
+            self.user1,
+            "Second character",
         )
 
-        self.char1_campaign2 = Character.objects.create(
-            name="Character in Campaign 2",
-            description="Third character",
-            campaign=self.campaign2,
-            player_owner=self.user1,
-            game_system="D&D 5e",
+        self.char1_campaign2 = self.create_character(
+            "Character in Campaign 2",
+            self.campaign2,
+            self.user1,
+            "Third character",
+            "D&D 5e",
         )
 
         # Character owned by user2 (should not be visible to user1)
-        self.char_user2 = Character.objects.create(
-            name="User2 Character",
-            description="Character owned by user2",
-            campaign=self.campaign2,
-            player_owner=self.user2,
-            game_system="D&D 5e",
+        self.char_user2 = self.create_character(
+            "User2 Character",
+            self.campaign2,
+            self.user2,
+            "Character owned by user2",
+            "D&D 5e",
         )
 
         # Character in campaign user1 has no access to
-        self.char_no_access = Character.objects.create(
-            name="No Access Character",
-            description="Character in campaign user1 cannot access",
-            campaign=self.campaign3,
-            player_owner=self.user2,
-            game_system="Vampire: The Masquerade",
+        self.char_no_access = self.create_character(
+            "No Access Character",
+            self.campaign3,
+            self.user2,
+            "Character in campaign user1 cannot access",
+            "Vampire: The Masquerade",
         )
 
         # URL for user character list (this view doesn't exist yet)
@@ -1038,68 +1051,32 @@ class UserCharacterListViewTest(TestCase):
         self.assertTemplateUsed(response, "characters/user_characters.html")
 
 
-class EnhancedCharacterDetailViewTest(TestCase):
+class EnhancedCharacterDetailViewTest(BaseCharacterTestCase):
     """Test enhanced CharacterDetailView with role-based information display."""
 
     def setUp(self):
         """Set up test data for character detail view testing."""
-        # Create test users
-        self.owner = User.objects.create_user(
-            username="owner", email="owner@test.com", password="testpass123"
-        )
-        self.gm = User.objects.create_user(
-            username="gm", email="gm@test.com", password="testpass123"
-        )
-        self.player1 = User.objects.create_user(
-            username="player1", email="player1@test.com", password="testpass123"
-        )
-        self.player2 = User.objects.create_user(
-            username="player2", email="player2@test.com", password="testpass123"
-        )
-        self.observer = User.objects.create_user(
-            username="observer", email="observer@test.com", password="testpass123"
-        )
-        self.non_member = User.objects.create_user(
-            username="nonmember", email="nonmember@test.com", password="testpass123"
-        )
+        # Create standard users
+        self.create_standard_users()
 
         # Create test campaign
-        self.campaign = Campaign.objects.create(
-            name="Test Campaign",
-            slug="test-campaign",
-            owner=self.owner,
-            game_system="Mage: The Ascension",
-        )
-
-        # Create memberships
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.gm, role="GM"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player1, role="PLAYER"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.player2, role="PLAYER"
-        )
-        CampaignMembership.objects.create(
-            campaign=self.campaign, user=self.observer, role="OBSERVER"
+        self.campaign = self.create_campaign_with_memberships(
+            "Test Campaign", slug="test-campaign"
         )
 
         # Create test characters
-        self.player1_character = Character.objects.create(
-            name="Player1 Test Character",
-            description="A test character owned by player1",
-            campaign=self.campaign,
-            player_owner=self.player1,
-            game_system="Mage: The Ascension",
+        self.player1_character = self.create_character(
+            "Player1 Test Character",
+            self.campaign,
+            self.player1,
+            "A test character owned by player1",
         )
 
-        self.player2_character = Character.objects.create(
-            name="Player2 Test Character",
-            description="A test character owned by player2",
-            campaign=self.campaign,
-            player_owner=self.player2,
-            game_system="Mage: The Ascension",
+        self.player2_character = self.create_character(
+            "Player2 Test Character",
+            self.campaign,
+            self.player2,
+            "A test character owned by player2",
         )
 
         # URLs for character details
