@@ -6,6 +6,7 @@ Provides campaign-scoped character management views with proper permission check
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.generic import CreateView, DetailView, ListView
@@ -17,16 +18,53 @@ from core.mixins import CampaignCharacterMixin, CampaignListView
 
 class CampaignCharactersView(CampaignCharacterMixin, CampaignListView):
     """
-    List characters in a campaign with role-based filtering.
+    List characters in a campaign with role-based filtering and search/filter.
 
     - OWNER/GM: See all characters in the campaign
     - PLAYER: See only their own characters
     - OBSERVER: See all characters (read-only)
+
+    Supports search by character name and filtering by player owner.
     """
 
     model = Character
     template_name = "characters/campaign_characters.html"
     context_object_name = "characters"
+
+    def dispatch(self, request, *args, **kwargs):
+        """Handle campaign_slug parameter mapping."""
+        # Map campaign_slug to slug for CampaignFilterMixin
+        if "campaign_slug" in kwargs:
+            kwargs["slug"] = kwargs["campaign_slug"]
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        """Get characters with search and filtering."""
+        queryset = super().get_queryset()
+
+        # Mixin already applies select_related optimizations
+
+        # Search functionality
+        search_query = self.request.GET.get("search", "").strip()
+        if search_query:
+            queryset = queryset.filter(name__icontains=search_query)
+
+        # Filter by player owner
+        player_id = self.request.GET.get("player")
+        if player_id:
+            try:
+                from django.contrib.auth import get_user_model
+
+                User = get_user_model()
+                player = User.objects.get(pk=player_id)
+                # Only filter if the player is a member of the campaign
+                if self.campaign.is_member(player):
+                    queryset = queryset.filter(player_owner=player)
+            except (ValueError, User.DoesNotExist):
+                # Invalid player ID, ignore filter
+                pass
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         """Add character-specific context."""
@@ -41,6 +79,108 @@ class CampaignCharactersView(CampaignCharacterMixin, CampaignListView):
                 "can_create_character": user_role in ["OWNER", "GM", "PLAYER"],
                 "can_manage_all": user_role in ["OWNER", "GM"],
                 "is_player": user_role == "PLAYER",
+                "search_query": self.request.GET.get("search", ""),
+                "selected_player": self.request.GET.get("player", ""),
+            }
+        )
+
+        # Add campaign members for filtering dropdown (for OWNER/GM only)
+        if user_role in ["OWNER", "GM"]:
+            from django.contrib.auth import get_user_model
+
+            User = get_user_model()
+
+            # Get all campaign members who have characters
+            members_with_characters = (
+                User.objects.filter(owned_characters__campaign=self.campaign)
+                .distinct()
+                .order_by("username")
+            )
+
+            context["campaign_members"] = members_with_characters
+
+        return context
+
+
+class UserCharactersView(LoginRequiredMixin, ListView):
+    """
+    List all characters owned by the current user across accessible campaigns.
+
+    Shows characters from campaigns where the user is a member.
+    Supports search by character name and filtering by campaign.
+    """
+
+    model = Character
+    template_name = "characters/user_characters.html"
+    context_object_name = "characters"
+    paginate_by = 20
+
+    def get_queryset(self):
+        """Get user's characters from accessible campaigns with search/filter."""
+        from campaigns.models import Campaign
+
+        # Get campaigns the user has access to
+        accessible_campaigns = Campaign.objects.filter(
+            Q(owner=self.request.user)  # Campaigns they own
+            | Q(memberships__user=self.request.user),  # Campaigns they're a member of
+            is_active=True,
+        ).distinct()
+
+        # Get user's characters from accessible campaigns
+        queryset = (
+            Character.objects.filter(
+                player_owner=self.request.user, campaign__in=accessible_campaigns
+            )
+            .select_related("campaign", "player_owner")
+            .order_by("name")
+        )
+
+        # Search functionality
+        search_query = self.request.GET.get("search", "").strip()
+        if search_query:
+            queryset = queryset.filter(name__icontains=search_query)
+
+        # Filter by campaign
+        campaign_id = self.request.GET.get("campaign")
+        if campaign_id:
+            try:
+                campaign = Campaign.objects.get(pk=campaign_id)
+                # Only filter if the user has access to this campaign
+                if campaign in accessible_campaigns:
+                    queryset = queryset.filter(campaign=campaign)
+            except (ValueError, Campaign.DoesNotExist):
+                # Invalid campaign ID, ignore filter
+                pass
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        """Add user character-specific context."""
+        context = super().get_context_data(**kwargs)
+
+        from campaigns.models import Campaign
+
+        # Get accessible campaigns for filtering dropdown
+        accessible_campaigns = (
+            Campaign.objects.filter(
+                Q(owner=self.request.user)  # Campaigns they own
+                | Q(
+                    memberships__user=self.request.user
+                ),  # Campaigns they're a member of
+                is_active=True,
+            )
+            .distinct()
+            .order_by("name")
+        )
+
+        context.update(
+            {
+                "page_title": "My Characters",
+                "search_query": self.request.GET.get("search", ""),
+                "selected_campaign": self.request.GET.get("campaign", ""),
+                "accessible_campaigns": accessible_campaigns,
+                # Users can always create characters in accessible campaigns
+                "can_create_character": True,
             }
         )
 
