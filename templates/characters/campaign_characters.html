@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{{ page_title }}{% endblock %}
-{% block extra_css %}{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'campaigns/css/campaign_detail_new.css' %}">
+{% endblock %}
 {% block content %}
   <div class="container">
     <!-- Breadcrumb -->
@@ -13,73 +15,255 @@
         <li class="breadcrumb-item active" aria-current="page">Characters</li>
       </ol>
     </nav>
+
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h1 class="h2 mb-1">{{ campaign.name }} - Characters</h1>
-        <p class="text-muted mb-0">Manage player and NPC characters in this campaign.</p>
+    <div class="main-content-section">
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">
+            <i class="bi bi-people-fill"></i>
+            {{ campaign.name }} - Characters
+          </h1>
+        </div>
+        <div class="d-flex gap-2">
+          {% if can_create_character %}
+            <a href="{% url 'characters:create' %}" class="btn btn-primary">
+              <i class="bi bi-plus-circle"></i> Create Character
+            </a>
+          {% endif %}
+          <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Campaign
+          </a>
+        </div>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="section-content border-bottom">
+        <form method="get" class="row g-3 align-items-end">
+          <div class="col-md-6">
+            <label for="search" class="form-label">Search Characters</label>
+            <input type="text"
+                   class="form-control"
+                   id="search"
+                   name="search"
+                   value="{{ search_query }}"
+                   placeholder="Search by character name..."
+                   aria-describedby="searchHelp">
+            <div id="searchHelp" class="form-text">Find characters by name</div>
+          </div>
+
+          {% if can_manage_all and campaign_members %}
+            <div class="col-md-4">
+              <label for="player" class="form-label">Filter by Player</label>
+              <select class="form-select" id="player" name="player">
+                <option value="">All Players</option>
+                {% for member in campaign_members %}
+                  <option value="{{ member.id }}"
+                          {% if selected_player == member.id|stringformat:"s" %}selected{% endif %}>
+                    {{ member.username }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          {% endif %}
+
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-search"></i> Search
+            </button>
+          </div>
+        </form>
+
+        <!-- Clear filters -->
+        {% if search_query or selected_player %}
+          <div class="mt-3">
+            <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-x-circle"></i> Clear Filters
+            </a>
+            <small class="text-muted ms-2">
+              {% if search_query %}Searching for: "<strong>{{ search_query }}</strong>"{% endif %}
+              {% if search_query and selected_player %} | {% endif %}
+              {% if selected_player %}
+                Filtered by player: <strong>
+                  {% for member in campaign_members %}
+                    {% if member.id|stringformat:"s" == selected_player %}{{ member.username }}{% endif %}
+                  {% endfor %}
+                </strong>
+              {% endif %}
+            </small>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Characters List -->
+      <div class="section-content">
+        {% if characters %}
+          <div class="row g-4">
+            {% for character in characters %}
+              <div class="col-lg-6 col-xl-4">
+                <div class="card h-100">
+                  <div class="card-body d-flex flex-column">
+                    <!-- Character Header -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                      <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">{{ character.name }}</h5>
+                        <small class="text-muted">
+                          <i class="bi bi-dice-6"></i> {{ character.game_system }}
+                        </small>
+                      </div>
+                      {% if character.player_owner %}
+                        <span class="badge bg-primary">
+                          <i class="bi bi-person"></i> {{ character.player_owner.username }}
+                        </span>
+                      {% endif %}
+                    </div>
+
+                    <!-- Character Description -->
+                    {% if character.description %}
+                      <p class="card-text text-muted small flex-grow-1">
+                        {% if character.description|length > 150 %}
+                          {{ character.description|truncatechars:150 }}
+                        {% else %}
+                          {{ character.description }}
+                        {% endif %}
+                      </p>
+                    {% else %}
+                      <p class="card-text text-muted small flex-grow-1 fst-italic">
+                        No description available.
+                      </p>
+                    {% endif %}
+
+                    <!-- Character Meta -->
+                    <div class="character-meta mb-3">
+                      <small class="text-muted d-block">
+                        <i class="bi bi-calendar-plus"></i> Created {{ character.created_at|date:"M j, Y" }}
+                      </small>
+                      {% if character.updated_at != character.created_at %}
+                        <small class="text-muted d-block">
+                          <i class="bi bi-clock-history"></i> Updated {{ character.updated_at|date:"M j, Y" }}
+                        </small>
+                      {% endif %}
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="card-actions d-flex gap-2 mt-auto">
+                      <a href="{% url 'characters:detail' pk=character.pk %}"
+                         class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-eye"></i> View Details
+                      </a>
+
+                      {% if can_manage_all or character.player_owner == request.user %}
+                        <a href="#" class="btn btn-outline-secondary btn-sm" title="Edit Character (Coming Soon)" disabled>
+                          <i class="bi bi-pencil"></i>
+                        </a>
+                      {% endif %}
+
+                      {% if can_manage_all or character.player_owner == request.user %}
+                        <button class="btn btn-outline-danger btn-sm"
+                                title="Delete Character (Coming Soon)"
+                                disabled>
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <!-- Character Count -->
+          <div class="mt-4 text-center">
+            <small class="text-muted">
+              Showing {{ characters|length }} character{{ characters|length|pluralize }}
+              {% if search_query or selected_player %}
+                (filtered)
+              {% endif %}
+            </small>
+          </div>
+
+        {% else %}
+          <!-- Empty State -->
+          <div class="text-center py-5">
+            <div class="mb-4">
+              <i class="bi bi-people" style="font-size: 4rem; color: var(--bs-secondary);"></i>
+            </div>
+            <h4 class="text-muted mb-3">
+              {% if search_query or selected_player %}
+                No Characters Found
+              {% else %}
+                No Characters Yet
+              {% endif %}
+            </h4>
+            <p class="text-muted mb-4">
+              {% if search_query or selected_player %}
+                No characters match your search criteria. Try adjusting your filters or search terms.
+              {% else %}
+                {% if is_player %}
+                  You don't have any characters in this campaign yet. Create your first character to get started!
+                {% elif can_manage_all %}
+                  This campaign doesn't have any characters yet. Create the first character or invite players to join.
+                {% else %}
+                  This campaign doesn't have any characters yet.
+                {% endif %}
+              {% endif %}
+            </p>
+
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+              {% if search_query or selected_player %}
+                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                   class="btn btn-outline-primary">
+                  <i class="bi bi-x-circle"></i> Clear Filters
+                </a>
+              {% endif %}
+
+              {% if can_create_character %}
+                <a href="{% url 'characters:create' %}" class="btn btn-primary">
+                  <i class="bi bi-plus-circle"></i> Create Character
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
       </div>
     </div>
-    <!-- Coming Soon Card -->
-    <div class="row justify-content-center">
-      <div class="col-lg-8">
-        <div class="card text-center">
-          <div class="card-body p-5">
-            <div class="mb-4">
-              <h3 class="h4 text-primary">🎭 Characters Area Coming Soon</h3>
-              <p class="text-muted">This area will allow you to:</p>
-            </div>
-            <div class="row">
-              <div class="col-md-8 mx-auto">
-                <ul class="list-unstyled text-start">
-                  {% if can_manage_all %}
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> View all characters in the campaign
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Create new player characters and NPCs
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Edit character sheets and stats
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Manage character permissions
-                    </li>
-                  {% elif is_player %}
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> View and edit your characters
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Create new characters (within limits)
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> View other players' characters
-                    </li>
+
+    <!-- Role Information -->
+    {% if user_role %}
+      <div class="mt-4">
+        <div class="card border-light">
+          <div class="card-body py-3">
+            <div class="row align-items-center">
+              <div class="col">
+                <small class="text-muted">
+                  Your role: <strong>{{ user_role }}</strong>
+                  {% if is_player %}
+                    - You can see and manage your own characters
+                  {% elif can_manage_all %}
+                    - You can see and manage all characters in this campaign
                   {% else %}
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> View all characters in the campaign
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> See character details and backstories
-                    </li>
+                    - You can view characters but cannot edit them
                   {% endif %}
-                </ul>
+                </small>
               </div>
-            </div>
-            <div class="mt-4 d-flex gap-3 justify-content-center flex-wrap">
-              {% if can_create_character %}
-                <button class="btn btn-primary" disabled title="Coming Soon">
-                  <i class="bi bi-plus-circle"></i> Create Character
-                </button>
-              {% endif %}
-              <a href="{% url 'campaigns:detail' slug=campaign.slug %}"
-                 class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Campaign
-              </a>
+              <div class="col-auto">
+                <span class="member-role role-{{ user_role|lower }}">
+                  {% if user_role == "OWNER" %}
+                    <i class="bi bi-crown"></i>
+                  {% elif user_role == "GM" %}
+                    <i class="bi bi-person-gear"></i>
+                  {% elif user_role == "PLAYER" %}
+                    <i class="bi bi-person"></i>
+                  {% else %}
+                    <i class="bi bi-eye"></i>
+                  {% endif %}
+                  {{ user_role }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    {% endif %}
   </div>
 {% endblock %}
