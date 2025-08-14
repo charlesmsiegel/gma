@@ -43,7 +43,7 @@ api.interceptors.request.use(
 );
 
 // Helper function to ensure CSRF token is available
-const ensureCSRFToken = async (): Promise<void> => {
+export const ensureCSRFToken = async (): Promise<void> => {
   if (!csrfToken) {
     try {
       await getCSRFToken();
