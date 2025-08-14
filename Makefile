@@ -1,4 +1,4 @@
-.PHONY: help runserver runserver-django start-postgres start-redis stop-postgres stop-redis setup-env migrate clean health-check test test-coverage start-frontend build-frontend stop-all check-frontend reset-migrations create-superuser reset-dev
+.PHONY: help runserver runserver-django start-postgres start-redis stop-postgres stop-redis setup-env migrate clean health-check test test-coverage start-frontend build-frontend stop-all check-frontend reset-migrations create-superuser reset-dev pristine
 
 # Environment paths
 GMA_ENV_PATH = /home/janothar/miniconda3/envs/gma
@@ -20,6 +20,7 @@ help:
 	@echo "  reset-migrations - Drop database, delete migrations, recreate everything"
 	@echo "  create-superuser - Create Django admin superuser"
 	@echo "  reset-dev      - Complete dev reset: migrations + superuser (interactive)"
+	@echo "  pristine       - NUCLEAR OPTION: Clean everything to pristine state"
 	@echo "  health-check   - Test database and Redis connections"
 	@echo "  test           - Run all tests"
 	@echo "  test-coverage  - Run tests with coverage report"
@@ -63,11 +64,11 @@ start-redis:
 
 stop-postgres:
 	@echo "Stopping PostgreSQL..."
-	@$(PG_BIN)/pg_ctl stop -D $(PG_DATA) || true
+	@$(PG_BIN)/pg_ctl stop -D $(PG_DATA) 2>/dev/null || echo "PostgreSQL already stopped"
 
 stop-redis:
 	@echo "Stopping Redis..."
-	@$(GMA_ENV_PATH)/bin/redis-cli shutdown || true
+	@$(GMA_ENV_PATH)/bin/redis-cli shutdown 2>/dev/null || echo "Redis already stopped"
 
 setup-env:
 	@echo "Creating conda environment..."
@@ -158,11 +159,84 @@ check-frontend:
 		echo "Frontend dependencies already installed"; \
 	fi
 
-stop-all: stop-postgres stop-redis
+stop-all:
 	@echo "Stopping all services..."
+	@# Stop PostgreSQL
+	@$(PG_BIN)/pg_ctl stop -D $(PG_DATA) 2>/dev/null || echo "PostgreSQL already stopped"
+	@# Stop Redis
+	@$(GMA_ENV_PATH)/bin/redis-cli shutdown 2>/dev/null || echo "Redis already stopped"
 	@# Kill any running React development servers
-	@pkill -f "react-scripts start" 2>/dev/null || true
-	@pkill -f "npm start" 2>/dev/null || true
+	@-pkill -f "react-scripts start" 2>/dev/null || true
+	@-pkill -f "npm start" 2>/dev/null || true
 	@echo "All services stopped"
 
 clean: stop-all
+
+pristine:
+	@echo "☢️  NUCLEAR OPTION: CREATING PRISTINE STATE ☢️"
+	@echo "This will DESTROY everything and create a completely clean state:"
+	@echo "  🗑️  Drop and recreate database"
+	@echo "  🗑️  Delete ALL migration files"
+	@echo "  🗑️  Delete ALL __pycache__ directories"
+	@echo "  🗑️  Delete ALL .pyc files"
+	@echo "  🗑️  Remove empty directories"
+	@echo "  🗑️  Clean coverage reports"
+	@echo "  🗑️  Clean frontend build artifacts"
+	@echo ""
+	@echo "⚠️  THIS CANNOT BE UNDONE ⚠️"
+	@echo "Make sure you have committed any important changes!"
+	@echo ""
+	@read -p "Type 'YES' to proceed with nuclear cleanup: " confirm && [ "$$confirm" = "YES" ] || (echo "❌ Cancelled." && exit 1)
+	@echo ""
+	@echo "🧹 Starting pristine cleanup..."
+	@echo ""
+	@echo "🗑️  Stopping services..."
+	@-$(PG_BIN)/pg_ctl stop -D $(PG_DATA) 2>/dev/null || echo "PostgreSQL already stopped"
+	@-$(GMA_ENV_PATH)/bin/redis-cli shutdown 2>/dev/null || echo "Redis already stopped"
+	@-pkill -f "react-scripts start" 2>/dev/null || true
+	@-pkill -f "npm start" 2>/dev/null || true
+	@echo "✅ Services stopped"
+	@echo ""
+	@echo "🗑️  Dropping database..."
+	@-$(PG_BIN)/dropdb gm_app_db 2>/dev/null || echo "Database already dropped or PostgreSQL not running"
+	@echo "✅ Database dropped"
+	@echo ""
+	@echo "🗑️  Deleting all migration files..."
+	@find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
+	@find . -path "*/migrations/*.pyc" -delete
+	@echo "✅ Migration files deleted"
+	@echo ""
+	@echo "🗑️  Deleting all __pycache__ directories..."
+	@find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+	@echo "✅ __pycache__ directories deleted"
+	@echo ""
+	@echo "🗑️  Deleting all .pyc files..."
+	@find . -name "*.pyc" -delete
+	@echo "✅ .pyc files deleted"
+	@echo ""
+	@echo "🗑️  Removing empty directories..."
+	@# Remove empty directories multiple times to handle nested empties
+	@for i in 1 2 3 4 5; do \
+		empty_count=$$(find . -type d -empty -not -path "*/.git/*" -not -path "./OLD_CODE/*" | wc -l); \
+		if [ $$empty_count -eq 0 ]; then break; fi; \
+		find . -type d -empty -not -path "*/.git/*" -not -path "./OLD_CODE/*" -delete 2>/dev/null || true; \
+	done
+	@echo "✅ Empty directories removed"
+	@echo ""
+	@echo "🗑️  Cleaning coverage reports..."
+	@rm -rf htmlcov/ .coverage .coverage.* 2>/dev/null || true
+	@echo "✅ Coverage reports cleaned"
+	@echo ""
+	@echo "🗑️  Cleaning frontend artifacts..."
+	@rm -rf frontend/build/ frontend/.cache/ 2>/dev/null || true
+	@echo "✅ Frontend artifacts cleaned"
+	@echo ""
+	@echo "🗑️  Cleaning test artifacts..."
+	@rm -rf .pytest_cache/ 2>/dev/null || true
+	@echo "✅ Test artifacts cleaned"
+	@echo ""
+	@echo "🎉 PRISTINE STATE ACHIEVED! 🎉"
+	@echo ""
+	@echo "🔄 To get back to working state, run:"
+	@echo "   make reset-dev    # Recreate DB, migrations, and superuser"
+	@echo "   make runserver    # Start development environment"
