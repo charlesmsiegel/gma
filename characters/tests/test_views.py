@@ -1702,8 +1702,11 @@ class CharacterDeleteViewTest(BaseCharacterTestCase):
         )
         response = self.client.get(list_url)
 
-        # Character should not appear in list
-        self.assertNotContains(response, "Deletable Character")
+        # Character should not appear in the actual character list
+        # (ignore success messages which might contain the character name)
+        characters = response.context["characters"]
+        character_names = [char.name for char in characters]
+        self.assertNotIn("Deletable Character", character_names)
 
     def test_soft_deleted_character_can_be_restored(self):
         """Test that soft deleted characters can be restored (admin functionality)."""

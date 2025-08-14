@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -17,19 +17,19 @@ if TYPE_CHECKING:
 class CharacterAuditLog(models.Model):
     """Audit trail for character changes."""
 
-    character = models.ForeignKey(
+    character: models.ForeignKey = models.ForeignKey(
         "Character",
         on_delete=models.CASCADE,
         related_name="audit_entries",
         help_text="The character this audit entry belongs to",
     )
-    changed_by = models.ForeignKey(
+    changed_by: models.ForeignKey = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         help_text="User who made the change",
     )
-    action = models.CharField(
+    action: models.CharField = models.CharField(
         max_length=20,
         choices=[
             ("CREATE", "Created"),
@@ -43,7 +43,7 @@ class CharacterAuditLog(models.Model):
         default=dict,
         help_text="Dictionary of field changes: {field_name: {old: value, new: value}}",
     )
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp: models.DateTimeField = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "characters_character_audit"
@@ -52,17 +52,19 @@ class CharacterAuditLog(models.Model):
         verbose_name_plural = "Character Audit Entries"
 
     @property
-    def user(self):
+    def user(self) -> Optional["AbstractUser"]:
         """Alias for changed_by to match test expectations."""
         return self.changed_by
 
     @property
-    def changes(self):
+    def changes(self) -> Dict[str, Any]:
         """Alias for field_changes to match test expectations."""
         return self.field_changes
 
     @classmethod
-    def get_for_user(cls, character, user):
+    def get_for_user(
+        cls, character: "Character", user: Optional["AbstractUser"]
+    ) -> "models.QuerySet[CharacterAuditLog]":
         """Get audit entries for a character that a user can view.
 
         Args:
@@ -86,8 +88,11 @@ class CharacterAuditLog(models.Model):
 
     def __str__(self) -> str:
         """Return string representation of audit entry."""
+        # Use getattr to handle mypy's inability to recognize Django's
+        # get_FOO_display methods
+        action_display = getattr(self, "get_action_display", lambda: self.action)()
         return (
-            f"{self.character.name} - {self.get_action_display()} "
+            f"{self.character.name} - {action_display} "
             f"by {self.changed_by} at {self.timestamp}"
         )
 
@@ -598,7 +603,9 @@ class Character(PolymorphicModel):
 
         return self.campaign.get_user_role(user)
 
-    def soft_delete(self, user: "AbstractUser", confirmation_name: str = None):
+    def soft_delete(
+        self, user: "AbstractUser", confirmation_name: Optional[str] = None
+    ) -> Union["Character", bool]:
         """Soft delete this character.
 
         Args:

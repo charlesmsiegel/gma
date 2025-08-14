@@ -12,9 +12,9 @@ from api.views.character_views import CharacterViewSet
 
 # Create router for character viewset
 router = DefaultRouter()
-router.register(r'', CharacterViewSet, basename='characters')
+router.register(r"", CharacterViewSet, basename="characters")
 
 urlpatterns = [
     # Include all ViewSet routes
-    path('', include(router.urls)),
+    path("", include(router.urls)),
 ]

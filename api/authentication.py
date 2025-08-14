@@ -5,18 +5,23 @@ This module provides custom authentication classes and exception handlers
 to ensure proper HTTP status codes are returned for authentication failures.
 """
 
-from rest_framework.views import exception_handler
+from typing import Any, Optional
+
+from django.contrib.auth.models import AnonymousUser
 from rest_framework import status
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied
-from django.contrib.auth.models import AnonymousUser
+from rest_framework.response import Response
+from rest_framework.views import exception_handler
 
 
-def custom_exception_handler(exc, context):
+def custom_exception_handler(
+    exc: Exception, context: dict[str, Any]
+) -> Optional[Response]:
     """
     Custom exception handler that returns appropriate HTTP status codes:
     - Anonymous user + PermissionDenied (not CSRF) → 401 Unauthorized
     - CSRF failures → 403 Forbidden (security-related, not authentication)
-    - Authenticated user + PermissionDenied → 403 Forbidden  
+    - Authenticated user + PermissionDenied → 403 Forbidden
     - Everything else → original status code
     """
     # Call REST framework's default exception handler first,
@@ -25,22 +30,22 @@ def custom_exception_handler(exc, context):
 
     if response is not None:
         # Get the request from context to check user authentication status
-        request = context.get('request')
-        
+        request = context.get("request")
+
         if request is not None:
-            user = getattr(request, 'user', None)
-            
+            user = getattr(request, "user", None)
+
             # For PermissionDenied exceptions, check if it's CSRF-related
             if isinstance(exc, PermissionDenied):
                 # Check if this is a CSRF failure by examining the exception details
                 exc_str = str(exc).lower()
-                is_csrf_failure = 'csrf' in exc_str or 'csrf token' in exc_str
-                
+                is_csrf_failure = "csrf" in exc_str or "csrf token" in exc_str
+
                 # Only change to 401 for anonymous users if it's NOT a CSRF failure
                 if user and isinstance(user, AnonymousUser) and not is_csrf_failure:
                     response.status_code = status.HTTP_401_UNAUTHORIZED
                 # For CSRF failures or authenticated users, keep 403
-                
+
             # Keep existing NotAuthenticated handling for completeness
             elif isinstance(exc, NotAuthenticated):
                 response.status_code = status.HTTP_401_UNAUTHORIZED

@@ -151,8 +151,9 @@ class CharacterDeleteView(LoginRequiredMixin, View):
                 else:
                     messages.success(
                         request,
-                        f"Character '{deleted_character.name}' was successfully deleted and can be "
-                        "restored by campaign staff.",
+                        f"Character '{deleted_character.name}' was successfully "
+                        f"deleted "
+                        f"and can be restored by campaign staff.",
                     )
 
                 # Redirect to campaign characters list

@@ -1046,9 +1046,9 @@ class CharacterAPIErrorHandlingTest(BaseCharacterAPITestCase):
         """Test handling of server errors."""
         self.client.force_authenticate(user=self.player1)
 
-        # Mock a server error
-        with patch("characters.models.Character.objects.filter") as mock_filter:
-            mock_filter.side_effect = Exception("Database error")
+        # Mock a server error in the get_queryset method
+        with patch("api.views.character_views.Character.objects.all") as mock_all:
+            mock_all.side_effect = Exception("Database error")
 
             response = self.client.get(self.list_url, {"campaign": self.campaign.pk})
             self.assertEqual(

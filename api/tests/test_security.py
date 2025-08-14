@@ -396,7 +396,8 @@ class GlobalAPIErrorHandlingTest(TestCase):
         self.protected_url = reverse("api:api_user_info")
 
     def test_401_error_returned_for_unauthenticated_requests(self):
-        """Test that our custom exception handler returns 401 for unauthenticated requests."""
+        """Test that our custom exception handler returns 401 for
+        unauthenticated requests."""
         # Make unauthenticated request to protected endpoint
         response = self.client.get(self.protected_url)
 
