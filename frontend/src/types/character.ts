@@ -1,6 +1,6 @@
 /**
  * TypeScript interfaces for Character-related data structures.
- * 
+ *
  * These interfaces match the Django API serializers and models
  * to ensure type safety in React components.
  */

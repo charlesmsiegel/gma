@@ -1,6 +1,6 @@
 /**
  * CharacterList component for displaying and managing characters.
- * 
+ *
  * Features:
  * - List characters with search and filtering
  * - Inline editing for character owners/GMs
@@ -39,18 +39,18 @@ const CharacterList: React.FC<CharacterListProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  
+
   // Editing state
   const [editingCharacterId, setEditingCharacterId] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<CharacterUpdateData>({});
   const [editErrors, setEditErrors] = useState<CharacterFormErrors>({});
   const [editLoading, setEditLoading] = useState(false);
-  
+
   // Delete confirmation state
   const [deletingCharacterId, setDeletingCharacterId] = useState<number | null>(null);
   const [deleteConfirmationName, setDeleteConfirmationName] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
-  
+
   // Success/error messages
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -59,7 +59,7 @@ const CharacterList: React.FC<CharacterListProps> = ({
     try {
       setLoading(true);
       setError(null);
-      
+
       const params: CharacterListParams = {
         campaign: campaignId,
         search: searchTerm || undefined,
@@ -68,9 +68,9 @@ const CharacterList: React.FC<CharacterListProps> = ({
         page_size: 20,
         ordering: 'name'
       };
-      
+
       const response = await characterAPI.getCharacters(params);
-      
+
       setCharacters(response.results);
       setTotalCount(response.count);
       setTotalPages(Math.ceil(response.count / 20));
@@ -134,14 +134,14 @@ const CharacterList: React.FC<CharacterListProps> = ({
     try {
       setEditLoading(true);
       setEditErrors({});
-      
+
       const updatedCharacter = await characterAPI.updateCharacter(characterId, editFormData);
-      
+
       // Update character in list
-      setCharacters(prev => 
+      setCharacters(prev =>
         prev.map(char => char.id === characterId ? updatedCharacter : char)
       );
-      
+
       setEditingCharacterId(null);
       setEditFormData({});
       setSuccessMessage('Character updated successfully');
@@ -171,22 +171,22 @@ const CharacterList: React.FC<CharacterListProps> = ({
   // Confirm character deletion
   const confirmDelete = async () => {
     if (!deletingCharacterId) return;
-    
+
     const character = characters.find(c => c.id === deletingCharacterId);
     if (!character) return;
-    
+
     if (deleteConfirmationName !== character.name) {
       return; // Button should be disabled, but just in case
     }
-    
+
     try {
       setDeleteLoading(true);
       await characterAPI.deleteCharacter(deletingCharacterId, deleteConfirmationName);
-      
+
       // Remove character from list
       setCharacters(prev => prev.filter(c => c.id !== deletingCharacterId));
       setTotalCount(prev => prev - 1);
-      
+
       setDeletingCharacterId(null);
       setDeleteConfirmationName('');
       setSuccessMessage('Character deleted successfully');
@@ -295,7 +295,7 @@ const CharacterList: React.FC<CharacterListProps> = ({
                   placeholder="Search characters..."
                 />
               </div>
-              
+
               {showUserFilter && canManageAll && (
                 <div className="col-md-4">
                   <label htmlFor="user-filter" className="form-label">Filter by Player</label>
@@ -315,11 +315,11 @@ const CharacterList: React.FC<CharacterListProps> = ({
                   </select>
                 </div>
               )}
-              
+
               <div className="col-md-2">
                 <div className="d-flex gap-2">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn btn-primary"
                     onClick={loadCharacters}
                     disabled={loading}
@@ -386,7 +386,7 @@ const CharacterList: React.FC<CharacterListProps> = ({
                               </div>
                             )}
                           </div>
-                          
+
                           <div className="mb-3">
                             <label className="form-label">Description</label>
                             <textarea
@@ -405,7 +405,7 @@ const CharacterList: React.FC<CharacterListProps> = ({
                               </div>
                             )}
                           </div>
-                          
+
                           <div className="d-flex gap-2">
                             <button
                               className="btn btn-primary btn-sm"
@@ -477,7 +477,7 @@ const CharacterList: React.FC<CharacterListProps> = ({
                           >
                             <i className="bi bi-eye"></i> View
                           </button>
-                          
+
                           <div className="d-flex gap-1">
                             {canEdit && (
                               <button
@@ -488,7 +488,7 @@ const CharacterList: React.FC<CharacterListProps> = ({
                                 <i className="bi bi-pencil"></i> Edit
                               </button>
                             )}
-                            
+
                             {canDelete && (
                               <button
                                 className="btn btn-sm btn-outline-danger"

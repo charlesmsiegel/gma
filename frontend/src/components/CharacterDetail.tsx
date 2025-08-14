@@ -1,6 +1,6 @@
 /**
  * CharacterDetail component for displaying character information.
- * 
+ *
  * Features:
  * - Display character information with inline editing
  * - Role-based action button visibility
@@ -33,13 +33,13 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
   const [auditTrail, setAuditTrail] = useState<CharacterAuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState<CharacterUpdateData>({});
   const [editErrors, setEditErrors] = useState<CharacterFormErrors>({});
   const [editLoading, setEditLoading] = useState(false);
-  
+
   // Success/error messages
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -49,10 +49,10 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
       try {
         setLoading(true);
         setError(null);
-        
+
         const characterData = await characterAPI.getCharacter(characterId);
         setCharacter(characterData);
-        
+
         // Load audit trail if requested and user has permission
         if (showAuditTrail) {
           try {
@@ -84,7 +84,7 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
   // Start editing mode
   const startEditing = () => {
     if (!character) return;
-    
+
     setIsEditing(true);
     setEditFormData({
       name: character.name,
@@ -104,11 +104,11 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
   // Save character changes
   const saveCharacter = async () => {
     if (!character) return;
-    
+
     try {
       setEditLoading(true);
       setEditErrors({});
-      
+
       const updatedCharacter = await characterAPI.updateCharacter(character.id, editFormData);
       setCharacter(updatedCharacter);
       setIsEditing(false);
@@ -144,7 +144,7 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 24) {
       return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
     } else {
@@ -170,8 +170,8 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
           <div className="card-body text-center">
             <h5 className="card-title text-danger">Error loading character</h5>
             <p className="card-text">{error}</p>
-            <button 
-              className="btn btn-primary" 
+            <button
+              className="btn btn-primary"
               onClick={() => window.location.reload()}
             >
               Try Again
@@ -224,7 +224,7 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
                   <p className="card-subtitle text-muted mb-0">
                     <i className="fas fa-dice-d20 me-1"></i>{character.game_system}
                     <span className="mx-2">•</span>
-                    <button 
+                    <button
                       className="btn btn-link p-0 text-decoration-none"
                       onClick={() => {
                         // Navigate to campaign detail
@@ -237,7 +237,7 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
                 </div>
                 <div className="btn-group" role="group">
                   {canEdit && !isEditing && (
-                    <button 
+                    <button
                       className="btn btn-primary btn-sm"
                       onClick={startEditing}
                     >
@@ -245,7 +245,7 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
                     </button>
                   )}
                   {canDelete && !isEditing && (
-                    <button 
+                    <button
                       className="btn btn-outline-danger btn-sm"
                       onClick={handleDelete}
                     >
@@ -279,7 +279,7 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="mb-3">
                         <label className="form-label">Character Background</label>
                         <textarea
@@ -298,7 +298,7 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="d-flex gap-2">
                         <button
                           className="btn btn-primary"
@@ -339,16 +339,16 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
                       <dl className="row mb-0">
                         <dt className="col-6">Owner:</dt>
                         <dd className="col-6">{character.player_owner.username}</dd>
-                        
+
                         <dt className="col-6">Created:</dt>
                         <dd className="col-6">{formatDate(character.created_at)}</dd>
-                        
+
                         <dt className="col-6">Updated:</dt>
                         <dd className="col-6">{formatDate(character.updated_at)}</dd>
-                        
+
                         <dt className="col-6">Campaign:</dt>
                         <dd className="col-6">
-                          <button 
+                          <button
                             className="btn btn-link p-0 text-decoration-none"
                             onClick={() => {
                               window.location.href = `/campaigns/${character.campaign.slug || character.campaign.id}/`;
@@ -433,7 +433,7 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
 
           {/* Navigation */}
           <div className="d-flex justify-content-between mt-4">
-            <button 
+            <button
               className="btn btn-secondary"
               onClick={() => {
                 window.location.href = `/campaigns/${character.campaign.slug || character.campaign.id}/`;
@@ -442,7 +442,7 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
               <i className="fas fa-arrow-left me-1"></i>Back to Campaign
             </button>
             {canEdit && !isEditing && (
-              <button 
+              <button
                 className="btn btn-primary"
                 onClick={startEditing}
               >

@@ -156,7 +156,7 @@ All components use Bootstrap 5 classes to match the existing Django template sty
 
 ### Character List in Campaign
 ```tsx
-<CharacterList 
+<CharacterList
   campaignId={1}
   userRole="GM"
   currentUserId={123}

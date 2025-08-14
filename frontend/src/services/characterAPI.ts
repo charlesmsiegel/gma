@@ -1,6 +1,6 @@
 /**
  * API service functions for character CRUD operations.
- * 
+ *
  * This module provides functions to interact with the Django REST API
  * for character management operations with proper error handling,
  * CSRF token support, and TypeScript type safety.
@@ -21,14 +21,14 @@ import {
 // Helper function to build query parameters
 const buildQueryParams = (params: CharacterListParams): URLSearchParams => {
   const searchParams = new URLSearchParams();
-  
+
   if (params.campaign) searchParams.append('campaign', params.campaign.toString());
   if (params.search) searchParams.append('search', params.search);
   if (params.user) searchParams.append('user', params.user.toString());
   if (params.page) searchParams.append('page', params.page.toString());
   if (params.page_size) searchParams.append('page_size', params.page_size.toString());
   if (params.ordering) searchParams.append('ordering', params.ordering);
-  
+
   return searchParams;
 };
 
@@ -41,7 +41,7 @@ export const characterAPI = {
     try {
       const queryParams = buildQueryParams(params);
       const url = `characters/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      
+
       const response = await api.get<CharacterListResponse>(url);
       return response.data;
     } catch (error: any) {
@@ -252,7 +252,7 @@ export const characterPermissions = {
     if (character.player_owner.id === currentUserId) {
       return true;
     }
-    
+
     // Campaign owners and GMs can edit all characters
     return userRole === 'OWNER' || userRole === 'GM';
   },
@@ -265,12 +265,12 @@ export const characterPermissions = {
     if (character.player_owner.id === currentUserId) {
       return true;
     }
-    
+
     // Campaign owners can delete characters (subject to campaign settings)
     if (userRole === 'OWNER') {
       return true;
     }
-    
+
     // GMs may be able to delete characters (subject to campaign settings)
     // This would need to be checked against campaign.allow_gm_character_deletion
     // For now, we'll allow it and let the API enforce the actual permission

@@ -1,6 +1,6 @@
 /**
  * Basic smoke tests for Character components to ensure they import and render.
- * 
+ *
  * These tests verify that the components can be imported and don't crash on render,
  * matching the functionality described in the Django templates.
  */
@@ -120,16 +120,16 @@ describe('Character Components Smoke Tests', () => {
       id: 1,
       name: 'Test Character',
       description: 'Test description',
-      campaign: { 
-        id: 1, 
-        name: 'Test Campaign', 
+      campaign: {
+        id: 1,
+        name: 'Test Campaign',
         slug: 'test-campaign',
-        game_system: 'Test System' 
+        game_system: 'Test System'
       },
-      player_owner: { 
-        id: 1, 
-        username: 'testuser', 
-        email: 'test@example.com' 
+      player_owner: {
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com'
       },
       game_system: 'Test System',
       created_at: '2023-01-01T00:00:00Z',
@@ -160,10 +160,10 @@ describe('Character Components Smoke Tests', () => {
     };
 
     const { unmount } = render(<CharacterList {...listProps} />);
-    
+
     // Should render loading or error state initially
     expect(screen.getByText(/Loading characters|Error loading characters/)).toBeInTheDocument();
-    
+
     unmount();
 
     // Test CharacterEditForm includes expected form elements
@@ -173,12 +173,12 @@ describe('Character Components Smoke Tests', () => {
     };
 
     render(<CharacterEditForm {...formProps} />);
-    
+
     // Should have required form inputs by ID/role
     expect(screen.getByRole('textbox', { name: /character name/i })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /campaign/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /description/i })).toBeInTheDocument();
-    
+
     // Should have form actions
     expect(screen.getByRole('button', { name: /create character/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();

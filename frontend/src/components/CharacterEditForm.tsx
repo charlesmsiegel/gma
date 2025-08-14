@@ -1,6 +1,6 @@
 /**
  * CharacterEditForm component for creating and editing characters.
- * 
+ *
  * Features:
  * - Form for creating new characters and editing existing ones
  * - Campaign selection with character limits
@@ -34,13 +34,13 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
     description: character?.description || '',
     ...(character ? {} : { campaign: campaignId || 0 })
   });
-  
+
   // Validation and UI state
   const [errors, setErrors] = useState<CharacterFormErrors>({});
   const [loading, setLoading] = useState(false);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(!character); // Don't load campaigns for editing
-  
+
   // Load campaigns for creation mode
   useEffect(() => {
     if (!character) {
@@ -55,7 +55,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
           setCampaignsLoading(false);
         }
       };
-      
+
       loadCampaigns();
     }
   }, [character]);
@@ -66,7 +66,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
       ...prev,
       [field]: value
     }));
-    
+
     // Clear field-specific errors when user types
     if (errors[field as keyof CharacterFormErrors]) {
       setErrors(prev => ({
@@ -79,7 +79,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
   // Validate form data
   const validateForm = (): boolean => {
     const newErrors: CharacterFormErrors = {};
-    
+
     // Name validation
     if (!formData.name || formData.name.trim().length === 0) {
       newErrors.name = ['Character name is required'];
@@ -88,7 +88,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
     } else if (formData.name.length > 100) {
       newErrors.name = ['Character name cannot exceed 100 characters'];
     }
-    
+
     // Campaign validation (only for creation)
     if (!character) {
       const createData = formData as CharacterCreateData;
@@ -96,7 +96,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
         newErrors.campaign = ['Please select a campaign'];
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -104,17 +104,17 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     try {
       setLoading(true);
       setErrors({});
-      
+
       let savedCharacter: Character;
-      
+
       if (character) {
         // Update existing character
         savedCharacter = await characterAPI.updateCharacter(
@@ -127,14 +127,14 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
           formData as CharacterCreateData
         );
       }
-      
+
       onSave(savedCharacter);
     } catch (err: any) {
       if (err.validationErrors) {
         setErrors(err.validationErrors);
       } else {
-        setErrors({ 
-          non_field_errors: [err.message || 'Failed to save character'] 
+        setErrors({
+          non_field_errors: [err.message || 'Failed to save character']
         });
       }
     } finally {
@@ -149,10 +149,10 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
 
   // Get selected campaign info
   const selectedCampaign = campaigns.find(c => c.id === (formData as CharacterCreateData).campaign);
-  
+
   // Check if user is at character limit
-  const isAtCharacterLimit = selectedCampaign && 
-    selectedCampaign.max_characters_per_player > 0 && 
+  const isAtCharacterLimit = selectedCampaign &&
+    selectedCampaign.max_characters_per_player > 0 &&
     selectedCampaign.user_character_count >= selectedCampaign.max_characters_per_player;
 
   const formTitle = character ? 'Edit Character' : 'Create Character';
@@ -169,7 +169,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
             ))}
           </div>
         )}
-        
+
         <div className="mb-3">
           <label className="form-label">Character Name</label>
           <input
@@ -186,7 +186,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
             </div>
           )}
         </div>
-        
+
         <div className="mb-3">
           <label className="form-label">Description</label>
           <textarea
@@ -202,7 +202,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
             </div>
           )}
         </div>
-        
+
         <div className="d-flex gap-2">
           <button
             type="submit"
@@ -234,7 +234,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
             <nav aria-label="breadcrumb" className="mb-4">
               <ol className="breadcrumb">
                 <li className="breadcrumb-item">
-                  <button 
+                  <button
                     type="button"
                     className="btn btn-link p-0 text-decoration-none"
                     onClick={() => {
@@ -245,7 +245,7 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
                   </button>
                 </li>
                 <li className="breadcrumb-item">
-                  <button 
+                  <button
                     type="button"
                     className="btn btn-link p-0 text-decoration-none"
                     onClick={() => {
@@ -327,11 +327,11 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
                         >
                           <option value="">Select a campaign</option>
                           {campaigns.map(campaign => (
-                            <option 
-                              key={campaign.id} 
+                            <option
+                              key={campaign.id}
                               value={campaign.id}
                               disabled={
-                                campaign.max_characters_per_player > 0 && 
+                                campaign.max_characters_per_player > 0 &&
                                 campaign.user_character_count >= campaign.max_characters_per_player
                               }
                             >
@@ -444,8 +444,8 @@ const CharacterEditForm: React.FC<CharacterEditFormProps> = ({
                     type="submit"
                     className="btn btn-primary"
                     disabled={
-                      loading || 
-                      !formData.name || 
+                      loading ||
+                      !formData.name ||
                       formData.name.trim().length < 2 ||
                       (!character && !((formData as CharacterCreateData).campaign)) ||
                       isAtCharacterLimit
