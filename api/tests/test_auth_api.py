@@ -174,8 +174,8 @@ class AuthenticationAPITest(TestCase):
         """Test user info endpoint when not authenticated."""
         response = self.client.get(self.user_info_url)
 
-        # DRF returns 403 for permission denied when using IsAuthenticated
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Custom exception handler returns 401 for unauthenticated requests
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_logout_success(self):
         """Test successful logout."""

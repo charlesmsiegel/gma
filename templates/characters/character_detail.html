@@ -1,141 +1,144 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}{{ character.name }} - Character Detail{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'campaigns/css/campaign_detail.css' %}">
+  <link rel="stylesheet"
+        href="{% static 'campaigns/css/campaign_detail.css' %}">
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
+  <div class="container-fluid">
     <div class="row">
-        <div class="col-12">
-            <!-- Character Header -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h1 class="card-title h3 mb-1">{{ character.name }}</h1>
-                            <p class="card-subtitle text-muted mb-0">
-                                <i class="fas fa-dice-d20 me-1"></i>{{ character.game_system }}
-                                <span class="mx-2">•</span>
-                                <a href="{% url 'campaigns:detail' character.campaign.slug %}" class="text-decoration-none">
-                                    <i class="fas fa-flag me-1"></i>{{ character.campaign.name }}
-                                </a>
-                            </p>
-                        </div>
-                        <div class="btn-group" role="group">
-                            {% if can_edit %}
-                                <a href="#" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-edit me-1"></i>Edit Character
-                                </a>
-                            {% endif %}
-                            {% if can_delete %}
-                                <a href="#" class="btn btn-outline-danger btn-sm">
-                                    <i class="fas fa-trash me-1"></i>Delete
-                                </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            {% if character.description %}
-                                <h5>Character Background</h5>
-                                <p class="lead">{{ character.description }}</p>
-                            {% else %}
-                                <p class="text-muted fst-italic">No character description provided.</p>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card bg-light">
-                                <div class="card-header">
-                                    <h6 class="card-title mb-0">Character Information</h6>
-                                </div>
-                                <div class="card-body">
-                                    <dl class="row mb-0">
-                                        <dt class="col-6">Owner:</dt>
-                                        <dd class="col-6">{{ character.player_owner.username }}</dd>
-                                        
-                                        <dt class="col-6">Created:</dt>
-                                        <dd class="col-6">{{ character.created_at|date:"M d, Y" }}</dd>
-                                        
-                                        <dt class="col-6">Updated:</dt>
-                                        <dd class="col-6">{{ character.updated_at|date:"M d, Y" }}</dd>
-                                        
-                                        <dt class="col-6">Campaign:</dt>
-                                        <dd class="col-6">
-                                            <a href="{% url 'campaigns:detail' character.campaign.slug %}">
-                                                {{ character.campaign.name }}
-                                            </a>
-                                        </dd>
-                                    </dl>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Character Sheets Section (Future Implementation) -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-clipboard-list me-2"></i>Character Sheet
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info" role="alert">
-                        <h6 class="alert-heading">Character Sheet Coming Soon!</h6>
-                        <p class="mb-0">
-                            Detailed character sheets with stats, abilities, and traits will be available in a future update.
-                            For now, you can edit the basic information above.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Scenes Section -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-theater-masks me-2"></i>Recent Scenes
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if recent_scenes %}
-                        <div class="list-group">
-                            {% for scene in recent_scenes %}
-                                <a href="#" class="list-group-item list-group-item-action">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h6 class="mb-1">{{ scene.name }}</h6>
-                                        <small>{{ scene.created_at|timesince }} ago</small>
-                                    </div>
-                                    <p class="mb-1">{{ scene.description|truncatewords:20 }}</p>
-                                    <small>Status: {{ scene.get_status_display }}</small>
-                                </a>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted mb-0">This character hasn't participated in any scenes yet.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Navigation -->
-            <div class="d-flex justify-content-between mt-4">
-                <a href="{% url 'campaigns:detail' character.campaign.slug %}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Back to Campaign
-                </a>
+      <div class="col-12">
+        <!-- Character Header -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h1 class="card-title h3 mb-1">{{ character.name }}</h1>
+                <p class="card-subtitle text-muted mb-0">
+                  <i class="fas fa-dice-d20 me-1"></i>{{ character.game_system }}
+                  <span class="mx-2">•</span>
+                  <a href="{% url 'campaigns:detail' character.campaign.slug %}"
+                     class="text-decoration-none">
+                    <i class="fas fa-flag me-1"></i>{{ character.campaign.name }}
+                  </a>
+                </p>
+              </div>
+              <div class="btn-group" role="group">
                 {% if can_edit %}
-                    <a href="#" class="btn btn-primary">
-                        <i class="fas fa-edit me-1"></i>Edit Character
-                    </a>
+                  <a href="{% url 'characters:edit' character.pk %}"
+                     class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit Character
+                  </a>
                 {% endif %}
+                {% if can_delete %}
+                  <a href="{% url 'characters:delete' character.pk %}"
+                     class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-trash me-1"></i>Delete
+                  </a>
+                {% endif %}
+              </div>
             </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-8">
+                {% if character.description %}
+                  <h5>Character Background</h5>
+                  <p class="lead">{{ character.description }}</p>
+                {% else %}
+                  <p class="text-muted fst-italic">No character description provided.</p>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-light">
+                  <div class="card-header">
+                    <h6 class="card-title mb-0">Character Information</h6>
+                  </div>
+                  <div class="card-body">
+                    <dl class="row mb-0">
+                      <dt class="col-6">Owner:</dt>
+                      <dd class="col-6">
+                        {{ character.player_owner.username }}
+                      </dd>
+                      <dt class="col-6">Created:</dt>
+                      <dd class="col-6">
+                        {{ character.created_at|date:"M d, Y" }}
+                      </dd>
+                      <dt class="col-6">Updated:</dt>
+                      <dd class="col-6">
+                        {{ character.updated_at|date:"M d, Y" }}
+                      </dd>
+                      <dt class="col-6">Campaign:</dt>
+                      <dd class="col-6">
+                        <a href="{% url 'campaigns:detail' character.campaign.slug %}">
+                          {{ character.campaign.name }}
+                        </a>
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+        <!-- Character Sheets Section (Future Implementation) -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-clipboard-list me-2"></i>Character Sheet
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info" role="alert">
+              <h6 class="alert-heading">Character Sheet Coming Soon!</h6>
+              <p class="mb-0">
+                Detailed character sheets with stats, abilities, and traits will be available in a future update.
+                For now, you can edit the basic information above.
+              </p>
+            </div>
+          </div>
+        </div>
+        <!-- Scenes Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-theater-masks me-2"></i>Recent Scenes
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if recent_scenes %}
+              <div class="list-group">
+                {% for scene in recent_scenes %}
+                  <a href="#" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                      <h6 class="mb-1">{{ scene.name }}</h6>
+                      <small>{{ scene.created_at|timesince }} ago</small>
+                    </div>
+                    <p class="mb-1">{{ scene.description|truncatewords:20 }}</p>
+                    <small>Status: {{ scene.get_status_display }}</small>
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="text-muted mb-0">This character hasn't participated in any scenes yet.</p>
+            {% endif %}
+          </div>
+        </div>
+        <!-- Navigation -->
+        <div class="d-flex justify-content-between mt-4">
+          <a href="{% url 'campaigns:detail' character.campaign.slug %}"
+             class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Campaign
+          </a>
+          {% if can_edit %}
+            <a href="{% url 'characters:edit' character.pk %}"
+               class="btn btn-primary">
+              <i class="fas fa-edit me-1"></i>Edit Character
+            </a>
+          {% endif %}
+        </div>
+      </div>
     </div>
-</div>
+  </div>
 {% endblock %}

@@ -110,7 +110,7 @@ class APIError:
 
     @staticmethod
     def validation_error(
-        errors: Union[Dict[str, List[str]], str, DjangoValidationError]
+        errors: Union[Dict[str, List[str]], str, DjangoValidationError],
     ) -> Response:
         """
         Return a standardized validation error response.
@@ -214,7 +214,7 @@ class FieldValidator:
 
     @staticmethod
     def build_field_errors(
-        **field_errors: Union[str, List[str]]
+        **field_errors: Union[str, List[str]],
     ) -> Dict[str, List[str]]:
         """
         Build a field errors dictionary from keyword arguments.

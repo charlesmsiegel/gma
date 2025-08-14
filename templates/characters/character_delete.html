@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet"
+        href="{% static 'campaigns/css/campaign_create.css' %}">
+  <style>
+.danger-zone {
+    border: 2px solid var(--bs-danger);
+    border-radius: 0.5rem;
+}
+.confirmation-input {
+    font-family: 'Courier New', monospace;
+}
+  </style>
+{% endblock %}
+{% block content %}
+  <div class="container-fluid">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-8">
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="mb-4">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+              <a href="{% url 'campaigns:detail' campaign.slug %}">
+                <i class="bi bi-flag me-1"></i>{{ campaign.name }}
+              </a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'characters:detail' character.pk %}">
+                <i class="bi bi-person me-1"></i>{{ character.name }}
+              </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Delete</li>
+          </ol>
+        </nav>
+        <!-- Warning Alert -->
+        <div class="alert alert-danger" role="alert">
+          <h4 class="alert-heading">
+            <i class="bi bi-exclamation-triangle me-2"></i>Delete Character Confirmation
+          </h4>
+          <p>
+            You are about to delete the character <strong>{{ character.name }}</strong>. This action has serious consequences:
+          </p>
+          <hr>
+          <ul class="mb-0">
+            {% if can_hard_delete %}
+              <li>
+                <strong>Soft Delete (Default):</strong> Character will be hidden but can be restored by campaign staff
+              </li>
+              <li>
+                <strong>Hard Delete (Admin Only):</strong> Character will be permanently removed and cannot be recovered
+              </li>
+            {% else %}
+              <li>Character will be hidden from view but can be restored by campaign staff</li>
+              <li>All character data will be preserved for potential restoration</li>
+            {% endif %}
+          </ul>
+        </div>
+        <div class="card danger-zone">
+          <div class="card-header bg-danger text-white">
+            <h1 class="card-title h3 mb-0">
+              <i class="bi bi-trash me-2"></i>{{ page_title }}
+            </h1>
+          </div>
+          <div class="card-body">
+            <!-- Character Information -->
+            <div class="card bg-light mb-4">
+              <div class="card-header">
+                <h6 class="card-title mb-0">
+                  <i class="bi bi-info-circle me-2"></i>Character to Delete
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <dl class="row mb-0">
+                      <dt class="col-sm-6">Name:</dt>
+                      <dd class="col-sm-6">
+                        <strong>{{ character.name }}</strong>
+                      </dd>
+                      <dt class="col-sm-6">Owner:</dt>
+                      <dd class="col-sm-6">
+                        {{ character.player_owner.username }}
+                      </dd>
+                      <dt class="col-sm-6">Created:</dt>
+                      <dd class="col-sm-6">
+                        {{ character.created_at|date:"M d, Y" }}
+                      </dd>
+                    </dl>
+                  </div>
+                  <div class="col-md-6">
+                    <dl class="row mb-0">
+                      <dt class="col-sm-6">Campaign:</dt>
+                      <dd class="col-sm-6">
+                        {{ character.campaign.name }}
+                      </dd>
+                      <dt class="col-sm-6">Game System:</dt>
+                      <dd class="col-sm-6">
+                        {{ character.game_system }}
+                      </dd>
+                      <dt class="col-sm-6">Your Role:</dt>
+                      <dd class="col-sm-6">
+                        <span class="badge bg-secondary">{{ user_role }}</span>
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+                {% if character.description %}
+                  <hr>
+                  <div class="mb-0">
+                    <strong>Description:</strong>
+                    <p class="mt-2">{{ character.description }}</p>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+            <!-- Confirmation Form -->
+            <form method="post" novalidate>
+              {% csrf_token %}
+              {% if form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                  <h6 class="alert-heading">Form Errors:</h6>
+                  {% for error in form.non_field_errors %}<p class="mb-0">{{ error }}</p>{% endfor %}
+                </div>
+              {% endif %}
+              <!-- Name Confirmation -->
+              <div class="mb-4">
+                <label for="{{ form.confirmation_name.id_for_label }}" class="form-label">
+                  <strong>Type the character name to confirm deletion:</strong>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-danger text-white">
+                    <i class="bi bi-keyboard"></i>
+                  </span>
+                  <input type="text"
+                         class="form-control confirmation-input
+                                {% if form.confirmation_name.errors %}is-invalid{% endif %}"
+                         id="{{ form.confirmation_name.id_for_label }}"
+                         name="{{ form.confirmation_name.name }}"
+                         placeholder="Type '{{ character.name }}' exactly"
+                         autocomplete="off"
+                         required>
+                </div>
+                {% if form.confirmation_name.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.confirmation_name.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+                {% if form.confirmation_name.help_text %}
+                  <div class="form-text">{{ form.confirmation_name.help_text }}</div>
+                {% endif %}
+                <div class="form-text text-danger">
+                  <strong>Required:</strong> You must type <code>{{ character.name }}</code> exactly (case-sensitive)
+                </div>
+              </div>
+              <!-- Hard Delete Option (Admin Only) -->
+              {% if can_hard_delete %}
+                <div class="card border-warning mb-4">
+                  <div class="card-header bg-warning text-dark">
+                    <h6 class="card-title mb-0">
+                      <i class="bi bi-shield-exclamation me-2"></i>Admin Options
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-check">
+                      <input class="form-check-input"
+                             type="checkbox"
+                             name="hard_delete"
+                             value="true"
+                             id="hard_delete_checkbox">
+                      <label class="form-check-label text-danger" for="hard_delete_checkbox">
+                        <strong>Permanently delete this character (IRREVERSIBLE)</strong>
+                      </label>
+                    </div>
+                    <div class="form-text text-warning">
+                      <i class="bi bi-exclamation-triangle me-1"></i>
+                      <strong>Warning:</strong> Hard delete will permanently remove all character data.
+                      This action cannot be undone. Use soft delete (default) unless data destruction is required.
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+              <!-- Form Actions -->
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'characters:detail' character.pk %}"
+                   class="btn btn-secondary">
+                  <i class="bi bi-arrow-left me-1"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-danger" id="delete-button">
+                  <i class="bi bi-trash me-1"></i>
+                  {% if can_hard_delete %}
+                    <span id="delete-button-text">Delete Character</span>
+                  {% else %}
+                    Delete Character
+                  {% endif %}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <!-- Information Cards -->
+        <div class="row mt-4">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h6 class="card-title mb-0">
+                  <i class="bi bi-info-circle me-2"></i>What Happens Next?
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="small">
+                  {% if can_hard_delete %}
+                    <p class="mb-2">
+                      <strong>Soft Delete (Default):</strong>
+                    </p>
+                    <ul class="mb-3">
+                      <li>Character becomes invisible to regular users</li>
+                      <li>Data is preserved for potential restoration</li>
+                      <li>Campaign staff can restore if needed</li>
+                    </ul>
+                    <p class="mb-2 text-danger">
+                      <strong>Hard Delete (Admin):</strong>
+                    </p>
+                    <ul class="mb-0 text-danger">
+                      <li>Character is permanently removed</li>
+                      <li>All data is destroyed immediately</li>
+                      <li>No possibility of restoration</li>
+                    </ul>
+                  {% else %}
+                    <ul class="mb-0">
+                      <li>Character becomes invisible to regular users</li>
+                      <li>All character data is preserved</li>
+                      <li>Campaign owners and GMs can restore the character</li>
+                      <li>You will be redirected to the campaign character list</li>
+                    </ul>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h6 class="card-title mb-0">
+                  <i class="bi bi-shield-check me-2"></i>Your Permissions
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="small">
+                  <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-check-circle text-success me-2"></i>
+                    Delete this character
+                  </div>
+                  {% if can_hard_delete %}
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="bi bi-check-circle text-warning me-2"></i>
+                      Permanently destroy character (Admin)
+                    </div>
+                  {% endif %}
+                  <div class="d-flex align-items-center">
+                    <span class="badge bg-secondary me-2">{{ user_role }}</span>
+                    in {{ campaign.name }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block extra_js %}
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const hardDeleteCheckbox = document.getElementById('hard_delete_checkbox');
+    const deleteButton = document.getElementById('delete-button');
+    const deleteButtonText = document.getElementById('delete-button-text');
+
+    if (hardDeleteCheckbox && deleteButtonText) {
+        hardDeleteCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                deleteButton.classList.remove('btn-danger');
+                deleteButton.classList.add('btn-dark');
+                deleteButtonText.textContent = 'PERMANENTLY DELETE';
+            } else {
+                deleteButton.classList.remove('btn-dark');
+                deleteButton.classList.add('btn-danger');
+                deleteButtonText.textContent = 'Delete Character';
+            }
+        });
+    }
+
+    // Focus on confirmation input
+    const confirmationInput = document.querySelector('.confirmation-input');
+    if (confirmationInput) {
+        confirmationInput.focus();
+    }
+});
+  </script>
+{% endblock %}

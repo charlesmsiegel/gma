@@ -80,7 +80,7 @@ class UserSearchAPITest(TestCase):
         response = self.client.get(self.search_url, {"q": "alice"})
 
         # Should require authentication
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_user_search_requires_campaign_membership(self):
         """Test that only campaign members can search for users."""

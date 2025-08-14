@@ -7,13 +7,15 @@ Provides campaign-scoped character management views with proper permission check
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.generic import CreateView, DetailView, ListView
+from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
 
 from characters.forms import CharacterCreateForm
 from characters.models import Character
 from core.mixins import CampaignCharacterMixin, CampaignListView
+
+from .edit_delete import CharacterDeleteView, CharacterEditView
 
 
 class CampaignCharactersView(CampaignCharacterMixin, CampaignListView):
