@@ -898,28 +898,23 @@ class CharacterPolymorphicSerializationTest(BaseCharacterAPITestCase):
         super().setUp()
 
         # Create different character types
-        # (these will fail until polymorphic models exist)
-        try:
-            from characters.models import MageCharacter
+        from characters.models import MageCharacter
 
-            self.mage_character = MageCharacter.objects.create(
-                name="Mage Character",
-                campaign=self.campaign,
-                player_owner=self.player1,
-                game_system="Mage: The Ascension",
-                # Mage-specific fields
-                arete=3,
-                quintessence=10,
-                paradox=0,
-            )
-        except ImportError:
-            # If polymorphic models don't exist yet, skip these tests
-            self.mage_character = None
+        self.mage_character = MageCharacter.objects.create(
+            name="Mage Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            # Mage-specific fields
+            arete=3,
+            quintessence=10,
+            paradox=0,
+        )
 
     def test_polymorphic_character_serialization(self):
         """Test that polymorphic characters are serialized with type-specific fields."""
         if not self.mage_character:
-            self.skipTest("Polymorphic character models not implemented yet")
+            self.fail("Failed to create MageCharacter in setUp")
 
         self.client.force_authenticate(user=self.player1)
 
@@ -946,7 +941,7 @@ class CharacterPolymorphicSerializationTest(BaseCharacterAPITestCase):
     def test_polymorphic_character_list_serialization(self):
         """Test that character list properly handles mixed polymorphic types."""
         if not self.mage_character:
-            self.skipTest("Polymorphic character models not implemented yet")
+            self.fail("Failed to create MageCharacter in setUp")
 
         self.client.force_authenticate(user=self.owner)
 
@@ -963,7 +958,7 @@ class CharacterPolymorphicSerializationTest(BaseCharacterAPITestCase):
     def test_polymorphic_character_creation(self):
         """Test creating polymorphic characters via API."""
         if not self.mage_character:
-            self.skipTest("Polymorphic character models not implemented yet")
+            self.fail("Failed to create MageCharacter in setUp")
 
         self.client.force_authenticate(user=self.player1)
 

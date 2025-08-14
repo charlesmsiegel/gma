@@ -514,6 +514,34 @@ class CharacterSerializer(serializers.ModelSerializer):
         """Get the polymorphic character type."""
         return obj.__class__.__name__
 
+    def to_representation(self, instance):
+        """Use polymorphic serialization for specific character types."""
+        # Get the base representation
+        data = super().to_representation(instance)
+
+        # Add type-specific fields based on character type
+        from characters.models import MageCharacter, WoDCharacter
+
+        if isinstance(instance, MageCharacter):
+            # Add Mage-specific fields
+            data.update(
+                {
+                    "arete": instance.arete,
+                    "quintessence": instance.quintessence,
+                    "paradox": instance.paradox,
+                    "willpower": instance.willpower,  # From WoDCharacter
+                }
+            )
+        elif isinstance(instance, WoDCharacter):
+            # Add WoD-specific fields
+            data.update(
+                {
+                    "willpower": instance.willpower,
+                }
+            )
+
+        return data
+
 
 class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating characters."""
@@ -523,6 +551,14 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,  # Not required for updates
     )
+    character_type = serializers.CharField(
+        write_only=True, required=False, help_text="Character type to create"
+    )
+    # Polymorphic fields for different character types
+    willpower = serializers.IntegerField(required=False, min_value=1, max_value=10)
+    arete = serializers.IntegerField(required=False, min_value=1, max_value=10)
+    quintessence = serializers.IntegerField(required=False, min_value=0)
+    paradox = serializers.IntegerField(required=False, min_value=0)
 
     def run_validation(self, data):
         """
@@ -573,6 +609,11 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "campaign",
+            "character_type",
+            "willpower",
+            "arete",
+            "quintessence",
+            "paradox",
         )
 
     def __init__(self, *args, **kwargs):
@@ -697,6 +738,8 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
         from django.core.exceptions import ValidationError
         from django.db import IntegrityError
 
+        from characters.models import MageCharacter, WoDCharacter
+
         request = self.context.get("request")
         campaign = validated_data["campaign"]
 
@@ -704,9 +747,30 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
         validated_data["player_owner"] = request.user
         validated_data["game_system"] = campaign.game_system
 
+        # Extract character type and polymorphic fields
+        character_type = validated_data.pop("character_type", "Character")
+        polymorphic_fields = {}
+
+        # Extract type-specific fields
+        if character_type == "MageCharacter":
+            for field in ["willpower", "arete", "quintessence", "paradox"]:
+                if field in validated_data:
+                    polymorphic_fields[field] = validated_data.pop(field)
+        elif character_type == "WoDCharacter":
+            for field in ["willpower"]:
+                if field in validated_data:
+                    polymorphic_fields[field] = validated_data.pop(field)
+
         # Create character with audit user
         try:
-            character = Character(**validated_data)
+            # Choose the right model class based on character_type
+            if character_type == "MageCharacter":
+                character = MageCharacter(**validated_data, **polymorphic_fields)
+            elif character_type == "WoDCharacter":
+                character = WoDCharacter(**validated_data, **polymorphic_fields)
+            else:
+                character = Character(**validated_data)
+
             character.save(audit_user=request.user)
             return character
         except IntegrityError as e:

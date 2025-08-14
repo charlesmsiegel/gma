@@ -211,8 +211,14 @@ class CharacterViewSet(viewsets.ModelViewSet):
 
     def get_object(self):
         """Get character with permission checking, including soft-deleted ones."""
-        # Override to use all_objects manager to include soft-deleted characters
-        queryset = self.filter_queryset(Character.all_objects.all())
+        # Use all_objects to include soft-deleted characters
+        # The API should allow access to soft-deleted characters for certain operations
+        queryset = Character.all_objects.all()
+
+        # Apply the same filtering as get_queryset but without permission filtering
+        queryset = queryset.select_related(
+            "campaign", "player_owner", "deleted_by"
+        ).prefetch_related("campaign__memberships__user")
 
         # Perform the lookup filtering based on pk or slug
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field

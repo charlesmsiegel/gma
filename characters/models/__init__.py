@@ -185,11 +185,11 @@ class CharacterQuerySet(models.QuerySet):
 class CharacterManager(PolymorphicManager):
     """Custom manager for Character with query methods."""
 
-    def get_queryset(self) -> CharacterQuerySet:
-        """Return the custom QuerySet, excluding soft-deleted by default."""
-        return CharacterQuerySet(self.model, using=self._db).filter(is_deleted=False)
+    def get_queryset(self):
+        """Return the polymorphic QuerySet, excluding soft-deleted by default."""
+        return super().get_queryset().filter(is_deleted=False)
 
-    def for_campaign(self, campaign: Campaign) -> CharacterQuerySet:
+    def for_campaign(self, campaign: Campaign):
         """Get characters for a specific campaign.
 
         Args:
@@ -198,9 +198,11 @@ class CharacterManager(PolymorphicManager):
         Returns:
             QuerySet of characters in the campaign
         """
-        return self.get_queryset().for_campaign(campaign)
+        if campaign is None:
+            raise ValueError("Campaign parameter cannot be None")
+        return self.get_queryset().filter(campaign=campaign)
 
-    def owned_by(self, user: Optional["AbstractUser"]) -> CharacterQuerySet:
+    def owned_by(self, user: Optional["AbstractUser"]):
         """Get characters owned by a specific user.
 
         Args:
@@ -209,11 +211,11 @@ class CharacterManager(PolymorphicManager):
         Returns:
             QuerySet of characters owned by the user
         """
-        return self.get_queryset().owned_by(user)
+        if user is None:
+            return self.none()
+        return self.get_queryset().filter(player_owner=user)
 
-    def editable_by(
-        self, user: Optional["AbstractUser"], campaign: Campaign
-    ) -> CharacterQuerySet:
+    def editable_by(self, user: Optional["AbstractUser"], campaign: Campaign):
         """Get characters that can be edited by a user in a campaign.
 
         Args:
@@ -223,23 +225,47 @@ class CharacterManager(PolymorphicManager):
         Returns:
             QuerySet of characters the user can edit
         """
-        return self.get_queryset().editable_by(user, campaign)
+        if user is None:
+            return self.none()
 
-    def with_campaign_memberships(self) -> CharacterQuerySet:
+        if campaign is None:
+            raise ValueError("Campaign parameter cannot be None")
+
+        # Get user's role in the campaign
+        user_role = campaign.get_user_role(user)
+
+        if user_role is None:
+            # Non-members cannot edit any characters
+            return self.none()
+        elif user_role in ["OWNER", "GM"]:
+            # Campaign owners and GMs can edit all characters in their campaign
+            return self.get_queryset().filter(campaign=campaign)
+        elif user_role in ["PLAYER"]:
+            # Players can only edit their own characters
+            return self.get_queryset().filter(campaign=campaign, player_owner=user)
+        else:
+            # Observers and others cannot edit any characters
+            return self.none()
+
+    def with_campaign_memberships(self):
         """Get characters with prefetched campaign memberships.
 
         Returns:
             QuerySet with prefetched campaign memberships for optimization
         """
-        return self.get_queryset().with_campaign_memberships()
+        return (
+            self.get_queryset()
+            .select_related("campaign", "campaign__owner")
+            .prefetch_related("campaign__memberships__user")
+        )
 
 
 class AllCharacterManager(PolymorphicManager):
     """Manager that includes soft-deleted characters."""
 
-    def get_queryset(self) -> CharacterQuerySet:
-        """Return the custom QuerySet including all characters."""
-        return CharacterQuerySet(self.model, using=self._db)
+    def get_queryset(self):
+        """Return the polymorphic QuerySet including all characters."""
+        return super().get_queryset()
 
 
 class Character(PolymorphicModel):
@@ -478,25 +504,35 @@ class Character(PolymorphicModel):
         self, using: Optional[str] = None, fields: Optional[List[str]] = None
     ) -> None:
         """Refresh the instance from the database and reset change tracking."""
-        # Use all_objects to include soft-deleted characters in refresh
-        db_instance_qs = self.__class__.all_objects
-        if fields is not None:
-            db_instance_qs = db_instance_qs.only(*fields)
-        db_instance = db_instance_qs.using(using).get(pk=self.pk)
+        # For soft-deleted characters, we need to use all_objects manager
+        # But to avoid recursion issues with polymorphic queries during Django's
+        # deletion cascades, we'll use a simpler approach
 
-        # Manually refresh fields
-        if fields is None:
-            fields = [field.name for field in self._meta.fields]
+        if hasattr(self, "_state") and self._state.db is None:
+            # Object not yet saved, use default behavior
+            super().refresh_from_db(using=using, fields=fields)
+            return
 
-        for field in fields:
-            setattr(self, field, getattr(db_instance, field))
+        # Try with all_objects first (includes soft-deleted)
+        try:
+            # Use all_objects but be careful with polymorphic fields
+            fresh_instance = self.__class__.all_objects.using(using).get(pk=self.pk)
 
-        # Reset change tracking after refresh
-        self._original_campaign_id = self.campaign_id
-        self._original_player_owner_id = self.player_owner_id
-        self._original_name = self.name
-        self._original_description = self.description
-        self._original_game_system = self.game_system
+            # Update only the requested fields or all fields
+            if fields is None:
+                fields = [field.name for field in self._meta.concrete_fields]
+
+            # Clear the related object cache to force fresh retrieval
+            if hasattr(self, "_state"):
+                self._state.fields_cache.clear()
+
+            for field_name in fields:
+                if hasattr(fresh_instance, field_name):
+                    setattr(self, field_name, getattr(fresh_instance, field_name))
+
+        except self.__class__.DoesNotExist:
+            # Fallback to default behavior for hard-deleted objects
+            super().refresh_from_db(using=using, fields=fields)
 
     def can_be_edited_by(
         self, user: Optional["AbstractUser"], user_role: Optional[str] = None
@@ -747,3 +783,35 @@ class Character(PolymorphicModel):
                 changes[field] = {"old": old_value, "new": new_value}
 
         return changes
+
+
+class WoDCharacter(Character):
+    """Base World of Darkness character model."""
+
+    # WoD-specific fields that are common to all WoD games
+    willpower: models.PositiveSmallIntegerField = models.PositiveSmallIntegerField(
+        default=3, help_text="Character's willpower rating (1-10)"
+    )
+
+    class Meta:
+        verbose_name = "World of Darkness Character"
+        verbose_name_plural = "World of Darkness Characters"
+
+
+class MageCharacter(WoDCharacter):
+    """Mage: The Ascension character model."""
+
+    # Mage-specific fields
+    arete: models.PositiveSmallIntegerField = models.PositiveSmallIntegerField(
+        default=1, help_text="Mage's Arete rating (1-10)"
+    )
+    quintessence: models.PositiveSmallIntegerField = models.PositiveSmallIntegerField(
+        default=0, help_text="Current quintessence points"
+    )
+    paradox: models.PositiveSmallIntegerField = models.PositiveSmallIntegerField(
+        default=0, help_text="Current paradox points"
+    )
+
+    class Meta:
+        verbose_name = "Mage Character"
+        verbose_name_plural = "Mage Characters"
