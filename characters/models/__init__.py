@@ -287,12 +287,12 @@ class Character(PolymorphicModel):
         """Initialize the model and store original field values for change tracking."""
         super().__init__(*args, **kwargs)
         # Store original values for key fields to track changes
-        # Use getattr to safely access fields that might not be loaded yet
-        self._original_campaign_id = getattr(self, "campaign_id", None)
-        self._original_player_owner_id = getattr(self, "player_owner_id", None)
-        self._original_name = getattr(self, "name", "")
-        self._original_description = getattr(self, "description", "")
-        self._original_game_system = getattr(self, "game_system", "")
+        # Safely access attributes by looking directly at __dict__ to avoid recursion
+        self._original_campaign_id = self.__dict__.get("campaign_id")
+        self._original_player_owner_id = self.__dict__.get("player_owner_id")
+        self._original_name = self.__dict__.get("name", "")
+        self._original_description = self.__dict__.get("description", "")
+        self._original_game_system = self.__dict__.get("game_system", "")
 
     class Meta:
         db_table = "characters_character"
