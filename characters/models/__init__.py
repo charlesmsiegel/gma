@@ -14,8 +14,94 @@ if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
 
 
+class CharacterAuditLog(models.Model):
+    """Audit trail for character changes."""
+
+    character = models.ForeignKey(
+        "Character",
+        on_delete=models.CASCADE,
+        related_name="audit_entries",
+        help_text="The character this audit entry belongs to",
+    )
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        help_text="User who made the change",
+    )
+    action = models.CharField(
+        max_length=20,
+        choices=[
+            ("CREATE", "Created"),
+            ("UPDATE", "Updated"),
+            ("DELETE", "Deleted"),
+            ("RESTORE", "Restored"),
+        ],
+        help_text="Type of action performed",
+    )
+    field_changes = models.JSONField(
+        default=dict,
+        help_text="Dictionary of field changes: {field_name: {old: value, new: value}}",
+    )
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "characters_character_audit"
+        ordering = ["-timestamp"]
+        verbose_name = "Character Audit Entry"
+        verbose_name_plural = "Character Audit Entries"
+
+    @property
+    def user(self):
+        """Alias for changed_by to match test expectations."""
+        return self.changed_by
+
+    @property
+    def changes(self):
+        """Alias for field_changes to match test expectations."""
+        return self.field_changes
+
+    @classmethod
+    def get_for_user(cls, character, user):
+        """Get audit entries for a character that a user can view.
+
+        Args:
+            character: The Character instance
+            user: The user requesting audit entries
+
+        Returns:
+            QuerySet of audit entries the user can view
+        """
+        if not user or not user.is_authenticated:
+            return cls.objects.none()
+
+        # Check if user has permission to view this character
+        if not character.can_be_edited_by(user):
+            # Also check if user is character owner or has read access
+            permission_level = character.get_permission_level(user)
+            if permission_level == "none":
+                return cls.objects.none()
+
+        return cls.objects.filter(character=character)
+
+    def __str__(self) -> str:
+        """Return string representation of audit entry."""
+        return (
+            f"{self.character.name} - {self.get_action_display()} "
+            f"by {self.changed_by} at {self.timestamp}"
+        )
+
+
 class CharacterQuerySet(models.QuerySet):
     """Custom QuerySet for Character with filtering methods."""
+
+    def active(self) -> "CharacterQuerySet":
+        """Filter to only active (non-deleted) characters."""
+        return self.filter(is_deleted=False)
+
+    def deleted(self) -> "CharacterQuerySet":
+        """Filter to only soft-deleted characters."""
+        return self.filter(is_deleted=True)
 
     def for_campaign(self, campaign: Campaign) -> "CharacterQuerySet":
         """Filter characters belonging to a specific campaign.
@@ -95,8 +181,8 @@ class CharacterManager(PolymorphicManager):
     """Custom manager for Character with query methods."""
 
     def get_queryset(self) -> CharacterQuerySet:
-        """Return the custom QuerySet for additional methods."""
-        return CharacterQuerySet(self.model, using=self._db)
+        """Return the custom QuerySet, excluding soft-deleted by default."""
+        return CharacterQuerySet(self.model, using=self._db).filter(is_deleted=False)
 
     def for_campaign(self, campaign: Campaign) -> CharacterQuerySet:
         """Get characters for a specific campaign.
@@ -143,6 +229,14 @@ class CharacterManager(PolymorphicManager):
         return self.get_queryset().with_campaign_memberships()
 
 
+class AllCharacterManager(PolymorphicManager):
+    """Manager that includes soft-deleted characters."""
+
+    def get_queryset(self) -> CharacterQuerySet:
+        """Return the custom QuerySet including all characters."""
+        return CharacterQuerySet(self.model, using=self._db)
+
+
 class Character(PolymorphicModel):
     """Base Character model for all game systems."""
 
@@ -170,14 +264,35 @@ class Character(PolymorphicModel):
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
+    # Soft delete fields
+    is_deleted: models.BooleanField = models.BooleanField(
+        default=False, help_text="Whether this character has been soft deleted"
+    )
+    deleted_at: models.DateTimeField = models.DateTimeField(
+        null=True, blank=True, help_text="When this character was deleted"
+    )
+    deleted_by: models.ForeignKey = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="deleted_characters",
+        help_text="User who deleted this character",
+    )
+
     objects = CharacterManager()
+    all_objects = AllCharacterManager()
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the model and store original field values for change tracking."""
         super().__init__(*args, **kwargs)
         # Store original values for key fields to track changes
-        self._original_campaign_id = self.campaign_id
-        self._original_player_owner_id = self.player_owner_id
+        # Use getattr to safely access fields that might not be loaded yet
+        self._original_campaign_id = getattr(self, "campaign_id", None)
+        self._original_player_owner_id = getattr(self, "player_owner_id", None)
+        self._original_name = getattr(self, "name", "")
+        self._original_description = getattr(self, "description", "")
+        self._original_game_system = getattr(self, "game_system", "")
 
     class Meta:
         db_table = "characters_character"
@@ -284,27 +399,99 @@ class Character(PolymorphicModel):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """
-        Save the character with validation.
+        Save the character with validation and audit trail.
 
         Only runs full_clean() for new characters (those without a pk) or when
         explicitly requested via validate=True parameter.
         """
+        # Check if this is a new character
+        is_new = self.pk is None
+
+        # Store original values for audit trail (if not new)
+        original_values = {}
+        if not is_new:
+            original_values = {
+                "name": (
+                    self._original_name
+                    if hasattr(self, "_original_name")
+                    else self.name
+                ),
+                "description": (
+                    self._original_description
+                    if hasattr(self, "_original_description")
+                    else self.description
+                ),
+                "game_system": (
+                    self._original_game_system
+                    if hasattr(self, "_original_game_system")
+                    else self.game_system
+                ),
+                "campaign_id": self._original_campaign_id,
+                "player_owner_id": self._original_player_owner_id,
+            }
+
         # Run validation for new characters or when explicitly requested
         validate = kwargs.pop("validate", self.pk is None)
         if validate:
             self.full_clean()
+
+        # Get audit user from kwargs if provided (support both names for compatibility)
+        audit_user = kwargs.pop("audit_user", None) or kwargs.pop("update_user", None)
+
         super().save(*args, **kwargs)
+
+        # Create audit entry after successful save
+        # Use provided audit_user, or default to player_owner for automatic auditing
+        effective_audit_user = audit_user or self.player_owner
+
+        if effective_audit_user:
+            if is_new:
+                # For new characters, track initial field values
+                initial_changes = {
+                    "name": {"old": None, "new": self.name},
+                    "description": {"old": None, "new": self.description},
+                    "game_system": {"old": None, "new": self.game_system},
+                    "campaign_id": {"old": None, "new": self.campaign_id},
+                    "player_owner_id": {"old": None, "new": self.player_owner_id},
+                }
+                self._create_audit_entry(
+                    effective_audit_user, "CREATE", initial_changes
+                )
+            else:
+                changes = self.get_field_changes(original_values)
+                if changes:
+                    self._create_audit_entry(effective_audit_user, "UPDATE", changes)
 
         # Update original values after successful save to reset change tracking
         self._original_campaign_id = self.campaign_id
         self._original_player_owner_id = self.player_owner_id
+        self._original_name = self.name
+        self._original_description = self.description
+        self._original_game_system = self.game_system
 
-    def refresh_from_db(self, using: Optional[str] = None, fields: Optional[List[str]] = None) -> None:
+    def refresh_from_db(
+        self, using: Optional[str] = None, fields: Optional[List[str]] = None
+    ) -> None:
         """Refresh the instance from the database and reset change tracking."""
-        super().refresh_from_db(using=using, fields=fields)
+        # Use all_objects to include soft-deleted characters in refresh
+        db_instance_qs = self.__class__.all_objects
+        if fields is not None:
+            db_instance_qs = db_instance_qs.only(*fields)
+        db_instance = db_instance_qs.using(using).get(pk=self.pk)
+
+        # Manually refresh fields
+        if fields is None:
+            fields = [field.name for field in self._meta.fields]
+
+        for field in fields:
+            setattr(self, field, getattr(db_instance, field))
+
         # Reset change tracking after refresh
         self._original_campaign_id = self.campaign_id
         self._original_player_owner_id = self.player_owner_id
+        self._original_name = self.name
+        self._original_description = self.description
+        self._original_game_system = self.game_system
 
     def can_be_edited_by(
         self, user: Optional["AbstractUser"], user_role: Optional[str] = None
@@ -410,3 +597,145 @@ class Character(PolymorphicModel):
             return None
 
         return self.campaign.get_user_role(user)
+
+    def soft_delete(self, user: "AbstractUser", confirmation_name: str = None):
+        """Soft delete this character.
+
+        Args:
+            user: The user performing the deletion
+            confirmation_name: Optional character name confirmation for validation
+
+        Returns:
+            Character instance if successful, False if no permission
+
+        Raises:
+            ValueError: If character deleted or confirmation name doesn't match
+        """
+        from django.utils import timezone
+
+        if not self.can_be_deleted_by(user):
+            return False
+
+        if self.is_deleted:
+            raise ValueError("Character is already deleted")
+
+        # Validate confirmation name if provided
+        if confirmation_name is not None:
+            if not confirmation_name:
+                raise ValueError("Confirmation name cannot be empty")
+            if confirmation_name != self.name:
+                raise ValueError(
+                    "Confirmation name must match character name "
+                    f"exactly: '{self.name}'"
+                )
+
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.deleted_by = user
+        self.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
+
+        # Create audit entry
+        self._create_audit_entry(
+            user, "DELETE", {"is_deleted": {"old": False, "new": True}}
+        )
+
+        return self
+
+    def restore(self, user: "AbstractUser") -> "Character":
+        """Restore a soft-deleted character.
+
+        Args:
+            user: The user performing the restoration
+
+        Raises:
+            PermissionError: If user doesn't have permission to restore
+            ValueError: If character is not deleted
+        """
+        if not self.can_be_deleted_by(user):
+            raise PermissionError("You don't have permission to restore this character")
+
+        if not self.is_deleted:
+            raise ValueError("Character is not deleted")
+
+        self.is_deleted = False
+        self.deleted_at = None
+        self.deleted_by = None
+        # Use direct SQL update since default manager excludes soft-deleted chars
+        self.__class__.all_objects.filter(pk=self.pk).update(
+            is_deleted=False, deleted_at=None, deleted_by=None
+        )
+
+        # Create audit entry
+        self._create_audit_entry(
+            user, "RESTORE", {"is_deleted": {"old": True, "new": False}}
+        )
+
+        return self
+
+    def hard_delete(self, user: "AbstractUser") -> "Character":
+        """Permanently delete this character (admin only).
+
+        Args:
+            user: The user performing the deletion
+
+        Raises:
+            PermissionError: If user is not an admin
+        """
+        if not user.is_staff:
+            raise PermissionError(
+                "Only administrators can permanently delete characters"
+            )
+
+        # Create final audit entry before deletion
+        self._create_audit_entry(
+            user,
+            "DELETE",
+            {"permanently_deleted": {"old": False, "new": True}},
+        )
+
+        self.delete()
+        return self
+
+    def _create_audit_entry(
+        self, user: "AbstractUser", action: str, field_changes: Dict[str, Any]
+    ) -> None:
+        """Create an audit entry for this character.
+
+        Args:
+            user: The user who made the change
+            action: The action performed ('create', 'update', 'delete', 'restore')
+            field_changes: Dictionary of field changes
+        """
+        CharacterAuditLog.objects.create(
+            character=self,
+            changed_by=user,
+            action=action,
+            field_changes=field_changes,
+        )
+
+    def get_field_changes(self, original_values: Dict[str, Any]) -> Dict[str, Any]:
+        """Compare current values with original to detect changes.
+
+        Args:
+            original_values: Dictionary of original field values
+
+        Returns:
+            Dictionary of changes in format {field: {old: value, new: value}}
+        """
+        changes = {}
+        tracked_fields = [
+            "name",
+            "description",
+            "game_system",
+            "campaign_id",
+            "player_owner_id",
+        ]
+
+        for field in tracked_fields:
+            old_value = original_values.get(field)
+            new_value = getattr(self, field)
+
+            if old_value != new_value:
+                changes[field] = {"old": old_value, "new": new_value}
+
+        return changes

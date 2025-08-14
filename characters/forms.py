@@ -175,3 +175,179 @@ class CharacterCreateForm(forms.ModelForm):
             character.save(validate=True)
 
         return character
+
+
+class CharacterEditForm(forms.ModelForm):
+    """Form for editing existing characters with permission validation."""
+
+    class Meta:
+        model = Character
+        fields = ["name", "description"]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Enter character name",
+                    "maxlength": 100,
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Describe your character's background",
+                    "rows": 4,
+                }
+            ),
+        }
+        help_texts = {
+            "name": "Character name (required, max 100 characters)",
+            "description": "Character description and background",
+        }
+
+    def __init__(self, *args, user=None, character=None, **kwargs):
+        """Initialize form with user and character for permission checking."""
+        if user is None:
+            raise TypeError("CharacterEditForm requires 'user' parameter")
+
+        # Support both character= and instance= patterns
+        if character is None:
+            character = kwargs.get("instance")
+        if character is None:
+            raise TypeError(
+                "CharacterEditForm requires 'character' parameter or instance"
+            )
+
+        self.user = user
+        self.character = character
+
+        # Check permissions
+        if not character.can_be_edited_by(user):
+            raise PermissionError(f"You don't have permission to edit {character.name}")
+
+        super().__init__(*args, **kwargs)
+
+    def clean_name(self):
+        """Validate character name field."""
+        name = self.cleaned_data.get("name")
+
+        if not name:
+            raise ValidationError("Character name is required.")
+
+        # Strip whitespace and check if empty
+        name = name.strip()
+        if not name:
+            raise ValidationError("Character name cannot be empty or only whitespace.")
+
+        if len(name) > 100:
+            raise ValidationError("Character name cannot exceed 100 characters.")
+
+        return name
+
+    def clean(self):
+        """Perform cross-field validation."""
+        cleaned_data = super().clean()
+        name = cleaned_data.get("name")
+
+        if name and self.character:
+            # Check for unique character name per campaign (excluding current character)
+            existing_character = (
+                Character.objects.filter(campaign=self.character.campaign, name=name)
+                .exclude(pk=self.character.pk)
+                .first()
+            )
+
+            if existing_character:
+                raise ValidationError(
+                    {
+                        "name": (
+                            f"A character named '{name}' already exists in this "
+                            "campaign. Character names must be unique within "
+                            "each campaign."
+                        )
+                    }
+                )
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        """Save the character with audit trail."""
+        character = super().save(commit=False)
+
+        if commit:
+            # Save with audit user for audit trail
+            character.save(audit_user=self.user)
+
+        return character
+
+    def get_changed_fields(self):
+        """Get list of fields that changed for audit tracking."""
+        if not hasattr(self, "changed_data"):
+            return []
+        return self.changed_data
+
+
+class CharacterDeleteForm(forms.Form):
+    """Form for deleting characters with confirmation."""
+
+    character_name_confirmation = forms.CharField(
+        max_length=100,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Type the character name to confirm deletion",
+            }
+        ),
+        help_text="Type the character name exactly to confirm deletion",
+    )
+
+    def __init__(self, *args, character=None, user=None, **kwargs):
+        """Initialize form with character and user for validation."""
+        # Support both character= and instance= patterns
+        if character is None:
+            character = kwargs.get("instance")
+        if character is None:
+            raise TypeError(
+                "CharacterDeleteForm requires 'character' parameter or instance"
+            )
+        if user is None:
+            raise TypeError("CharacterDeleteForm requires 'user' parameter")
+
+        self.character = character
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_character_name_confirmation(self):
+        """Validate that the confirmation matches the character name exactly."""
+        confirmation = self.cleaned_data.get("character_name_confirmation")
+
+        if not confirmation:
+            raise ValidationError(
+                "You must type the character name to confirm deletion."
+            )
+
+        # Case-sensitive comparison as required
+        if confirmation != self.character.name:
+            raise ValidationError(
+                f"You must type '{self.character.name}' exactly to confirm deletion."
+            )
+
+        return confirmation
+
+    def delete_character(self, hard_delete=False):
+        """Delete the character (soft delete by default, hard delete for admins).
+
+        Args:
+            hard_delete: Whether to permanently delete (admin only)
+
+        Returns:
+            The character that was deleted
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        if hard_delete:
+            self.character.hard_delete(self.user)
+        else:
+            self.character.soft_delete(self.user)
+
+        return self.character

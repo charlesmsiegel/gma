@@ -1317,7 +1317,8 @@ class CharacterSoftDeleteTest(TestCase):
         self.assertEqual(character.deleted_by, self.player1)
 
         # Character should still exist in database but be marked deleted
-        self.assertTrue(Character.objects.filter(pk=character.pk).exists())
+        # Soft deleted characters should not be in default queryset
+        self.assertFalse(Character.objects.filter(pk=character.pk).exists())
         self.assertTrue(Character.all_objects.filter(pk=character.pk).exists())
 
     def test_soft_delete_character_as_campaign_owner(self):
@@ -1376,6 +1377,10 @@ class CharacterSoftDeleteTest(TestCase):
 
     def test_soft_deleted_characters_excluded_from_default_queryset(self):
         """Test that soft deleted characters are excluded from default queries."""
+        # Set campaign to allow multiple characters
+        self.campaign.max_characters_per_player = 2
+        self.campaign.save()
+
         character1 = Character.objects.create(
             name="Active Character",
             campaign=self.campaign,
@@ -1659,6 +1664,14 @@ class CharacterAuditTrailTest(TestCase):
         # This test verifies that the QuerySet method returns expected results
         # In a real scenario, we'd use django-debug-toolbar or connection.queries
         # to verify that it actually reduces queries
+
+        # Create a character for testing
+        Character.objects.create(
+            name="Test Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
 
         queryset = Character.objects.with_campaign_memberships().filter(
             campaign=self.campaign
