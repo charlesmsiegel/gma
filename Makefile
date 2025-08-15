@@ -1,4 +1,4 @@
-.PHONY: help runserver runserver-django start-postgres start-redis stop-postgres stop-redis setup-env migrate clean health-check test test-coverage start-frontend build-frontend stop-all check-frontend reset-migrations create-superuser reset-dev pristine
+.PHONY: help runserver runserver-django start-postgres start-redis stop-postgres stop-redis setup-env makemigrations migrate clean health-check test test-coverage start-frontend build-frontend stop-all check-frontend reset-migrations create-superuser reset-dev pristine
 
 # Environment paths
 GMA_ENV_PATH = /home/janothar/miniconda3/envs/gma
@@ -16,7 +16,8 @@ help:
 	@echo "  stop-postgres  - Stop PostgreSQL server"
 	@echo "  stop-redis     - Stop Redis server"
 	@echo "  setup-env      - Create conda environment from environment.yml"
-	@echo "  migrate        - Run Django migrations"
+	@echo "  makemigrations - Create Django migration files (ensures PostgreSQL is running)"
+	@echo "  migrate        - Run Django migrations (ensures PostgreSQL is running)"
 	@echo "  reset-migrations - Drop database, delete migrations, recreate everything"
 	@echo "  create-superuser - Create Django admin superuser"
 	@echo "  reset-dev      - Complete dev reset: migrations + superuser (interactive)"
@@ -74,7 +75,11 @@ setup-env:
 	@echo "Creating conda environment..."
 	conda env create -f environment.yml
 
-migrate:
+makemigrations: start-postgres
+	@echo "Creating Django migration files..."
+	$(GMA_ENV_PATH)/bin/python manage.py makemigrations
+
+migrate: start-postgres
 	@echo "Running Django migrations..."
 	$(GMA_ENV_PATH)/bin/python manage.py migrate
 
