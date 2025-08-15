@@ -5,95 +5,166 @@
   <link rel="stylesheet" href="{% static 'css/home.css' %}">
 {% endblock %}
 {% block content %}
-  <div class="hero-section">
-    <h1 class="display-3 fw-bold">Welcome to Game Master Application</h1>
-    <p class="lead">
-      Your ultimate tool for managing World of Darkness tabletop RPG campaigns
-    </p>
-    <a href="{% if user.is_authenticated %}{% url 'campaigns:list' %}{% else %}{% url 'users:register' %}{% endif %}"
-       class="btn btn-primary btn-lg">Get Started</a>
-  </div>
-  <div class="row features-grid">
-    <div class="col-lg-4 col-md-6 mb-4">
-      <div class="feature-card card h-100">
-        <div class="card-body d-flex flex-column">
-          <div class="feature-icon">🎭</div>
-          <h3 class="card-title">Campaign Management</h3>
-          <p class="card-text flex-grow-1">
-            Create and manage multiple campaigns with ease. Track storylines, NPCs, and campaign progression across your World of Darkness games.
+  <!-- Hero Section -->
+  <div class="hero-section text-center py-5 mb-5">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <h1 class="display-3 fw-bold mb-4">
+            <i class="bi bi-dice-6 text-primary me-3"></i>
+            Welcome to Game Master Application
+          </h1>
+          <p class="lead mb-4 fs-5">
+            Your ultimate tool for managing World of Darkness tabletop RPG campaigns
           </p>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-4 col-md-6 mb-4">
-      <div class="feature-card card h-100">
-        <div class="card-body d-flex flex-column">
-          <div class="feature-icon">👤</div>
-          <h3 class="card-title">Character Sheets</h3>
-          <p class="card-text flex-grow-1">
-            Comprehensive character management with support for Mage: the Ascension and other World of Darkness game lines. Digital character sheets that sync in real-time.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-4 col-md-6 mb-4">
-      <div class="feature-card card h-100">
-        <div class="card-body d-flex flex-column">
-          <div class="feature-icon">🗣️</div>
-          <h3 class="card-title">Real-time Chat</h3>
-          <p class="card-text flex-grow-1">
-            Integrated chat system for seamless in-character and out-of-character communication during your gaming sessions.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-4 col-md-6 mb-4">
-      <div class="feature-card card h-100">
-        <div class="card-body d-flex flex-column">
-          <div class="feature-icon">🎲</div>
-          <h3 class="card-title">Dice Rolling</h3>
-          <p class="card-text flex-grow-1">
-            Built-in dice rolling system with support for World of Darkness mechanics. Roll dice, track successes, and handle botches automatically.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-4 col-md-6 mb-4">
-      <div class="feature-card card h-100">
-        <div class="card-body d-flex flex-column">
-          <div class="feature-icon">🗺️</div>
-          <h3 class="card-title">Scene Management</h3>
-          <p class="card-text flex-grow-1">
-            Organize your game sessions into scenes with participant tracking, location management, and scene-specific chat channels.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-4 col-md-6 mb-4">
-      <div class="feature-card card h-100">
-        <div class="card-body d-flex flex-column">
-          <div class="feature-icon">📱</div>
-          <h3 class="card-title">Mobile Friendly</h3>
-          <p class="card-text flex-grow-1">
-            Access your campaigns on the go with our responsive design. Play from your desktop, tablet, or mobile device seamlessly.
-          </p>
+          <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="{% if user.is_authenticated %}{% url 'campaigns:list' %}{% else %}{% url 'users:register' %}{% endif %}"
+               class="btn btn-primary btn-lg px-4 py-3">
+              <i class="bi bi-{% if user.is_authenticated %}journal-text{% else %}person-plus{% endif %} me-2"></i>
+              {% if user.is_authenticated %}View Campaigns{% else %}Get Started{% endif %}
+            </a>
+            {% if not user.is_authenticated %}
+              <a href="{% url 'users:login' %}" class="btn btn-outline-primary btn-lg px-4 py-3">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+              </a>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
   </div>
-  <div class="cta-section">
-    <h2 class="h3 fw-bold">Ready to Transform Your Storytelling?</h2>
-    <p class="mb-3">
-      Join the growing community of Storytellers using GMA to enhance their World of Darkness campaigns.
-    </p>
-    <div class="d-flex gap-3 justify-content-center flex-wrap">
-      {% if user.is_authenticated %}
-        <a href="{% url 'campaigns:create' %}" class="btn btn-primary">Create Campaign</a>
-        <a href="{% url 'campaigns:list' %}" class="btn btn-success">View Campaigns</a>
-      {% else %}
-        <a href="{% url 'users:register' %}" class="btn btn-primary">Join Now</a>
-        <a href="{% url 'users:login' %}" class="btn btn-outline-primary">Sign In</a>
-      {% endif %}
+
+  <!-- Features Section -->
+  <div class="container mb-5">
+    <div class="text-center mb-5">
+      <h2 class="display-5 fw-bold">Everything You Need for Epic Storytelling</h2>
+      <p class="lead">Streamline your World of Darkness campaigns with our comprehensive toolkit</p>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card card h-100 shadow-sm border-0">
+          <div class="card-body d-flex flex-column text-center p-4">
+            <div class="feature-icon mb-3">
+              <i class="bi bi-journal-text display-1 text-primary"></i>
+            </div>
+            <h3 class="card-title h5 fw-bold mb-3">Campaign Management</h3>
+            <p class="card-text flex-grow-1 text-muted">
+              Create and manage multiple campaigns with ease. Track storylines, NPCs, and campaign progression across your World of Darkness games.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card card h-100 shadow-sm border-0">
+          <div class="card-body d-flex flex-column text-center p-4">
+            <div class="feature-icon mb-3">
+              <i class="bi bi-person-badge display-1 text-success"></i>
+            </div>
+            <h3 class="card-title h5 fw-bold mb-3">Character Sheets</h3>
+            <p class="card-text flex-grow-1 text-muted">
+              Comprehensive character management with support for Mage: the Ascension and other World of Darkness game lines. Digital character sheets that sync in real-time.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card card h-100 shadow-sm border-0">
+          <div class="card-body d-flex flex-column text-center p-4">
+            <div class="feature-icon mb-3">
+              <i class="bi bi-chat-dots display-1 text-info"></i>
+            </div>
+            <h3 class="card-title h5 fw-bold mb-3">Real-time Chat</h3>
+            <p class="card-text flex-grow-1 text-muted">
+              Integrated chat system for seamless in-character and out-of-character communication during your gaming sessions.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card card h-100 shadow-sm border-0">
+          <div class="card-body d-flex flex-column text-center p-4">
+            <div class="feature-icon mb-3">
+              <i class="bi bi-dice-6 display-1 text-warning"></i>
+            </div>
+            <h3 class="card-title h5 fw-bold mb-3">Dice Rolling</h3>
+            <p class="card-text flex-grow-1 text-muted">
+              Built-in dice rolling system with support for World of Darkness mechanics. Roll dice, track successes, and handle botches automatically.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card card h-100 shadow-sm border-0">
+          <div class="card-body d-flex flex-column text-center p-4">
+            <div class="feature-icon mb-3">
+              <i class="bi bi-map display-1 text-danger"></i>
+            </div>
+            <h3 class="card-title h5 fw-bold mb-3">Scene Management</h3>
+            <p class="card-text flex-grow-1 text-muted">
+              Organize your game sessions into scenes with participant tracking, location management, and scene-specific chat channels.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card card h-100 shadow-sm border-0">
+          <div class="card-body d-flex flex-column text-center p-4">
+            <div class="feature-icon mb-3">
+              <i class="bi bi-phone display-1 text-secondary"></i>
+            </div>
+            <h3 class="card-title h5 fw-bold mb-3">Mobile Friendly</h3>
+            <p class="card-text flex-grow-1 text-muted">
+              Access your campaigns on the go with our responsive design. Play from your desktop, tablet, or mobile device seamlessly.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Call to Action Section -->
+  <div class="cta-section bg-primary text-white py-5">
+    <div class="container text-center">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <h2 class="display-5 fw-bold mb-4">Ready to Transform Your Storytelling?</h2>
+          <p class="lead mb-4">
+            Join the growing community of Storytellers using GMA to enhance their World of Darkness campaigns.
+          </p>
+          <div class="d-flex gap-3 justify-content-center flex-wrap">
+            {% if user.is_authenticated %}
+              <a href="{% url 'campaigns:create' %}" class="btn btn-light btn-lg px-4 py-3">
+                <i class="bi bi-plus-circle me-2"></i>Create Campaign
+              </a>
+              <a href="{% url 'campaigns:list' %}" class="btn btn-outline-light btn-lg px-4 py-3">
+                <i class="bi bi-list me-2"></i>View Campaigns
+              </a>
+            {% else %}
+              <a href="{% url 'users:register' %}" class="btn btn-light btn-lg px-4 py-3">
+                <i class="bi bi-person-plus me-2"></i>Join Now
+              </a>
+              <a href="{% url 'users:login' %}" class="btn btn-outline-light btn-lg px-4 py-3">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+              </a>
+            {% endif %}
+          </div>
+
+          {% if not user.is_authenticated %}
+            <div class="mt-4">
+              <small class="text-light opacity-75">
+                <i class="bi bi-shield-check me-1"></i>
+                No credit card required • Free to start • Join {{ total_users|default:"hundreds of" }} Storytellers
+              </small>
+            </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 {% endblock %}

@@ -1,78 +1,245 @@
 {% extends "base.html" %}
 {% block title %}Profile - {{ block.super }}{% endblock %}
 {% block content %}
-  <div class="container mt-5">
+  <div class="container py-4">
     <div class="row justify-content-center">
-      <div class="col-md-8">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="mb-0">User Profile</h4>
-            <a href="{% url 'users:profile_edit' %}" class="btn btn-primary btn-sm">
-              Edit Profile
+      <div class="col-lg-10">
+        <!-- Profile Header -->
+        <div class="card shadow-sm border-0 mb-4">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-person-circle me-3 fs-3"></i>
+              <div>
+                <h4 class="mb-0">{{ user.get_display_name }}</h4>
+                <small class="opacity-75">@{{ user.username }}</small>
+              </div>
+            </div>
+            <a href="{% url 'users:profile_edit' %}" class="btn btn-light">
+              <i class="bi bi-pencil me-1"></i>Edit Profile
             </a>
           </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6">
-                <h5>Profile Information</h5>
-                <hr>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Username:</label>
-                  <p class="mb-1">{{ user.username }}</p>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Display Name:</label>
-                  <p class="mb-1">
-                    {% if user.display_name %}
-                      {{ user.display_name }}
-                    {% else %}
-                      <em class="text-muted">Not set (showing username as fallback)</em>
-                    {% endif %}
-                  </p>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Email:</label>
-                  <p class="mb-1">{{ user.email }}</p>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Timezone:</label>
-                  <p class="mb-1">{{ user.timezone }}</p>
+          <div class="card-body p-4">
+            <div class="row g-4">
+              <div class="col-lg-6">
+                <h5 class="d-flex align-items-center mb-3">
+                  <i class="bi bi-person me-2 text-primary"></i>Profile Information
+                </h5>
+                <div class="list-group list-group-flush">
+                  <div class="list-group-item px-0 py-3 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="text-muted small">USERNAME</strong>
+                        <p class="mb-0 fw-semibold">{{ user.username }}</p>
+                      </div>
+                      <i class="bi bi-person-badge text-muted"></i>
+                    </div>
+                  </div>
+                  <div class="list-group-item px-0 py-3 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="text-muted small">DISPLAY NAME</strong>
+                        <p class="mb-0 fw-semibold">
+                          {% if user.display_name %}
+                            {{ user.display_name }}
+                          {% else %}
+                            <em class="text-muted">Not set</em>
+                          {% endif %}
+                        </p>
+                      </div>
+                      <i class="bi bi-tag text-muted"></i>
+                    </div>
+                  </div>
+                  <div class="list-group-item px-0 py-3 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="text-muted small">EMAIL</strong>
+                        <p class="mb-0 fw-semibold">{{ user.email }}</p>
+                      </div>
+                      <i class="bi bi-envelope text-muted"></i>
+                    </div>
+                  </div>
+                  <div class="list-group-item px-0 py-3 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="text-muted small">TIMEZONE</strong>
+                        <p class="mb-0 fw-semibold">{{ user.timezone }}</p>
+                      </div>
+                      <i class="bi bi-globe text-muted"></i>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="col-md-6">
-                <h5>Account Information</h5>
-                <hr>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Member Since:</label>
-                  <p class="mb-1">{{ user.created_at|date:"F j, Y" }}</p>
+
+              <div class="col-lg-6">
+                <h5 class="d-flex align-items-center mb-3">
+                  <i class="bi bi-info-circle me-2 text-primary"></i>Account Information
+                </h5>
+                <div class="list-group list-group-flush">
+                  <div class="list-group-item px-0 py-3 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="text-muted small">MEMBER SINCE</strong>
+                        <p class="mb-0 fw-semibold">{{ user.created_at|date:"F j, Y" }}</p>
+                      </div>
+                      <i class="bi bi-calendar-plus text-muted"></i>
+                    </div>
+                  </div>
+                  <div class="list-group-item px-0 py-3 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="text-muted small">LAST UPDATED</strong>
+                        <p class="mb-0 fw-semibold">{{ user.updated_at|date:"M j, Y \a\t g:i A" }}</p>
+                      </div>
+                      <i class="bi bi-clock text-muted"></i>
+                    </div>
+                  </div>
+                  <div class="list-group-item px-0 py-3 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="text-muted small">STATUS</strong>
+                        <p class="mb-0">
+                          {% if user.is_active %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                              <i class="bi bi-check-circle me-1"></i>Active
+                            </span>
+                          {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                              <i class="bi bi-x-circle me-1"></i>Inactive
+                            </span>
+                          {% endif %}
+                        </p>
+                      </div>
+                      <i class="bi bi-shield-check text-muted"></i>
+                    </div>
+                  </div>
+                  <div class="list-group-item px-0 py-3 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="text-muted small">CURRENT THEME</strong>
+                        <p class="mb-0 fw-semibold">
+                          {% if theme_object %}
+                            {{ theme_object.display_name }}
+                            {% if theme_object.is_dark_theme %}
+                              <i class="bi bi-moon text-muted ms-1" title="Dark theme"></i>
+                            {% else %}
+                              <i class="bi bi-sun text-muted ms-1" title="Light theme"></i>
+                            {% endif %}
+                          {% else %}
+                            {{ user_theme|title }}
+                          {% endif %}
+                        </p>
+                      </div>
+                      <i class="bi bi-palette text-muted"></i>
+                    </div>
+                  </div>
                 </div>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Last Updated:</label>
-                  <p class="mb-1">{{ user.updated_at|date:"F j, Y \a\t g:i A" }}</p>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Status:</label>
-                  <p class="mb-1">
-                    {% if user.is_active %}
-                      <span class="badge bg-success">Active</span>
-                    {% else %}
-                      <span class="badge bg-danger">Inactive</span>
-                    {% endif %}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div class="mt-4">
-              <h5>Quick Actions</h5>
-              <hr>
-              <div class="d-flex flex-wrap gap-2">
-                <a href="{% url 'users:profile_edit' %}" class="btn btn-primary">Edit Profile</a>
-                <a href="{% url 'users:password_change' %}" class="btn btn-secondary">
-                  Change Password
-                </a>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="card shadow-sm border-0 mb-4">
+          <div class="card-header bg-light">
+            <h5 class="mb-0 d-flex align-items-center">
+              <i class="bi bi-lightning me-2 text-primary"></i>Quick Actions
+            </h5>
+          </div>
+          <div class="card-body p-4">
+            <div class="row g-3">
+              <div class="col-sm-6 col-lg-3">
+                <a href="{% url 'users:profile_edit' %}" class="btn btn-primary w-100">
+                  <i class="bi bi-pencil me-2"></i>Edit Profile
+                </a>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <a href="{% url 'users:password_change' %}" class="btn btn-outline-secondary w-100">
+                  <i class="bi bi-key me-2"></i>Change Password
+                </a>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <a href="{% url 'campaigns:list' %}" class="btn btn-outline-primary w-100">
+                  <i class="bi bi-journal-text me-2"></i>My Campaigns
+                </a>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <button type="button" class="btn btn-outline-info w-100" data-bs-toggle="modal" data-bs-target="#themePreviewModal">
+                  <i class="bi bi-palette me-2"></i>Preview Themes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Theme Preview Modal -->
+  <div class="modal fade" id="themePreviewModal" tabindex="-1" aria-labelledby="themePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="themePreviewModalLabel">
+            <i class="bi bi-palette me-2"></i>Theme Gallery
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-4">Preview and switch between available themes. Changes are applied immediately.</p>
+
+          <div class="row g-3" id="theme-gallery">
+            {% for theme in available_themes %}
+              <div class="col-md-6 col-lg-4">
+                <div class="card theme-preview-card h-100 {% if theme.name == user_theme %}border-primary{% endif %}"
+                     data-theme-name="{{ theme.name }}"
+                     style="cursor: pointer;">
+                  <div class="card-header d-flex align-items-center justify-content-between p-3"
+                       style="background-color: {{ theme.background_color }}; color: {{ theme.text_color }}; border-bottom: 1px solid {{ theme.primary_color }};">
+                    <span class="fw-semibold">{{ theme.display_name }}</span>
+                    {% if theme.is_dark_theme %}
+                      <i class="bi bi-moon"></i>
+                    {% else %}
+                      <i class="bi bi-sun"></i>
+                    {% endif %}
+                  </div>
+                  <div class="card-body p-3" style="background-color: {{ theme.background_color }}; color: {{ theme.text_color }};">
+                    <div class="d-flex align-items-center mb-2">
+                      <div class="rounded-circle me-2"
+                           style="width: 12px; height: 12px; background-color: {{ theme.primary_color }};"></div>
+                      <small>{{ theme.category|title }} Theme</small>
+                    </div>
+                    {% if theme.description %}
+                      <p class="small mb-2 opacity-75">{{ theme.description|truncatewords:8 }}</p>
+                    {% endif %}
+                    <div class="d-flex align-items-center justify-content-between">
+                      {% if theme.name == user_theme %}
+                        <span class="badge text-white" style="background-color: {{ theme.primary_color }};">
+                          <i class="bi bi-check-circle me-1"></i>Current
+                        </span>
+                      {% else %}
+                        <button type="button" class="btn btn-sm"
+                                style="background-color: {{ theme.primary_color }}; color: white; border: none;"
+                                onclick="switchTheme('{{ theme.name }}')">
+                          <i class="bi bi-brush me-1"></i>Apply
+                        </button>
+                      {% endif %}
+                      {% if theme.is_high_contrast %}
+                        <i class="bi bi-eye" title="High Contrast"></i>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x me-1"></i>Close
+          </button>
+          <a href="{% url 'users:profile_edit' %}" class="btn btn-primary">
+            <i class="bi bi-gear me-1"></i>Advanced Settings
+          </a>
         </div>
       </div>
     </div>

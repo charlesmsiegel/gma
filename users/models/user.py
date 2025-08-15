@@ -40,7 +40,7 @@ def validate_timezone(value: str) -> None:
 class User(AbstractUser):
     """Custom User model extending Django's AbstractUser."""
 
-    # Theme choices for interface customization
+    # Legacy theme choices for backward compatibility
     THEME_CHOICES = [
         ("light", "Light"),
         ("dark", "Dark"),
@@ -88,3 +88,51 @@ class User(AbstractUser):
     def get_display_name(self) -> str:
         """Return display_name if set, otherwise fall back to username."""
         return self.display_name or self.username
+
+    def get_theme_name(self) -> str:
+        """
+        Get the user's theme name, with fallback logic.
+
+        This method provides backward compatibility while supporting
+        the new Theme model system.
+        """
+        # First, check if user has a theme preference
+        if hasattr(self, "theme_preference") and self.theme_preference.current_theme:
+            return self.theme_preference.current_theme.name
+
+        # Fallback to legacy theme field
+        if self.theme:
+            return self.theme
+
+        # Final fallback to light theme
+        return "light"
+
+    def get_theme_object(self):
+        """
+        Get the Theme object for this user.
+
+        Returns None if Theme model is not available (during migrations).
+        """
+        try:
+            # Import here to avoid circular imports and migration issues
+            from .theme import Theme
+
+            # Check if user has a theme preference
+            if (
+                hasattr(self, "theme_preference")
+                and self.theme_preference.current_theme
+            ):
+                return self.theme_preference.current_theme
+
+            # Try to find theme by name from legacy field
+            theme_name = self.theme or "light"
+            theme = Theme.objects.filter(name=theme_name, is_active=True).first()
+
+            if theme:
+                return theme
+
+            # Fallback to default theme
+            return Theme.get_default_theme()
+        except Exception:
+            # During migrations or if Theme model doesn't exist yet
+            return None
