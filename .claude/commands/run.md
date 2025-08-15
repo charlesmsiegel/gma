@@ -1,0 +1,1 @@
+You must not do any tasks directly unless the user mentions you should. Delegate everything to a sub agent. Use @agent-file-reader to find information in files, and the @agent-maker-agent to create new code

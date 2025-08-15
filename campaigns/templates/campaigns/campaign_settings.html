@@ -1,186 +1,300 @@
 {% extends "base.html" %}
-{% load static %}
-
 {% block title %}{{ campaign.name }} Settings - {{ block.super }}{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'campaigns/css/campaign_settings.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="card">
-    <h1>{{ campaign.name }} - Settings</h1>
-    <p>Configure your campaign settings below. Only campaign owners can modify these settings.</p>
+  <div class="container py-4">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:list' %}" class="text-decoration-none">
+            <i class="bi bi-journal-text me-1"></i>Campaigns
+          </a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="text-decoration-none">
+            {{ campaign.name }}
+          </a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Settings</li>
+      </ol>
+    </nav>
 
-    <form method="post" novalidate>
-        {% csrf_token %}
+    <!-- Page Header -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-primary text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-gear-fill me-3 fs-4"></i>
+          <div>
+            <h4 class="mb-0">Campaign Settings</h4>
+            <small class="opacity-75">{{ campaign.name }}</small>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info d-flex align-items-start">
+          <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+          <div>
+            <strong>Campaign Owner Access</strong>
+            <p class="mb-0 mt-1">Configure your campaign settings below. Only campaign owners can modify these settings.</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <!-- Basic Information Section -->
-        <div class="settings-section">
-            <div class="settings-section-title">Basic Information</div>
+    <div class="row">
+      <div class="col-lg-8">
+        <!-- Settings Form -->
+        <div class="card shadow-sm border-0 mb-4">
+          <form method="post" novalidate>
+            {% csrf_token %}
 
-            <div class="form-group">
-                <label for="{{ form.name.id_for_label }}" class="form-label">
-                    Campaign Name
-                    <span class="required-field">*</span>
+            {% if form.non_field_errors %}
+              <div class="card-header border-0 bg-danger-subtle">
+                <div class="text-danger d-flex align-items-center">
+                  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                  <div>
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Basic Information Section -->
+            <div class="card-header bg-light">
+              <h5 class="mb-0 d-flex align-items-center">
+                <i class="bi bi-info-circle me-2 text-primary"></i>
+                Basic Information
+              </h5>
+            </div>
+            <div class="card-body">
+              <!-- Campaign Name -->
+              <div class="mb-4">
+                <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
+                  <i class="bi bi-tag me-1"></i>Campaign Name
+                  <span class="text-danger">*</span>
                 </label>
-                {{ form.name }}
+                <input type="text"
+                       name="{{ form.name.html_name }}"
+                       id="{{ form.name.id_for_label }}"
+                       class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                       value="{{ form.name.value|default:'' }}"
+                       {% if form.name.field.required %}required{% endif %}>
                 {% if form.name.help_text %}
-                    <div class="form-help">{{ form.name.help_text }}</div>
+                  <div class="form-text">{{ form.name.help_text }}</div>
                 {% endif %}
                 {% if form.name.errors %}
-                    <div class="form-errors">
-                        {% for error in form.name.errors %}
-                            <span class="form-error">{{ error }}</span>
-                        {% endfor %}
-                    </div>
+                  <div class="invalid-feedback">
+                    {% for error in form.name.errors %}{{ error }}{% endfor %}
+                  </div>
                 {% endif %}
-            </div>
+              </div>
 
-            <div class="form-group">
-                <label for="{{ form.game_system.id_for_label }}" class="form-label">
-                    Game System
+              <!-- Game System -->
+              <div class="mb-4">
+                <label for="{{ form.game_system.id_for_label }}" class="form-label fw-semibold">
+                  <i class="bi bi-dice-6 me-1"></i>Game System
                 </label>
-                {{ form.game_system }}
+                <input type="text"
+                       name="{{ form.game_system.html_name }}"
+                       id="{{ form.game_system.id_for_label }}"
+                       class="form-control {% if form.game_system.errors %}is-invalid{% endif %}"
+                       value="{{ form.game_system.value|default:'' }}">
                 {% if form.game_system.help_text %}
-                    <div class="form-help">{{ form.game_system.help_text }}</div>
+                  <div class="form-text">{{ form.game_system.help_text }}</div>
                 {% endif %}
                 {% if form.game_system.errors %}
-                    <div class="form-errors">
-                        {% for error in form.game_system.errors %}
-                            <span class="form-error">{{ error }}</span>
-                        {% endfor %}
-                    </div>
+                  <div class="invalid-feedback">
+                    {% for error in form.game_system.errors %}{{ error }}{% endfor %}
+                  </div>
                 {% endif %}
-            </div>
+              </div>
 
-            <div class="form-group">
-                <label for="{{ form.description.id_for_label }}" class="form-label">
-                    Description
+              <!-- Description -->
+              <div class="mb-4">
+                <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
+                  <i class="bi bi-journal-text me-1"></i>Description
                 </label>
-                {{ form.description }}
+                <textarea name="{{ form.description.html_name }}"
+                          id="{{ form.description.id_for_label }}"
+                          class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                          rows="4">{{ form.description.value|default:'' }}</textarea>
                 {% if form.description.help_text %}
-                    <div class="form-help">{{ form.description.help_text }}</div>
+                  <div class="form-text">{{ form.description.help_text }}</div>
                 {% endif %}
                 {% if form.description.errors %}
-                    <div class="form-errors">
-                        {% for error in form.description.errors %}
-                            <span class="form-error">{{ error }}</span>
-                        {% endfor %}
-                    </div>
+                  <div class="invalid-feedback">
+                    {% for error in form.description.errors %}{{ error }}{% endfor %}
+                  </div>
                 {% endif %}
-            </div>
+              </div>
 
-            <div class="form-group">
-                <div class="form-check-wrapper">
-                    {{ form.is_active }}
-                    <label for="{{ form.is_active.id_for_label }}" class="form-check-label">
-                        {{ form.is_active.label }}
-                    </label>
-                    {% if form.is_active.help_text %}
-                        <div class="form-help">{{ form.is_active.help_text }}</div>
-                    {% endif %}
-                    {% if form.is_active.errors %}
-                        <div class="form-errors">
-                            {% for error in form.is_active.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+              <!-- Campaign Active -->
+              <div class="mb-0">
+                <div class="form-check form-switch">
+                  <input type="checkbox"
+                         name="{{ form.is_active.html_name }}"
+                         id="{{ form.is_active.id_for_label }}"
+                         class="form-check-input {% if form.is_active.errors %}is-invalid{% endif %}"
+                         {% if form.is_active.value %}checked{% endif %}>
+                  <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">
+                    <i class="bi bi-play-circle me-1"></i>{{ form.is_active.label }}
+                  </label>
+                  {% if form.is_active.help_text %}
+                    <div class="form-text">{{ form.is_active.help_text }}</div>
+                  {% endif %}
+                  {% if form.is_active.errors %}
+                    <div class="invalid-feedback">
+                      {% for error in form.is_active.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
                 </div>
+              </div>
             </div>
+
+            <!-- Visibility Settings Section -->
+            <div class="card-header bg-light border-top">
+              <h5 class="mb-0 d-flex align-items-center">
+                <i class="bi bi-eye me-2 text-primary"></i>
+                Visibility Settings
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="form-check form-switch">
+                <input type="checkbox"
+                       name="{{ form.is_public.html_name }}"
+                       id="{{ form.is_public.id_for_label }}"
+                       class="form-check-input {% if form.is_public.errors %}is-invalid{% endif %}"
+                       {% if form.is_public.value %}checked{% endif %}>
+                <label class="form-check-label fw-semibold" for="{{ form.is_public.id_for_label }}">
+                  <i class="bi bi-globe me-1"></i>{{ form.is_public.label }}
+                </label>
+                {% if form.is_public.help_text %}
+                  <div class="form-text">{{ form.is_public.help_text }}</div>
+                {% endif %}
+                {% if form.is_public.errors %}
+                  <div class="invalid-feedback">
+                    {% for error in form.is_public.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Membership Settings Section -->
+            <div class="card-header bg-light border-top">
+              <h5 class="mb-0 d-flex align-items-center">
+                <i class="bi bi-people me-2 text-primary"></i>
+                Membership Settings
+              </h5>
+            </div>
+            <div class="card-body">
+              <!-- Allow Observer Join -->
+              <div class="form-check form-switch mb-4">
+                <input type="checkbox"
+                       name="{{ form.allow_observer_join.html_name }}"
+                       id="{{ form.allow_observer_join.id_for_label }}"
+                       class="form-check-input {% if form.allow_observer_join.errors %}is-invalid{% endif %}"
+                       {% if form.allow_observer_join.value %}checked{% endif %}>
+                <label class="form-check-label fw-semibold" for="{{ form.allow_observer_join.id_for_label }}">
+                  <i class="bi bi-eye me-1"></i>{{ form.allow_observer_join.label }}
+                </label>
+                {% if form.allow_observer_join.help_text %}
+                  <div class="form-text">{{ form.allow_observer_join.help_text }}</div>
+                {% endif %}
+                {% if form.allow_observer_join.errors %}
+                  <div class="invalid-feedback">
+                    {% for error in form.allow_observer_join.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+
+              <!-- Allow Player Join -->
+              <div class="form-check form-switch mb-0">
+                <input type="checkbox"
+                       name="{{ form.allow_player_join.html_name }}"
+                       id="{{ form.allow_player_join.id_for_label }}"
+                       class="form-check-input {% if form.allow_player_join.errors %}is-invalid{% endif %}"
+                       {% if form.allow_player_join.value %}checked{% endif %}>
+                <label class="form-check-label fw-semibold" for="{{ form.allow_player_join.id_for_label }}">
+                  <i class="bi bi-person me-1"></i>{{ form.allow_player_join.label }}
+                </label>
+                {% if form.allow_player_join.help_text %}
+                  <div class="form-text">{{ form.allow_player_join.help_text }}</div>
+                {% endif %}
+                {% if form.allow_player_join.errors %}
+                  <div class="invalid-feedback">
+                    {% for error in form.allow_player_join.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+              <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Cancel
+              </a>
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-circle me-1"></i>Save Settings
+              </button>
+            </div>
+          </form>
         </div>
+      </div>
 
-        <!-- Visibility Settings Section -->
-        <div class="settings-section">
-            <div class="settings-section-title">Visibility Settings</div>
-
-            <div class="form-group">
-                <div class="form-check-wrapper">
-                    {{ form.is_public }}
-                    <label for="{{ form.is_public.id_for_label }}" class="form-check-label">
-                        {{ form.is_public.label }}
-                    </label>
-                    {% if form.is_public.help_text %}
-                        <div class="form-help">{{ form.is_public.help_text }}</div>
-                    {% endif %}
-                    {% if form.is_public.errors %}
-                        <div class="form-errors">
-                            {% for error in form.is_public.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+      <!-- Help Sidebar -->
+      <div class="col-lg-4">
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-info-subtle border-0">
+            <h5 class="mb-0 d-flex align-items-center text-dark">
+              <i class="bi bi-question-circle me-2 text-info"></i>
+              Settings Help
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item px-0 border-0">
+                <h6 class="fw-semibold text-primary mb-2">
+                  <i class="bi bi-play-circle me-1"></i>Campaign Active
+                </h6>
+                <p class="mb-0 small text-muted">
+                  Inactive campaigns are hidden from public listings and search results. Members can still access inactive campaigns directly.
+                </p>
+              </div>
+              <div class="list-group-item px-0 border-0">
+                <h6 class="fw-semibold text-primary mb-2">
+                  <i class="bi bi-globe me-1"></i>Public Campaign
+                </h6>
+                <p class="mb-0 small text-muted">
+                  Public campaigns are visible to all users in search and listings. Private campaigns are only visible to members.
+                </p>
+              </div>
+              <div class="list-group-item px-0 border-0">
+                <h6 class="fw-semibold text-primary mb-2">
+                  <i class="bi bi-eye me-1"></i>Observer Join
+                </h6>
+                <p class="mb-0 small text-muted">
+                  Allow anyone to join as an observer. Observers can view campaign content but cannot participate in scenes or edit anything.
+                </p>
+              </div>
+              <div class="list-group-item px-0 border-0">
+                <h6 class="fw-semibold text-primary mb-2">
+                  <i class="bi bi-person me-1"></i>Player Join
+                </h6>
+                <p class="mb-0 small text-muted">
+                  Allow anyone to join as a player. Players can create characters and participate actively in campaign scenes.
+                </p>
+              </div>
             </div>
+          </div>
+          <div class="card-footer bg-light border-0">
+            <small class="text-muted">
+              <i class="bi bi-shield-check me-1"></i>
+              <strong>Note:</strong> Only campaign owners can access and modify these settings.
+            </small>
+          </div>
         </div>
-
-        <!-- Membership Settings Section -->
-        <div class="settings-section">
-            <div class="settings-section-title">Membership Settings</div>
-
-            <div class="form-group">
-                <div class="form-check-wrapper">
-                    {{ form.allow_observer_join }}
-                    <label for="{{ form.allow_observer_join.id_for_label }}" class="form-check-label">
-                        {{ form.allow_observer_join.label }}
-                    </label>
-                    {% if form.allow_observer_join.help_text %}
-                        <div class="form-help">{{ form.allow_observer_join.help_text }}</div>
-                    {% endif %}
-                    {% if form.allow_observer_join.errors %}
-                        <div class="form-errors">
-                            {% for error in form.allow_observer_join.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div class="form-check-wrapper">
-                    {{ form.allow_player_join }}
-                    <label for="{{ form.allow_player_join.id_for_label }}" class="form-check-label">
-                        {{ form.allow_player_join.label }}
-                    </label>
-                    {% if form.allow_player_join.help_text %}
-                        <div class="form-help">{{ form.allow_player_join.help_text }}</div>
-                    {% endif %}
-                    {% if form.allow_player_join.errors %}
-                        <div class="form-errors">
-                            {% for error in form.allow_player_join.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        {% if form.non_field_errors %}
-            <div class="form-errors mb-3">
-                {% for error in form.non_field_errors %}
-                    <span class="form-error">{{ error }}</span>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        <div class="btn-group">
-            <button type="submit" class="btn btn-success">Save Settings</button>
-            <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn-secondary">Cancel</a>
-        </div>
-    </form>
-</div>
-
-<div class="card settings-help">
-    <h3>Settings Help</h3>
-    <ul>
-        <li><strong>Campaign Active:</strong> Inactive campaigns are hidden from public listings.</li>
-        <li><strong>Public Campaign:</strong> Public campaigns are visible to all users, private campaigns only to members.</li>
-        <li><strong>Observer Join:</strong> Allow anyone to join as an observer (can view but not participate).</li>
-        <li><strong>Player Join:</strong> Allow anyone to join as a player (can participate in scenes).</li>
-    </ul>
-    <p><small><strong>Note:</strong> Only campaign owners can access and modify these settings.</small></p>
-</div>
+      </div>
+    </div>
+  </div>
 {% endblock %}

@@ -890,8 +890,8 @@ class CampaignCharacterListViewTest(BaseCharacterTestCase):
         # This tests that the view uses select_related/prefetch_related
         # to avoid N+1 queries
         with self.assertNumQueries(
-            8
-        ):  # campaign+memberships+users+session+user+count+campaign_members+characters
+            13
+        ):  # campaign+memberships+users+session+user+count+campaign_members+characters+theme_queries
             response = self.client.get(self.list_url)
             # Access all character attributes that would trigger queries
             for character in response.context["characters"]:
@@ -1225,8 +1225,8 @@ class EnhancedCharacterDetailViewTest(BaseCharacterTestCase):
 
         # Should use select_related for campaign and player_owner
         with self.assertNumQueries(
-            11
-        ):  # Character detail with permission checks requires multiple queries
+            16
+        ):  # Character detail with permission checks and theme queries
             response = self.client.get(self.detail_url_p1)
             # Access related objects to verify they're prefetched
             _ = response.context["character"].campaign.name

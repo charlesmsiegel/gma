@@ -4,31 +4,17 @@
     box-sizing: border-box;
 }
 
+/* Let Bootstrap handle most body styling */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    line-height: 1.6;
-    color: var(--theme-text-primary) !important;
-    background-color: var(--theme-bg-body) !important;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
 }
 
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
-}
+/* Let Bootstrap handle container styles */
 
-/* Header */
+/* Header - Let Bootstrap handle the navbar styling */
 .main-header {
-    background-color: var(--theme-bg-navbar);
-    color: var(--theme-text-primary);
-    padding: 1rem 0;
-    box-shadow: var(--theme-shadow-sm);
-    border-bottom: 1px solid var(--theme-border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
 .main-nav {

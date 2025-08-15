@@ -1,15 +1,171 @@
 {% extends "base.html" %}
-{% block title %}Bulk Member Management - {{ campaign.name }}{% endblock %}
+{% block title %}Bulk Member Management - {{ campaign.name }} - {{ block.super }}{% endblock %}
+
 {% block content %}
-  <div class="container">
-    <h1>Bulk Member Management</h1>
-    <h2>{{ campaign.name }}</h2>
-    <form method="post">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="btn btn-primary">Process</button>
-      <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}"
-         class="btn btn-secondary">Cancel</a>
-    </form>
+  <div class="container py-4">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:list' %}" class="text-decoration-none">
+            <i class="bi bi-journal-text me-1"></i>Campaigns
+          </a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="text-decoration-none">
+            {{ campaign.name }}
+          </a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}" class="text-decoration-none">
+            Members
+          </a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Bulk Management</li>
+      </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-primary text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-people-fill me-3 fs-4"></i>
+          <div>
+            <h4 class="mb-0">Bulk Member Management</h4>
+            <small class="opacity-75">{{ campaign.name }}</small>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-4">
+        <div class="alert alert-info d-flex align-items-start">
+          <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+          <div>
+            <strong>Bulk Operations</strong>
+            <p class="mb-0 mt-1">Use this form to perform actions on multiple campaign members at once. Select the operation and specify the members to modify.</p>
+          </div>
+        </div>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger d-flex align-items-center mb-4">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <div>
+                {% for error in form.non_field_errors %}
+                  {{ error }}
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Form Fields -->
+          <div class="row">
+            <div class="col-lg-8">
+              {% for field in form %}
+                <div class="mb-4">
+                  <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                    <i class="bi bi-{% if 'operation' in field.name %}gear{% elif 'member' in field.name %}person{% else %}list{% endif %} me-1"></i>
+                    {{ field.label }}
+                  </label>
+
+                  {% if field.help_text %}
+                    <div class="form-text mb-2">{{ field.help_text }}</div>
+                  {% endif %}
+
+                  {% if field.field.widget.input_type == 'select' %}
+                    <select name="{{ field.html_name }}"
+                            id="{{ field.id_for_label }}"
+                            class="form-select {% if field.errors %}is-invalid{% endif %}"
+                            {% if field.field.required %}required{% endif %}>
+                      {% for choice in field.field.choices %}
+                        <option value="{{ choice.0 }}" {% if choice.0 == field.value %}selected{% endif %}>
+                          {{ choice.1 }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  {% elif field.field.widget.input_type == 'checkbox' %}
+                    <div class="form-check">
+                      <input type="checkbox"
+                             name="{{ field.html_name }}"
+                             id="{{ field.id_for_label }}"
+                             class="form-check-input {% if field.errors %}is-invalid{% endif %}"
+                             {% if field.value %}checked{% endif %}>
+                      <label class="form-check-label" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                      </label>
+                    </div>
+                  {% elif 'multiple' in field.field.widget.attrs %}
+                    <select name="{{ field.html_name }}"
+                            id="{{ field.id_for_label }}"
+                            class="form-select {% if field.errors %}is-invalid{% endif %}"
+                            multiple
+                            size="6"
+                            {% if field.field.required %}required{% endif %}>
+                      {% for choice in field.field.choices %}
+                        <option value="{{ choice.0 }}"
+                                {% if choice.0 in field.value %}selected{% endif %}>
+                          {{ choice.1 }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  {% else %}
+                    <input type="{{ field.field.widget.input_type|default:'text' }}"
+                           name="{{ field.html_name }}"
+                           id="{{ field.id_for_label }}"
+                           class="form-control {% if field.errors %}is-invalid{% endif %}"
+                           value="{{ field.value|default:'' }}"
+                           {% if field.field.required %}required{% endif %}>
+                  {% endif %}
+
+                  {% if field.errors %}
+                    <div class="invalid-feedback">
+                      {% for error in field.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="col-lg-4">
+              <div class="card bg-light border-0">
+                <div class="card-header bg-transparent border-0">
+                  <h6 class="mb-0 d-flex align-items-center">
+                    <i class="bi bi-lightbulb me-2 text-warning"></i>Tips
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <ul class="list-unstyled mb-0 small">
+                    <li class="mb-2">
+                      <i class="bi bi-check-circle text-success me-1"></i>
+                      Select multiple members using Ctrl/Cmd + click
+                    </li>
+                    <li class="mb-2">
+                      <i class="bi bi-check-circle text-success me-1"></i>
+                      Operations are applied to all selected members
+                    </li>
+                    <li class="mb-0">
+                      <i class="bi bi-check-circle text-success me-1"></i>
+                      Changes take effect immediately
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle me-2"></i>Process Changes
+            </button>
+            <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}"
+               class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left me-2"></i>Back to Members
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 {% endblock %}

@@ -1,173 +1,190 @@
 {% extends "base.html" %}
-{% load static %}
 {% block title %}Create Campaign - {{ block.super }}{% endblock %}
-{% block extra_css %}
-  <link rel="stylesheet"
-        href="{% static 'campaigns/css/campaign_create.css' %}">
-{% endblock %}
+
 {% block content %}
-  <!-- Hero Section -->
-  <div class="create-hero">
-    <div class="container">
-      <div class="py-4 py-md-5 text-center">
+  <div class="container py-4">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:list' %}" class="text-decoration-none">
+            <i class="bi bi-journal-text me-1"></i>Campaigns
+          </a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Create Campaign</li>
+      </ol>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="card bg-primary text-white shadow-sm border-0 mb-4">
+      <div class="card-body text-center py-5">
         <h1 class="display-5 fw-bold mb-3">
           <i class="bi bi-plus-circle me-3"></i>Create New Campaign
         </h1>
-        <p class="lead mb-0">
+        <p class="lead mb-0 opacity-75">
           Start your tabletop RPG adventure and invite friends to join your story
         </p>
       </div>
     </div>
-  </div>
-  <div class="container">
+
     <div class="row">
       <!-- Main Form -->
       <div class="col-lg-8">
-        <div class="create-form-card">
-          <form method="post" novalidate>
-            {% csrf_token %}
-            <!-- Campaign Basics Section -->
-            <div class="form-section">
-              <div class="form-section-header">
-                <div class="form-section-icon">
-                  <i class="bi bi-info-circle"></i>
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-light border-0">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-info-circle me-3 fs-5 text-primary"></i>
+              <h3 class="mb-0">Campaign Details</h3>
+            </div>
+          </div>
+          <div class="card-body p-4">
+            <form method="post" novalidate>
+              {% csrf_token %}
+
+              {% if form.non_field_errors %}
+                <div class="alert alert-danger d-flex align-items-center mb-4">
+                  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                  <div>
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                  </div>
                 </div>
-                <h3 class="form-section-title">Campaign Details</h3>
-              </div>
+              {% endif %}
+
               <!-- Campaign Name -->
-              <div class="form-group">
-                <div class="row align-items-center">
-                  <div class="col-sm-3">
-                    <label for="{{ form.name.id_for_label }}" class="form-label mb-0">
-                      Campaign Name
-                      <span class="required-indicator">*</span>
-                      <i class="bi bi-info-circle text-primary ms-1"
-                         data-bs-toggle="tooltip"
-                         data-bs-placement="top"
-                         title="Pick something that captures the essence of your story or setting. It's the first thing players will see!"
-                         class="tooltip-icon"></i>
-                    </label>
+              <div class="mb-4">
+                <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
+                  <i class="bi bi-tag me-1"></i>Campaign Name
+                  <span class="text-danger">*</span>
+                  <i class="bi bi-info-circle text-primary ms-1"
+                     data-bs-toggle="tooltip"
+                     data-bs-placement="top"
+                     title="Pick something that captures the essence of your story or setting. It's the first thing players will see!"
+                     style="cursor: help"></i>
+                </label>
+                <input type="text"
+                       name="{{ form.name.html_name }}"
+                       id="{{ form.name.id_for_label }}"
+                       class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                       value="{{ form.name.value|default:'' }}"
+                       placeholder="Enter your campaign name..."
+                       {% if form.name.field.required %}required{% endif %}>
+                {% if form.name.errors %}
+                  <div class="invalid-feedback">
+                    {% for error in form.name.errors %}{{ error }}{% endfor %}
                   </div>
-                  <div class="col-sm-9">
-                    {{ form.name }}
-                    {% if form.name.errors %}
-                      {% for error in form.name.errors %}
-                        <div class="invalid-feedback d-block">{{ error }}</div>
-                      {% endfor %}
-                    {% endif %}
-                  </div>
-                </div>
+                {% endif %}
               </div>
+
               <!-- Game System -->
-              <div class="form-group">
-                <div class="row align-items-center">
-                  <div class="col-sm-3">
-                    <label for="{{ form.game_system.id_for_label }}" class="form-label mb-0">
-                      <i class="bi bi-dice-6 text-primary me-1"></i>
-                      Game System
-                      <i class="bi bi-info-circle text-primary ms-1"
-                         data-bs-toggle="tooltip"
-                         data-bs-placement="top"
-                         title="Use the autocomplete to find popular RPG systems, or enter your own homebrew rules."
-                         class="tooltip-icon"></i>
-                    </label>
+              <div class="mb-4">
+                <label for="{{ form.game_system.id_for_label }}" class="form-label fw-semibold">
+                  <i class="bi bi-dice-6 me-1"></i>Game System
+                  <i class="bi bi-info-circle text-primary ms-1"
+                     data-bs-toggle="tooltip"
+                     data-bs-placement="top"
+                     title="Use the autocomplete to find popular RPG systems, or enter your own homebrew rules."
+                     style="cursor: help"></i>
+                </label>
+                <input type="text"
+                       name="{{ form.game_system.html_name }}"
+                       id="{{ form.game_system.id_for_label }}"
+                       class="form-control {% if form.game_system.errors %}is-invalid{% endif %}"
+                       value="{{ form.game_system.value|default:'' }}"
+                       placeholder="e.g., D&D 5e, World of Darkness, Pathfinder..."
+                       list="game-systems-list">
+                <datalist id="game-systems-list">
+                  {% for system in game_systems %}
+                    <option value="{{ system }}">{{ system }}</option>
+                  {% endfor %}
+                </datalist>
+                {% if form.game_system.errors %}
+                  <div class="invalid-feedback">
+                    {% for error in form.game_system.errors %}{{ error }}{% endfor %}
                   </div>
-                  <div class="col-sm-9">
-                    {{ form.game_system }}
-                    <datalist id="game-systems-list">
-                      {% for system in game_systems %}
-                        <option value="{{ system }}">{{ system }}</option>
-                      {% endfor %}
-                    </datalist>
-                    {% if form.game_system.errors %}
-                      {% for error in form.game_system.errors %}
-                        <div class="invalid-feedback d-block">{{ error }}</div>
-                      {% endfor %}
-                    {% endif %}
-                  </div>
-                </div>
+                {% endif %}
               </div>
+
               <!-- Description -->
-              <div class="form-group">
-                <label for="{{ form.description.id_for_label }}" class="form-label">
-                  <i class="bi bi-journal-text text-primary me-1"></i>
-                  Campaign Description
+              <div class="mb-4">
+                <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
+                  <i class="bi bi-journal-text me-1"></i>Campaign Description
                   <i class="bi bi-info-circle text-primary ms-1"
                      data-bs-toggle="tooltip"
                      data-bs-placement="top"
                      title="Describe your campaign's setting, themes, tone, or story hooks. This helps players understand what to expect."
                      style="cursor: help"></i>
                 </label>
-                {{ form.description }}
+                <textarea name="{{ form.description.html_name }}"
+                          id="{{ form.description.id_for_label }}"
+                          class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                          rows="4"
+                          placeholder="Describe your campaign's world, themes, or story...">{{ form.description.value|default:'' }}</textarea>
                 {% if form.description.errors %}
-                  {% for error in form.description.errors %}
-                    <div class="invalid-feedback d-block">{{ error }}</div>
-                  {% endfor %}
+                  <div class="invalid-feedback">
+                    {% for error in form.description.errors %}{{ error }}{% endfor %}
+                  </div>
                 {% endif %}
               </div>
-            </div>
-            <!-- Non-field errors -->
-            {% if form.non_field_errors %}
-              <div class="form-section">
-                <div class="alert alert-danger" role="alert">
-                  {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
-                </div>
-              </div>
-            {% endif %}
-            <!-- Form Actions -->
-            <div class="form-actions">
-              <div>
+
+              <hr class="my-4">
+
+              <!-- Form Actions -->
+              <div class="d-flex justify-content-between align-items-center">
                 <small class="text-muted">
                   <i class="bi bi-info-circle me-1"></i>
                   You can adjust all settings after creating your campaign
                 </small>
+                <div class="d-flex gap-2">
+                  <a href="{% url 'campaigns:list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i>Cancel
+                  </a>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Create Campaign
+                  </button>
+                </div>
               </div>
-              <div class="d-flex gap-2">
-                <a href="{% url 'campaigns:list' %}" class="btn-cancel">
-                  <i class="bi bi-x-lg me-1"></i>Cancel
-                </a>
-                <button type="submit" class="btn btn-create">
-                  <i class="bi bi-plus-circle me-2"></i>Create Campaign
-                </button>
-              </div>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
       <!-- Tips Sidebar -->
       <div class="col-lg-4">
-        <div class="tips-sidebar">
-          <h4 class="tips-title">
-            <i class="bi bi-lightbulb text-warning"></i>
-            Campaign Tips
-          </h4>
-          <ul class="tips-list">
-            <li>
-              <div class="tip-title">Quick Tips</div>
-              <p class="tip-content">
-                Hover over the <i class="bi bi-info-circle text-primary"></i> icons next to field labels for helpful hints and tips about each field.
-              </p>
-            </li>
-            <li>
-              <div class="tip-title">Plan Ahead</div>
-              <p class="tip-content">
-                Think about themes, major NPCs, and plot hooks you want to explore in your campaign.
-              </p>
-            </li>
-            <li>
-              <div class="tip-title">Game Balance</div>
-              <p class="tip-content">
-                Consider the experience level of your players and choose appropriate difficulty for encounters and challenges.
-              </p>
-            </li>
-            <li>
-              <div class="tip-title">Session Zero</div>
-              <p class="tip-content">
-                Plan a session zero to discuss expectations, safety tools, and character creation with your players.
-              </p>
-            </li>
-          </ul>
-          <div class="mt-4 p-3 bg-light rounded sidebar-bg-override">
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-warning-subtle border-0">
+            <h5 class="mb-0 d-flex align-items-center text-dark">
+              <i class="bi bi-lightbulb me-2 text-warning"></i>
+              Campaign Tips
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item px-0 border-0">
+                <h6 class="fw-semibold text-primary mb-2">Quick Tips</h6>
+                <p class="mb-0 small text-muted">
+                  Hover over the <i class="bi bi-info-circle text-primary"></i> icons next to field labels for helpful hints and tips about each field.
+                </p>
+              </div>
+              <div class="list-group-item px-0 border-0">
+                <h6 class="fw-semibold text-primary mb-2">Plan Ahead</h6>
+                <p class="mb-0 small text-muted">
+                  Think about themes, major NPCs, and plot hooks you want to explore in your campaign.
+                </p>
+              </div>
+              <div class="list-group-item px-0 border-0">
+                <h6 class="fw-semibold text-primary mb-2">Game Balance</h6>
+                <p class="mb-0 small text-muted">
+                  Consider the experience level of your players and choose appropriate difficulty for encounters and challenges.
+                </p>
+              </div>
+              <div class="list-group-item px-0 border-0">
+                <h6 class="fw-semibold text-primary mb-2">Session Zero</h6>
+                <p class="mb-0 small text-muted">
+                  Plan a session zero to discuss expectations, safety tools, and character creation with your players.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer bg-light border-0">
             <small class="text-muted">
               <i class="bi bi-gear me-1"></i>
               <strong>Next steps:</strong> After creating your campaign, you can invite players, set visibility options, and start creating scenes.
@@ -177,19 +194,16 @@
       </div>
     </div>
   </div>
-  <script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
 // Enhance form interaction
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     const nameInput = document.getElementById('{{ form.name.id_for_label }}');
     const gameSystemInput = document.getElementById('{{ form.game_system.id_for_label }}');
     const submitButton = form.querySelector('button[type="submit"]');
-
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
 
     // Add loading state to submit button
     form.addEventListener('submit', function() {
@@ -205,7 +219,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Enhanced game system autocomplete behavior
     if (gameSystemInput) {
         gameSystemInput.addEventListener('input', function(e) {
-            // Add visual feedback for autocomplete
             const value = e.target.value.toLowerCase();
             const datalist = document.getElementById('game-systems-list');
             const options = datalist.querySelectorAll('option');
@@ -217,16 +230,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Visual feedback (optional enhancement)
+            // Visual feedback
             if (value && hasMatch) {
-                gameSystemInput.style.borderLeftColor = 'var(--theme-success)';
+                gameSystemInput.classList.add('border-success');
+                gameSystemInput.classList.remove('border-primary');
             } else if (value) {
-                gameSystemInput.style.borderLeftColor = 'var(--theme-primary)';
+                gameSystemInput.classList.add('border-primary');
+                gameSystemInput.classList.remove('border-success');
             } else {
-                gameSystemInput.style.borderLeftColor = '';
+                gameSystemInput.classList.remove('border-success', 'border-primary');
             }
         });
     }
 });
-  </script>
+</script>
 {% endblock %}

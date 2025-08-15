@@ -39,7 +39,14 @@ npm install
 
 ### Django Commands
 ```bash
-# Run migrations
+# Create migration files (ensures PostgreSQL is running)
+make makemigrations
+
+# Run migrations (ensures PostgreSQL is running)
+make migrate
+
+# Or run directly (requires PostgreSQL to be running)
+python manage.py makemigrations
 python manage.py migrate
 
 # Reset all migrations (drops database, deletes migrations, recreates everything)
