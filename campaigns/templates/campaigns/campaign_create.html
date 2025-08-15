@@ -40,7 +40,7 @@
           <div class="card-body p-4">
             <form method="post" novalidate>
               {% csrf_token %}
-              
+
               {% if form.non_field_errors %}
                 <div class="alert alert-danger d-flex align-items-center mb-4">
                   <i class="bi bi-exclamation-triangle-fill me-2"></i>

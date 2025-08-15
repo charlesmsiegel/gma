@@ -465,8 +465,13 @@ a:hover {
     color: var(--theme-nav-link-active) !important;
 }
 
-/* Ensure all text elements use theme colors */
-h1, h2, h3, h4, h5, h6 {
+/* Ensure all text elements use theme colors, but respect utility classes */
+h1:not(.text-white):not(.text-light):not(.text-dark):not(.text-primary):not(.text-secondary):not(.text-success):not(.text-danger):not(.text-warning):not(.text-info),
+h2:not(.text-white):not(.text-light):not(.text-dark):not(.text-primary):not(.text-secondary):not(.text-success):not(.text-danger):not(.text-warning):not(.text-info),
+h3:not(.text-white):not(.text-light):not(.text-dark):not(.text-primary):not(.text-secondary):not(.text-success):not(.text-danger):not(.text-warning):not(.text-info),
+h4:not(.text-white):not(.text-light):not(.text-dark):not(.text-primary):not(.text-secondary):not(.text-success):not(.text-danger):not(.text-warning):not(.text-info),
+h5:not(.text-white):not(.text-light):not(.text-dark):not(.text-primary):not(.text-secondary):not(.text-success):not(.text-danger):not(.text-warning):not(.text-info),
+h6:not(.text-white):not(.text-light):not(.text-dark):not(.text-primary):not(.text-secondary):not(.text-success):not(.text-danger):not(.text-warning):not(.text-info) {
     color: var(--theme-text-primary) !important;
 }
 
