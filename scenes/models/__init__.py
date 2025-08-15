@@ -8,11 +8,16 @@ from campaigns.models import Campaign
 
 class Scene(models.Model):
     """
-    Placeholder Scene model for campaign management.
+    Enhanced Scene model for campaign management.
 
-    This is a minimal implementation to support URL routing and basic views.
-    Full scene functionality will be implemented later.
+    Manages scenes within campaigns with status tracking and character participation.
     """
+
+    STATUS_CHOICES = [
+        ("ACTIVE", "Active"),
+        ("CLOSED", "Closed"),
+        ("ARCHIVED", "Archived"),
+    ]
 
     name: models.CharField = models.CharField(max_length=200, help_text="Scene name")
     description: models.TextField = models.TextField(
@@ -29,6 +34,18 @@ class Scene(models.Model):
         on_delete=models.CASCADE,
         related_name="created_scenes",
         help_text="The user who created this scene",
+    )
+    status: models.CharField = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="ACTIVE",
+        help_text="Current status of the scene",
+    )
+    participants: models.ManyToManyField = models.ManyToManyField(
+        "characters.Character",
+        related_name="participated_scenes",
+        blank=True,
+        help_text="Characters participating in this scene",
     )
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
