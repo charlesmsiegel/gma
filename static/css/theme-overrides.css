@@ -224,15 +224,28 @@ a:hover {
     color: var(--theme-text-white) !important;
 }
 
+/* Let Bootstrap handle outline button styling through CSS custom properties */
 .btn-outline-primary {
-    color: var(--theme-primary) !important;
-    border-color: var(--theme-primary) !important;
+    --bs-btn-color: var(--theme-primary);
+    --bs-btn-border-color: var(--theme-primary);
+    --bs-btn-hover-color: var(--theme-text-white);
+    --bs-btn-hover-bg: var(--theme-primary);
+    --bs-btn-hover-border-color: var(--theme-primary);
+    --bs-btn-focus-shadow-rgb: var(--theme-primary-rgb);
+    --bs-btn-active-color: var(--theme-text-white);
+    --bs-btn-active-bg: var(--theme-primary);
+    --bs-btn-active-border-color: var(--theme-primary);
 }
 
-.btn-outline-primary:hover {
-    background-color: var(--theme-primary) !important;
-    border-color: var(--theme-primary) !important;
-    color: var(--theme-text-white) !important;
+.btn-outline-secondary {
+    --bs-btn-color: var(--theme-secondary);
+    --bs-btn-border-color: var(--theme-secondary);
+    --bs-btn-hover-color: var(--theme-text-white);
+    --bs-btn-hover-bg: var(--theme-secondary);
+    --bs-btn-hover-border-color: var(--theme-secondary);
+    --bs-btn-active-color: var(--theme-text-white);
+    --bs-btn-active-bg: var(--theme-secondary);
+    --bs-btn-active-border-color: var(--theme-secondary);
 }
 
 /* Alerts - Override Bootstrap */

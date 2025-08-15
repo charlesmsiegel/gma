@@ -1,29 +1,124 @@
 {% extends "base.html" %}
-{% block title %}{{ campaign.name }} - Invitations{% endblock %}
+{% block title %}{{ campaign.name }} - Invitations - {{ block.super }}{% endblock %}
+
 {% block content %}
-  <div class="container">
-    <h1>{{ campaign.name }} - Invitations</h1>
-    {% if can_manage %}
-      <div class="invitation-controls">
-        <button class="btn btn-primary">Send Invitation</button>
+  <div class="container py-4">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:list' %}" class="text-decoration-none">
+            <i class="bi bi-journal-text me-1"></i>Campaigns
+          </a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="text-decoration-none">
+            {{ campaign.name }}
+          </a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Invitations</li>
+      </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-primary text-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-envelope-plus me-3 fs-4"></i>
+            <div>
+              <h4 class="mb-0">Campaign Invitations</h4>
+              <small class="opacity-75">{{ campaign.name }}</small>
+            </div>
+          </div>
+          {% if can_manage %}
+            <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}" class="btn btn-light">
+              <i class="bi bi-plus-circle me-1"></i>Send Invitation
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Invitations List -->
+    {% if invitations %}
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-light">
+          <h5 class="mb-0 d-flex align-items-center">
+            <i class="bi bi-list-ul me-2 text-primary"></i>
+            Pending & Recent Invitations ({{ invitations|length }})
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            {% for invitation in invitations %}
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-2">
+                      <i class="bi bi-person-circle me-2 text-muted fs-5"></i>
+                      <h6 class="mb-0 fw-semibold">{{ invitation.invited_user.username }}</h6>
+                    </div>
+                    <div class="row g-2 text-muted small">
+                      <div class="col-sm-6 col-lg-3">
+                        <i class="bi bi-person-badge me-1"></i>
+                        <strong>Role:</strong> {{ invitation.role }}
+                      </div>
+                      <div class="col-sm-6 col-lg-3">
+                        <i class="bi bi-person-plus me-1"></i>
+                        <strong>Invited by:</strong> {{ invitation.invited_by.username }}
+                      </div>
+                      <div class="col-sm-6 col-lg-3">
+                        <i class="bi bi-calendar me-1"></i>
+                        <strong>Created:</strong> {{ invitation.created_at|date:"M j, Y" }}
+                      </div>
+                      <div class="col-sm-6 col-lg-3">
+                        <i class="bi bi-clock me-1"></i>
+                        <strong>Time:</strong> {{ invitation.created_at|time:"g:i A" }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="ms-3">
+                    <span class="badge {% if invitation.status == 'PENDING' %}bg-warning text-dark{% elif invitation.status == 'ACCEPTED' %}bg-success{% elif invitation.status == 'DECLINED' %}bg-danger{% else %}bg-secondary{% endif %} fs-6">
+                      <i class="bi {% if invitation.status == 'PENDING' %}bi-clock{% elif invitation.status == 'ACCEPTED' %}bi-check-circle{% elif invitation.status == 'DECLINED' %}bi-x-circle{% else %}bi-question-circle{% endif %} me-1"></i>
+                      {{ invitation.status|title }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <!-- Empty State -->
+      <div class="card shadow-sm border-0">
+        <div class="card-body text-center py-5">
+          <div class="mb-4">
+            <i class="bi bi-envelope text-muted" style="font-size: 4rem;"></i>
+          </div>
+          <h3 class="h4 mb-3">No Invitations Found</h3>
+          <p class="text-muted mb-4">
+            {% if can_manage %}
+              No invitations have been sent for this campaign yet. Send your first invitation to get started!
+            {% else %}
+              There are no invitations to display for this campaign.
+            {% endif %}
+          </p>
+          {% if can_manage %}
+            <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}" class="btn btn-primary">
+              <i class="bi bi-plus-circle me-1"></i>Send First Invitation
+            </a>
+          {% endif %}
+        </div>
       </div>
     {% endif %}
-    <div class="invitations-list">
-      {% if invitations %}
-        {% for invitation in invitations %}
-          <div class="invitation-item">
-            <h3>{{ invitation.invited_user.username }}</h3>
-            <p>Role: {{ invitation.role }}</p>
-            <p>
-              Status: <span class="badge status-{{ invitation.status|lower }} badge-{{ invitation.status|lower }}">{{ invitation.status|title }}</span>
-            </p>
-            <p>Invited by: {{ invitation.invited_by.username }}</p>
-            <p>Created: {{ invitation.created_at }}</p>
-          </div>
-        {% endfor %}
-      {% else %}
-        <p>No invitations found.</p>
-      {% endif %}
+
+    <!-- Back Button -->
+    <div class="mt-4">
+      <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Campaign
+      </a>
     </div>
   </div>
 {% endblock %}

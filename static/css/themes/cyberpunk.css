@@ -4,6 +4,7 @@
   --theme-primary: #00ffff;
   --theme-primary-dark: #00cccc;
   --theme-primary-light: #66ffff;
+  --theme-primary-rgb: 0, 255, 255;
   --theme-secondary: #ff00ff;
   --theme-secondary-dark: #cc00cc;
   --theme-secondary-light: #ff66ff;
