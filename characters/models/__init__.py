@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django_fsm import FSMField, transition  # type: ignore[import-untyped]
 from polymorphic.managers import PolymorphicManager  # type: ignore[import-untyped]
 from polymorphic.models import PolymorphicModel  # type: ignore[import-untyped]
 from polymorphic.query import PolymorphicQuerySet  # type: ignore[import-untyped]
@@ -165,6 +166,17 @@ class CharacterQuerySet(PolymorphicQuerySet):
         """
         return self.filter(npc=False)
 
+    def with_status(self, status: str) -> "CharacterQuerySet":
+        """Filter characters by status.
+
+        Args:
+            status: The status to filter by (e.g., 'DRAFT', 'ACTIVE', etc.)
+
+        Returns:
+            QuerySet of characters with the specified status
+        """
+        return self.filter(status=status)
+
     def editable_by(
         self, user: Optional["AbstractUser"], campaign: Campaign
     ) -> "CharacterQuerySet":
@@ -293,6 +305,17 @@ class CharacterManager(PolymorphicManager):
             .prefetch_related("campaign__memberships__user")
         )
 
+    def with_status(self, status: str):
+        """Get characters with a specific status.
+
+        Args:
+            status: The status to filter by (e.g., 'DRAFT', 'ACTIVE', etc.)
+
+        Returns:
+            QuerySet of characters with the specified status
+        """
+        return self.get_queryset().filter(status=status)
+
 
 class AllCharacterManager(PolymorphicManager):
     """Manager that includes soft-deleted characters."""
@@ -353,6 +376,25 @@ class Character(
         help_text="Whether this character is an NPC (Non-Player Character)",
     )
 
+    # Character status FSM field
+    STATUS_CHOICES = [
+        ("DRAFT", "Draft"),
+        ("SUBMITTED", "Submitted"),
+        ("ACTIVE", "Active"),
+        ("INACTIVE", "Inactive"),
+        ("RETIRED", "Retired"),
+        ("DECEASED", "Deceased"),
+    ]
+
+    status: FSMField = FSMField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="DRAFT",
+        protected=False,  # Allow direct setting during creation
+        db_index=True,
+        help_text="Current status of the character in the campaign",
+    )
+
     # Soft delete fields
     is_deleted: models.BooleanField = models.BooleanField(
         default=False, help_text="Whether this character has been soft deleted"
@@ -385,6 +427,7 @@ class Character(
         self._original_description = self.__dict__.get("description", "")
         self._original_game_system = self.__dict__.get("game_system", "")
         self._original_npc = self.__dict__.get("npc", False)
+        self._original_status = self.__dict__.get("status", "DRAFT")
 
     class Meta:
         db_table = "characters_character"
@@ -430,6 +473,7 @@ class Character(
             "campaign_id",
             "player_owner_id",
             "npc",
+            "status",
         ]
 
     def _has_campaign_changed(self) -> bool:
@@ -547,6 +591,7 @@ class Character(
         self._original_description = self.description
         self._original_game_system = self.game_system
         self._original_npc = self.npc
+        self._original_status = self.status
 
     def refresh_from_db(
         self, using: Optional[str] = None, fields: Optional[List[str]] = None
@@ -721,6 +766,9 @@ class Character(
                     f"exactly: '{self.name}'"
                 )
 
+        # Store original status before soft deletion
+        original_status = self.status
+
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.deleted_by = user
@@ -728,7 +776,12 @@ class Character(
 
         # Create audit entry using DetailedAuditableMixin method
         self._create_audit_entry(
-            user, "DELETE", {"is_deleted": {"old": False, "new": True}}
+            user,
+            "DELETE",
+            {
+                "is_deleted": {"old": False, "new": True},
+                "status_at_deletion": {"old": None, "new": original_status},
+            },
         )
 
         return self
@@ -787,6 +840,227 @@ class Character(
 
         self.delete()
         return self
+
+    # FSM Status Transition Methods
+
+    def _can_transition_status(
+        self, user: "AbstractUser", required_permissions: List[str]
+    ) -> bool:
+        """Check if user has permission to perform a status transition.
+
+        Args:
+            user: The user attempting the transition
+            required_permissions: List of roles that can perform this transition
+                                 Options: ['owner', 'gm', 'campaign_owner']
+
+        Returns:
+            True if user has permission, False otherwise
+        """
+        if user is None or not user.is_authenticated:
+            return False
+
+        # Character owners can perform 'owner' level transitions
+        if "owner" in required_permissions and self.player_owner == user:
+            return True
+
+        # Get user's role in the campaign for GM/OWNER level permissions
+        user_role = self.campaign.get_user_role(user)
+
+        if "gm" in required_permissions and user_role == "GM":
+            return True
+
+        if "campaign_owner" in required_permissions and user_role == "OWNER":
+            return True
+
+        return False
+
+    @transition(field=status, source="DRAFT", target="SUBMITTED")
+    def submit_for_approval(self, user: "AbstractUser") -> None:
+        """Transition from DRAFT to SUBMITTED status.
+
+        Args:
+            user: The user performing the transition (must be character owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        if not self._can_transition_status(user, ["owner"]):
+            raise PermissionError(
+                "Only character owners can submit characters for approval"
+            )
+
+        # Save with audit user to trigger audit trail
+        self.save(audit_user=user)
+
+    @transition(field=status, source="SUBMITTED", target="ACTIVE")
+    def approve(self, user: "AbstractUser") -> None:
+        """Transition from SUBMITTED to ACTIVE status.
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        if not self._can_transition_status(user, ["gm", "campaign_owner"]):
+            raise PermissionError("Only GMs and campaign owners can approve characters")
+
+        # Save with audit user to trigger audit trail
+        self.save(audit_user=user)
+
+    @transition(field=status, source="SUBMITTED", target="DRAFT")
+    def reject(self, user: "AbstractUser") -> None:
+        """Transition from SUBMITTED to DRAFT status (rejection).
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        if not self._can_transition_status(user, ["gm", "campaign_owner"]):
+            raise PermissionError("Only GMs and campaign owners can reject characters")
+
+        # Save with audit user to trigger audit trail
+        self.save(audit_user=user)
+
+    @transition(field=status, source="ACTIVE", target="INACTIVE")
+    def deactivate(self, user: "AbstractUser") -> None:
+        """Transition from ACTIVE to INACTIVE status.
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        if not self._can_transition_status(user, ["gm", "campaign_owner"]):
+            raise PermissionError(
+                "Only GMs and campaign owners can deactivate characters"
+            )
+
+        # Save with audit user to trigger audit trail
+        self.save(audit_user=user)
+
+    @transition(field=status, source="INACTIVE", target="ACTIVE")
+    def activate(self, user: "AbstractUser") -> None:
+        """Transition from INACTIVE to ACTIVE status.
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        if not self._can_transition_status(user, ["gm", "campaign_owner"]):
+            raise PermissionError(
+                "Only GMs and campaign owners can activate characters"
+            )
+
+        # Save with audit user to trigger audit trail
+        self.save(audit_user=user)
+
+    @transition(field=status, source="ACTIVE", target="RETIRED")
+    def retire(self, user: "AbstractUser") -> None:
+        """Transition from ACTIVE to RETIRED status.
+
+        Args:
+            user: The user performing the transition
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        if not self._can_transition_status(user, ["owner", "gm", "campaign_owner"]):
+            raise PermissionError(
+                "Only character owners, GMs, and campaign owners can retire characters"
+            )
+
+        # Save with audit user to trigger audit trail
+        self.save(audit_user=user)
+
+    @transition(field=status, source="ACTIVE", target="DECEASED")
+    def mark_deceased(self, user: "AbstractUser") -> None:
+        """Transition from ACTIVE to DECEASED status.
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        if not self._can_transition_status(user, ["gm", "campaign_owner"]):
+            raise PermissionError(
+                "Only GMs and campaign owners can mark characters as deceased"
+            )
+
+        # Save with audit user to trigger audit trail
+        self.save(audit_user=user)
+
+    def get_available_status_transitions_for_user(
+        self, user: "AbstractUser"
+    ) -> List[str]:
+        """Get list of status transitions available to the user for this character.
+
+        This is our custom method that provides role-based filtering.
+
+        Args:
+            user: The user to check transitions for
+
+        Returns:
+            List of transition method names available to the user
+        """
+        if user is None or not user.is_authenticated:
+            return []
+
+        available = []
+
+        # Check each possible transition based on current status
+        if self.status == "DRAFT":
+            if self._can_transition_status(user, ["owner"]):
+                available.append("submit_for_approval")
+
+        elif self.status == "SUBMITTED":
+            if self._can_transition_status(user, ["gm", "campaign_owner"]):
+                available.extend(["approve", "reject"])
+
+        elif self.status == "ACTIVE":
+            if self._can_transition_status(user, ["gm", "campaign_owner"]):
+                available.extend(["deactivate", "mark_deceased"])
+            if self._can_transition_status(user, ["owner", "gm", "campaign_owner"]):
+                available.append("retire")
+
+        elif self.status == "INACTIVE":
+            if self._can_transition_status(user, ["gm", "campaign_owner"]):
+                available.append("activate")
+
+        return available
+
+    def can_change_status_to(self, target_status: str, user: "AbstractUser") -> bool:
+        """Check if a user can change character status to a specific target.
+
+        Args:
+            target_status: The target status to check
+            user: The user to check permissions for
+
+        Returns:
+            True if the transition is allowed, False otherwise
+        """
+        transition_map = {
+            ("DRAFT", "SUBMITTED"): "submit_for_approval",
+            ("SUBMITTED", "ACTIVE"): "approve",
+            ("SUBMITTED", "DRAFT"): "reject",
+            ("ACTIVE", "INACTIVE"): "deactivate",
+            ("INACTIVE", "ACTIVE"): "activate",
+            ("ACTIVE", "RETIRED"): "retire",
+            ("ACTIVE", "DECEASED"): "mark_deceased",
+        }
+
+        transition_key = (self.status, target_status)
+        if transition_key not in transition_map:
+            return False
+
+        transition_method = transition_map[transition_key]
+        return transition_method in self.get_available_status_transitions_for_user(user)
 
 
 class WoDCharacter(Character):

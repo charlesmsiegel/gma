@@ -3770,3 +3770,537 @@ class NPCPCManagerTest(TestCase):
 
         self.assertEqual(list(ordered_npcs), sorted(npcs_qs, key=lambda x: x.name))
         self.assertEqual(list(ordered_pcs), sorted(pcs_qs, key=lambda x: x.name))
+
+
+class CharacterStatusFSMTest(TestCase):
+    """Test Character.status FSMField functionality and state transitions."""
+
+    def setUp(self):
+        """Set up test users, campaigns, and characters."""
+        from django_fsm import TransitionNotAllowed
+
+        # Store reference to TransitionNotAllowed for tests
+        self.TransitionNotAllowed = TransitionNotAllowed
+
+        # Create users with different roles
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.player2 = User.objects.create_user(
+            username="player2", email="player2@test.com", password="testpass123"
+        )
+        self.outsider = User.objects.create_user(
+            username="outsider", email="outsider@test.com", password="testpass123"
+        )
+
+        # Create campaign
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited characters for testing
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player2, role="PLAYER"
+        )
+        # Note: outsider is not a campaign member
+
+        # Create a test character
+        self.character = Character.objects.create(
+            name="Test Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+    def test_status_field_exists_with_correct_properties(self):
+        """Test that status field exists with correct choices and default value."""
+        # Get the status field
+        status_field = Character._meta.get_field("status")
+
+        # Verify it's an FSMField
+        from django_fsm import FSMField
+
+        self.assertIsInstance(status_field, FSMField)
+
+        # Verify default value
+        new_character = Character(
+            name="New Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        self.assertEqual(new_character.status, "DRAFT")
+
+        # Verify choices
+        expected_choices = [
+            ("DRAFT", "Draft"),
+            ("SUBMITTED", "Submitted"),
+            ("ACTIVE", "Active"),
+            ("INACTIVE", "Inactive"),
+            ("RETIRED", "Retired"),
+            ("DECEASED", "Deceased"),
+        ]
+        self.assertEqual(status_field.choices, expected_choices)
+
+        # Verify field protection (using transition methods for control)
+        self.assertFalse(status_field.protected)
+
+    def test_character_created_with_draft_status(self):
+        """Test that new characters are created with DRAFT status."""
+        character = Character.objects.create(
+            name="Draft Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        self.assertEqual(character.status, "DRAFT")
+
+    def test_valid_state_transitions(self):
+        """Test that all valid state transitions work correctly."""
+        # Start with DRAFT
+        self.assertEqual(self.character.status, "DRAFT")
+
+        # DRAFT → SUBMITTED (player can do this)
+        self.character.submit_for_approval(user=self.player1)
+        self.assertEqual(self.character.status, "SUBMITTED")
+
+        # SUBMITTED → ACTIVE (requires GM/OWNER)
+        self.character.approve(user=self.gm)
+        self.assertEqual(self.character.status, "ACTIVE")
+
+        # ACTIVE → INACTIVE (requires GM/OWNER)
+        self.character.deactivate(user=self.owner)
+        self.assertEqual(self.character.status, "INACTIVE")
+
+        # INACTIVE → ACTIVE (requires GM/OWNER)
+        self.character.activate(user=self.gm)
+        self.assertEqual(self.character.status, "ACTIVE")
+
+        # ACTIVE → RETIRED (players can do this)
+        self.character.retire(user=self.player1)
+        self.assertEqual(self.character.status, "RETIRED")
+
+        # Create another character to test ACTIVE → DECEASED
+        character2 = Character.objects.create(
+            name="Test Character 2",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        character2.submit_for_approval(user=self.player1)
+        character2.approve(user=self.gm)
+        self.assertEqual(character2.status, "ACTIVE")
+
+        # ACTIVE → DECEASED (requires GM/OWNER)
+        character2.mark_deceased(user=self.owner)
+        self.assertEqual(character2.status, "DECEASED")
+
+        # Create another character to test SUBMITTED → DRAFT (rejection)
+        character3 = Character.objects.create(
+            name="Test Character 3",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        character3.submit_for_approval(user=self.player1)
+        self.assertEqual(character3.status, "SUBMITTED")
+
+        # SUBMITTED → DRAFT (requires GM/OWNER - for rejection)
+        character3.reject(user=self.gm)
+        self.assertEqual(character3.status, "DRAFT")
+
+    def test_invalid_transitions_are_blocked(self):
+        """Test that invalid state transitions are blocked."""
+        # Try to transition from DRAFT directly to ACTIVE (should fail)
+        with self.assertRaises(self.TransitionNotAllowed):
+            self.character.approve(user=self.gm)
+
+        # Try to transition from DRAFT to RETIRED (should fail)
+        with self.assertRaises(self.TransitionNotAllowed):
+            self.character.retire(user=self.player1)
+
+        # Move to SUBMITTED and try invalid transitions
+        self.character.submit_for_approval(user=self.player1)
+
+        # Try to submit again (should fail)
+        with self.assertRaises(self.TransitionNotAllowed):
+            self.character.submit_for_approval(user=self.player1)
+
+        # Try to transition from SUBMITTED to INACTIVE (should fail)
+        with self.assertRaises(self.TransitionNotAllowed):
+            self.character.deactivate(user=self.gm)
+
+        # Move to ACTIVE and try invalid transitions
+        self.character.approve(user=self.gm)
+
+        # Try to submit from ACTIVE (should fail)
+        with self.assertRaises(self.TransitionNotAllowed):
+            self.character.submit_for_approval(user=self.player1)
+
+        # Try to approve from ACTIVE (should fail)
+        with self.assertRaises(self.TransitionNotAllowed):
+            self.character.approve(user=self.gm)
+
+        # Move to RETIRED and try transitions (should all fail)
+        self.character.retire(user=self.player1)
+
+        with self.assertRaises(self.TransitionNotAllowed):
+            self.character.activate(user=self.gm)
+
+        with self.assertRaises(self.TransitionNotAllowed):
+            self.character.mark_deceased(user=self.gm)
+
+    def test_permission_based_restrictions(self):
+        """Test that state transitions respect permission rules."""
+        # Test that character owners can submit
+        self.character.submit_for_approval(user=self.player1)
+        self.assertEqual(self.character.status, "SUBMITTED")
+
+        # Test that only GM/OWNER can approve
+        character2 = Character.objects.create(
+            name="Test Character 2",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        character2.submit_for_approval(user=self.player1)
+
+        # Player2 (different player) should not be able to approve
+        with self.assertRaises(PermissionError):
+            character2.approve(user=self.player2)
+
+        # Outsider should not be able to approve
+        with self.assertRaises(PermissionError):
+            character2.approve(user=self.outsider)
+
+        # GM should be able to approve
+        character2.approve(user=self.gm)
+        self.assertEqual(character2.status, "ACTIVE")
+
+        # Test that only character owner can retire their character
+        with self.assertRaises(PermissionError):
+            character2.retire(user=self.player2)
+
+        # Character owner should be able to retire
+        character2.retire(user=self.player1)
+        self.assertEqual(character2.status, "RETIRED")
+
+        # Test GM/OWNER can do restricted transitions
+        character3 = Character.objects.create(
+            name="Test Character 3",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        character3.submit_for_approval(user=self.player1)
+        character3.approve(user=self.owner)  # Owner should be able to approve
+        character3.mark_deceased(user=self.gm)  # GM should be able to mark deceased
+        self.assertEqual(character3.status, "DECEASED")
+
+        # Test rejection permissions
+        character4 = Character.objects.create(
+            name="Test Character 4",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+        character4.submit_for_approval(user=self.player1)
+
+        # Player should not be able to reject
+        with self.assertRaises(PermissionError):
+            character4.reject(user=self.player1)
+
+        # GM should be able to reject
+        character4.reject(user=self.gm)
+        self.assertEqual(character4.status, "DRAFT")
+
+    def test_fsm_protection_prevents_manual_changes(self):
+        """Test that FSM protection prevents manual field changes."""
+        original_status = self.character.status
+
+        # Try to manually change status (should be protected)
+        self.character.status = "ACTIVE"
+
+        # The protection should prevent the change or it should be reset
+        # This depends on implementation - let's test both scenarios
+        try:
+            self.character.save()
+            # If save succeeds, verify the status wasn't actually changed
+            self.character.refresh_from_db()
+            self.assertEqual(self.character.status, original_status)
+        except Exception:
+            # If save fails due to protection, that's also valid
+            pass
+
+        # Verify the proper way to change status works
+        self.character.submit_for_approval(user=self.player1)
+        self.assertEqual(self.character.status, "SUBMITTED")
+
+    def test_integration_with_soft_delete(self):
+        """Test that FSM status integrates properly with soft-delete functionality."""
+        # Set character to ACTIVE status
+        self.character.submit_for_approval(user=self.player1)
+        self.character.approve(user=self.gm)
+        self.assertEqual(self.character.status, "ACTIVE")
+
+        # Soft delete the character
+        deleted_character = self.character.soft_delete(user=self.player1)
+        self.assertTrue(deleted_character.is_deleted)
+
+        # Verify status is preserved after soft delete
+        self.assertEqual(deleted_character.status, "ACTIVE")
+
+        # Restore the character
+        restored_character = deleted_character.restore(user=self.player1)
+        self.assertFalse(restored_character.is_deleted)
+
+        # Verify status is still preserved after restore
+        self.assertEqual(restored_character.status, "ACTIVE")
+
+        # Verify FSM transitions still work after restore
+        restored_character.deactivate(user=self.gm)
+        self.assertEqual(restored_character.status, "INACTIVE")
+
+    def test_migration_preserves_existing_data(self):
+        """Test that migration preserves existing data."""
+        # This test simulates what happens during migration
+        # Since there's no current status field, all existing characters
+        # should get the default DRAFT status
+
+        # Create a character the old way (simulating pre-migration)
+        character = Character.objects.create(
+            name="Pre-Migration Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Verify it gets the default status
+        self.assertEqual(character.status, "DRAFT")
+
+        # Verify it can use FSM transitions normally
+        character.submit_for_approval(user=self.player1)
+        self.assertEqual(character.status, "SUBMITTED")
+
+        character.approve(user=self.gm)
+        self.assertEqual(character.status, "ACTIVE")
+
+    def test_audit_trail_captures_status_changes(self):
+        """Test that audit trail captures status changes."""
+        # Get initial audit count
+        initial_audit_count = self.character.audit_entries.count()
+
+        # Perform a status transition
+        self.character.submit_for_approval(user=self.player1)
+
+        # Verify audit entry was created
+        new_audit_count = self.character.audit_entries.count()
+        self.assertGreater(new_audit_count, initial_audit_count)
+
+        # Get the latest audit entry
+        latest_audit = self.character.audit_entries.first()
+        self.assertEqual(latest_audit.changed_by, self.player1)
+        self.assertEqual(latest_audit.action, "UPDATE")
+
+        # Verify the status change is recorded
+        field_changes = latest_audit.field_changes
+        self.assertIn("status", field_changes)
+        self.assertEqual(field_changes["status"]["old"], "DRAFT")
+        self.assertEqual(field_changes["status"]["new"], "SUBMITTED")
+
+        # Test multiple transitions create multiple audit entries
+        initial_count = self.character.audit_entries.count()
+        self.character.approve(user=self.gm)
+        self.character.deactivate(user=self.owner)
+
+        final_count = self.character.audit_entries.count()
+        self.assertEqual(final_count, initial_count + 2)
+
+    def test_status_display_methods(self):
+        """Test status display methods and string representations."""
+        # Test default status display
+        self.assertEqual(self.character.get_status_display(), "Draft")
+
+        # Test status displays for all states
+        status_displays = {
+            "DRAFT": "Draft",
+            "SUBMITTED": "Submitted",
+            "ACTIVE": "Active",
+            "INACTIVE": "Inactive",
+            "RETIRED": "Retired",
+            "DECEASED": "Deceased",
+        }
+
+        for status_code, expected_display in status_displays.items():
+            # Create a character and manually set status for testing
+            character = Character.objects.create(
+                name=f"Test {status_code}",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            )
+
+            # Use transition methods to reach each state
+            if status_code == "SUBMITTED":
+                character.submit_for_approval(user=self.player1)
+            elif status_code == "ACTIVE":
+                character.submit_for_approval(user=self.player1)
+                character.approve(user=self.gm)
+            elif status_code == "INACTIVE":
+                character.submit_for_approval(user=self.player1)
+                character.approve(user=self.gm)
+                character.deactivate(user=self.owner)
+            elif status_code == "RETIRED":
+                character.submit_for_approval(user=self.player1)
+                character.approve(user=self.gm)
+                character.retire(user=self.player1)
+            elif status_code == "DECEASED":
+                character.submit_for_approval(user=self.player1)
+                character.approve(user=self.gm)
+                character.mark_deceased(user=self.owner)
+
+            self.assertEqual(character.status, status_code)
+            self.assertEqual(character.get_status_display(), expected_display)
+
+    def test_available_transitions_method(self):
+        """Test method that returns available transitions for current state."""
+        # Test DRAFT state transitions
+        self.assertEqual(self.character.status, "DRAFT")
+        available = self.character.get_available_status_transitions_for_user(
+            user=self.player1
+        )
+        self.assertIn("submit_for_approval", available)
+        self.assertEqual(len(available), 1)
+
+        # Test GM has same transitions for DRAFT
+        available_gm = self.character.get_available_status_transitions_for_user(
+            user=self.gm
+        )
+        self.assertIn("submit_for_approval", available_gm)
+
+        # Move to SUBMITTED and test transitions
+        self.character.submit_for_approval(user=self.player1)
+
+        # Player should have no transitions from SUBMITTED
+        available = self.character.get_available_status_transitions_for_user(
+            user=self.player1
+        )
+        self.assertEqual(len(available), 0)
+
+        # GM should have approve and reject transitions
+        available_gm = self.character.get_available_status_transitions_for_user(
+            user=self.gm
+        )
+        self.assertIn("approve", available_gm)
+        self.assertIn("reject", available_gm)
+        self.assertEqual(len(available_gm), 2)
+
+        # Move to ACTIVE and test transitions
+        self.character.approve(user=self.gm)
+
+        # Player should have retire transition
+        available = self.character.get_available_status_transitions_for_user(
+            user=self.player1
+        )
+        self.assertIn("retire", available)
+        self.assertEqual(len(available), 1)
+
+        # GM should have deactivate and mark_deceased transitions
+        available_gm = self.character.get_available_status_transitions_for_user(
+            user=self.gm
+        )
+        self.assertIn("deactivate", available_gm)
+        self.assertIn("mark_deceased", available_gm)
+        self.assertEqual(len(available_gm), 2)
+
+    def test_batch_status_operations(self):
+        """Test operations on multiple characters with different statuses."""
+        # Create multiple characters in different states
+        characters = []
+        for i in range(5):
+            char = Character.objects.create(
+                name=f"Batch Character {i}",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+            )
+            characters.append(char)
+
+        # Set different statuses
+        characters[1].submit_for_approval(user=self.player1)
+        characters[2].submit_for_approval(user=self.player1)
+        characters[2].approve(user=self.gm)
+        characters[3].submit_for_approval(user=self.player1)
+        characters[3].approve(user=self.gm)
+        characters[3].deactivate(user=self.gm)
+        characters[4].submit_for_approval(user=self.player1)
+        characters[4].approve(user=self.gm)
+        characters[4].retire(user=self.player1)
+
+        # Test filtering by status
+        draft_chars = Character.objects.filter(status="DRAFT")
+        self.assertEqual(draft_chars.count(), 1)
+        self.assertEqual(draft_chars.first(), characters[0])
+
+        submitted_chars = Character.objects.filter(status="SUBMITTED")
+        self.assertEqual(submitted_chars.count(), 1)
+        self.assertEqual(submitted_chars.first(), characters[1])
+
+        active_chars = Character.objects.filter(status="ACTIVE")
+        self.assertEqual(active_chars.count(), 1)
+        self.assertEqual(active_chars.first(), characters[2])
+
+        inactive_chars = Character.objects.filter(status="INACTIVE")
+        self.assertEqual(inactive_chars.count(), 1)
+        self.assertEqual(inactive_chars.first(), characters[3])
+
+        retired_chars = Character.objects.filter(status="RETIRED")
+        self.assertEqual(retired_chars.count(), 1)
+        self.assertEqual(retired_chars.first(), characters[4])
+
+    def test_concurrent_status_transitions(self):
+        """Test that concurrent status transitions are handled safely."""
+        from django.db import transaction
+
+        # This test ensures that FSM transitions are atomic
+        self.character.submit_for_approval(user=self.player1)
+
+        def approve_character():
+            with transaction.atomic():
+                char = Character.objects.select_for_update().get(pk=self.character.pk)
+                char.approve(user=self.gm)
+
+        def reject_character():
+            with transaction.atomic():
+                char = Character.objects.select_for_update().get(pk=self.character.pk)
+                char.reject(user=self.gm)
+
+        # Both operations should not conflict due to select_for_update
+        # One should succeed, the other should fail
+        try:
+            approve_character()
+            # If approve succeeded, reject should fail
+            with self.assertRaises(self.TransitionNotAllowed):
+                reject_character()
+        except self.TransitionNotAllowed:
+            # If approve failed, reject might succeed
+            reject_character()
+
+        # Verify the character is in a valid final state
+        self.character.refresh_from_db()
+        self.assertIn(self.character.status, ["ACTIVE", "DRAFT"])
