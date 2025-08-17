@@ -522,6 +522,179 @@ class CampaignInvitation(models.Model):
 - Cleanup management via custom manager
 - Constraint prevents duplicate invitations
 
+### Character Domain Models
+
+#### Character Model Architecture
+Location: `characters/models/__init__.py:272-771`
+
+The Character model implements a unified PC/NPC architecture using polymorphic inheritance for game system flexibility:
+
+```python
+class Character(TimestampedMixin, NamedModelMixin, DetailedAuditableMixin, PolymorphicModel):
+    # Core fields
+    description = TextField(blank=True, default="")
+    campaign = ForeignKey(Campaign, on_delete=CASCADE)
+    player_owner = ForeignKey(User, on_delete=CASCADE)
+    game_system = CharField(max_length=100)
+
+    # PC/NPC unified architecture
+    npc = BooleanField(default=False, db_index=True)  # Key architectural decision
+
+    # Soft delete support
+    is_deleted = BooleanField(default=False)
+    deleted_at = DateTimeField(null=True, blank=True)
+    deleted_by = ForeignKey(User, on_delete=SET_NULL, null=True)
+```
+
+#### PC/NPC Unified Architecture
+
+**Architectural Benefits:**
+
+1. **Single Model Design**: Both Player Characters (PCs) and Non-Player Characters (NPCs) use the same base model
+2. **Polymorphic Inheritance**: Game-specific features through WoDCharacter → MageCharacter inheritance
+3. **Flexible Ownership**: NPCs typically owned by GMs, PCs owned by players
+4. **Performance Optimization**: Database index on `npc` field for efficient filtering
+5. **Consistent API**: Same endpoints, serializers, and business logic for both character types
+
+**Business Logic Implications:**
+
+```python
+# NPC filtering in queries
+npcs = Character.objects.filter(campaign=campaign, npc=True)
+pcs = Character.objects.filter(campaign=campaign, npc=False)
+
+# Permission checking considers NPC status
+def can_edit_character(user, character):
+    if character.player_owner == user:
+        return True  # Character owner can always edit
+
+    user_role = character.campaign.get_user_role(user)
+    return user_role in ["OWNER", "GM"]  # GMs can edit all characters
+```
+
+**Character Type Management:**
+
+- **Player Characters (npc=False)**:
+  - Created by players for their own use
+  - Subject to campaign character limits
+  - Players have full edit control
+  - Used for main story participation
+
+- **Non-Player Characters (npc=True)**:
+  - Created by GMs for story purposes
+  - Not subject to player character limits
+  - GMs and campaign owners have edit control
+  - Used for NPCs, antagonists, supporting characters
+
+#### Polymorphic Inheritance Chain
+
+**Base Character → WoD Character → Game-Specific Character:**
+
+```python
+# Inheritance hierarchy
+Character (Base)
+├── Core fields: name, description, campaign, player_owner, npc
+├── Audit trail: created_by, modified_by, timestamps
+├── Soft delete: is_deleted, deleted_at, deleted_by
+└── WoDCharacter
+    ├── World of Darkness fields: willpower
+    └── MageCharacter
+        └── Mage-specific fields: arete, quintessence, paradox
+```
+
+**Polymorphic Benefits:**
+- Unified queries across all character types
+- Game-system-specific fields without database table explosion
+- Type-safe casting and field access
+- Consistent API responses with polymorphic serialization
+
+#### Character Audit Trail Integration
+
+**DetailedAuditableMixin Integration:**
+```python
+# Automatic audit trail for character changes
+character.save(audit_user=request.user)  # Records user who made changes
+
+# NPC field changes tracked in audit
+audit_entry = character.audit_entries.filter(
+    field_changes__has_key='npc'
+).first()
+# Shows: {"npc": {"old": false, "new": true}}
+```
+
+**Tracked Operations:**
+- Character creation with initial PC/NPC status
+- NPC status toggles (PC ↔ NPC conversions)
+- Ownership transfers (important for NPCs)
+- Field modifications with user attribution
+
+#### Character Manager and QuerySet
+
+**Optimized Query Methods:**
+```python
+class CharacterManager(PolymorphicManager):
+    def for_campaign(self, campaign):
+        return self.get_queryset().filter(campaign=campaign)
+
+    def editable_by(self, user, campaign):
+        # Handles both PC and NPC permission logic
+        user_role = campaign.get_user_role(user)
+        if user_role in ["OWNER", "GM"]:
+            return self.filter(campaign=campaign)  # All characters
+        elif user_role == "PLAYER":
+            return self.filter(campaign=campaign, player_owner=user)  # Own characters only
+        else:
+            return self.none()
+```
+
+**Performance Optimizations:**
+- Database index on `npc` field for type filtering
+- Composite index on `(campaign, player_owner)` for character limits
+- Prefetch related data with `with_campaign_memberships()`
+- Soft delete filtering in default manager
+
+#### Permission System Integration
+
+**Role-Based Character Access:**
+
+```
+Character Permissions by Role:
+OWNER (Campaign Creator)
+├── Edit all PCs and NPCs in campaign
+├── Delete any character (with campaign settings)
+└── Transfer character ownership
+
+GM (Game Master)
+├── Edit all PCs and NPCs in campaign
+├── Create NPCs without character limits
+└── Delete characters (with campaign settings)
+
+PLAYER (Standard Participant)
+├── Edit own PCs only
+├── Cannot edit NPCs
+└── Subject to character creation limits
+
+OBSERVER (Read-only Access)
+├── View character lists
+└── Cannot edit any characters
+```
+
+**Implementation Patterns:**
+```python
+# Service layer handles PC/NPC permission differences
+class CharacterService:
+    def create_character(self, user, campaign, **data):
+        npc = data.get('npc', False)
+
+        if npc:
+            # NPCs can only be created by GMs/Owners
+            if campaign.get_user_role(user) not in ["OWNER", "GM"]:
+                raise PermissionError("Only GMs can create NPCs")
+        else:
+            # PCs subject to character limits
+            self._validate_character_limit(user, campaign)
+```
+
 ### Database Optimization
 
 #### Indexes

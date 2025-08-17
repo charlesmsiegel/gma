@@ -488,6 +488,7 @@ class CharacterSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "game_system",
+            "npc",
             "created_at",
             "updated_at",
             "campaign",
@@ -608,6 +609,7 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
         fields = (
             "name",
             "description",
+            "npc",
             "campaign",
             "character_type",
             "willpower",
