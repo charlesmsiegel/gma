@@ -49,6 +49,8 @@ dependencies:
   - pip:
     # Django polymorphic for character model inheritance
     - django-polymorphic==3.1
+    # State machine support
+    - django-fsm-2>=4.0.0
     # Additional Django packages
     - django-filter
     - drf-spectacular  # API documentation
