@@ -1222,6 +1222,102 @@ class TestGameSessionModel(TestCase):
         self.assertEqual(session.modified_by, modifier)  # Updated
 ```
 
+### Character Manager Testing Patterns (Issue #175)
+
+The Character model includes multiple manager instances for efficient filtering. Test these new manager capabilities:
+
+#### Manager Instance Testing
+
+```python
+class CharacterManagerTest(TestCase):
+    """Test Character manager instances and functionality."""
+
+    def test_manager_instances_exist(self):
+        """Test that all manager instances are available."""
+        self.assertTrue(hasattr(Character, 'objects'))      # Primary manager
+        self.assertTrue(hasattr(Character, 'all_objects'))  # Includes soft-deleted
+        self.assertTrue(hasattr(Character, 'npcs'))         # NPCs only
+        self.assertTrue(hasattr(Character, 'pcs'))          # PCs only
+
+    def test_npc_manager_filtering(self):
+        """Test NPCManager returns only NPCs, excluding soft-deleted."""
+        # Create test data
+        pc = Character.objects.create(name="PC", campaign=self.campaign,
+                                    player_owner=self.player, npc=False)
+        npc = Character.objects.create(name="NPC", campaign=self.campaign,
+                                     player_owner=self.gm, npc=True)
+        deleted_npc = Character.objects.create(name="Deleted NPC", campaign=self.campaign,
+                                             player_owner=self.gm, npc=True)
+        deleted_npc.soft_delete(self.gm)
+
+        # Test NPCManager
+        npcs = Character.npcs.all()
+        self.assertIn(npc, npcs)
+        self.assertNotIn(pc, npcs)
+        self.assertNotIn(deleted_npc, npcs)
+        self.assertEqual(npcs.count(), 1)
+
+    def test_pc_manager_filtering(self):
+        """Test PCManager returns only PCs, excluding soft-deleted."""
+        # Similar test structure for PCs
+        pcs = Character.pcs.all()
+        # Verify only active PCs are returned
+
+    def test_manager_polymorphic_support(self):
+        """Test managers work with polymorphic inheritance."""
+        mage_pc = MageCharacter.objects.create(
+            name="Mage PC", campaign=self.campaign, player_owner=self.player,
+            npc=False, willpower=3, arete=1
+        )
+        mage_npc = MageCharacter.objects.create(
+            name="Mage NPC", campaign=self.campaign, player_owner=self.gm,
+            npc=True, willpower=5, arete=3
+        )
+
+        # Test polymorphic queries with managers
+        mage_pcs = Character.pcs.instance_of(MageCharacter)
+        mage_npcs = Character.npcs.instance_of(MageCharacter)
+
+        self.assertIn(mage_pc, mage_pcs)
+        self.assertNotIn(mage_npc, mage_pcs)
+        self.assertIn(mage_npc, mage_npcs)
+        self.assertNotIn(mage_pc, mage_npcs)
+
+    def test_manager_chaining_and_filtering(self):
+        """Test manager method chaining with additional filters."""
+        # Test combining manager filters with additional criteria
+        campaign_npcs = Character.npcs.filter(campaign=self.campaign)
+        user_pcs = Character.pcs.filter(player_owner=self.player)
+
+        # Verify chaining works correctly
+        self.assertTrue(hasattr(campaign_npcs, 'count'))
+        self.assertTrue(hasattr(user_pcs, 'order_by'))
+
+    def test_backward_compatibility(self):
+        """Test existing manager methods still work."""
+        # Verify existing methods on objects manager still work
+        legacy_npcs = Character.objects.npcs()
+        legacy_pcs = Character.objects.player_characters()
+
+        # Compare with new manager instances
+        new_npcs = Character.npcs.all()
+        new_pcs = Character.pcs.all()
+
+        self.assertEqual(list(legacy_npcs), list(new_npcs))
+        self.assertEqual(list(legacy_pcs), list(new_pcs))
+```
+
+**Testing Best Practices for Character Managers:**
+
+1. **Test Manager Existence**: Verify all manager instances are accessible
+2. **Test Filtering Logic**: Ensure managers return correct character types
+3. **Test Soft Delete Exclusion**: Verify soft-deleted characters are excluded
+4. **Test Polymorphic Support**: Ensure managers work with inheritance chains
+5. **Test Method Chaining**: Verify additional filtering works correctly
+6. **Test Performance**: Verify database queries are optimized
+7. **Test Backward Compatibility**: Ensure existing code still works
+8. **Test Edge Cases**: Empty querysets, mixed character types, etc.
+
 ### Character NPC Field Testing Patterns
 
 The NPC field implementation (issue #174) introduced unified PC/NPC architecture. Here are essential testing patterns for Character functionality:

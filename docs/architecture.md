@@ -628,9 +628,37 @@ audit_entry = character.audit_entries.filter(
 - Ownership transfers (important for NPCs)
 - Field modifications with user attribution
 
-#### Character Manager and QuerySet
+#### Character Manager Architecture
 
-**Optimized Query Methods:**
+The Character model uses a comprehensive manager system providing multiple access patterns for different use cases:
+
+**Manager Instances:**
+
+1. **`Character.objects`** (CharacterManager): Primary manager excluding soft-deleted characters
+2. **`Character.all_objects`** (AllCharacterManager): Includes soft-deleted characters
+3. **`Character.npcs`** (NPCManager): Only NPCs, excluding soft-deleted **[New in #175]**
+4. **`Character.pcs`** (PCManager): Only PCs, excluding soft-deleted **[New in #175]**
+
+**NPCManager and PCManager (Issue #175):**
+
+```python
+class NPCManager(PolymorphicManager):
+    """Manager for NPC (Non-Player Character) filtering."""
+
+    def get_queryset(self):
+        """Return QuerySet filtered to only NPCs (npc=True) and not soft-deleted."""
+        return super().get_queryset().filter(npc=True, is_deleted=False)
+
+class PCManager(PolymorphicManager):
+    """Manager for PC (Player Character) filtering."""
+
+    def get_queryset(self):
+        """Return QuerySet filtered to only PCs (npc=False) and not soft-deleted."""
+        return super().get_queryset().filter(npc=False, is_deleted=False)
+```
+
+**Primary CharacterManager Methods:**
+
 ```python
 class CharacterManager(PolymorphicManager):
     def npcs(self):
@@ -655,29 +683,49 @@ class CharacterManager(PolymorphicManager):
             return self.none()
 ```
 
-**Manager Method Usage Examples:**
+**New Manager Usage Examples (Recommended):**
+
 ```python
-# Get all NPCs in the system
-all_npcs = Character.objects.npcs()
+# NEW: Direct manager instances (recommended approach)
+Character.npcs.all()           # Only NPCs, excluding soft-deleted
+Character.pcs.all()            # Only PCs, excluding soft-deleted
 
-# Get all Player Characters
-all_pcs = Character.objects.player_characters()
+# NEW: Filter with additional criteria
+Character.npcs.filter(campaign=campaign)         # NPCs in specific campaign
+Character.pcs.filter(player_owner=user)          # PCs owned by user
+Character.npcs.filter(game_system="Mage")        # NPCs of specific game system
 
-# Get NPCs for a specific campaign
-campaign_npcs = Character.objects.npcs().for_campaign(campaign)
+# NEW: Complex queries using polymorphic inheritance
+mage_npcs = Character.npcs.instance_of(MageCharacter)  # Only Mage NPCs
+vampire_pcs = Character.pcs.instance_of(VampireCharacter)  # Only Vampire PCs
 
-# Get Player Characters owned by a user
-user_pcs = Character.objects.player_characters().owned_by(user)
-
-# Combine multiple filters
-campaign_player_pcs = (Character.objects
-                      .player_characters()
-                      .for_campaign(campaign)
-                      .owned_by(player))
-
-# Backward compatibility - old approach still works
-old_style_npcs = Character.objects.filter(npc=True)
+# NEW: Combining with other manager methods
+Character.npcs.with_campaign_memberships()      # NPCs with prefetched data
+Character.pcs.for_campaign(campaign)            # PCs filtered by campaign
 ```
+
+**Backward Compatibility (Still Available):**
+
+```python
+# Existing methods on primary manager (still works)
+Character.objects.npcs()                    # Same as Character.npcs.all()
+Character.objects.player_characters()       # Same as Character.pcs.all()
+
+# Traditional filtering (still works)
+Character.objects.filter(npc=True)          # Manual NPC filtering
+Character.objects.filter(npc=False)         # Manual PC filtering
+
+# All active characters (default behavior)
+Character.objects.all()                     # All active characters (PCs + NPCs)
+Character.all_objects.all()                # Including soft-deleted characters
+```
+
+**Performance Benefits:**
+
+- **Database Optimization**: Manager-level filtering reduces query complexity
+- **Automatic Indexing**: Leverages existing database indexes on `npc` and `is_deleted` fields
+- **Polymorphic Support**: Full compatibility with django-polymorphic features
+- **Memory Efficiency**: QuerySet lazy evaluation with optimized filters
 
 **Performance Optimizations:**
 - Database index on `npc` field for type filtering
