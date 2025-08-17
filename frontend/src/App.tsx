@@ -26,7 +26,7 @@ const AuthenticatedApp: React.FC = () => {
         <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1>Game Master Application</h1>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <span>Welcome, {user?.display_name || user?.username}!</span>
+            <span>Welcome, {user?.display_name ?? user?.username}!</span>
             <button
               className="btn btn-secondary"
               onClick={() => setView('profile')}
@@ -45,12 +45,12 @@ const AuthenticatedApp: React.FC = () => {
 
       <main>
         {view === 'profile' && (
-          <ProfileView onEdit={() => setView('profile-edit')} />
+          <ProfileView onEdit={function() { return setView('profile-edit') }} />
         )}
         {view === 'profile-edit' && (
           <ProfileEditForm
             onSuccess={() => setView('profile')}
-            onCancel={() => setView('profile')}
+            onCancel={() => { setView('profile'); }}
           />
         )}
       </main>
@@ -70,8 +70,8 @@ const UnauthenticatedApp: React.FC = () => {
       <main>
         {view === 'login' && (
           <LoginForm
-            onSuccess={() => window.location.reload()}
-            onSwitchToRegister={() => setView('register')}
+            onSuccess={function() { return window.location.reload() }}
+            onSwitchToRegister={function() { return setView('register') }}
           />
         )}
         {view === 'register' && (

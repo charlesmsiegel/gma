@@ -63,8 +63,8 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
             console.warn('Could not load audit trail:', auditError.message);
           }
         }
-      } catch (err: any) {
-        setError(err.message || 'Failed to load character');
+      } catch (err: unknown) {
+        setError((err as Error).message || 'Failed to load character');
       } finally {
         setLoading(false);
       }
@@ -76,8 +76,8 @@ const CharacterDetail: React.FC<CharacterDetailProps> = ({
   // Clear success messages after a delay
   useEffect(() => {
     if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(null), 5000);
-      return () => clearTimeout(timer);
+      const timer = setTimeout(function() { return setSuccessMessage(null) }, 5000);
+      return function() { return clearTimeout(timer) };
     }
   }, [successMessage]);
 

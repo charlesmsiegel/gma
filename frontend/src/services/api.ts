@@ -30,7 +30,7 @@ export const getCSRFToken = async (): Promise<string> => {
 // Add CSRF token interceptor
 api.interceptors.request.use(
   (config) => {
-    if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() || '')) {
+    if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() ?? '')) {
       if (csrfToken && config.headers) {
         config.headers['X-CSRFToken'] = csrfToken;
       }

@@ -40,7 +40,7 @@ export const characterAPI = {
   getCharacters: async (params: CharacterListParams = {}): Promise<CharacterListResponse> => {
     try {
       const queryParams = buildQueryParams(params);
-      const url = `characters/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const url = "characters/"+queryParams.toString() ? `?${queryParams.toString()}` : '';
 
       const response = await api.get<CharacterListResponse>(url);
       return response.data;
@@ -63,7 +63,7 @@ export const characterAPI = {
    */
   getCharacter: async (id: number): Promise<Character> => {
     try {
-      const response = await api.get<Character>(`characters/${id}/`);
+      const response = await api.get<Character>("characters/"+id+"/");
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {
@@ -152,7 +152,9 @@ export const characterAPI = {
     try {
       await ensureCSRFToken();
       const requestData = confirmationName ? { confirmation_name: confirmationName } : {};
-      await api.delete(`characters/${id}/`, { data: requestData });
+      await api.delete(`characters/${id}/`, {
+        data: requestData
+      } as any);
     } catch (error: any) {
       if (error.response?.status === 400) {
         const apiError = error.response.data as APIError;

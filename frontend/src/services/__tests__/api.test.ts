@@ -57,7 +57,7 @@ describe('API Service', () => {
       // Mock CSRF token fetch
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ csrfToken: 'cached-token' }),
+        json: async function() { return ({ csrfToken: 'cached-token' }) },
       });
 
       // Mock multiple API calls

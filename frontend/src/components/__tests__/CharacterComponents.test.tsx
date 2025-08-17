@@ -35,13 +35,13 @@ jest.mock('../../services/characterAPI', () => ({
       character_type: 'Character'
     })),
     getAvailableCampaigns: jest.fn(() => Promise.resolve([])),
-    updateCharacter: jest.fn(() => Promise.resolve({} as any)),
+    updateCharacter: jest.fn(() => Promise.resolve({} as unknown)),
     createCharacter: jest.fn(() => Promise.resolve({} as any)),
-    deleteCharacter: jest.fn(() => Promise.resolve()),
+    deleteCharacter: jest.fn(function() { return Promise.resolve() }),
   },
   characterPermissions: {
     canEdit: jest.fn(() => true),
-    canDelete: jest.fn(() => true),
+    canDelete: jest.fn(function() { return true }),
     canView: jest.fn(() => true),
   }
 }));
@@ -66,7 +66,7 @@ const mockAuthContext = {
 };
 
 jest.mock('../../contexts/AuthContext', () => ({
-  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  AuthProvider: function({ children }: { children: React.ReactNode }) { return children },
   useAuth: () => mockAuthContext
 }));
 

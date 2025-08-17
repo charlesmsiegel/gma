@@ -77,7 +77,7 @@ const server = setupServer(
 
   // Character creation endpoint
   rest.post('/api/characters/', (req, res, ctx) => {
-    const body = req.body as any;
+    const body = req.body;
 
     // Simulate validation errors
     if (body.name === 'Duplicate Name') {
@@ -119,7 +119,7 @@ const server = setupServer(
   // Character update endpoint
   rest.patch('/api/characters/:id/', (req, res, ctx) => {
     const { id } = req.params;
-    const body = req.body as any;
+    const body = req.body;
 
     return res(
       ctx.json({

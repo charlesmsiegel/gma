@@ -39,7 +39,7 @@ const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user: propUser, onSuc
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(function(prev) { return ({ ...prev, [name]: value }) });
 
     // Clear field-specific error when user starts typing
     if (formErrors[name as keyof ProfileUpdateData]) {

@@ -21,11 +21,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(function(prev) { return ({ ...prev, [name]: value }) });
 
     // Clear field-specific error when user starts typing
     if (formErrors[name as keyof RegisterData]) {
-      setFormErrors(prev => ({ ...prev, [name]: undefined }));
+      setFormErrors(function(prev) { return ({ ...prev, [name]: undefined }) });
     }
 
     // Clear global error when user starts typing

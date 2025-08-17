@@ -1,0 +1,2161 @@
+diff --git a/frontend/src/components/ProfileEditForm.tsx b/frontend/src/components/ProfileEditForm.tsx
+--- a/frontend/src/components/ProfileEditForm.tsx
++++ b/frontend/src/components/ProfileEditForm.tsx
+@@ -42,1 +42,1 @@
+-    setFormData(prev => ({ ...prev, [name]: value }));
++    setFormData(function(prev) { return ({ ...prev, [name]: value }) });
+diff --git a/.claude/agents/reference-builder.md b/.claude/agents/reference-builder.md
+--- a/.claude/agents/reference-builder.md
++++ b/.claude/agents/reference-builder.md
+@@ -19,1 +19,1 @@
+-### API References
++### API References
+
+@@ -20,1 +20,1 @@
+-- Complete method signatures with all parameters
++
+- Complete method signatures with all parameters
+@@ -26,1 +26,1 @@
+-### Configuration Guides
++### Configuration Guides
+
+@@ -27,1 +27,1 @@
+-- Every configurable parameter
++
+- Every configurable parameter
+@@ -33,1 +33,1 @@
+-### Schema Documentation
++### Schema Documentation
+
+@@ -34,1 +34,1 @@
+-- Field types and constraints
++
+- Field types and constraints
+@@ -42,1 +42,1 @@
+-### Entry Format
++### Entry Format
+
+@@ -74,1 +74,1 @@
+-### Hierarchical Structure
++### Hierarchical Structure
+
+@@ -75,1 +75,1 @@
+-1. **Overview**: Quick introduction to the module/API
++
+1. **Overview**: Quick introduction to the module/API
+@@ -81,1 +81,1 @@
+-### Navigation Aids
++### Navigation Aids
+
+@@ -82,1 +82,1 @@
+-- Table of contents with deep linking
++
+- Table of contents with deep linking
+@@ -90,1 +90,1 @@
+-### Code Examples
++### Code Examples
+
+@@ -91,1 +91,1 @@
+-- Minimal working example
++
+- Minimal working example
+@@ -97,1 +97,1 @@
+-### Tables
++### Tables
+
+@@ -98,1 +98,1 @@
+-- Parameter reference tables
++
+- Parameter reference tables
+@@ -104,1 +104,1 @@
+-### Warnings and Notes
++### Warnings and Notes
+
+@@ -105,1 +105,1 @@
+-- **Warning**: Potential issues or gotchas
++
+- **Warning**: Potential issues or gotchas
+@@ -121,1 +121,1 @@
+-### Quick Start
++### Quick Start
+
+@@ -122,1 +122,1 @@
+-- Most common operations
++
+- Most common operations
+@@ -126,1 +126,1 @@
+-### Troubleshooting
++### Troubleshooting
+
+@@ -127,1 +127,1 @@
+-- Common errors and solutions
++
+- Common errors and solutions
+@@ -131,1 +131,1 @@
+-### Migration Guides
++### Migration Guides
+
+@@ -132,1 +132,1 @@
+-- Version upgrade paths
++
+- Version upgrade paths
+@@ -138,1 +138,1 @@
+-### Primary Format (Markdown)
++### Primary Format (Markdown)
+
+@@ -139,1 +139,1 @@
+-- Clean, readable structure
++
+- Clean, readable structure
+@@ -144,1 +144,1 @@
+-### Metadata Inclusion
++### Metadata Inclusion
+
+@@ -145,1 +145,1 @@
+-- JSON schemas for automated processing
++
+- JSON schemas for automated processing
+diff --git a/frontend/src/components/LoginForm.tsx b/frontend/src/components/LoginForm.tsx
+--- a/frontend/src/components/LoginForm.tsx
++++ b/frontend/src/components/LoginForm.tsx
+@@ -24,1 +24,1 @@
+-      setFormErrors(prev => ({ ...prev, [name]: undefined }));
++      setFormErrors(function(prev) { return ({ ...prev, [name]: undefined }) });
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -29,1 +29,1 @@
+-- **Django 5.2.4** with Django REST Framework for robust API development
++
+- **Django 5.2.4** with Django REST Framework for robust API development
+@@ -36,1 +36,1 @@
+-- **React with TypeScript** for enhanced user interactions
++
+- **React with TypeScript** for enhanced user interactions
+@@ -41,1 +41,1 @@
+-- **Conda** for consistent environment management
++
+- **Conda** for consistent environment management
+@@ -90,1 +90,1 @@
+-   - **Main Application**: http://localhost:8080
++   - **Main Application**: <http://localhost:8080>
+@@ -91,1 +91,1 @@
+-   - **Admin Interface**: http://localhost:8080/admin/
++   - **Admin Interface**: <http://localhost:8080/admin/>
+@@ -92,1 +92,1 @@
+-   - **API Documentation**: http://localhost:8080/api/schema/swagger-ui/
++   - **API Documentation**: <http://localhost:8080/api/schema/swagger-ui/>
+@@ -140,1 +140,1 @@
+-- **Models**: Data persistence and business rules
++
+- **Models**: Data persistence and business rules
+diff --git a/frontend/src/components/__tests__/CharacterComponents.test.tsx b/frontend/src/components/__tests__/CharacterComponents.test.tsx
+--- a/frontend/src/components/__tests__/CharacterComponents.test.tsx
++++ b/frontend/src/components/__tests__/CharacterComponents.test.tsx
+@@ -15,1 +15,1 @@
+-jest.mock('../../services/characterAPI', () => ({
++// Mock the characterAPI module
+@@ -38,1 +38,1 @@
+-    updateCharacter: jest.fn(() => Promise.resolve({} as any)),
++    updateCharacter: jest.fn(() => Promise.resolve({} as unknown)),
+@@ -40,1 +40,1 @@
+-    deleteCharacter: jest.fn(() => Promise.resolve()),
++    deleteCharacter: jest.fn(function() { return Promise.resolve() }),
+@@ -44,1 +44,1 @@
+-    canDelete: jest.fn(() => true),
++    canDelete: jest.fn(function() { return true }),
+@@ -69,1 +69,1 @@
+-  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
++  AuthProvider: function({ children }: { children: React.ReactNode }) { return children },
+diff --git a/.claude/agents/python-pro.md b/.claude/agents/python-pro.md
+--- a/.claude/agents/python-pro.md
++++ b/.claude/agents/python-pro.md
+@@ -9,1 +9,1 @@
+-## Focus Areas
++## Focus Areas
+
+@@ -10,1 +10,1 @@
+-- Advanced Python features (decorators, metaclasses, descriptors)
++
+- Advanced Python features (decorators, metaclasses, descriptors)
+@@ -17,1 +17,1 @@
+-## Approach
++## Approach
+
+@@ -18,1 +18,1 @@
+-1. Pythonic code - follow PEP 8 and Python idioms
++
+1. Pythonic code - follow PEP 8 and Python idioms
+@@ -24,1 +24,1 @@
+-## Output
++## Output
+
+@@ -25,1 +25,1 @@
+-- Clean Python code with type hints
++
+- Clean Python code with type hints
+diff --git a/.github/branch-protection.md b/.github/branch-protection.md
+--- a/.github/branch-protection.md
++++ b/.github/branch-protection.md
+@@ -39,1 +39,1 @@
+-### Via GitHub Web Interface:
++### Via GitHub Web Interface
+@@ -40,1 +40,1 @@
+-1. Go to your repository on GitHub
++
+1. Go to your repository on GitHub
+@@ -45,1 +45,1 @@
+-### Via GitHub CLI:
++### Via GitHub CLI
+@@ -76,1 +76,1 @@
+-- Code formatting (black, isort)
++
+- Code formatting (black, isort)
+@@ -106,1 +106,1 @@
+-- Check "Include administrators" to enforce rules for all users
++
+- Check "Include administrators" to enforce rules for all users
+diff --git a/.claude/agents/django-api-developer.md b/.claude/agents/django-api-developer.md
+--- a/.claude/agents/django-api-developer.md
++++ b/.claude/agents/django-api-developer.md
+@@ -67,1 +67,1 @@
+-### Django REST Framework
++### Django REST Framework
+
+@@ -68,1 +68,1 @@
+-- ViewSets and generic views
++
+- ViewSets and generic views
+@@ -76,1 +76,1 @@
+-### GraphQL with Django
++### GraphQL with Django
+
+@@ -77,1 +77,1 @@
+-- Graphene-Django integration
++
+- Graphene-Django integration
+@@ -85,1 +85,1 @@
+-### API Design Patterns
++### API Design Patterns
+
+@@ -86,1 +86,1 @@
+-- RESTful principles
++
+- RESTful principles
+@@ -94,1 +94,1 @@
+-### Authentication & Security
++### Authentication & Security
+
+@@ -95,1 +95,1 @@
+-- JWT authentication
++
+- JWT authentication
+@@ -105,1 +105,1 @@
+-### Advanced ViewSet with Filtering
++### Advanced ViewSet with Filtering
+
+@@ -222,1 +222,1 @@
+-### Advanced Serializers
++### Advanced Serializers
+
+@@ -357,1 +357,1 @@
+-### Custom Authentication
++### Custom Authentication
+
+@@ -437,1 +437,1 @@
+-### API Versioning
++### API Versioning
+
+@@ -477,1 +477,1 @@
+-### GraphQL Implementation
++### GraphQL Implementation
+
+@@ -627,1 +627,1 @@
+-### API Documentation
++### API Documentation
+
+@@ -694,1 +694,1 @@
+-### Rate Limiting and Throttling
++### Rate Limiting and Throttling
+
+diff --git a/.claude/agents/api-documenter.md b/.claude/agents/api-documenter.md
+--- a/.claude/agents/api-documenter.md
++++ b/.claude/agents/api-documenter.md
+@@ -9,1 +9,1 @@
+-## Focus Areas
++## Focus Areas
+
+@@ -10,1 +10,1 @@
+-- OpenAPI 3.0/Swagger specification writing
++
+- OpenAPI 3.0/Swagger specification writing
+@@ -17,1 +17,1 @@
+-## Approach
++## Approach
+
+@@ -18,1 +18,1 @@
+-1. Document as you build - not after
++
+1. Document as you build - not after
+@@ -24,1 +24,1 @@
+-## Output
++## Output
+
+@@ -25,1 +25,1 @@
+-- Complete OpenAPI specification
++
+- Complete OpenAPI specification
+diff --git a/frontend/src/contexts/__tests__/AuthContext.test.tsx b/frontend/src/contexts/__tests__/AuthContext.test.tsx
+--- a/frontend/src/contexts/__tests__/AuthContext.test.tsx
++++ b/frontend/src/contexts/__tests__/AuthContext.test.tsx
+@@ -2,1 +2,1 @@
+-import { render, screen, waitFor } from '@testing-library/react';
++import { render, screen, waitFor , renderHook, act } from '@testing-library/react';
+@@ -23,1 +23,1 @@
+-      const { result } = renderHook(() => useAuth(), { wrapper });
++      const { result } = renderHook(function() { return useAuth() }, { wrapper });
+diff --git a/FILES.md b/FILES.md
+--- a/FILES.md
++++ b/FILES.md
+@@ -22,1 +22,1 @@
+-### gm_app/ (Main Django Project)
++### gm_app/ (Main Django Project)
+
+@@ -23,1 +23,1 @@
+-- `gm_app/__init__.py` - Python package initialization for the main Django project
++
+- `gm_app/__init__.py` - Python package initialization for the main Django project
+@@ -33,1 +33,1 @@
+-### api/ (REST API Layer)
++### api/ (REST API Layer)
+
+@@ -34,1 +34,1 @@
+-- `api/__init__.py` - Python package initialization for the API application
++
+- `api/__init__.py` - Python package initialization for the API application
+@@ -42,1 +42,1 @@
+-#### API Models
++#### API Models
+
+@@ -43,1 +43,1 @@
+-- `api/models/__init__.py` - API-specific model definitions package (currently placeholder)
++
+- `api/models/__init__.py` - API-specific model definitions package (currently placeholder)
+@@ -45,1 +45,1 @@
+-#### API Tests
++#### API Tests
+
+@@ -46,1 +46,1 @@
+-- `api/tests/__init__.py` - Test package initialization for API test modules
++
+- `api/tests/__init__.py` - Test package initialization for API test modules
+@@ -54,1 +54,1 @@
+-#### API URLs
++#### API URLs
+
+@@ -55,1 +55,1 @@
+-- `api/urls/__init__.py` - URL routing package initialization for modular API endpoints
++
+- `api/urls/__init__.py` - URL routing package initialization for modular API endpoints
+@@ -63,1 +63,1 @@
+-#### API Views
++#### API Views
+
+@@ -64,1 +64,1 @@
+-- `api/views/__init__.py` - View package initialization for modular API view organization
++
+- `api/views/__init__.py` - View package initialization for modular API view organization
+@@ -70,1 +70,1 @@
+-##### Campaign Views
++##### Campaign Views
+
+@@ -71,1 +71,1 @@
+-- `api/views/campaigns/__init__.py` - Campaign-related views package initialization
++
+- `api/views/campaigns/__init__.py` - Campaign-related views package initialization
+@@ -76,1 +76,1 @@
+-##### Membership Views
++##### Membership Views
+
+@@ -77,1 +77,1 @@
+-- `api/views/memberships/__init__.py` - Membership management views package initialization
++
+- `api/views/memberships/__init__.py` - Membership management views package initialization
+@@ -81,1 +81,1 @@
+-### campaigns/ (Campaign Management)
++### campaigns/ (Campaign Management)
+
+@@ -82,1 +82,1 @@
+-- `campaigns/__init__.py` - Python package initialization for the campaigns application
++
+- `campaigns/__init__.py` - Python package initialization for the campaigns application
+@@ -92,1 +92,1 @@
+-#### Campaign Models
++#### Campaign Models
+
+@@ -93,1 +93,1 @@
+-- `campaigns/models/__init__.py` - Campaign models package initialization
++
+- `campaigns/models/__init__.py` - Campaign models package initialization
+@@ -96,1 +96,1 @@
+-#### Campaign Static Files
++#### Campaign Static Files
+
+@@ -97,1 +97,1 @@
+-- `campaigns/static/campaigns/css/campaign_detail.css` - Styling for campaign detail page layout and components
++
+- `campaigns/static/campaigns/css/campaign_detail.css` - Styling for campaign detail page layout and components
+@@ -101,1 +101,1 @@
+-#### Campaign Templates
++#### Campaign Templates
+
+@@ -102,1 +102,1 @@
+-- `campaigns/templates/campaigns/bulk_member_management.html` - Template for bulk member operations interface
++
+- `campaigns/templates/campaigns/bulk_member_management.html` - Template for bulk member operations interface
+@@ -112,1 +112,1 @@
+-#### Campaign Tests
++#### Campaign Tests
+
+@@ -113,1 +113,1 @@
+-- `campaigns/tests/__init__.py` - Test package initialization for campaign test modules
++
+- `campaigns/tests/__init__.py` - Test package initialization for campaign test modules
+@@ -130,1 +130,1 @@
+-#### Campaign URLs and Views
++#### Campaign URLs and Views
+
+@@ -131,1 +131,1 @@
+-- `campaigns/urls/__init__.py` - URL routing package for campaign-related endpoints
++
+- `campaigns/urls/__init__.py` - URL routing package for campaign-related endpoints
+@@ -137,1 +137,1 @@
+-### characters/ (Character Management)
++### characters/ (Character Management)
+
+@@ -138,1 +138,1 @@
+-- `characters/__init__.py` - Python package initialization for the characters application
++
+- `characters/__init__.py` - Python package initialization for the characters application
+@@ -144,1 +144,1 @@
+-#### Character Models
++#### Character Models
+
+@@ -145,1 +145,1 @@
+-- `characters/models/__init__.py` - Character model definitions with polymorphic inheritance support
++
+- `characters/models/__init__.py` - Character model definitions with polymorphic inheritance support
+@@ -147,1 +147,1 @@
+-#### Character Tests
++#### Character Tests
+
+@@ -148,1 +148,1 @@
+-- `characters/tests/__init__.py` - Test package initialization for character test modules
++
+- `characters/tests/__init__.py` - Test package initialization for character test modules
+@@ -153,1 +153,1 @@
+-#### Character URLs and Views
++#### Character URLs and Views
+
+@@ -154,1 +154,1 @@
+-- `characters/urls/__init__.py` - URL routing package for character-related endpoints
++
+- `characters/urls/__init__.py` - URL routing package for character-related endpoints
+@@ -158,1 +158,1 @@
+-### core/ (Core Application)
++### core/ (Core Application)
+
+@@ -159,1 +159,1 @@
+-- `core/__init__.py` - Python package initialization for the core application
++
+- `core/__init__.py` - Python package initialization for the core application
+@@ -167,1 +167,1 @@
+-#### Core Management Commands
++#### Core Management Commands
+
+@@ -168,1 +168,1 @@
+-- `core/management/__init__.py` - Management commands package initialization
++
+- `core/management/__init__.py` - Management commands package initialization
+@@ -174,1 +174,1 @@
+-#### Core Models
++#### Core Models
+
+@@ -175,1 +175,1 @@
+-- `core/models/__init__.py` - Core model package initialization
++
+- `core/models/__init__.py` - Core model package initialization
+@@ -178,1 +178,1 @@
+-#### Core Tests
++#### Core Tests
+
+@@ -179,1 +179,1 @@
+-- `core/tests/__init__.py` - Test package initialization for core test modules
++
+- `core/tests/__init__.py` - Test package initialization for core test modules
+@@ -184,1 +184,1 @@
+-#### Core URLs and Views
++#### Core URLs and Views
+
+@@ -185,1 +185,1 @@
+-- `core/urls/__init__.py` - URL routing package for core application endpoints
++
+- `core/urls/__init__.py` - URL routing package for core application endpoints
+@@ -188,1 +188,1 @@
+-### users/ (User Management)
++### users/ (User Management)
+
+@@ -189,1 +189,1 @@
+-- `users/__init__.py` - Python package initialization for the users application
++
+- `users/__init__.py` - Python package initialization for the users application
+@@ -197,1 +197,1 @@
+-#### User Models
++#### User Models
+
+@@ -198,1 +198,1 @@
+-- `users/models/__init__.py` - User models package initialization
++
+- `users/models/__init__.py` - User models package initialization
+diff --git a/docs/development-guide.md b/docs/development-guide.md
+--- a/docs/development-guide.md
++++ b/docs/development-guide.md
+@@ -55,1 +55,1 @@
+-- **Django Application**: http://localhost:8080
++- **Django Application**: <http://localhost:8080>
+@@ -56,1 +56,1 @@
+-- **Django Admin**: http://localhost:8080/admin/
++- **Django Admin**: <http://localhost:8080/admin/>
+@@ -57,1 +57,1 @@
+-- **React Development Server**: http://localhost:3000 (started with Django)
++- **React Development Server**: <http://localhost:3000> (started with Django)
+@@ -58,1 +58,1 @@
+-- **API Base**: http://localhost:8080/api/
++- **API Base**: <http://localhost:8080/api/>
+@@ -126,1 +126,1 @@
+-#### Migration Safety Tests
++#### Migration Safety Tests
+
+@@ -162,1 +162,1 @@
+-#### Unit Tests
++#### Unit Tests
+
+@@ -186,1 +186,1 @@
+-#### Integration Tests
++#### Integration Tests
+
+@@ -210,1 +210,1 @@
+-#### Security Tests
++#### Security Tests
+
+@@ -649,1 +649,1 @@
+-- Models with clear lifecycle stages (campaigns, scenes, characters)
++
+- Models with clear lifecycle stages (campaigns, scenes, characters)
+@@ -655,1 +655,1 @@
+-- Use descriptive state names ('draft', 'active', 'completed')
++
+- Use descriptive state names ('draft', 'active', 'completed')
+@@ -988,1 +988,1 @@
+-- **Data Preservation**: Ensures existing data survives migration
++
+- **Data Preservation**: Ensures existing data survives migration
+@@ -1010,1 +1010,1 @@
+-- Interactive confirmation to prevent accidental rollbacks
++
+- Interactive confirmation to prevent accidental rollbacks
+diff --git a/docs/api-reference.md b/docs/api-reference.md
+--- a/docs/api-reference.md
++++ b/docs/api-reference.md
+@@ -192,1 +192,1 @@
+-- `page` - Page number (default: 1)
++
+- `page` - Page number (default: 1)
+@@ -340,1 +340,1 @@
+-- `q` - Search query (minimum 2 characters)
++
+- `q` - Search query (minimum 2 characters)
+@@ -366,1 +366,1 @@
+-- Excludes campaign owner, existing members, and users with pending invitations
++
+- Excludes campaign owner, existing members, and users with pending invitations
+@@ -568,1 +568,1 @@
+-- `status` - Filter by status: `PENDING`, `ACCEPTED`, `DECLINED`, `EXPIRED`
++
+- `status` - Filter by status: `PENDING`, `ACCEPTED`, `DECLINED`, `EXPIRED`
+@@ -737,1 +737,1 @@
+-- `campaign_id` (optional): Filter characters by campaign ID
++
+- `campaign_id` (optional): Filter characters by campaign ID
+@@ -947,1 +947,1 @@
+-- `id`: Integer, primary key
++
+- `id`: Integer, primary key
+@@ -958,1 +958,1 @@
+-- `campaign`: Foreign key to Campaign model
++
+- `campaign`: Foreign key to Campaign model
+@@ -964,1 +964,1 @@
+-- `character_type`: String, polymorphic type identifier
++
+- `character_type`: String, polymorphic type identifier
+@@ -970,1 +970,1 @@
+-- `willpower`: Integer (1-10), character's willpower rating
++
+- `willpower`: Integer (1-10), character's willpower rating
+@@ -973,1 +973,1 @@
+-- `arete`: Integer (1-10), mage's Arete rating
++
+- `arete`: Integer (1-10), mage's Arete rating
+@@ -978,1 +978,1 @@
+-- `is_deleted`: Boolean, soft delete flag
++
+- `is_deleted`: Boolean, soft delete flag
+@@ -983,1 +983,1 @@
+-- Character names must be unique within a campaign
++
+- Character names must be unique within a campaign
+diff --git a/MIXIN_APPLICATION_TEST_SUMMARY.md b/MIXIN_APPLICATION_TEST_SUMMARY.md
+--- a/MIXIN_APPLICATION_TEST_SUMMARY.md
++++ b/MIXIN_APPLICATION_TEST_SUMMARY.md
+@@ -9,1 +9,1 @@
+-### 1. Character Model Mixin Application Tests
++### 1. Character Model Mixin Application Tests
+
+@@ -13,1 +13,1 @@
+-- `TimestampedMixin` (created_at, updated_at fields)
++
+- `TimestampedMixin` (created_at, updated_at fields)
+@@ -14,1 +14,1 @@
+-- `NamedModelMixin` (name field + __str__ method)
++- `NamedModelMixin` (name field + **str__ method)
+@@ -18,1 +18,1 @@
+-- Field presence and type verification
++
+- Field presence and type verification
+@@ -28,1 +28,1 @@
+-### 2. Item Model Mixin Application Tests
++### 2. Item Model Mixin Application Tests
+
+@@ -37,1 +37,1 @@
+-- Field integration and compatibility
++
+- Field integration and compatibility
+@@ -43,1 +43,1 @@
+-### 3. Location Model Mixin Application Tests
++### 3. Location Model Mixin Application Tests
+
+@@ -58,1 +58,1 @@
+-### 4. Migration Compatibility Tests
++### 4. Migration Compatibility Tests
+
+@@ -62,1 +62,1 @@
+-- Field deduplication without data loss
++
+- Field deduplication without data loss
+@@ -72,1 +72,1 @@
+-### 5. Functionality Preservation Tests
++### 5. Functionality Preservation Tests
+
+@@ -76,1 +76,1 @@
+-- Character-specific functionality preservation
++
+- Character-specific functionality preservation
+@@ -85,1 +85,1 @@
+-### 6. Cross-Model Consistency Tests
++### 6. Cross-Model Consistency Tests
+
+@@ -89,1 +89,1 @@
+-- TimestampedMixin behavior consistency across models
++
+- TimestampedMixin behavior consistency across models
+diff --git a/frontend/src/components/RegisterForm.tsx b/frontend/src/components/RegisterForm.tsx
+--- a/frontend/src/components/RegisterForm.tsx
++++ b/frontend/src/components/RegisterForm.tsx
+@@ -24,1 +24,1 @@
+-    setFormData(prev => ({ ...prev, [name]: value }));
++    setFormData(function(prev) { return ({ ...prev, [name]: value }) });
+@@ -28,1 +28,1 @@
+-      setFormErrors(prev => ({ ...prev, [name]: undefined }));
++      setFormErrors(function(prev) { return ({ ...prev, [name]: undefined }) });
+diff --git a/docs/database-schema.md b/docs/database-schema.md
+--- a/docs/database-schema.md
++++ b/docs/database-schema.md
+@@ -27,1 +27,1 @@
+-### Database Technology
++### Database Technology
+
+@@ -28,1 +28,1 @@
+-- **PostgreSQL 16** as the primary database
++
+- **PostgreSQL 16** as the primary database
+@@ -41,1 +41,1 @@
+-#### TimestampedMixin
++#### TimestampedMixin
+
+@@ -56,1 +56,1 @@
+-- `created_at`: Automatically set on model creation (`auto_now_add=True`, indexed)
++
+- `created_at`: Automatically set on model creation (`auto_now_add=True`, indexed)
+@@ -63,1 +63,1 @@
+-#### DisplayableMixin
++#### DisplayableMixin
+
+@@ -77,1 +77,1 @@
+-- `is_displayed`: Boolean flag controlling visibility (default: `True`)
++
+- `is_displayed`: Boolean flag controlling visibility (default: `True`)
+@@ -82,1 +82,1 @@
+-#### NamedModelMixin
++#### NamedModelMixin
+
+@@ -92,1 +92,1 @@
+-- `name`: Required CharField with 100 character limit
++
+- `name`: Required CharField with 100 character limit
+@@ -96,1 +96,1 @@
+-#### DescribedModelMixin
++#### DescribedModelMixin
+
+@@ -106,1 +106,1 @@
+-- `description`: Optional TextField with blank=True and default empty string
++
+- `description`: Optional TextField with blank=True and default empty string
+@@ -110,1 +110,1 @@
+-#### AuditableMixin
++#### AuditableMixin
+
+@@ -121,1 +121,1 @@
+-- `created_by`: Optional ForeignKey to User who created the object
++
+- `created_by`: Optional ForeignKey to User who created the object
+@@ -136,1 +136,1 @@
+-#### GameSystemMixin
++#### GameSystemMixin
+
+@@ -147,1 +147,1 @@
+-- `game_system`: CharField with predefined choices for popular RPG systems
++
+- `game_system`: CharField with predefined choices for popular RPG systems
+@@ -155,1 +155,1 @@
+-- `TimestampedMixin`: Indexes on `created_at` and `updated_at` for time-based queries
++
+- `TimestampedMixin`: Indexes on `created_at` and `updated_at` for time-based queries
+@@ -162,1 +162,1 @@
+-- Django admin interface
++
+- Django admin interface
+@@ -168,1 +168,1 @@
+-- Use `select_related()` when querying models with audit tracking
++
+- Use `select_related()` when querying models with audit tracking
+@@ -173,1 +173,1 @@
+-- Creating new models that need basic timestamp tracking
++
+- Creating new models that need basic timestamp tracking
+@@ -178,1 +178,1 @@
+-- Model already has timestamp fields (e.g., Campaign, Character)
++
+- Model already has timestamp fields (e.g., Campaign, Character)
+@@ -331,1 +331,1 @@
+-- Always index state fields for efficient filtering
++
+- Always index state fields for efficient filtering
+@@ -348,1 +348,1 @@
+-- Use database constraints to enforce valid state values
++
+- Use database constraints to enforce valid state values
+@@ -367,1 +367,1 @@
+-- Consider adding indexes on `created_at` for time-based queries
++
+- Consider adding indexes on `created_at` for time-based queries
+@@ -377,1 +377,1 @@
+-### Campaign Model
++### Campaign Model
+
+@@ -408,1 +408,1 @@
+-- **Auto-generated slug**: URL-friendly unique identifier
++
+- **Auto-generated slug**: URL-friendly unique identifier
+@@ -414,1 +414,1 @@
+-- **Owner**: Many campaigns â One user (owner)
++
+- **Owner**: Many campaigns â One user (owner)
+@@ -418,1 +418,1 @@
+-### CampaignMembership Model
++### CampaignMembership Model
+
+@@ -440,1 +440,1 @@
+-- **Unique membership**: One membership per user per campaign
++
+- **Unique membership**: One membership per user per campaign
+@@ -445,1 +445,1 @@
+-### CampaignInvitation Model
++### CampaignInvitation Model
+
+@@ -475,1 +475,1 @@
+-1. **PENDING**: Invitation created, awaiting response
++
+1. **PENDING**: Invitation created, awaiting response
+@@ -481,1 +481,1 @@
+-- **7-day expiration**: Default invitation lifetime
++
+- **7-day expiration**: Default invitation lifetime
+@@ -487,1 +487,1 @@
+-### Character Model
++### Character Model
+
+@@ -534,1 +534,1 @@
+-- `name`: Character name, must be unique within campaign (VARCHAR 100, indexed via constraint)
++
+- `name`: Character name, must be unique within campaign (VARCHAR 100, indexed via constraint)
+@@ -539,1 +539,1 @@
+-- `npc`: Boolean flag distinguishing NPCs from PCs (BOOLEAN, default: false, indexed)
++
+- `npc`: Boolean flag distinguishing NPCs from PCs (BOOLEAN, default: false, indexed)
+@@ -546,1 +546,1 @@
+-- `campaign_id`: Campaign this character belongs to (CASCADE delete)
++
+- `campaign_id`: Campaign this character belongs to (CASCADE delete)
+@@ -689,1 +689,1 @@
+-- Visible to all authenticated users
++
+- Visible to all authenticated users
+@@ -694,1 +694,1 @@
+-- Visible only to owner and members
++
+- Visible only to owner and members
+@@ -728,1 +728,1 @@
+-### User Model
++### User Model
+
+@@ -760,1 +760,1 @@
+-- **display_name**: Optional display name for UI
++
+- **display_name**: Optional display name for UI
+@@ -817,1 +817,1 @@
+-- Token stored in session and cookie
++
+- Token stored in session and cookie
+@@ -849,1 +849,1 @@
+-- Automated health checks every 5 minutes
++
+- Automated health checks every 5 minutes
+@@ -858,1 +858,1 @@
+-- `campaign_{id}`: Campaign-wide notifications
++
+- `campaign_{id}`: Campaign-wide notifications
+@@ -1009,1 +1009,1 @@
+-- **Small datasets (< 1000 campaigns)**: < 10ms
++
+- **Small datasets (< 1000 campaigns)**: < 10ms
+@@ -1022,1 +1022,1 @@
+-- **Schema Migration**: Adds new mixin fields with proper defaults and indexes
++
+- **Schema Migration**: Adds new mixin fields with proper defaults and indexes
+@@ -1028,1 +1028,1 @@
+-- `characters/migrations/0003_character_created_by_character_modified_by_and_more.py` - Schema changes
++
+- `characters/migrations/0003_character_created_by_character_modified_by_and_more.py` - Schema changes
+@@ -1040,1 +1040,1 @@
+-- **Data Preservation Tests**: Verify existing data survives migration
++
+- **Data Preservation Tests**: Verify existing data survives migration
+@@ -1074,1 +1074,1 @@
+-- Step-by-step rollback of data migrations before schema migrations
++
+- Step-by-step rollback of data migrations before schema migrations
+@@ -1085,1 +1085,1 @@
+-- `created_by` â Set to `player_owner` (most logical default)
++
+- `created_by` â Set to `player_owner` (most logical default)
+@@ -1089,1 +1089,1 @@
+-- `created_by` â Preserved from existing field
++
+- `created_by` â Preserved from existing field
+@@ -1093,1 +1093,1 @@
+-- Uses `update_fields` to minimize database impact
++
+- Uses `update_fields` to minimize database impact
+diff --git a/.claude/agents/django-refactor-architect.md b/.claude/agents/django-refactor-architect.md
+--- a/.claude/agents/django-refactor-architect.md
++++ b/.claude/agents/django-refactor-architect.md
+@@ -11,1 +11,1 @@
+-- Converting single-file Django modules (models.py, views.py, etc.) into logical submodule structures
++
+- Converting single-file Django modules (models.py, views.py, etc.) into logical submodule structures
+@@ -19,1 +19,1 @@
+-1. **Analyze Current Structure**: Examine the existing codebase to understand the current organization, dependencies, and relationships between models, views, and other components.
++1. __Analyze Current Structure**: Examine the existing codebase to understand the current organization, dependencies, and relationships between models, views, and other components.
+@@ -21,1 +21,1 @@
+-2. **Design Logical Hierarchy**: Create a clear directory structure that reflects the domain logic, such as:
++2. __Design Logical Hierarchy**: Create a clear directory structure that reflects the domain logic, such as:
+@@ -27,1 +27,1 @@
+-3. **Preserve Django Conventions**: Ensure all refactored code follows Django best practices:
++3. __Preserve Django Conventions**: Ensure all refactored code follows Django best practices:
+@@ -33,1 +33,1 @@
+-4. **Handle Dependencies Carefully**:
++4. __Handle Dependencies Carefully**:
+@@ -39,1 +39,1 @@
+-5. **Create Comprehensive __init__.py Files**: Write __init__.py files that:
++5. __Create Comprehensive __init__.py Files**: Write __init__.py files that:
+@@ -44,1 +44,1 @@
+-6. **Verify Functionality**: After refactoring:
++6. __Verify Functionality**: After refactoring:
+@@ -51,1 +51,1 @@
+-- **Incremental**: Break large refactoring tasks into smaller, testable chunks
++- __Incremental**: Break large refactoring tasks into smaller, testable chunks
+@@ -52,1 +52,1 @@
+-- **Backward Compatible**: Maintain existing import paths where possible
++- __Backward Compatible**: Maintain existing import paths where possible
+@@ -53,1 +53,1 @@
+-- **Well-Documented**: Include clear comments explaining the new structure
++- __Well-Documented**: Include clear comments explaining the new structure
+@@ -54,1 +54,1 @@
+-- **Test-Friendly**: Ensure the new structure doesn't break existing tests
++- __Test-Friendly**: Ensure the new structure doesn't break existing tests
+diff --git a/.claude/agents/frontend-developer.md b/.claude/agents/frontend-developer.md
+--- a/.claude/agents/frontend-developer.md
++++ b/.claude/agents/frontend-developer.md
+@@ -9,1 +9,1 @@
+-## Focus Areas
++## Focus Areas
+
+@@ -10,1 +10,1 @@
+-- React component architecture (hooks, context, performance)
++
+- React component architecture (hooks, context, performance)
+@@ -16,1 +16,1 @@
+-## Approach
++## Approach
+
+@@ -17,1 +17,1 @@
+-1. Component-first thinking - reusable, composable UI pieces
++
+1. Component-first thinking - reusable, composable UI pieces
+@@ -23,1 +23,1 @@
+-## Output
++## Output
+
+@@ -24,1 +24,1 @@
+-- Complete React component with props interface
++
+- Complete React component with props interface
+diff --git a/frontend/src/components/__tests__/CharacterList.test.tsx b/frontend/src/components/__tests__/CharacterList.test.tsx
+--- a/frontend/src/components/__tests__/CharacterList.test.tsx
++++ b/frontend/src/components/__tests__/CharacterList.test.tsx
+@@ -14,1 +14,1 @@
+-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
++import { render, screen, waitFor } from '@testing-library/react';
+diff --git a/frontend/REACT_CHARACTER_COMPONENTS.md b/frontend/REACT_CHARACTER_COMPONENTS.md
+--- a/frontend/REACT_CHARACTER_COMPONENTS.md
++++ b/frontend/REACT_CHARACTER_COMPONENTS.md
+@@ -7,1 +7,1 @@
+-### 1. CharacterList.tsx
++### 1. CharacterList.tsx
+
+@@ -11,1 +11,1 @@
+-- Display character list with Bootstrap card layout matching Django templates
++
+- Display character list with Bootstrap card layout matching Django templates
+@@ -21,1 +21,1 @@
+-- `campaignId?: number` - Filter characters by campaign
++
+- `campaignId?: number` - Filter characters by campaign
+@@ -30,1 +30,1 @@
+-### 2. CharacterDetail.tsx
++### 2. CharacterDetail.tsx
+
+@@ -34,1 +34,1 @@
+-- Display character information with inline editing capability
++
+- Display character information with inline editing capability
+@@ -43,1 +43,1 @@
+-- `characterId: number` - ID of character to display
++
+- `characterId: number` - ID of character to display
+@@ -50,1 +50,1 @@
+-### 3. CharacterEditForm.tsx
++### 3. CharacterEditForm.tsx
+
+@@ -54,1 +54,1 @@
+-- Form for creating new characters and editing existing ones
++
+- Form for creating new characters and editing existing ones
+@@ -63,1 +63,1 @@
+-- `character?: Character` - Existing character for editing (undefined for creation)
++
+- `character?: Character` - Existing character for editing (undefined for creation)
+@@ -71,1 +71,1 @@
+-### 4. characterAPI.ts
++### 4. characterAPI.ts
+
+@@ -75,1 +75,1 @@
+-- Complete CRUD operations for characters
++
+- Complete CRUD operations for characters
+@@ -83,1 +83,1 @@
+-- `getCharacters(params)` - List characters with filtering/pagination
++
+- `getCharacters(params)` - List characters with filtering/pagination
+@@ -92,1 +92,1 @@
+-### 5. character.ts (Types)
++### 5. character.ts (Types)
+
+@@ -96,1 +96,1 @@
+-- Complete TypeScript interfaces for all character-related data
++
+- Complete TypeScript interfaces for all character-related data
+@@ -104,1 +104,1 @@
+-### API Endpoints Used
++### API Endpoints Used
+
+@@ -105,1 +105,1 @@
+-- `GET /api/characters/` - Character list with filtering
++
+- `GET /api/characters/` - Character list with filtering
+@@ -114,1 +114,1 @@
+-### Validation Matching
++### Validation Matching
+
+@@ -116,1 +116,1 @@
+-- Character name required (2-100 characters)
++
+- Character name required (2-100 characters)
+@@ -122,1 +122,1 @@
+-### Permission System
++### Permission System
+
+@@ -124,1 +124,1 @@
+-- **Character Owners**: Can edit and delete their own characters
++
+- **Character Owners**: Can edit and delete their own characters
+@@ -130,1 +130,1 @@
+-## Bootstrap Styling
++## Bootstrap Styling
+
+@@ -132,1 +132,1 @@
+-- Card layouts for character display
++
+- Card layouts for character display
+@@ -139,1 +139,1 @@
+-## Testing
++## Testing
+
+@@ -143,1 +143,1 @@
+-- Smoke tests ensuring all components render without crashing
++
+- Smoke tests ensuring all components render without crashing
+@@ -157,1 +157,1 @@
+-### Character List in Campaign
++### Character List in Campaign
+
+@@ -170,1 +170,1 @@
+-### Character Detail Page
++### Character Detail Page
+
+@@ -182,1 +182,1 @@
+-### Character Creation Form
++### Character Creation Form
+
+@@ -191,1 +191,1 @@
+-### Inline Character Editing
++### Inline Character Editing
+
+@@ -201,1 +201,1 @@
+-## Future Enhancements
++## Future Enhancements
+
+@@ -203,1 +203,1 @@
+-- Character sheet integration (stats, abilities, equipment)
++
+- Character sheet integration (stats, abilities, equipment)
+@@ -210,1 +210,1 @@
+-## Deployment Notes
++## Deployment Notes
+
+@@ -212,1 +212,1 @@
+-1. Components follow the existing React integration pattern
++
+1. Components follow the existing React integration pattern
+diff --git a/CLAUDE.md b/CLAUDE.md
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -11,1 +11,1 @@
+-### Backend
++### Backend
+
+@@ -12,1 +12,1 @@
+-- **Django 5.2.4+** with Django REST Framework for API development
++
+- **Django 5.2.4+** with Django REST Framework for API development
+@@ -19,1 +19,1 @@
+-### Frontend
++### Frontend
+
+@@ -20,1 +20,1 @@
+-- **React with TypeScript** (Progressive Web App)
++
+- **React with TypeScript** (Progressive Web App)
+@@ -23,1 +23,1 @@
+-### Development Environment
++### Development Environment
+
+@@ -24,1 +24,1 @@
+-- **Conda** for environment management
++
+- **Conda** for environment management
+@@ -30,1 +30,1 @@
+-### Environment Setup
++### Environment Setup
+
+@@ -41,1 +41,1 @@
+-### Django Commands
++### Django Commands
+
+@@ -146,1 +146,1 @@
+-### React Frontend Commands
++### React Frontend Commands
+
+@@ -165,1 +165,1 @@
+-### Database Commands
++### Database Commands
+
+@@ -179,1 +179,1 @@
+-### Service Layer Architecture
++### Service Layer Architecture
+
+@@ -192,1 +192,1 @@
+-### API Architecture
++### API Architecture
+
+@@ -208,1 +208,1 @@
+-### Permission System Simplification
++### Permission System Simplification
+
+@@ -216,1 +216,1 @@
+-### Django App Structure
++### Django App Structure
+
+@@ -228,1 +228,1 @@
+-#### Internal Structure
++#### Internal Structure
+
+@@ -231,1 +231,1 @@
+-### Character Model Hierarchy
++### Character Model Hierarchy
+
+@@ -239,1 +239,1 @@
+-### Real-Time Architecture
++### Real-Time Architecture
+
+@@ -240,1 +240,1 @@
+-- Character-based scene architecture
++
+- Character-based scene architecture
+@@ -245,1 +245,1 @@
+-### API Design
++### API Design
+
+@@ -246,1 +246,1 @@
+-- Flat URL patterns with query parameter filtering
++
+- Flat URL patterns with query parameter filtering
+@@ -254,1 +254,1 @@
+-### Testing Philosophy
++### Testing Philosophy
+
+@@ -262,1 +262,1 @@
+-### Test Structure
++### Test Structure
+
+@@ -270,1 +270,1 @@
+-### Test Categories by App
++### Test Categories by App
+
+@@ -271,1 +271,1 @@
+-- **campaigns/tests/**: Campaign models, membership, invitations, permissions
++
+- **campaigns/tests/**: Campaign models, membership, invitations, permissions
+@@ -276,1 +276,1 @@
+-### Running Tests
++### Running Tests
+
+@@ -286,1 +286,1 @@
+-### Test Patterns
++### Test Patterns
+
+@@ -287,1 +287,1 @@
+-- **Service Testing**: Test business logic separately from HTTP layer
++
+- **Service Testing**: Test business logic separately from HTTP layer
+@@ -294,1 +294,1 @@
+-### Phase 1: Generic Campaign Infrastructure
++### Phase 1: Generic Campaign Infrastructure
+
+@@ -295,1 +295,1 @@
+-- Basic campaign creation and management
++
+- Basic campaign creation and management
+@@ -299,1 +299,1 @@
+-### Phase 2: World of Darkness Foundation
++### Phase 2: World of Darkness Foundation
+
+@@ -300,1 +300,1 @@
+-- WoD character base class
++
+- WoD character base class
+@@ -304,1 +304,1 @@
+-### Phase 3: Mage Implementation
++### Phase 3: Mage Implementation
+
+@@ -305,1 +305,1 @@
+-- Full Mage: the Ascension character sheets
++
+- Full Mage: the Ascension character sheets
+@@ -309,1 +309,1 @@
+-### Phase 4: Polish & Production
++### Phase 4: Polish & Production
+
+@@ -310,1 +310,1 @@
+-- Scene closure workflows
++
+- Scene closure workflows
+@@ -324,1 +324,1 @@
+-### Authentication Security
++### Authentication Security
+
+@@ -325,1 +325,1 @@
+-- Authentication views implement secure error messages that don't reveal user existence
++
+- Authentication views implement secure error messages that don't reveal user existence
+@@ -329,1 +329,1 @@
+-### Rate Limiting (Production Recommendation)
++### Rate Limiting (Production Recommendation)
+
+@@ -331,1 +331,1 @@
+-- **django-ratelimit**: Decorator-based rate limiting for views
++
+- **django-ratelimit**: Decorator-based rate limiting for views
+@@ -348,1 +348,1 @@
+-### Architecture
++### Architecture
+
+@@ -349,1 +349,1 @@
+-- **Hybrid approach**: React components are embedded into Django templates for enhanced functionality
++
+- **Hybrid approach**: React components are embedded into Django templates for enhanced functionality
+@@ -354,1 +354,1 @@
+-### Component Structure
++### Component Structure
+
+@@ -371,1 +371,1 @@
+-### Usage in Django Templates
++### Usage in Django Templates
+
+@@ -381,1 +381,1 @@
+-### Development Workflow
++### Development Workflow
+
+@@ -382,1 +382,1 @@
+-1. **Start everything**: `make runserver` - Starts PostgreSQL, Redis, Django (8080), and React (3000)
++
+1. **Start everything**: `make runserver` - Starts PostgreSQL, Redis, Django (8080), and React (3000)
+@@ -387,1 +387,1 @@
+-1. **Start Django backend**: `make runserver-django` (port 8080)
++
+1. **Start Django backend**: `make runserver-django` (port 8080)
+diff --git a/frontend/src/services/__tests__/api.test.ts b/frontend/src/services/__tests__/api.test.ts
+--- a/frontend/src/services/__tests__/api.test.ts
++++ b/frontend/src/services/__tests__/api.test.ts
+@@ -5,1 +5,1 @@
+-jest.mock('axios');
++// Mock axios
+@@ -60,1 +60,1 @@
+-        json: async () => ({ csrfToken: 'cached-token' }),
++        json: async function() { return ({ csrfToken: 'cached-token' }) },
+diff --git a/frontend/src/services/api.ts b/frontend/src/services/api.ts
+--- a/frontend/src/services/api.ts
++++ b/frontend/src/services/api.ts
+@@ -33,1 +33,1 @@
+-    if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() || '')) {
++    if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() ?? '')) {
+diff --git a/.claude/agents/test-automator.md b/.claude/agents/test-automator.md
+--- a/.claude/agents/test-automator.md
++++ b/.claude/agents/test-automator.md
+@@ -9,1 +9,1 @@
+-## Focus Areas
++## Focus Areas
+
+@@ -10,1 +10,1 @@
+-- Unit test design with mocking and fixtures
++
+- Unit test design with mocking and fixtures
+@@ -17,1 +17,1 @@
+-## Approach
++## Approach
+
+@@ -18,1 +18,1 @@
+-1. Test pyramid - many unit, fewer integration, minimal E2E
++
+1. Test pyramid - many unit, fewer integration, minimal E2E
+@@ -24,1 +24,1 @@
+-## Output
++## Output
+
+@@ -25,1 +25,1 @@
+-- Test suite with clear test names
++
+- Test suite with clear test names
+diff --git a/frontend/src/components/__tests__/CharacterCard.test.tsx b/frontend/src/components/__tests__/CharacterCard.test.tsx
+--- a/frontend/src/components/__tests__/CharacterCard.test.tsx
++++ b/frontend/src/components/__tests__/CharacterCard.test.tsx
+@@ -73,1 +73,1 @@
+-    login: jest.fn(),
++    user: mockUser,
+diff --git a/frontend/src/components/DjangoIntegration.tsx b/frontend/src/components/DjangoIntegration.tsx
+--- a/frontend/src/components/DjangoIntegration.tsx
++++ b/frontend/src/components/DjangoIntegration.tsx
+@@ -19,1 +19,1 @@
+-export const mountComponent = (componentName: string, elementId: string, props: any = {}) => {
++export const mountComponent = (componentName: string, elementId: string, props: unknown = {}) => {
+diff --git a/frontend/src/services/characterAPI.ts b/frontend/src/services/characterAPI.ts
+--- a/frontend/src/services/characterAPI.ts
++++ b/frontend/src/services/characterAPI.ts
+@@ -43,1 +43,1 @@
+-      const url = `characters/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
++      const url = "characters/"+queryParams.toString() ? `?${queryParams.toString()}` : '';
+@@ -66,1 +66,1 @@
+-      const response = await api.get<Character>(`characters/${id}/`);
++      const response = await api.get<Character>("characters/"+id+"/");
+@@ -98,1 +98,1 @@
+-        const validationError = new Error(errorMessage) as any;
++        const validationError = new Error(errorMessage) as unknown;
+diff --git a/docs/HARDCODED_VALUES.md b/docs/HARDCODED_VALUES.md
+--- a/docs/HARDCODED_VALUES.md
++++ b/docs/HARDCODED_VALUES.md
+@@ -5,1 +5,1 @@
+-## Database Configuration
++## Database Configuration
+
+@@ -15,1 +15,1 @@
+-## CORS Configuration
++## CORS Configuration
+
+@@ -23,1 +23,1 @@
+-## CSRF Trusted Origins
++## CSRF Trusted Origins
+
+@@ -31,1 +31,1 @@
+-## Redis Configuration
++## Redis Configuration
+
+@@ -37,1 +37,1 @@
+-## Channel Layers Redis Configuration
++## Channel Layers Redis Configuration
+
+@@ -48,1 +48,1 @@
+-## Debug Mode
++## Debug Mode
+
+@@ -54,1 +54,1 @@
+-## Allowed Hosts
++## Allowed Hosts
+
+@@ -60,1 +60,1 @@
+-## Secret Key
++## Secret Key
+
+@@ -66,1 +66,1 @@
+-## Frontend API Base URL
++## Frontend API Base URL
+
+@@ -73,1 +73,1 @@
+-## React Bundle URL in Django Template
++## React Bundle URL in Django Template
+
+@@ -81,1 +81,1 @@
+-## Makefile Paths
++## Makefile Paths
+
+@@ -89,1 +89,1 @@
+-## Frontend Package.json Proxy
++## Frontend Package.json Proxy
+
+diff --git a/docs/deployment.md b/docs/deployment.md
+--- a/docs/deployment.md
++++ b/docs/deployment.md
+@@ -30,1 +30,1 @@
+-- **CPU**: 2 cores (4 recommended)
++
+- **CPU**: 2 cores (4 recommended)
+@@ -39,1 +39,1 @@
+-- **CPU**: 4-8 cores
++
+- **CPU**: 4-8 cores
+diff --git a/frontend/src/components/__tests__/CharacterForm.test.tsx b/frontend/src/components/__tests__/CharacterForm.test.tsx
+--- a/frontend/src/components/__tests__/CharacterForm.test.tsx
++++ b/frontend/src/components/__tests__/CharacterForm.test.tsx
+@@ -80,1 +80,1 @@
+-    const body = req.body as any;
++    const body = req.body;
+diff --git a/.claude/agents/django-orm-expert.md b/.claude/agents/django-orm-expert.md
+--- a/.claude/agents/django-orm-expert.md
++++ b/.claude/agents/django-orm-expert.md
+@@ -70,1 +70,1 @@
+-### Django ORM Mastery
++### Django ORM Mastery
+
+@@ -71,1 +71,1 @@
+-- QuerySet optimization
++
+- QuerySet optimization
+@@ -79,1 +79,1 @@
+-### Database Design
++### Database Design
+
+@@ -80,1 +80,1 @@
+-- Model relationships optimization
++
+- Model relationships optimization
+@@ -88,1 +88,1 @@
+-### Performance Optimization
++### Performance Optimization
+
+@@ -89,1 +89,1 @@
+-- Query profiling
++
+- Query profiling
+@@ -97,1 +97,1 @@
+-### Advanced Features
++### Advanced Features
+
+@@ -98,1 +98,1 @@
+-- Complex aggregations
++
+- Complex aggregations
+@@ -108,1 +108,1 @@
+-### Efficient QuerySet Usage
++### Efficient QuerySet Usage
+
+@@ -314,1 +314,1 @@
+-### Advanced Aggregations
++### Advanced Aggregations
+
+@@ -414,1 +414,1 @@
+-### Database Schema Optimization
++### Database Schema Optimization
+
+@@ -536,1 +536,1 @@
+-### Query Profiling and Debugging
++### Query Profiling and Debugging
+
+@@ -629,1 +629,1 @@
+-### Bulk Operations
++### Bulk Operations
+
+@@ -682,1 +682,1 @@
+-### Raw SQL When Needed
++### Raw SQL When Needed
+
+diff --git a/core/tests/README_migration_strategy.md b/core/tests/README_migration_strategy.md
+--- a/core/tests/README_migration_strategy.md
++++ b/core/tests/README_migration_strategy.md
+@@ -9,1 +9,1 @@
+-### 1. Forward Migration Data Preservation
++### 1. Forward Migration Data Preservation
+
+@@ -10,1 +10,1 @@
+-- **test_character_data_preservation**: Verifies character data integrity during migration
++
+- **test_character_data_preservation**: Verifies character data integrity during migration
+@@ -14,1 +14,1 @@
+-### 2. Default Values Application
++### 2. Default Values Application
+
+@@ -15,1 +15,1 @@
+-- **test_character_default_values**: Tests proper default value application for Character mixin fields
++
+- **test_character_default_values**: Tests proper default value application for Character mixin fields
+@@ -19,1 +19,1 @@
+-### 3. Data Integrity Maintenance
++### 3. Data Integrity Maintenance
+
+@@ -20,1 +20,1 @@
+-- **test_foreign_key_integrity**: Ensures FK relationships are preserved
++
+- **test_foreign_key_integrity**: Ensures FK relationships are preserved
+@@ -24,1 +24,1 @@
+-### 4. Edge Cases
++### 4. Edge Cases
+
+@@ -25,1 +25,1 @@
+-- **test_null_value_handling**: Tests handling of null/empty values
++
+- **test_null_value_handling**: Tests handling of null/empty values
+@@ -30,1 +30,1 @@
+-### 5. Performance Testing
++### 5. Performance Testing
+
+@@ -31,1 +31,1 @@
+-- **test_large_dataset_migration_performance**: Tests performance with realistic data volumes
++
+- **test_large_dataset_migration_performance**: Tests performance with realistic data volumes
+@@ -34,1 +34,1 @@
+-### 6. Concurrency Testing
++### 6. Concurrency Testing
+
+@@ -35,1 +35,1 @@
+-- **test_concurrent_object_creation**: Tests concurrent object creation after migration
++
+- **test_concurrent_object_creation**: Tests concurrent object creation after migration
+@@ -38,1 +38,1 @@
+-### 7. Rollback Testing
++### 7. Rollback Testing
+
+@@ -39,1 +39,1 @@
+-- **test_rollback_data_preservation**: Tests data preservation during rollback scenarios
++
+- **test_rollback_data_preservation**: Tests data preservation during rollback scenarios
+@@ -42,1 +42,1 @@
+-### 8. Audit Trail Integrity
++### 8. Audit Trail Integrity
+
+@@ -43,1 +43,1 @@
+-- **test_character_audit_trail_preservation**: Tests audit trail functionality
++
+- **test_character_audit_trail_preservation**: Tests audit trail functionality
+@@ -49,1 +49,1 @@
+-- `characters/0003_character_created_by_character_modified_by_and_more.py`
++
+- `characters/0003_character_created_by_character_modified_by_and_more.py`
+@@ -55,1 +55,1 @@
+-### Production-Ready Testing
++### Production-Ready Testing
+
+@@ -56,1 +56,1 @@
+-- Uses Django's migration testing framework
++
+- Uses Django's migration testing framework
+@@ -61,1 +61,1 @@
+-### Comprehensive Coverage
++### Comprehensive Coverage
+
+@@ -62,1 +62,1 @@
+-- Forward and backward migration compatibility
++
+- Forward and backward migration compatibility
+@@ -68,1 +68,1 @@
+-### Safety Validation
++### Safety Validation
+
+@@ -69,1 +69,1 @@
+-- Verifies no data loss during migration
++
+- Verifies no data loss during migration
+@@ -90,1 +90,1 @@
+-- **TransactionTestCase**: Allows migration testing and schema changes
++
+- **TransactionTestCase**: Allows migration testing and schema changes
+@@ -112,1 +112,1 @@
+-- Monitor migration execution time on production data volumes
++
+- Monitor migration execution time on production data volumes
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -29,1 +29,1 @@
+-            <span>Welcome, {user?.display_name || user?.username}!</span>
++            <span>Welcome, {user?.display_name ?? user?.username}!</span>
+@@ -48,1 +48,1 @@
+-          <ProfileView onEdit={() => setView('profile-edit')} />
++          <ProfileView onEdit={function() { return setView('profile-edit') }} />
+@@ -53,1 +53,1 @@
+-            onCancel={() => setView('profile')}
++            onCancel={() => { setView('profile'); }}
+@@ -73,1 +73,1 @@
+-            onSuccess={() => window.location.reload()}
++            onSuccess={function() { return window.location.reload() }}
+@@ -74,1 +74,1 @@
+-            onSwitchToRegister={() => setView('register')}
++            onSwitchToRegister={function() { return setView('register') }}
+diff --git a/docs/MIGRATION_STRATEGY.md b/docs/MIGRATION_STRATEGY.md
+--- a/docs/MIGRATION_STRATEGY.md
++++ b/docs/MIGRATION_STRATEGY.md
+@@ -8,1 +8,1 @@
+-- **Zero data loss** during migration
++
+- **Zero data loss** during migration
+@@ -15,1 +15,1 @@
+-### 1. Schema Migrations (Step 1)
++### 1. Schema Migrations (Step 1)
+
+@@ -19,1 +19,1 @@
+-- `characters/migrations/0003_character_created_by_character_modified_by_and_more.py`
++
+- `characters/migrations/0003_character_created_by_character_modified_by_and_more.py`
+@@ -24,1 +24,1 @@
+-- Adds `created_by` and `modified_by` foreign key fields
++
+- Adds `created_by` and `modified_by` foreign key fields
+@@ -28,1 +28,1 @@
+-### 2. Data Migrations (Step 2)
++### 2. Data Migrations (Step 2)
+
+@@ -32,1 +32,1 @@
+-- `characters/migrations/0004_populate_audit_fields.py`
++
+- `characters/migrations/0004_populate_audit_fields.py`
+@@ -37,1 +37,1 @@
+-- **Characters**: Sets both `created_by` and `modified_by` to `player_owner`
++
+- **Characters**: Sets both `created_by` and `modified_by` to `player_owner`
+@@ -59,1 +59,1 @@
+-### Interactive Rollback (Recommended)
++### Interactive Rollback (Recommended)
+
+@@ -66,1 +66,1 @@
+-- Step-by-step confirmation process
++
+- Step-by-step confirmation process
+@@ -72,1 +72,1 @@
+-### Manual Rollback
++### Manual Rollback
+
+@@ -81,1 +81,1 @@
+-1. Data migrations (0004) are rolled back first
++
+1. Data migrations (0004) are rolled back first
+@@ -87,1 +87,1 @@
+-### Comprehensive Test Suite
++### Comprehensive Test Suite
+
+@@ -161,1 +161,1 @@
+-### Database Indexes
++### Database Indexes
+
+@@ -163,1 +163,1 @@
+-- `created_at` indexed for chronological queries
++
+- `created_at` indexed for chronological queries
+@@ -167,1 +167,1 @@
+-### Query Optimization
++### Query Optimization
+
+@@ -180,1 +180,1 @@
+-### Pre-Migration Checklist
++### Pre-Migration Checklist
+
+@@ -181,1 +181,1 @@
+-- [ ] Run migration safety tests: `python manage.py test core.tests.test_migration_strategy`
++
+- [ ] Run migration safety tests: `python manage.py test core.tests.test_migration_strategy`
+@@ -187,1 +187,1 @@
+-### Post-Migration Verification
++### Post-Migration Verification
+
+@@ -188,1 +188,1 @@
+-- [ ] Confirm all migrations applied: `python manage.py showmigrations`
++
+- [ ] Confirm all migrations applied: `python manage.py showmigrations`
+@@ -194,1 +194,1 @@
+-### Monitoring
++### Monitoring
+
+@@ -195,1 +195,1 @@
+-- Monitor database query performance for timestamp-based queries
++
+- Monitor database query performance for timestamp-based queries
+@@ -225,1 +225,1 @@
+-### Emergency Rollback
++### Emergency Rollback
+
+diff --git a/frontend/src/components/CharacterDetail.tsx b/frontend/src/components/CharacterDetail.tsx
+--- a/frontend/src/components/CharacterDetail.tsx
++++ b/frontend/src/components/CharacterDetail.tsx
+@@ -66,1 +66,1 @@
+-      } catch (err: any) {
++      } catch (err: unknown) {
+@@ -79,1 +79,1 @@
+-      const timer = setTimeout(() => setSuccessMessage(null), 5000);
++      const timer = setTimeout(function() { return setSuccessMessage(null) }, 5000);
+@@ -80,1 +80,1 @@
+-      return () => clearTimeout(timer);
++      return function() { return clearTimeout(timer) };
+diff --git a/campaigns/PERMISSIONS.md b/campaigns/PERMISSIONS.md
+--- a/campaigns/PERMISSIONS.md
++++ b/campaigns/PERMISSIONS.md
+@@ -16,1 +16,1 @@
+-### `IsCampaignOwner`
++### `IsCampaignOwner`
+
+@@ -17,1 +17,1 @@
+-- Allows access only to campaign owners
++
+- Allows access only to campaign owners
+@@ -20,1 +20,1 @@
+-### `IsCampaignGM`
++### `IsCampaignGM`
+
+@@ -21,1 +21,1 @@
+-- Allows access only to campaign Game Masters
++
+- Allows access only to campaign Game Masters
+@@ -24,1 +24,1 @@
+-### `IsCampaignMember`
++### `IsCampaignMember`
+
+@@ -25,1 +25,1 @@
+-- Allows access to any campaign member (GM, Player, or Observer)
++
+- Allows access to any campaign member (GM, Player, or Observer)
+@@ -28,1 +28,1 @@
+-### `IsCampaignOwnerOrGM`
++### `IsCampaignOwnerOrGM`
+
+@@ -29,1 +29,1 @@
+-- Allows access to campaign owners or Game Masters
++
+- Allows access to campaign owners or Game Masters
+@@ -34,1 +34,1 @@
+-### `CampaignPermissionMixin`
++### `CampaignPermissionMixin`
+
+@@ -38,1 +38,1 @@
+-- `get_campaign()`: Retrieves campaign from URL kwargs, raises Http404 if not found
++
+- `get_campaign()`: Retrieves campaign from URL kwargs, raises Http404 if not found
+@@ -43,1 +43,1 @@
+-#### `@require_campaign_owner`
++#### `@require_campaign_owner`
+
+@@ -54,1 +54,1 @@
+-#### `@require_campaign_gm`
++#### `@require_campaign_gm`
+
+@@ -65,1 +65,1 @@
+-#### `@require_campaign_member`
++#### `@require_campaign_member`
+
+@@ -76,1 +76,1 @@
+-#### `@require_campaign_owner_or_gm`
++#### `@require_campaign_owner_or_gm`
+
+@@ -135,1 +135,1 @@
+-### Resource Hiding
++### Resource Hiding
+
+@@ -138,1 +138,1 @@
+-### Active Campaign Check
++### Active Campaign Check
+
+@@ -141,1 +141,1 @@
+-### Anonymous User Handling
++### Anonymous User Handling
+
+diff --git a/docs/architecture.md b/docs/architecture.md
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -34,1 +34,1 @@
+-- **Django 5.2.4+** with Django REST Framework
++
+- **Django 5.2.4+** with Django REST Framework
+@@ -41,1 +41,1 @@
+-- **React with TypeScript** for enhanced UI components
++
+- **React with TypeScript** for enhanced UI components
+@@ -46,1 +46,1 @@
+-- **Python 3.11** with Conda environment management
++
+- **Python 3.11** with Conda environment management
+@@ -53,1 +53,1 @@
+-- **Campaign Management**: Creation, membership, settings
++
+- **Campaign Management**: Creation, membership, settings
+@@ -73,1 +73,1 @@
+-#### MembershipService
++#### MembershipService
+
+@@ -87,1 +87,1 @@
+-- `get_available_users_for_invitation()`: Returns users eligible for invitation
++
+- `get_available_users_for_invitation()`: Returns users eligible for invitation
+@@ -94,1 +94,1 @@
+-- Cannot add campaign owner as member
++
+- Cannot add campaign owner as member
+@@ -99,1 +99,1 @@
+-#### InvitationService
++#### InvitationService
+
+@@ -112,1 +112,1 @@
+-- `create_invitation()`: Creates new invitation with validation
++
+- `create_invitation()`: Creates new invitation with validation
+@@ -117,1 +117,1 @@
+-- Role validation for invitations
++
+- Role validation for invitations
+@@ -121,1 +121,1 @@
+-#### CampaignService
++#### CampaignService
+
+@@ -134,1 +134,1 @@
+-- `create_campaign(owner, **data)`: Creates new campaign
++
+- `create_campaign(owner, **data)`: Creates new campaign
+@@ -141,1 +141,1 @@
+-- Operations involve multiple models
++
+- Operations involve multiple models
+@@ -147,1 +147,1 @@
+-- Simple CRUD operations
++
+- Simple CRUD operations
+@@ -164,1 +164,1 @@
+-#### APIError Class
++#### APIError Class
+
+@@ -177,1 +177,1 @@
+-- Generic error messages prevent information leakage
++
+- Generic error messages prevent information leakage
+@@ -181,1 +181,1 @@
+-#### SecurityResponseHelper
++#### SecurityResponseHelper
+
+@@ -200,1 +200,1 @@
+-#### Campaign Views
++#### Campaign Views
+
+@@ -207,1 +207,1 @@
+-#### Membership Views
++#### Membership Views
+
+@@ -226,1 +226,1 @@
+-- Includes memberships, members, and settings
++
+- Includes memberships, members, and settings
+@@ -231,1 +231,1 @@
+-- Structured responses for bulk operations
++
+- Structured responses for bulk operations
+@@ -248,1 +248,1 @@
+-#### Template Views
++#### Template Views
+
+@@ -260,1 +260,1 @@
+-#### API Views
++#### API Views
+
+@@ -392,1 +392,1 @@
+-- Automatic `created_at` and `updated_at` fields with database indexes
++
+- Automatic `created_at` and `updated_at` fields with database indexes
+@@ -397,1 +397,1 @@
+-- `is_displayed` boolean flag for visibility control
++
+- `is_displayed` boolean flag for visibility control
+@@ -402,1 +402,1 @@
+-- Standard `name` field with `__str__()` method implementation
++
+- Standard `name` field with `__str__()` method implementation
+@@ -406,1 +406,1 @@
+-- Optional `description` TextField for detailed information
++
+- Optional `description` TextField for detailed information
+@@ -410,1 +410,1 @@
+-- `created_by` and `modified_by` user tracking
++
+- `created_by` and `modified_by` user tracking
+@@ -415,1 +415,1 @@
+-- `game_system` field with predefined choices
++
+- `game_system` field with predefined choices
+@@ -443,1 +443,1 @@
+-- **Performance-First**: Database indexes on commonly queried fields
++
+- **Performance-First**: Database indexes on commonly queried fields
+@@ -450,1 +450,1 @@
+-- New models that need simple timestamp tracking
++
+- New models that need simple timestamp tracking
+@@ -455,1 +455,1 @@
+-- Existing models (Campaign, Character) already have their own implementations
++
+- Existing models (Campaign, Character) already have their own implementations
+@@ -472,1 +472,1 @@
+-#### Campaign Model
++#### Campaign Model
+
+@@ -487,1 +487,1 @@
+-- Auto-generated unique slugs
++
+- Auto-generated unique slugs
+@@ -492,1 +492,1 @@
+-#### CampaignMembership Model
++#### CampaignMembership Model
+
+@@ -504,1 +504,1 @@
+-- Unique constraint on (campaign, user)
++
+- Unique constraint on (campaign, user)
+@@ -508,1 +508,1 @@
+-#### CampaignInvitation Model
++#### CampaignInvitation Model
+
+@@ -521,1 +521,1 @@
+-- Automatic expiration calculation
++
+- Automatic expiration calculation
+@@ -700,1 +700,1 @@
+-#### Indexes
++#### Indexes
+
+@@ -701,1 +701,1 @@
+-- Composite indexes on frequently queried combinations
++
+- Composite indexes on frequently queried combinations
+@@ -705,1 +705,1 @@
+-#### Query Optimization
++#### Query Optimization
+
+@@ -706,1 +706,1 @@
+-- `select_related()` for single foreign keys
++
+- `select_related()` for single foreign keys
+@@ -723,1 +723,1 @@
+-#### Key Components
++#### Key Components
+
+@@ -730,1 +730,1 @@
+-#### Integration Pattern
++#### Integration Pattern
+
+@@ -740,1 +740,1 @@
+-#### API Client
++#### API Client
+
+@@ -744,1 +744,1 @@
+-- Automatic CSRF token handling
++
+- Automatic CSRF token handling
+@@ -797,1 +797,1 @@
+-- `django-ratelimit` for API endpoint protection
++
+- `django-ratelimit` for API endpoint protection
+diff --git a/.claude/agents/django-backend-expert.md b/.claude/agents/django-backend-expert.md
+--- a/.claude/agents/django-backend-expert.md
++++ b/.claude/agents/django-backend-expert.md
+@@ -61,1 +61,1 @@
+-### Django Fundamentals
++### Django Fundamentals
+
+@@ -62,1 +62,1 @@
+-- Django ORM mastery
++
+- Django ORM mastery
+@@ -70,1 +70,1 @@
+-### Advanced Features
++### Advanced Features
+
+@@ -71,1 +71,1 @@
+-- Django Channels for WebSockets
++
+- Django Channels for WebSockets
+@@ -79,1 +79,1 @@
+-### Architecture Patterns
++### Architecture Patterns
+
+@@ -80,1 +80,1 @@
+-- Clean Architecture in Django
++
+- Clean Architecture in Django
+@@ -88,1 +88,1 @@
+-### Security & Performance
++### Security & Performance
+
+@@ -89,1 +89,1 @@
+-- Django security best practices
++
+- Django security best practices
+@@ -99,1 +99,1 @@
+-### Model Architecture
++### Model Architecture
+
+@@ -203,1 +203,1 @@
+-### Service Layer Implementation
++### Service Layer Implementation
+
+@@ -305,1 +305,1 @@
+-### Django Admin Customization
++### Django Admin Customization
+
+@@ -396,1 +396,1 @@
+-### Celery Task Implementation
++### Celery Task Implementation
+
+@@ -508,1 +508,1 @@
+-### Middleware Implementation
++### Middleware Implementation
+
+@@ -595,1 +595,1 @@
+-### Custom Management Command
++### Custom Management Command
+
+@@ -700,1 +700,1 @@
+-### Signal Handlers
++### Signal Handlers
+
+@@ -743,1 +743,1 @@
+-### Unit and Integration Tests
++### Unit and Integration Tests
+
+@@ -830,1 +830,1 @@
+-### Query Optimization
++### Query Optimization
+
+diff --git a/.claude/agents/code-reviewer.md b/.claude/agents/code-reviewer.md
+--- a/.claude/agents/code-reviewer.md
++++ b/.claude/agents/code-reviewer.md
+@@ -12,1 +12,1 @@
+-1. Run git diff to see recent changes
++
+1. Run git diff to see recent changes
+@@ -19,1 +19,1 @@
+-### Magic Number Detection
++### Magic Number Detection
+
+@@ -21,1 +21,1 @@
+-- **ALWAYS QUESTION**: "Why this specific value? What's the justification?"
++
+- **ALWAYS QUESTION**: "Why this specific value? What's the justification?"
+@@ -28,1 +28,1 @@
+-#### Connection Pool Settings
++#### Connection Pool Settings
+
+@@ -37,1 +37,1 @@
+-- "How many concurrent users does this support?"
++
+- "How many concurrent users does this support?"
+@@ -42,1 +42,1 @@
+-#### Timeout Configurations
++#### Timeout Configurations
+
+@@ -50,1 +50,1 @@
+-- "What's the 95th percentile response time in production?"
++
+- "What's the 95th percentile response time in production?"
+@@ -54,1 +54,1 @@
+-#### Memory and Resource Limits
++#### Memory and Resource Limits
+
+@@ -63,1 +63,1 @@
+-- "What's the current memory usage pattern?"
++
+- "What's the current memory usage pattern?"
+@@ -69,1 +69,1 @@
+-#### Database Connection Pools
++#### Database Connection Pools
+
+@@ -81,1 +81,1 @@
+-#### Security Configuration
++#### Security Configuration
+
+@@ -93,1 +93,1 @@
+-#### Application Settings
++#### Application Settings
+
+@@ -106,1 +106,1 @@
+-1. **Load Testing**: "Has this been tested with production-level load?"
++
+1. **Load Testing**: "Has this been tested with production-level load?"
+@@ -129,1 +129,1 @@
+-### ð¨ CRITICAL (Must fix before deployment)
++### ð¨ CRITICAL (Must fix before deployment)
+
+@@ -130,1 +130,1 @@
+-- Configuration changes that could cause outages
++
+- Configuration changes that could cause outages
+@@ -135,1 +135,1 @@
+-### â ï¸ HIGH PRIORITY (Should fix)
++### â ï¸ HIGH PRIORITY (Should fix)
+
+@@ -136,1 +136,1 @@
+-- Performance degradation risks
++
+- Performance degradation risks
+@@ -140,1 +140,1 @@
+-### ð¡ SUGGESTIONS (Consider improving)
++### ð¡ SUGGESTIONS (Consider improving)
+
+@@ -141,1 +141,1 @@
+-- Code style improvements
++
+- Code style improvements
+@@ -148,1 +148,1 @@
+-- Default position: "This change is risky until proven otherwise"
++
+- Default position: "This change is risky until proven otherwise"
+@@ -157,1 +157,1 @@
+-1. **Connection Pool Exhaustion**: Pool size too small for load
++
+1. **Connection Pool Exhaustion**: Pool size too small for load
+diff --git a/.claude/agents/docs-architect.md b/.claude/agents/docs-architect.md
+--- a/.claude/agents/docs-architect.md
++++ b/.claude/agents/docs-architect.md
+@@ -70,1 +70,1 @@
+-- Clear heading hierarchy
++
+- Clear heading hierarchy
+diff --git a/.claude/agents/backend-architect.md b/.claude/agents/backend-architect.md
+--- a/.claude/agents/backend-architect.md
++++ b/.claude/agents/backend-architect.md
+@@ -9,1 +9,1 @@
+-## Focus Areas
++## Focus Areas
+
+@@ -10,1 +10,1 @@
+-- RESTful API design with proper versioning and error handling
++
+- RESTful API design with proper versioning and error handling
+@@ -16,1 +16,1 @@
+-## Approach
++## Approach
+
+@@ -17,1 +17,1 @@
+-1. Start with clear service boundaries
++
+1. Start with clear service boundaries
+@@ -23,1 +23,1 @@
+-## Output
++## Output
+
+@@ -24,1 +24,1 @@
+-- API endpoint definitions with example requests/responses
++
+- API endpoint definitions with example requests/responses
+diff --git a/.claude/agents/simplify.md b/.claude/agents/simplify.md
+--- a/.claude/agents/simplify.md
++++ b/.claude/agents/simplify.md
+@@ -32,1 +32,1 @@
+-- Start with a quick assessment of overall complexity relative to the problem being solved
++
+- Start with a quick assessment of overall complexity relative to the problem being solved
+@@ -41,1 +41,1 @@
+-1. **Complexity Assessment**: Brief overview of overall code complexity (Low/Medium/High) with justification
++
+1. **Complexity Assessment**: Brief overview of overall code complexity (Low/Medium/High) with justification
+@@ -48,1 +48,1 @@
+-- **File References**: Always use `file_path:line_number` format for consistency
++
+- **File References**: Always use `file_path:line_number` format for consistency
+@@ -53,1 +53,1 @@
+-- If simplifications might violate project rules: "Consider @standards to ensure changes align with CLAUDE.md"
++
+- If simplifications might violate project rules: "Consider @standards to ensure changes align with CLAUDE.md"
+@@ -60,1 +60,1 @@
+-1. @reality-check (verify simplified code still works)
++
+1. @reality-check (verify simplified code still works)

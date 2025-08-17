@@ -21,7 +21,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) 
 
     // Clear field-specific error when user starts typing
     if (formErrors[name as keyof LoginData]) {
-      setFormErrors(prev => ({ ...prev, [name]: undefined }));
+      setFormErrors(function(prev) { return ({ ...prev, [name]: undefined }) });
     }
 
     // Clear global error when user starts typing
