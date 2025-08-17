@@ -731,7 +731,13 @@ Update user profile information.
 
 **GET** `/api/characters/`
 
-Get list of characters. Supports filtering by campaign and character type.
+Get list of characters. Supports filtering by campaign and character type. The Character model uses multiple manager instances for efficient filtering:
+
+**Manager Architecture (Backend):**
+- `Character.objects`: Primary manager (excludes soft-deleted)
+- `Character.npcs`: Only NPCs, excludes soft-deleted **[New in #175]**
+- `Character.pcs`: Only PCs, excludes soft-deleted **[New in #175]**
+- `Character.all_objects`: Includes soft-deleted characters
 
 **Query Parameters:**
 - `campaign_id` (optional): Filter characters by campaign ID
@@ -928,6 +934,36 @@ GET /api/characters/?player_owner=2&npc=false
 GET /api/characters/?campaign_id=1
 ```
 
+**Backend Manager Usage (New in #175):**
+
+The Character model provides dedicated manager instances for efficient queries:
+
+```python
+# NEW: Direct manager instances (recommended)
+Character.npcs.all()                    # Only NPCs, auto-excludes soft-deleted
+Character.pcs.all()                     # Only PCs, auto-excludes soft-deleted
+
+# NEW: Filter with additional criteria
+Character.npcs.filter(campaign=campaign)         # NPCs in specific campaign
+Character.pcs.filter(player_owner=user)          # PCs owned by user
+Character.npcs.filter(game_system="Mage")        # NPCs of specific game system
+
+# NEW: Polymorphic inheritance support
+Character.npcs.instance_of(MageCharacter)        # Only Mage NPCs
+Character.pcs.instance_of(VampireCharacter)      # Only Vampire PCs
+
+# EXISTING: Backward compatibility preserved
+Character.objects.npcs()                         # Same as Character.npcs.all()
+Character.objects.player_characters()            # Same as Character.pcs.all()
+Character.objects.filter(npc=True)               # Manual filtering still works
+```
+
+**Performance Benefits:**
+- Automatic soft-delete filtering at manager level
+- Optimized database queries using indexed fields
+- Full polymorphic inheritance support
+- Reduced application-level filtering logic
+
 ## Data Models
 
 ### Role Choices
@@ -979,12 +1015,25 @@ ROLE_CHOICES = [
 - `deleted_at`: Timestamp, deletion time (null if active)
 - `deleted_by`: Foreign key to User, who deleted the character
 
+**Manager Instances (New in #175):**
+- `Character.objects`: Primary manager (excludes soft-deleted characters)
+- `Character.all_objects`: Includes soft-deleted characters
+- `Character.npcs`: Only NPCs, excludes soft-deleted
+- `Character.pcs`: Only PCs, excludes soft-deleted
+
+**Manager Benefits:**
+- Automatic filtering reduces query complexity
+- Performance optimized with database indexes
+- Full polymorphic inheritance support
+- Backward compatibility preserved
+
 **Business Rules:**
 - Character names must be unique within a campaign
 - Player must be campaign member to own characters
 - NPC creation limited to GMs and campaign owners
 - Character limits apply only to PCs, not NPCs
 - Audit trail tracks all character changes including NPC status
+- Manager-level filtering automatically excludes soft-deleted characters
 
 ### Invitation Status Choices
 

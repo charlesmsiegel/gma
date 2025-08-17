@@ -674,7 +674,82 @@ CREATE INDEX characters_audit_action_idx ON characters_character_audit (action);
 - `player_owner_id`: Ownership changes
 - `game_system`: System changes (rare)
 
-#### NPC Field Usage Patterns
+#### Character Manager System (Issue #175)
+
+The Character model provides multiple manager instances for efficient character querying and filtering:
+
+**Manager Architecture:**
+
+```python
+# Manager instances on Character model
+objects = CharacterManager()        # Primary manager (excludes soft-deleted)
+all_objects = AllCharacterManager() # Includes soft-deleted characters
+npcs = NPCManager()                 # Only NPCs, excludes soft-deleted
+pcs = PCManager()                   # Only PCs, excludes soft-deleted
+```
+
+**NPCManager and PCManager Implementation:**
+
+```python
+class NPCManager(PolymorphicManager):
+    """Manager for NPC (Non-Player Character) filtering."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(npc=True, is_deleted=False)
+
+class PCManager(PolymorphicManager):
+    """Manager for PC (Player Character) filtering."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(npc=False, is_deleted=False)
+```
+
+**Database Query Translation:**
+
+```sql
+-- Character.npcs.all() translates to:
+SELECT * FROM characters_character
+WHERE npc = true AND is_deleted = false;
+
+-- Character.pcs.all() translates to:
+SELECT * FROM characters_character
+WHERE npc = false AND is_deleted = false;
+
+-- Character.npcs.filter(campaign_id=1) translates to:
+SELECT * FROM characters_character
+WHERE campaign_id = 1 AND npc = true AND is_deleted = false;
+
+-- Character.pcs.filter(player_owner_id=123) translates to:
+SELECT * FROM characters_character
+WHERE player_owner_id = 123 AND npc = false AND is_deleted = false;
+```
+
+**Manager Usage Patterns:**
+
+```python
+# Recommended: Use dedicated managers
+campaign_npcs = Character.npcs.filter(campaign=campaign)
+user_pcs = Character.pcs.filter(player_owner=user)
+
+# Polymorphic inheritance support
+mage_npcs = Character.npcs.instance_of(MageCharacter)
+all_vampire_pcs = Character.pcs.instance_of(VampireCharacter)
+
+# Combining with other filters
+active_campaign_npcs = Character.npcs.filter(
+    campaign=campaign,
+    game_system="Mage: The Ascension"
+)
+
+# Performance-optimized queries with prefetch
+npcs_with_campaign_data = Character.npcs.with_campaign_memberships()
+
+# Backward compatibility (still works)
+legacy_npcs = Character.objects.npcs()  # Same as Character.npcs.all()
+legacy_pcs = Character.objects.player_characters()  # Same as Character.pcs.all()
+```
+
+**NPC Field Usage Patterns**
 
 **Query by Character Type:**
 
@@ -699,14 +774,25 @@ GROUP BY npc;
 **Performance Considerations:**
 
 - `npc` field is indexed for efficient filtering
-- Combined with other common filters (campaign, player_owner) for optimal query performance
+- `is_deleted` field is also indexed for soft-delete filtering
+- Manager-level filtering reduces query complexity and improves performance
+- Combined filters leverage composite indexes for optimal query performance
 - Polymorphic queries benefit from select_related() on content types
+
+**Manager Performance Benefits:**
+
+- **Automatic Filtering**: Manager-level filters applied automatically to all queries
+- **Index Utilization**: Both `npc` and `is_deleted` fields are individually indexed
+- **Query Optimization**: Reduces need for manual WHERE clauses in application code
+- **Polymorphic Compatibility**: Full support for django-polymorphic inheritance chains
 
 **Migration History:**
 
 - **Issue #174**: Added `npc` field with database index
+- **Issue #175**: Added NPCManager and PCManager for intuitive character filtering
 - **Default Behavior**: New field defaults to `false` (PC) for backward compatibility
 - **Existing Data**: All existing characters treated as PCs (npc=false)
+- **Backward Compatibility**: Existing `Character.objects` methods preserved
 
 ### Permission System
 
