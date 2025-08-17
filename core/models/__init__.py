@@ -2,6 +2,7 @@ from .health_check import HealthCheckLog
 from .mixins import (
     AuditableMixin,
     DescribedModelMixin,
+    DetailedAuditableMixin,
     DisplayableMixin,
     GameSystemMixin,
     NamedModelMixin,
@@ -15,5 +16,6 @@ __all__ = [
     "NamedModelMixin",
     "DescribedModelMixin",
     "AuditableMixin",
+    "DetailedAuditableMixin",
     "GameSystemMixin",
 ]

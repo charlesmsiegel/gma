@@ -9,6 +9,7 @@ from polymorphic.managers import PolymorphicManager  # type: ignore[import-untyp
 from polymorphic.models import PolymorphicModel  # type: ignore[import-untyped]
 
 from campaigns.models import Campaign
+from core.models import DetailedAuditableMixin, NamedModelMixin, TimestampedMixin
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
@@ -268,12 +269,17 @@ class AllCharacterManager(PolymorphicManager):
         return super().get_queryset()
 
 
-class Character(PolymorphicModel):
-    """Base Character model for all game systems."""
+class Character(
+    TimestampedMixin, NamedModelMixin, DetailedAuditableMixin, PolymorphicModel
+):
+    """Base Character model for all game systems with mixin-based functionality.
 
-    name: models.CharField = models.CharField(
-        max_length=100, help_text="Character name"
-    )
+    Provides standardized fields through mixins:
+    - TimestampedMixin: created_at, updated_at fields with indexing
+    - NamedModelMixin: name field with __str__ method
+    - DetailedAuditableMixin: created_by, modified_by tracking with detailed audit trail
+    """
+
     description: models.TextField = models.TextField(
         blank=True, default="", help_text="Character description and background"
     )
@@ -292,8 +298,6 @@ class Character(PolymorphicModel):
     game_system: models.CharField = models.CharField(
         max_length=100, help_text="The game system this character uses"
     )
-    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
-    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     # Soft delete fields
     is_deleted: models.BooleanField = models.BooleanField(
@@ -317,8 +321,8 @@ class Character(PolymorphicModel):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the model and store original field values for change tracking."""
         super().__init__(*args, **kwargs)
-        # Store original values for key fields to track changes
-        # Safely access attributes by looking directly at __dict__ to avoid recursion
+        # Additional Character-specific original values for legacy compatibility
+        # The parent DetailedAuditableMixin already stores _original_values
         self._original_campaign_id = self.__dict__.get("campaign_id")
         self._original_player_owner_id = self.__dict__.get("player_owner_id")
         self._original_name = self.__dict__.get("name", "")
@@ -345,6 +349,24 @@ class Character(PolymorphicModel):
     def __str__(self) -> str:
         """Return the character name."""
         return self.name
+
+    # DetailedAuditableMixin integration methods
+    def _get_audit_log_model(self):
+        """Return the CharacterAuditLog model for detailed audit trail."""
+        return CharacterAuditLog
+
+    def _get_audit_entry_fields(self, user, action, field_changes):
+        """Get fields for creating a CharacterAuditLog entry."""
+        return {
+            "character": self,
+            "changed_by": user,
+            "action": action,
+            "field_changes": field_changes,
+        }
+
+    def _get_tracked_fields(self):
+        """Get list of fields to track for Character audit trail."""
+        return ["name", "description", "game_system", "campaign_id", "player_owner_id"]
 
     def _has_campaign_changed(self) -> bool:
         """Check if the campaign field has changed since the instance was loaded."""
@@ -432,68 +454,29 @@ class Character(PolymorphicModel):
         """
         Save the character with validation and audit trail.
 
-        Only runs full_clean() for new characters (those without a pk) or when
-        explicitly requested via validate=True parameter.
+        Uses DetailedAuditableMixin for audit functionality while preserving
+        Character-specific validation logic.
         """
-        # Check if this is a new character
-        is_new = self.pk is None
-
-        # Store original values for audit trail (if not new)
-        original_values = {}
-        if not is_new:
-            original_values = {
-                "name": (
-                    self._original_name
-                    if hasattr(self, "_original_name")
-                    else self.name
-                ),
-                "description": (
-                    self._original_description
-                    if hasattr(self, "_original_description")
-                    else self.description
-                ),
-                "game_system": (
-                    self._original_game_system
-                    if hasattr(self, "_original_game_system")
-                    else self.game_system
-                ),
-                "campaign_id": self._original_campaign_id,
-                "player_owner_id": self._original_player_owner_id,
-            }
-
         # Run validation for new characters or when explicitly requested
         validate = kwargs.pop("validate", self.pk is None)
         if validate:
             self.full_clean()
 
-        # Get audit user from kwargs if provided (support both names for compatibility)
+        # Get audit user from kwargs (support legacy names for compatibility)
         audit_user = kwargs.pop("audit_user", None) or kwargs.pop("update_user", None)
 
+        # Default to player_owner for automatic auditing if no user provided
+        if audit_user is None and hasattr(self, "player_owner") and self.player_owner:
+            audit_user = self.player_owner
+
+        # Set audit_user back in kwargs for DetailedAuditableMixin to use
+        if audit_user:
+            kwargs["audit_user"] = audit_user
+
+        # Call parent save method which includes DetailedAuditableMixin logic
         super().save(*args, **kwargs)
 
-        # Create audit entry after successful save
-        # Use provided audit_user, or default to player_owner for automatic auditing
-        effective_audit_user = audit_user or self.player_owner
-
-        if effective_audit_user:
-            if is_new:
-                # For new characters, track initial field values
-                initial_changes = {
-                    "name": {"old": None, "new": self.name},
-                    "description": {"old": None, "new": self.description},
-                    "game_system": {"old": None, "new": self.game_system},
-                    "campaign_id": {"old": None, "new": self.campaign_id},
-                    "player_owner_id": {"old": None, "new": self.player_owner_id},
-                }
-                self._create_audit_entry(
-                    effective_audit_user, "CREATE", initial_changes
-                )
-            else:
-                changes = self.get_field_changes(original_values)
-                if changes:
-                    self._create_audit_entry(effective_audit_user, "UPDATE", changes)
-
-        # Update original values after successful save to reset change tracking
+        # Update legacy original values for backward compatibility
         self._original_campaign_id = self.campaign_id
         self._original_player_owner_id = self.player_owner_id
         self._original_name = self.name
@@ -678,7 +661,7 @@ class Character(PolymorphicModel):
         self.deleted_by = user
         self.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
 
-        # Create audit entry
+        # Create audit entry using DetailedAuditableMixin method
         self._create_audit_entry(
             user, "DELETE", {"is_deleted": {"old": False, "new": True}}
         )
@@ -709,7 +692,7 @@ class Character(PolymorphicModel):
             is_deleted=False, deleted_at=None, deleted_by=None
         )
 
-        # Create audit entry
+        # Create audit entry using DetailedAuditableMixin method
         self._create_audit_entry(
             user, "RESTORE", {"is_deleted": {"old": True, "new": False}}
         )
@@ -730,7 +713,7 @@ class Character(PolymorphicModel):
                 "Only administrators can permanently delete characters"
             )
 
-        # Create final audit entry before deletion
+        # Create final audit entry before deletion using DetailedAuditableMixin method
         self._create_audit_entry(
             user,
             "DELETE",
@@ -739,50 +722,6 @@ class Character(PolymorphicModel):
 
         self.delete()
         return self
-
-    def _create_audit_entry(
-        self, user: "AbstractUser", action: str, field_changes: Dict[str, Any]
-    ) -> None:
-        """Create an audit entry for this character.
-
-        Args:
-            user: The user who made the change
-            action: The action performed ('create', 'update', 'delete', 'restore')
-            field_changes: Dictionary of field changes
-        """
-        CharacterAuditLog.objects.create(
-            character=self,
-            changed_by=user,
-            action=action,
-            field_changes=field_changes,
-        )
-
-    def get_field_changes(self, original_values: Dict[str, Any]) -> Dict[str, Any]:
-        """Compare current values with original to detect changes.
-
-        Args:
-            original_values: Dictionary of original field values
-
-        Returns:
-            Dictionary of changes in format {field: {old: value, new: value}}
-        """
-        changes = {}
-        tracked_fields = [
-            "name",
-            "description",
-            "game_system",
-            "campaign_id",
-            "player_owner_id",
-        ]
-
-        for field in tracked_fields:
-            old_value = original_values.get(field)
-            new_value = getattr(self, field)
-
-            if old_value != new_value:
-                changes[field] = {"old": old_value, "new": new_value}
-
-        return changes
 
 
 class WoDCharacter(Character):

@@ -1,44 +1,38 @@
 from __future__ import annotations
 
-from django.conf import settings
 from django.db import models
 
 from campaigns.models import Campaign
+from core.models import (
+    AuditableMixin,
+    DescribedModelMixin,
+    NamedModelMixin,
+    TimestampedMixin,
+)
 
 
-class Location(models.Model):
+class Location(
+    TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, models.Model
+):
     """
-    Placeholder Location model for campaign management.
+    Location model for campaign management with mixin-based functionality.
 
-    This is a minimal implementation to support URL routing and basic views.
-    Full location functionality will be implemented later.
+    Provides standardized fields through mixins:
+    - TimestampedMixin: created_at, updated_at fields with indexing
+    - NamedModelMixin: name field with __str__ method
+    - DescribedModelMixin: description field
+    - AuditableMixin: created_by, modified_by tracking with enhanced save()
     """
 
-    name: models.CharField = models.CharField(max_length=200, help_text="Location name")
-    description: models.TextField = models.TextField(
-        blank=True, default="", help_text="Location description"
-    )
     campaign: models.ForeignKey = models.ForeignKey(
         Campaign,
         on_delete=models.CASCADE,
         related_name="locations",
         help_text="The campaign this location belongs to",
     )
-    created_by: models.ForeignKey = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="created_locations",
-        help_text="The user who created this location",
-    )
-    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
-    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "locations_location"
         ordering = ["name"]
         verbose_name = "Location"
         verbose_name_plural = "Locations"
-
-    def __str__(self) -> str:
-        """Return the location name."""
-        return self.name

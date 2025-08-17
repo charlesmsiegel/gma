@@ -1,44 +1,38 @@
 from __future__ import annotations
 
-from django.conf import settings
 from django.db import models
 
 from campaigns.models import Campaign
+from core.models import (
+    AuditableMixin,
+    DescribedModelMixin,
+    NamedModelMixin,
+    TimestampedMixin,
+)
 
 
-class Item(models.Model):
+class Item(
+    TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, models.Model
+):
     """
-    Placeholder Item model for campaign management.
+    Item model for campaign management with mixin-based functionality.
 
-    This is a minimal implementation to support URL routing and basic views.
-    Full item functionality will be implemented later.
+    Provides standardized fields through mixins:
+    - TimestampedMixin: created_at, updated_at fields with indexing
+    - NamedModelMixin: name field with __str__ method
+    - DescribedModelMixin: description field
+    - AuditableMixin: created_by, modified_by tracking with enhanced save()
     """
 
-    name: models.CharField = models.CharField(max_length=200, help_text="Item name")
-    description: models.TextField = models.TextField(
-        blank=True, default="", help_text="Item description"
-    )
     campaign: models.ForeignKey = models.ForeignKey(
         Campaign,
         on_delete=models.CASCADE,
         related_name="items",
         help_text="The campaign this item belongs to",
     )
-    created_by: models.ForeignKey = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="created_items",
-        help_text="The user who created this item",
-    )
-    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
-    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "items_item"
         ordering = ["name"]
         verbose_name = "Item"
         verbose_name_plural = "Items"
-
-    def __str__(self) -> str:
-        """Return the item name."""
-        return self.name
