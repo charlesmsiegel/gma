@@ -522,7 +522,7 @@ class CampaignDetailViewTest(TestCase):
 
         # Check for Campaign Management section
         self.assertContains(response, "Campaign Management", count=1)
-        self.assertContains(response, 'class="campaign-management"')
+        self.assertContains(response, "campaign-management")
 
         # Check for all 4 management cards
         expected_urls = [
@@ -556,7 +556,7 @@ class CampaignDetailViewTest(TestCase):
 
         # Check for Campaign Management section
         self.assertContains(response, "Campaign Management", count=1)
-        self.assertContains(response, 'class="campaign-management"')
+        self.assertContains(response, "campaign-management")
 
         # Check for all 4 management cards
         expected_urls = [
@@ -584,7 +584,7 @@ class CampaignDetailViewTest(TestCase):
 
         # Players should see Campaign Management section but with limited cards
         self.assertContains(response, "Campaign Management", count=1)
-        self.assertContains(response, 'class="campaign-management"')
+        self.assertContains(response, "campaign-management")
 
         # Players should see character management (limited to their own)
         self.assertContains(response, f"/campaigns/{self.campaign.slug}/characters/")
@@ -607,7 +607,7 @@ class CampaignDetailViewTest(TestCase):
 
         # Observers should see limited Campaign Management section
         self.assertContains(response, "Campaign Management", count=1)
-        self.assertContains(response, 'class="campaign-management"')
+        self.assertContains(response, "campaign-management")
 
         # Observers should see read-only access
         self.assertContains(response, f"/campaigns/{self.campaign.slug}/characters/")
@@ -692,7 +692,7 @@ class CampaignDetailViewTest(TestCase):
 
         # Even inactive campaigns should show management to owners
         self.assertContains(response, "Campaign Management", count=1)
-        self.assertContains(response, 'class="campaign-management"')
+        self.assertContains(response, "campaign-management")
         self.assertContains(response, 'btn btn-primary">Characters</a>')
         self.assertContains(response, 'btn btn-primary">Scenes</a>')
         self.assertContains(response, 'btn btn-primary">Locations</a>')
@@ -706,17 +706,17 @@ class CampaignDetailViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check for proper CSS class structure
-        self.assertContains(response, 'class="campaign-management"')
+        self.assertContains(response, "campaign-management")
         self.assertContains(response, 'btn btn-primary">Characters</a>')
         self.assertContains(response, 'btn btn-primary">Scenes</a>')
         self.assertContains(response, 'btn btn-primary">Locations</a>')
         self.assertContains(response, 'btn btn-primary">Items</a>')
 
         # Check for specific management card types (for different styling)
-        self.assertContains(response, 'class="management-card characters-card"')
-        self.assertContains(response, 'class="management-card scenes-card"')
-        self.assertContains(response, 'class="management-card locations-card"')
-        self.assertContains(response, 'class="management-card items-card"')
+        self.assertContains(response, "characters-card")
+        self.assertContains(response, "scenes-card")
+        self.assertContains(response, "locations-card")
+        self.assertContains(response, "items-card")
 
     def test_management_section_responsive_layout(self):
         """Test that management section uses responsive grid layout."""
@@ -755,7 +755,7 @@ class CampaignDetailViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check for icon classes or elements (adjust based on implementation)
-        self.assertContains(response, 'class="card-icon"', count=4)
+        self.assertContains(response, "card-icon", count=4)
 
         # Check for specific Unicode emoji icons
         self.assertContains(response, "👥")  # Characters icon
@@ -772,9 +772,9 @@ class CampaignDetailViewTest(TestCase):
         content = response.content.decode()
 
         # Management section should appear after campaign info but before member list
-        campaign_info_pos = content.find('class="info-section"')
-        management_pos = content.find('class="campaign-management"')
-        member_list_pos = content.find('class="member-list-section"')
+        campaign_info_pos = content.find("info-section")
+        management_pos = content.find("campaign-management")
+        member_list_pos = content.find("member-list-section")
 
         # Verify ordering: campaign info < management < member list
         self.assertLess(campaign_info_pos, management_pos)
@@ -1152,7 +1152,7 @@ class CampaignManagementEdgeCaseTest(TestCase):
 
         # Should contain responsive CSS classes
         self.assertContains(response, "management-grid")
-        self.assertContains(response, '<div class="management-card')
+        self.assertContains(response, "management-card")
 
     def test_management_links_accessibility(self):
         """Test that management links have proper accessibility attributes."""

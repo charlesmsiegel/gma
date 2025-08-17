@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% block title %}{{ campaign.name }} - {{ block.super }}{% endblock %}
-
 {% block content %}
   <div class="container py-4">
     <!-- Breadcrumb Navigation -->
@@ -14,9 +13,8 @@
         <li class="breadcrumb-item active" aria-current="page">{{ campaign.name }}</li>
       </ol>
     </nav>
-
     <!-- Campaign Header Card -->
-    <div class="card shadow-sm border-0 mb-4">
+    <div class="card shadow-sm border-0 mb-4 info-section">
       <div class="card-header bg-primary text-white py-4">
         <div class="row align-items-center">
           <div class="col-lg-8">
@@ -50,12 +48,36 @@
           </div>
           <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
             <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
-              <span class="badge {% if campaign.is_active %}bg-success{% else %}bg-warning text-dark{% endif %} fs-6">
-                <i class="bi {% if campaign.is_active %}bi-play-circle{% else %}bi-pause-circle{% endif %} me-1"></i>
+              <span class="badge
+                           {% if campaign.is_active %}
+                             bg-success
+                           {% else %}
+                             bg-warning text-dark
+                           {% endif %}
+                           fs-6">
+                <i class="bi
+                          {% if campaign.is_active %}
+                            bi-play-circle
+                          {% else %}
+                            bi-pause-circle
+                          {% endif %}
+                          me-1"></i>
                 {{ campaign.is_active|yesno:"Active,Inactive" }}
               </span>
-              <span class="badge {% if campaign.is_public %}bg-info{% else %}bg-secondary{% endif %} fs-6">
-                <i class="bi {% if campaign.is_public %}bi-globe{% else %}bi-lock{% endif %} me-1"></i>
+              <span class="badge
+                           {% if campaign.is_public %}
+                             bg-info
+                           {% else %}
+                             bg-secondary
+                           {% endif %}
+                           fs-6">
+                <i class="bi
+                          {% if campaign.is_public %}
+                            bi-globe
+                          {% else %}
+                            bi-lock
+                          {% endif %}
+                          me-1"></i>
                 {{ campaign.is_public|yesno:"Public,Private" }}
               </span>
               {% if user.is_authenticated and user_role %}
@@ -69,7 +91,6 @@
         </div>
       </div>
     </div>
-
     <!-- Campaign Information -->
     {% if campaign.description %}
       <div class="card shadow-sm border-0 mb-4">
@@ -84,7 +105,6 @@
         </div>
       </div>
     {% endif %}
-
     <!-- Management Section -->
     {% if user.is_authenticated and is_member %}
       <div class="card shadow-sm border-0 mb-4 campaign-management">
@@ -99,112 +119,102 @@
             {% if user_role == "OWNER" or user_role == "GM" %}
               <!-- Full management access for owners and GMs -->
               <div class="col-md-6 col-lg-3">
-                <div class="card h-100 border-primary">
+                <div class="card h-100 border-primary management-card characters-card">
                   <div class="card-body text-center">
-                    <div class="fs-1 mb-3">👥</div>
+                    <div class="fs-1 mb-3 card-icon">👥</div>
                     <h5 class="card-title">Manage Characters</h5>
                     <p class="card-text small text-muted">Manage player and NPC characters</p>
                     <div class="d-grid gap-2">
-                      <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">
-                        Manage Characters
-                      </a>
-                      <a href="{% url 'characters:create' %}" class="btn btn-outline-primary btn-sm">
-                        Create New
-                      </a>
+                      <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                         class="btn btn-primary">Characters</a>
+                      <a href="{% url 'characters:create' %}"
+                         class="btn btn-outline-primary btn-sm">Create New</a>
                     </div>
                   </div>
                 </div>
               </div>
               <div class="col-md-6 col-lg-3">
-                <div class="card h-100 border-success">
+                <div class="card h-100 border-success management-card scenes-card">
                   <div class="card-body text-center">
-                    <div class="fs-1 mb-3">🎭</div>
+                    <div class="fs-1 mb-3 card-icon">🎭</div>
                     <h5 class="card-title">Manage Scenes</h5>
                     <p class="card-text small text-muted">Create and manage campaign scenes</p>
-                    <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="btn btn-success">
-                      Manage Scenes
-                    </a>
+                    <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
+                       class="btn btn-primary">Scenes</a>
                   </div>
                 </div>
               </div>
               <div class="col-md-6 col-lg-3">
-                <div class="card h-100 border-warning">
+                <div class="card h-100 border-warning management-card locations-card">
                   <div class="card-body text-center">
-                    <div class="fs-1 mb-3">🗺️</div>
+                    <div class="fs-1 mb-3 card-icon">🗺️</div>
                     <h5 class="card-title">Manage Locations</h5>
                     <p class="card-text small text-muted">Organize campaign locations and maps</p>
-                    <a href="{% url 'campaigns:campaign_locations' slug=campaign.slug %}" class="btn btn-warning">
-                      Manage Locations
-                    </a>
+                    <a href="{% url 'campaigns:campaign_locations' slug=campaign.slug %}"
+                       class="btn btn-primary">Locations</a>
                   </div>
                 </div>
               </div>
               <div class="col-md-6 col-lg-3">
-                <div class="card h-100 border-danger">
+                <div class="card h-100 border-danger management-card items-card">
                   <div class="card-body text-center">
-                    <div class="fs-1 mb-3">⚔️</div>
+                    <div class="fs-1 mb-3 card-icon">⚔️</div>
                     <h5 class="card-title">Manage Items</h5>
                     <p class="card-text small text-muted">Track items, equipment, and treasures</p>
-                    <a href="{% url 'campaigns:campaign_items' slug=campaign.slug %}" class="btn btn-danger">
-                      Manage Items
-                    </a>
+                    <a href="{% url 'campaigns:campaign_items' slug=campaign.slug %}"
+                       class="btn btn-primary">Items</a>
                   </div>
                 </div>
               </div>
             {% elif user_role == "PLAYER" %}
               <!-- Limited access for players -->
               <div class="col-md-6">
-                <div class="card h-100 border-primary">
+                <div class="card h-100 border-primary management-card">
                   <div class="card-body text-center">
                     <div class="fs-1 mb-3">👤</div>
                     <h5 class="card-title">My Characters</h5>
                     <p class="card-text small text-muted">View and manage your characters</p>
                     <div class="d-grid gap-2">
-                      <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">
-                        My Characters
-                      </a>
-                      <a href="{% url 'characters:create' %}" class="btn btn-outline-primary btn-sm">
-                        Create Character
-                      </a>
+                      <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                         class="btn btn-primary">My Characters</a>
+                      <a href="{% url 'characters:create' %}"
+                         class="btn btn-outline-primary btn-sm">Create Character</a>
                     </div>
                   </div>
                 </div>
               </div>
               <div class="col-md-6">
-                <div class="card h-100 border-success">
+                <div class="card h-100 border-success management-card">
                   <div class="card-body text-center">
                     <div class="fs-1 mb-3">🎭</div>
                     <h5 class="card-title">Campaign Scenes</h5>
                     <p class="card-text small text-muted">Browse and participate in scenes</p>
-                    <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="btn btn-success">
-                      View Scenes
-                    </a>
+                    <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
+                       class="btn btn-primary">View Scenes</a>
                   </div>
                 </div>
               </div>
             {% elif user_role == "OBSERVER" %}
               <!-- Read-only access for observers -->
               <div class="col-md-6">
-                <div class="card h-100 border-info">
+                <div class="card h-100 border-info management-card">
                   <div class="card-body text-center">
                     <div class="fs-1 mb-3">👥</div>
                     <h5 class="card-title">View Characters</h5>
                     <p class="card-text small text-muted">Browse campaign characters and stories</p>
-                    <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-info">
-                      View Characters
-                    </a>
+                    <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                       class="btn btn-primary">View Characters</a>
                   </div>
                 </div>
               </div>
               <div class="col-md-6">
-                <div class="card h-100 border-info">
+                <div class="card h-100 border-info management-card">
                   <div class="card-body text-center">
                     <div class="fs-1 mb-3">🎭</div>
                     <h5 class="card-title">View Scenes</h5>
                     <p class="card-text small text-muted">Follow along with scenes and story</p>
-                    <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}" class="btn btn-info">
-                      View Scenes
-                    </a>
+                    <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
+                       class="btn btn-primary">View Scenes</a>
                   </div>
                 </div>
               </div>
@@ -213,19 +223,17 @@
         </div>
       </div>
     {% endif %}
-
     <!-- Campaign Members -->
     {% if user.is_authenticated %}
-      <div class="card shadow-sm border-0 mb-4">
+      <div class="card shadow-sm border-0 mb-4 member-list-section">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h4 class="mb-0 d-flex align-items-center">
             <i class="bi bi-people-fill me-2 text-primary"></i>
             Campaign Members ({{ campaign.memberships.count|add:1 }})
           </h4>
           {% if is_owner %}
-            <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}" class="btn btn-outline-primary btn-sm">
-              <i class="bi bi-gear me-1"></i>Manage Members
-            </a>
+            <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}"
+               class="btn btn-outline-primary btn-sm"><i class="bi bi-gear me-1"></i>Manage Members</a>
           {% endif %}
         </div>
         <div class="card-body">
@@ -236,7 +244,7 @@
                 <div class="fw-semibold">{{ campaign.owner.username }}</div>
                 <small class="text-muted">Owner since {{ campaign.created_at|date:"M j, Y" }}</small>
               </div>
-              <span class="badge bg-warning text-dark">
+              <span class="badge bg-warning text-dark role-owner">
                 <i class="bi bi-crown me-1"></i>Owner
               </span>
             </div>
@@ -248,19 +256,41 @@
                   <small class="text-muted">Joined {{ membership.joined_at|date:"M j, Y" }}</small>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                  <span class="badge {% if membership.role == 'GM' %}bg-success{% elif membership.role == 'PLAYER' %}bg-primary{% else %}bg-secondary{% endif %}">
-                    <i class="bi {% if membership.role == 'GM' %}bi-person-gear{% elif membership.role == 'PLAYER' %}bi-person{% else %}bi-eye{% endif %} me-1"></i>
+                  <span class="badge
+                               {% if membership.role == 'GM' %}
+                                 bg-success
+                               {% elif membership.role == 'PLAYER' %}
+                                 bg-primary
+                               {% else %}
+                                 bg-secondary
+                               {% endif %}
+                               role-{{ membership.role|lower }}">
+                    <i class="bi
+                              {% if membership.role == 'GM' %}
+                                bi-person-gear
+                              {% elif membership.role == 'PLAYER' %}
+                                bi-person
+                              {% else %}
+                                bi-eye
+                              {% endif %}
+                              me-1"></i>
                     {{ membership.role }}
                   </span>
                   {% if is_owner %}
                     <div class="dropdown">
-                      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        Actions
-                      </button>
+                      <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                              type="button"
+                              data-bs-toggle="dropdown">Actions</button>
                       <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-arrow-repeat me-1"></i>Change Role</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-person-x me-1"></i>Remove</a></li>
+                        <li>
+                          <a class="dropdown-item" href="#"><i class="bi bi-arrow-repeat me-1"></i>Change Role</a>
+                        </li>
+                        <li>
+                          <hr class="dropdown-divider">
+                        </li>
+                        <li>
+                          <a class="dropdown-item text-danger" href="#"><i class="bi bi-person-x me-1"></i>Remove</a>
+                        </li>
                       </ul>
                     </div>
                   {% endif %}
@@ -271,7 +301,6 @@
         </div>
       </div>
     {% endif %}
-
     <!-- Action Buttons -->
     {% if user.is_authenticated %}
       <div class="card shadow-sm border-0">
@@ -279,12 +308,13 @@
           <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
             <div class="d-flex flex-wrap gap-2">
               {% if is_owner %}
-                <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}" class="btn btn-primary">
-                  <i class="bi bi-person-plus me-1"></i>Invite Users
+                <a href="{% url 'campaigns:send_invitation' slug=campaign.slug %}"
+                   class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Invite Users</a>
+                <a href="{% url 'campaigns:settings' slug=campaign.slug %}"
+                   class="btn btn-outline-secondary">
+                  <i class="bi bi-gear me-1"></i>Edit Campaign
                 </a>
-                <a href="{% url 'campaigns:settings' slug=campaign.slug %}" class="btn btn-outline-secondary">
-                  <i class="bi bi-gear me-1"></i>Campaign Settings
-                </a>
+                <!-- Campaign Settings -->
               {% elif user_role == "GM" %}
                 <button class="btn btn-success" disabled>
                   <i class="bi bi-plus-circle me-1"></i>Create Scene
@@ -293,7 +323,8 @@
                   <i class="bi bi-people me-1"></i>Manage NPCs
                 </button>
               {% elif user_role == "PLAYER" %}
-                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}" class="btn btn-primary">
+                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                   class="btn btn-primary">
                   <i class="bi bi-person me-1"></i>My Characters
                 </a>
               {% elif user_role == "OBSERVER" %}
@@ -313,7 +344,6 @@
         </div>
       </div>
     {% endif %}
-
     <!-- Join Campaign Card (for unauthenticated users) -->
     {% if not user.is_authenticated %}
       <div class="card shadow-sm border-0">
