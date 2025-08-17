@@ -227,3 +227,177 @@ class GameSystemMixin(models.Model):
 
     class Meta:
         abstract = True
+
+
+class DetailedAuditableMixin(AuditableMixin):
+    """
+    Enhanced auditable mixin that provides detailed audit trail functionality.
+
+    Extends AuditableMixin with:
+    - Detailed change tracking with field-level changes
+    - Configurable audit log model creation
+    - Support for action types (CREATE, UPDATE, DELETE, RESTORE)
+    - Permission-based audit access control
+
+    Usage:
+        class MyModel(DetailedAuditableMixin, models.Model):
+            # Your model fields
+
+            def _get_audit_log_model(self):
+                return MyModelAuditLog
+
+        obj.save(user=request.user)  # Creates detailed audit entry
+
+    Performance Notes:
+    - Creates audit entries on every save operation
+    - Use bulk operations carefully as they bypass audit logging
+    - Consider audit log retention policies for high-volume models
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the model and store original field values for change tracking."""
+        super().__init__(*args, **kwargs)
+        self._store_original_values()
+
+    def _store_original_values(self):
+        """Store original field values for change tracking."""
+        self._original_values = {}
+        if self.pk is not None:
+            # Only store values for existing objects, but only use __dict__ to avoid recursion
+            # during Django's object loading and deletion cascade operations
+            for field in self._meta.concrete_fields:
+                # Only access fields that are already loaded in __dict__ to avoid deferred field loading
+                if field.name in self.__dict__:
+                    self._original_values[field.name] = self.__dict__[field.name]
+
+    def _should_create_audit_entry(self):
+        """Determine if an audit entry should be created."""
+        # Override this method in subclasses to customize audit entry creation
+        return True
+
+    def _get_tracked_fields(self):
+        """Get list of field names to track for changes."""
+        # Override this method in subclasses to customize tracked fields
+        # By default, track all concrete fields except auto fields and audit fields
+        tracked_fields = []
+        for field in self._meta.concrete_fields:
+            # Skip auto fields, primary keys, and audit tracking fields
+            if not field.auto_created and field.name not in [
+                "id",
+                "created_by",
+                "modified_by",
+                "created_at",
+                "updated_at",
+            ]:
+                tracked_fields.append(field.name)
+        return tracked_fields
+
+    def _get_field_changes(self, original_values):
+        """Compare current values with original to detect changes."""
+        changes = {}
+        tracked_fields = self._get_tracked_fields()
+
+        for field_name in tracked_fields:
+            old_value = original_values.get(field_name)
+            new_value = getattr(self, field_name, None)
+
+            # Handle ForeignKey fields by comparing IDs
+            try:
+                field = self._meta.get_field(field_name)
+                if hasattr(field, "related_model"):
+                    if hasattr(new_value, "pk"):
+                        new_value = new_value.pk
+                    if hasattr(old_value, "pk"):
+                        old_value = old_value.pk
+            except Exception:
+                pass
+
+            if old_value != new_value:
+                changes[field_name] = {"old": old_value, "new": new_value}
+
+        return changes
+
+    def get_field_changes(self, original_values):
+        """Public method to get field changes for external usage."""
+        return self._get_field_changes(original_values)
+
+    def _create_audit_entry(self, user, action, field_changes=None):
+        """Create an audit entry for this model instance."""
+        if not self._should_create_audit_entry():
+            return
+
+        audit_model = self._get_audit_log_model()
+        if audit_model is None:
+            return
+
+        field_changes = field_changes or {}
+
+        audit_entry = audit_model(
+            **self._get_audit_entry_fields(user, action, field_changes)
+        )
+        audit_entry.save()
+        return audit_entry
+
+    def _get_audit_log_model(self):
+        """Get the audit log model class for this model."""
+        # Override this method in subclasses to return the appropriate audit model
+        # Return None to disable audit logging
+        return None
+
+    def _get_audit_entry_fields(self, user, action, field_changes):
+        """Get the fields for creating an audit entry."""
+        # Override this method in subclasses to customize audit entry fields
+        # This is a base implementation that subclasses should override
+        return {
+            "changed_by": user,
+            "action": action,
+            "field_changes": field_changes,
+        }
+
+    def save(self, *args, **kwargs):
+        """Enhanced save method with detailed audit trail creation."""
+        # Check if this is a new object
+        is_new = self.pk is None
+
+        # Store original values before save for change tracking
+        original_values = getattr(self, "_original_values", {})
+
+        # Get audit user from kwargs
+        audit_user = kwargs.pop("audit_user", None) or kwargs.pop("user", None)
+
+        # Call parent save method (which includes AuditableMixin logic)
+        super().save(*args, **kwargs)
+
+        # Create detailed audit entry if user is provided
+        if audit_user and self._should_create_audit_entry():
+            if is_new:
+                # For new objects, track initial field values
+                initial_changes = {}
+                for field_name in self._get_tracked_fields():
+                    value = getattr(self, field_name, None)
+                    try:
+                        field = self._meta.get_field(field_name)
+                        if hasattr(field, "related_model"):
+                            if hasattr(value, "pk"):
+                                value = value.pk
+                    except:
+                        pass
+                    initial_changes[field_name] = {"old": None, "new": value}
+
+                self._create_audit_entry(audit_user, "CREATE", initial_changes)
+            else:
+                # For updates, track what changed
+                changes = self._get_field_changes(original_values)
+                if changes:
+                    self._create_audit_entry(audit_user, "UPDATE", changes)
+
+        # Update stored values after save for future change tracking
+        self._store_original_values()
+
+    def refresh_from_db(self, using=None, fields=None):
+        """Refresh the instance from the database and reset change tracking."""
+        super().refresh_from_db(using=using, fields=fields)
+        self._store_original_values()
+
+    class Meta:
+        abstract = True
