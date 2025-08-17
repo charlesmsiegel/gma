@@ -35,6 +35,7 @@ The Game Master Application (GMA) is a web-based tabletop RPG campaign managemen
 - **PostgreSQL 16** for data persistence
 - **Redis 7.2** for caching and real-time messaging
 - **Django Channels** for WebSocket support
+- **django-fsm-2** for state machine management
 
 **Frontend:**
 - **React with TypeScript** for enhanced UI components
@@ -54,6 +55,7 @@ The GMA system manages:
 - **Real-Time Communication**: Chat, notifications via WebSocket
 - **Game System Support**: Flexible character models for different RPG systems
 - **Content Organization**: Scenes, locations, items, characters
+- **State Management**: Workflow transitions for campaigns, scenes, and characters
 
 ## Service Layer Architecture
 
@@ -271,6 +273,112 @@ campaign, error = SecurityResponseHelper.safe_get_or_404(
 2. **Information Hiding**: 404 instead of 403 for private resources
 3. **Role Validation**: Consistent role checking across the system
 4. **Audit Trail**: Track permission-related actions
+
+## State Management Architecture
+
+### django-fsm-2 Integration
+
+The GMA system uses **django-fsm-2** (version 4.0.0+) for managing complex state transitions in domain models. This provides a robust foundation for workflow management across campaigns, scenes, and characters.
+
+#### Technology Choice Rationale
+
+**django-fsm-2 vs django-fsm:**
+- **Active Maintenance**: django-fsm-2 is actively maintained with Django 5.x support
+- **Enhanced Features**: Improved transition validation and error handling
+- **Better Documentation**: More comprehensive documentation and examples
+- **Community Support**: Active community with regular updates and bug fixes
+
+#### State Machine Capabilities
+
+**Current Implementation:**
+The system includes basic FSM validation and integration testing to ensure django-fsm-2 works correctly with the Django framework.
+
+**Future State Machine Applications:**
+
+**Campaign Lifecycle:**
+```python
+# Future implementation example
+class Campaign(models.Model):
+    state = FSMField(default='draft', max_length=50)
+
+    @transition(field=state, source='draft', target='active')
+    def activate(self):
+        """Activate campaign for player access."""
+        pass
+
+    @transition(field=state, source='active', target='completed')
+    def complete(self):
+        """Mark campaign as completed."""
+        pass
+```
+
+**Scene Management:**
+```python
+# Future implementation example
+class Scene(models.Model):
+    status = FSMField(default='planning', max_length=50)
+
+    @transition(field=status, source='planning', target='active')
+    def start_scene(self):
+        """Begin scene with player participation."""
+        pass
+
+    @transition(field=status, source='active', target='concluded')
+    def conclude_scene(self):
+        """End scene and finalize results."""
+        pass
+```
+
+**Character Development:**
+```python
+# Future implementation example
+class Character(models.Model):
+    status = FSMField(default='created', max_length=50)
+
+    @transition(field=status, source='created', target='approved')
+    def approve_character(self):
+        """GM approves character for campaign."""
+        pass
+
+    @transition(field=status, source='approved', target='active')
+    def activate_character(self):
+        """Character enters active play."""
+        pass
+```
+
+#### Integration Benefits
+
+1. **Workflow Enforcement**: Prevent invalid state transitions
+2. **Business Logic**: Encapsulate state-specific behavior in transition methods
+3. **Audit Trail**: Track state changes for campaign history
+4. **Permission Integration**: Combine FSM transitions with role-based permissions
+5. **API Consistency**: Standardize state management across REST endpoints
+
+#### Testing and Validation
+
+The system includes comprehensive FSM testing in `core/tests/test_django_fsm_installation.py`:
+- **Package Import Validation**: Ensures django-fsm-2 is properly installed
+- **Basic FSM Functionality**: Tests state transitions and field behavior
+- **Django Integration**: Validates compatibility with Django ORM
+
+**Current Test Coverage:**
+- FSM field creation and default values
+- State transition mechanics
+- Django model integration
+- Error handling for invalid transitions
+
+#### Future Implementation Strategy
+
+1. **Phase 1**: Apply FSM to Campaign model for basic lifecycle management
+2. **Phase 2**: Extend to Scene model for workflow control
+3. **Phase 3**: Integrate with Character model for approval workflows
+4. **Phase 4**: Add complex multi-model state dependencies
+
+**Implementation Guidelines:**
+- Use clear, descriptive state names (e.g., 'draft', 'active', 'completed')
+- Include transition validation logic in transition methods
+- Maintain backward compatibility with existing state fields
+- Add comprehensive test coverage for each state machine
 
 ## Data Model Architecture
 

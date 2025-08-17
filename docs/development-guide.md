@@ -22,6 +22,7 @@
 - **Conda**: For Python environment management
 - **PostgreSQL**: Primary database (included in conda environment)
 - **Redis**: For caching and real-time features
+- **django-fsm-2**: For state machine management (installed via pip)
 
 ### Initial Setup
 
@@ -250,6 +251,9 @@ python manage.py test campaigns.tests.test_api.TestCampaignAPI.test_create_campa
 
 # Run performance tests for migrations
 python manage.py test core.tests.test_migration_strategy.MigrationPerformanceTest -v 2
+
+# Test django-fsm-2 installation and functionality
+python manage.py test core.tests.test_django_fsm_installation
 ```
 
 ### Test Database Management
@@ -541,6 +545,145 @@ class TestCampaignService(TestCase):
         self.assertTrue(
             campaign.sessions.filter(name="Campaign Setup").exists()
         )
+```
+
+### State Machine Development
+
+The GMA project uses django-fsm-2 for managing state transitions in domain models. This provides workflow management for campaigns, scenes, and characters.
+
+#### State Machine Patterns
+
+**Basic FSM Model:**
+```python
+from django_fsm import FSMField, transition
+
+class GameSession(models.Model):
+    """Example model with state machine."""
+    name = models.CharField(max_length=200)
+    status = FSMField(default='planning', max_length=50)
+
+    @transition(field=status, source='planning', target='active')
+    def start_session(self):
+        """Begin the game session."""
+        self.started_at = timezone.now()
+
+    @transition(field=status, source='active', target='completed')
+    def complete_session(self):
+        """End the game session."""
+        self.completed_at = timezone.now()
+
+    @transition(field=status, source=['planning', 'active'], target='cancelled')
+    def cancel_session(self):
+        """Cancel the game session."""
+        self.cancelled_at = timezone.now()
+```
+
+**State Machine with Validation:**
+```python
+from django_fsm import FSMField, transition
+from django.core.exceptions import ValidationError
+
+class Campaign(models.Model):
+    state = FSMField(default='draft', max_length=50)
+
+    @transition(field=state, source='draft', target='active')
+    def activate(self):
+        """Activate campaign for players."""
+        # Validation before transition
+        if not self.has_minimum_players():
+            raise ValidationError("Campaign needs at least one player")
+
+        # Business logic after transition
+        self.send_activation_notifications()
+
+    def has_minimum_players(self):
+        """Check if campaign has minimum required players."""
+        return self.memberships.filter(role='PLAYER').exists()
+```
+
+**Testing State Machines:**
+```python
+class TestGameSessionFSM(TestCase):
+    def setUp(self):
+        self.session = GameSession.objects.create(name="Test Session")
+
+    def test_session_lifecycle(self):
+        """Test complete session state transitions."""
+        # Initial state
+        self.assertEqual(self.session.status, 'planning')
+
+        # Start session
+        self.session.start_session()
+        self.assertEqual(self.session.status, 'active')
+        self.assertIsNotNone(self.session.started_at)
+
+        # Complete session
+        self.session.complete_session()
+        self.assertEqual(self.session.status, 'completed')
+        self.assertIsNotNone(self.session.completed_at)
+
+    def test_invalid_transition(self):
+        """Test that invalid transitions raise errors."""
+        self.session.status = 'completed'
+
+        with self.assertRaises(TransitionNotAllowed):
+            self.session.start_session()
+
+    def test_transition_with_validation(self):
+        """Test transition with business logic validation."""
+        campaign = Campaign.objects.create(name="Test Campaign")
+
+        # Should fail without players
+        with self.assertRaises(ValidationError):
+            campaign.activate()
+
+        # Add player and retry
+        self.create_campaign_member(campaign, role='PLAYER')
+        campaign.activate()  # Should succeed
+        self.assertEqual(campaign.state, 'active')
+```
+
+#### FSM Integration Guidelines
+
+**When to Use State Machines:**
+- Models with clear lifecycle stages (campaigns, scenes, characters)
+- Complex business rules around state transitions
+- Need for audit trail of state changes
+- API endpoints that modify model state
+
+**Best Practices:**
+- Use descriptive state names ('draft', 'active', 'completed')
+- Include validation logic in transition methods
+- Test all valid and invalid transition paths
+- Consider permission checks in transition methods
+- Document state diagrams for complex workflows
+
+**State Machine Testing:**
+```python
+# Test all valid transitions
+def test_all_valid_transitions(self):
+    """Test each valid state transition."""
+    transitions = [
+        ('planning', 'start_session', 'active'),
+        ('active', 'complete_session', 'completed'),
+        ('planning', 'cancel_session', 'cancelled'),
+    ]
+
+    for source, method, target in transitions:
+        session = GameSession.objects.create(name="Test")
+        session.status = source
+
+        getattr(session, method)()
+        self.assertEqual(session.status, target)
+
+# Test invalid transitions
+def test_invalid_transitions(self):
+    """Test that invalid transitions are blocked."""
+    session = GameSession.objects.create(name="Test")
+    session.status = 'completed'
+
+    with self.assertRaises(TransitionNotAllowed):
+        session.start_session()
 ```
 
 ## API Development Patterns
