@@ -263,11 +263,12 @@ class DetailedAuditableMixin(AuditableMixin):
         """Store original field values for change tracking."""
         self._original_values = {}
         if self.pk is not None:
-            # Only store values for existing objects
+            # Only store values for existing objects, but only use __dict__ to avoid recursion
+            # during Django's object loading and deletion cascade operations
             for field in self._meta.concrete_fields:
-                # Skip reverse foreign keys and relations
-                if hasattr(self, field.name):
-                    self._original_values[field.name] = getattr(self, field.name)
+                # Only access fields that are already loaded in __dict__ to avoid deferred field loading
+                if field.name in self.__dict__:
+                    self._original_values[field.name] = self.__dict__[field.name]
 
     def _should_create_audit_entry(self):
         """Determine if an audit entry should be created."""
@@ -315,6 +316,10 @@ class DetailedAuditableMixin(AuditableMixin):
                 changes[field_name] = {"old": old_value, "new": new_value}
 
         return changes
+
+    def get_field_changes(self, original_values):
+        """Public method to get field changes for external usage."""
+        return self._get_field_changes(original_values)
 
     def _create_audit_entry(self, user, action, field_changes=None):
         """Create an audit entry for this model instance."""

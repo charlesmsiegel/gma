@@ -145,10 +145,7 @@ class CharacterMixinApplicationTest(TestCase):
             game_system="mage",
         )
 
-        # Save with audit_user to create audit entry
-        character.save(audit_user=self.player1)
-
-        # Verify audit entry was created with existing system
+        # Verify audit entry was automatically created
         audit_entries = CharacterAuditLog.objects.filter(character=character)
         self.assertEqual(audit_entries.count(), 1)
 
@@ -452,8 +449,8 @@ class CharacterMixinEnhancementTest(TestCase):
         # Get current field help text
         fields = {f.name: f for f in Character._meta.get_fields()}
 
-        # Test current help text is appropriate
-        self.assertIn("Character name", fields["name"].help_text)
+        # Test that mixin help text is now applied
+        self.assertIn("Name of the object", fields["name"].help_text)
         # Note: Current Character fields might not have detailed help text
         # Mixins will provide consistent help text
 

@@ -115,9 +115,8 @@ class ItemMixinApplicationTest(TestCase):
         name_field = fields["name"]
 
         self.assertIsInstance(name_field, models.CharField)
-        # Current Item.name has max_length=200, mixin uses 100
-        # After migration, this should be 100 to match mixin
-        self.assertEqual(name_field.max_length, 200)  # Current value
+        # After mixin application, this should be 100 to match mixin
+        self.assertEqual(name_field.max_length, 100)  # Mixin value
         self.assertFalse(name_field.blank)
         self.assertFalse(name_field.null)
 
@@ -306,10 +305,9 @@ class ItemMixinApplicationTest(TestCase):
         name_field = fields["name"]
         expected_name = NamedModelMixin._meta.get_field("name")
 
-        # Current Item has max_length=200, mixin has 100
-        # Migration will need to handle this change
-        self.assertEqual(name_field.max_length, 200)  # Current
-        self.assertEqual(expected_name.max_length, 100)  # Target
+        # After mixin application, both should have max_length=100
+        self.assertEqual(name_field.max_length, 100)  # Applied mixin value
+        self.assertEqual(expected_name.max_length, 100)  # Mixin template
 
         # Other properties should match
         self.assertEqual(name_field.blank, expected_name.blank)
@@ -380,9 +378,9 @@ class ItemMixinEnhancementTest(TestCase):
         # Get current field help text
         fields = {f.name: f for f in Item._meta.get_fields()}
 
-        # Test current help text is appropriate
-        self.assertIn("Item name", fields["name"].help_text)
-        self.assertIn("Item description", fields["description"].help_text)
+        # Test that mixin help text is now applied
+        self.assertIn("Name of the object", fields["name"].help_text)
+        self.assertIn("Optional detailed description", fields["description"].help_text)
 
         # Test that mixin help text would be compatible
         named_mixin_fields = {f.name: f for f in NamedModelMixin._meta.get_fields()}

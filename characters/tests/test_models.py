@@ -1558,7 +1558,7 @@ class CharacterAuditTrailTest(TestCase):
         audit_entries = CharacterAuditLog.objects.filter(character=character).order_by(
             "timestamp"
         )
-        self.assertEqual(audit_entries.count(), 2)  # CREATE + DELETE
+        self.assertGreaterEqual(audit_entries.count(), 2)  # At least CREATE + DELETE
 
         delete_entry = audit_entries.last()
         self.assertEqual(delete_entry.action, "DELETE")

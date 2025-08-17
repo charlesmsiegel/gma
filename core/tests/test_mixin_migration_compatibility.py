@@ -109,29 +109,28 @@ class MixinMigrationCompatibilityTest(TestCase):
             created_by=self.player1,
         )
 
-        # Test field length adjustment planning
-        # Current Item.name is 200 chars, mixin is 100 chars
+        # Test field length after mixin application
+        # Both Item.name and mixin should now be 100 chars
         fields = {f.name: f for f in Item._meta.get_fields()}
         name_field = fields["name"]
         mixin_name = NamedModelMixin._meta.get_field("name")
 
-        self.assertEqual(name_field.max_length, 200)  # Current
-        self.assertEqual(mixin_name.max_length, 100)  # Target
+        self.assertEqual(name_field.max_length, 100)  # Applied mixin value
+        self.assertEqual(mixin_name.max_length, 100)  # Mixin template
 
-        # Create item with name that would need truncation
-        long_name = "A" * 150  # Longer than target mixin length
-        long_name_item = Item.objects.create(
-            name=long_name,
-            description="Testing name length migration",
+        # Create item with name that fits mixin constraint
+        acceptable_name = "A" * 90  # Within mixin length limit
+        length_test_item = Item.objects.create(
+            name=acceptable_name,
+            description="Testing name length after mixin application",
             campaign=self.campaign,
             created_by=self.player1,
         )
 
-        # Verify current behavior
-        self.assertEqual(long_name_item.name, long_name)
-        self.assertEqual(len(long_name_item.name), 150)
-
-        # After migration, this would need to be handled
+        # Verify mixin constraint is enforced
+        self.assertEqual(length_test_item.name, acceptable_name)
+        self.assertEqual(len(length_test_item.name), 90)
+        self.assertLessEqual(len(length_test_item.name), 100)  # Within mixin limit
         # Migration should either truncate or provide data migration
 
     def test_location_field_deduplication_compatibility(self):
@@ -144,25 +143,26 @@ class MixinMigrationCompatibilityTest(TestCase):
             created_by=self.player1,
         )
 
-        # Same field length considerations as Item
+        # Same field length after mixin application as Item
         fields = {f.name: f for f in Location._meta.get_fields()}
         name_field = fields["name"]
         mixin_name = NamedModelMixin._meta.get_field("name")
 
-        self.assertEqual(name_field.max_length, 200)  # Current
-        self.assertEqual(mixin_name.max_length, 100)  # Target
+        self.assertEqual(name_field.max_length, 100)  # Applied mixin value
+        self.assertEqual(mixin_name.max_length, 100)  # Mixin template
 
-        # Test with long name
-        long_name = "B" * 150
-        long_name_location = Location.objects.create(
-            name=long_name,
-            description="Testing location name length migration",
+        # Test with acceptable name length
+        acceptable_name = "B" * 95  # Within mixin length limit
+        length_test_location = Location.objects.create(
+            name=acceptable_name,
+            description="Testing location name length after mixin application",
             campaign=self.campaign,
             created_by=self.player1,
         )
 
-        self.assertEqual(long_name_location.name, long_name)
-        self.assertEqual(len(long_name_location.name), 150)
+        self.assertEqual(length_test_location.name, acceptable_name)
+        self.assertEqual(len(length_test_location.name), 95)
+        self.assertLessEqual(len(length_test_location.name), 100)  # Within mixin limit
 
     def test_database_constraint_preservation(self):
         """Test that database constraints are preserved during migration."""
@@ -246,8 +246,8 @@ class MixinMigrationCompatibilityTest(TestCase):
         self.assertIn(item, self.campaign.items.all())
         self.assertIn(location, self.campaign.locations.all())
         self.assertIn(character, self.player1.owned_characters.all())
-        self.assertIn(item, self.player1.created_items.all())
-        self.assertIn(location, self.player1.created_locations.all())
+        self.assertIn(item, self.player1.items_item_created.all())
+        self.assertIn(location, self.player1.locations_location_created.all())
 
     def test_polymorphic_compatibility(self):
         """Test that polymorphic functionality is preserved during migration."""
@@ -307,10 +307,7 @@ class MixinMigrationCompatibilityTest(TestCase):
             game_system="mage",
         )
 
-        # Save with audit_user to create audit entry
-        character.save(audit_user=self.player1)
-
-        # Verify audit entry was created
+        # Verify audit entry was automatically created
         audit_entries = CharacterAuditLog.objects.filter(character=character)
         self.assertEqual(audit_entries.count(), 1)
 
@@ -513,10 +510,10 @@ class MixinDataMigrationTest(TestCase):
         item_fields = {f.name: f for f in Item._meta.get_fields()}
         location_fields = {f.name: f for f in Location._meta.get_fields()}
 
-        # Test current help text
-        self.assertIn("Character name", character_fields["name"].help_text)
-        self.assertIn("Item name", item_fields["name"].help_text)
-        self.assertIn("Location name", location_fields["name"].help_text)
+        # Test that mixin help text is now applied
+        self.assertIn("Name of the object", character_fields["name"].help_text)
+        self.assertIn("Name of the object", item_fields["name"].help_text)
+        self.assertIn("Name of the object", location_fields["name"].help_text)
 
         # Mixin help text is more generic
         mixin_fields = {f.name: f for f in NamedModelMixin._meta.get_fields()}
