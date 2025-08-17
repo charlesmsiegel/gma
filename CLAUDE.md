@@ -119,6 +119,15 @@ python manage.py create_test_data --users=5 --campaigns=3 --characters=10  # Cus
 python manage.py create_test_data --clear   # Clear existing test data first
 python manage.py create_test_data --dry-run # Preview what would be created
 
+# Migration safety testing commands
+python manage.py test core.tests.test_migration_strategy  # Run all migration safety tests
+python manage.py test core.tests.test_migration_strategy.ForwardMigrationDataPreservationTest  # Data preservation tests
+python manage.py test core.tests.test_migration_strategy.MigrationPerformanceTest  # Performance tests
+python manage.py test core.tests.test_migration_strategy.MigrationRollbackTest  # Rollback safety tests
+
+# Migration rollback support
+./scripts/rollback_mixin_migrations.sh      # Interactive rollback script for mixin migrations
+
 # Database shell access
 python manage.py dbshell                   # Open PostgreSQL shell
 
