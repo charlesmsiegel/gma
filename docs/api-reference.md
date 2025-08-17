@@ -9,8 +9,9 @@
 5. [Membership API](#membership-api)
 6. [Invitation API](#invitation-api)
 7. [User API](#user-api)
-8. [Data Models](#data-models)
-9. [Testing the API](#testing-the-api)
+8. [Character API](#character-api)
+9. [Data Models](#data-models)
+10. [Testing the API](#testing-the-api)
 
 ## Overview
 
@@ -724,6 +725,209 @@ Update user profile information.
 }
 ```
 
+## Character API
+
+### List Characters
+
+**GET** `/api/characters/`
+
+Get list of characters. Supports filtering by campaign and character type.
+
+**Query Parameters:**
+- `campaign_id` (optional): Filter characters by campaign ID
+- `npc` (optional): Filter by character type (`true` for NPCs, `false` for PCs)
+- `player_owner` (optional): Filter by player owner ID
+
+**Success Response (200):**
+```json
+{
+  "results": [
+    {
+      "id": 1,
+      "name": "Aria Nightwhisper",
+      "description": "A mysterious mage skilled in the arts of Mind and Spirit.",
+      "game_system": "Mage: The Ascension",
+      "npc": false,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-20T14:45:00Z",
+      "campaign": {
+        "id": 1,
+        "name": "Chronicles of the Technocracy",
+        "game_system": "Mage: The Ascension"
+      },
+      "player_owner": {
+        "id": 2,
+        "username": "player1",
+        "email": "player1@example.com"
+      },
+      "character_type": "MageCharacter",
+      "is_deleted": false,
+      "deleted_at": null,
+      "deleted_by": null,
+      "arete": 2,
+      "quintessence": 5,
+      "paradox": 1,
+      "willpower": 4
+    },
+    {
+      "id": 2,
+      "name": "Dr. Morrison",
+      "description": "A Technocratic operative and medical researcher.",
+      "game_system": "Mage: The Ascension",
+      "npc": true,
+      "created_at": "2024-01-16T09:15:00Z",
+      "updated_at": "2024-01-16T09:15:00Z",
+      "campaign": {
+        "id": 1,
+        "name": "Chronicles of the Technocracy",
+        "game_system": "Mage: The Ascension"
+      },
+      "player_owner": {
+        "id": 1,
+        "username": "gamemaster",
+        "email": "gm@example.com"
+      },
+      "character_type": "MageCharacter",
+      "is_deleted": false,
+      "deleted_at": null,
+      "deleted_by": null,
+      "arete": 4,
+      "quintessence": 10,
+      "paradox": 0,
+      "willpower": 6
+    }
+  ],
+  "count": 2
+}
+```
+
+### Get Character
+
+**GET** `/api/characters/{id}/`
+
+Get detailed information about a specific character.
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "name": "Aria Nightwhisper",
+  "description": "A mysterious mage skilled in the arts of Mind and Spirit.",
+  "game_system": "Mage: The Ascension",
+  "npc": false,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-20T14:45:00Z",
+  "campaign": {
+    "id": 1,
+    "name": "Chronicles of the Technocracy",
+    "game_system": "Mage: The Ascension"
+  },
+  "player_owner": {
+    "id": 2,
+    "username": "player1",
+    "email": "player1@example.com"
+  },
+  "character_type": "MageCharacter",
+  "is_deleted": false,
+  "deleted_at": null,
+  "deleted_by": null,
+  "arete": 2,
+  "quintessence": 5,
+  "paradox": 1,
+  "willpower": 4
+}
+```
+
+### Create Character
+
+**POST** `/api/characters/`
+
+Create a new character. Requires campaign membership.
+
+**Request Body:**
+```json
+{
+  "name": "New Character",
+  "description": "Character background and description",
+  "npc": false,
+  "campaign": 1,
+  "character_type": "MageCharacter",
+  "willpower": 3,
+  "arete": 1,
+  "quintessence": 0,
+  "paradox": 0
+}
+```
+
+**Success Response (201):**
+```json
+{
+  "id": 3,
+  "name": "New Character",
+  "description": "Character background and description",
+  "game_system": "Mage: The Ascension",
+  "npc": false,
+  "created_at": "2024-01-21T16:30:00Z",
+  "updated_at": "2024-01-21T16:30:00Z",
+  "campaign": {
+    "id": 1,
+    "name": "Chronicles of the Technocracy",
+    "game_system": "Mage: The Ascension"
+  },
+  "player_owner": {
+    "id": 2,
+    "username": "player1",
+    "email": "player1@example.com"
+  },
+  "character_type": "MageCharacter",
+  "is_deleted": false,
+  "deleted_at": null,
+  "deleted_by": null,
+  "arete": 1,
+  "quintessence": 0,
+  "paradox": 0,
+  "willpower": 3
+}
+```
+
+### Update Character
+
+**PUT** `/api/characters/{id}/`
+
+Update an existing character. Only character owner, campaign owner, or GM can update.
+
+**Request Body:**
+```json
+{
+  "name": "Updated Character Name",
+  "description": "Updated description",
+  "npc": true,
+  "arete": 2,
+  "willpower": 4
+}
+```
+
+### Delete Character
+
+**DELETE** `/api/characters/{id}/`
+
+Soft delete a character. Only character owner, campaign owner, or GM can delete (based on campaign settings).
+
+**Success Response (204):** No content
+
+**Character Type Filtering Examples:**
+
+```bash
+# Get all NPCs in a campaign
+GET /api/characters/?campaign_id=1&npc=true
+
+# Get all PCs owned by a specific player
+GET /api/characters/?player_owner=2&npc=false
+
+# Get all characters in a campaign (both PCs and NPCs)
+GET /api/characters/?campaign_id=1
+```
+
 ## Data Models
 
 ### Role Choices
@@ -736,6 +940,51 @@ ROLE_CHOICES = [
     ('OBSERVER', 'Observer') # Read-only access
 ]
 ```
+
+### Character Model
+
+**Core Fields:**
+- `id`: Integer, primary key
+- `name`: String (max 100 chars), unique per campaign
+- `description`: Text, optional character background
+- `game_system`: String, inherited from campaign
+- `npc`: Boolean, character type flag
+  - `false`: Player Character (PC) - controlled by players
+  - `true`: Non-Player Character (NPC) - controlled by GMs
+- `created_at`: Timestamp, character creation time
+- `updated_at`: Timestamp, last modification time
+
+**Relationships:**
+- `campaign`: Foreign key to Campaign model
+- `player_owner`: Foreign key to User model (character controller)
+- `created_by`: Foreign key to User model (audit trail)
+- `modified_by`: Foreign key to User model (audit trail)
+
+**Polymorphic Fields (game-system specific):**
+- `character_type`: String, polymorphic type identifier
+  - `"Character"`: Base character
+  - `"WoDCharacter"`: World of Darkness character
+  - `"MageCharacter"`: Mage: The Ascension character
+
+**World of Darkness Characters (WoDCharacter):**
+- `willpower`: Integer (1-10), character's willpower rating
+
+**Mage Characters (MageCharacter):**
+- `arete`: Integer (1-10), mage's Arete rating
+- `quintessence`: Integer (0+), current quintessence points
+- `paradox`: Integer (0+), current paradox points
+
+**Soft Delete Fields:**
+- `is_deleted`: Boolean, soft delete flag
+- `deleted_at`: Timestamp, deletion time (null if active)
+- `deleted_by`: Foreign key to User, who deleted the character
+
+**Business Rules:**
+- Character names must be unique within a campaign
+- Player must be campaign member to own characters
+- NPC creation limited to GMs and campaign owners
+- Character limits apply only to PCs, not NPCs
+- Audit trail tracks all character changes including NPC status
 
 ### Invitation Status Choices
 

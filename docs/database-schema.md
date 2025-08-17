@@ -484,6 +484,175 @@ CREATE TABLE campaigns_campaigninvitation (
 
 ## Campaign Domain
 
+### Character Model
+**Table**: `characters_character`
+
+The core character model supporting polymorphic inheritance for different game systems, with unified PC/NPC architecture.
+
+```sql
+-- Character base table
+CREATE TABLE characters_character (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT DEFAULT '',
+    game_system VARCHAR(100) NOT NULL,
+    npc BOOLEAN DEFAULT false NOT NULL,  -- PC/NPC unified architecture
+
+    -- Relationships
+    campaign_id INTEGER NOT NULL REFERENCES campaigns_campaign(id) ON DELETE CASCADE,
+    player_owner_id INTEGER NOT NULL REFERENCES users_user(id) ON DELETE CASCADE,
+
+    -- Polymorphic type tracking
+    polymorphic_ctype_id INTEGER NOT NULL REFERENCES django_content_type(id),
+
+    -- Audit trail fields (via DetailedAuditableMixin)
+    created_by_id INTEGER REFERENCES users_user(id) ON DELETE SET NULL,
+    modified_by_id INTEGER REFERENCES users_user(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+
+    -- Soft delete fields
+    is_deleted BOOLEAN DEFAULT false NOT NULL,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    deleted_by_id INTEGER REFERENCES users_user(id) ON DELETE SET NULL,
+
+    -- Constraints
+    CONSTRAINT unique_character_name_per_campaign UNIQUE (campaign_id, name)
+);
+
+-- Performance indexes
+CREATE INDEX characters_character_npc_idx ON characters_character (npc);  -- NPC filtering
+CREATE INDEX characters_character_count_idx ON characters_character (campaign_id, player_owner_id);  -- Character limits
+CREATE INDEX characters_character_campaign_idx ON characters_character (campaign_id);  -- Campaign queries
+CREATE INDEX characters_character_created_at_idx ON characters_character (created_at);  -- Audit queries
+CREATE INDEX characters_character_updated_at_idx ON characters_character (updated_at);  -- Audit queries
+```
+
+**Field Specifications:**
+
+**Core Identity:**
+- `name`: Character name, must be unique within campaign (VARCHAR 100, indexed via constraint)
+- `description`: Optional character background and description (TEXT, blank allowed)
+- `game_system`: Game system identifier (VARCHAR 100, matches campaign system)
+
+**PC/NPC Architecture:**
+- `npc`: Boolean flag distinguishing NPCs from PCs (BOOLEAN, default: false, indexed)
+  - `false`: Player Character (PC) - controlled by players
+  - `true`: Non-Player Character (NPC) - controlled by GMs
+  - **Performance**: Indexed for efficient filtering queries
+  - **Unified Model**: Same Character model serves both PCs and NPCs
+
+**Relationships:**
+- `campaign_id`: Campaign this character belongs to (CASCADE delete)
+- `player_owner_id`: User who owns/controls this character (CASCADE delete)
+  - For PCs: The actual player
+  - For NPCs: Usually the GM who created them
+
+**Polymorphic Support:**
+- `polymorphic_ctype_id`: Django content type for polymorphic inheritance
+- Supports inheritance: Character → WoDCharacter → MageCharacter
+- Enables game-system-specific fields while maintaining unified queries
+
+**Audit Trail (via DetailedAuditableMixin):**
+- `created_by_id`: User who created the character (SET NULL on user deletion)
+- `modified_by_id`: User who last modified the character (SET NULL on user deletion)
+- `created_at`: Character creation timestamp (indexed for audit queries)
+- `updated_at`: Last modification timestamp (indexed for audit queries)
+
+**Soft Delete Support:**
+- `is_deleted`: Soft delete flag (default: false)
+- `deleted_at`: Deletion timestamp (null for active characters)
+- `deleted_by_id`: User who deleted the character (SET NULL on user deletion)
+
+**Business Rules:**
+- Character names must be unique within a campaign
+- Player must be a campaign member to own characters
+- Campaign owners and GMs can edit all campaign characters
+- Players can only edit their own characters
+- Character limit per player enforced at campaign level
+- NPC/PC status can be toggled (useful for character ownership transfers)
+
+#### Polymorphic Character Inheritance
+
+**WoD Character Extension:**
+```sql
+-- World of Darkness character extension
+CREATE TABLE characters_wodcharacter (
+    character_ptr_id INTEGER PRIMARY KEY REFERENCES characters_character(id) ON DELETE CASCADE,
+    willpower SMALLINT DEFAULT 3 NOT NULL CHECK (willpower >= 1 AND willpower <= 10)
+);
+```
+
+**Mage Character Extension:**
+```sql
+-- Mage: The Ascension character extension
+CREATE TABLE characters_magecharacter (
+    wodcharacter_ptr_id INTEGER PRIMARY KEY REFERENCES characters_wodcharacter(character_ptr_id) ON DELETE CASCADE,
+    arete SMALLINT DEFAULT 1 NOT NULL CHECK (arete >= 1 AND arete <= 10),
+    quintessence SMALLINT DEFAULT 0 NOT NULL CHECK (quintessence >= 0),
+    paradox SMALLINT DEFAULT 0 NOT NULL CHECK (paradox >= 0)
+);
+```
+
+#### Character Audit Trail
+
+**Audit Log Table:**
+```sql
+-- Character-specific audit trail
+CREATE TABLE characters_character_audit (
+    id SERIAL PRIMARY KEY,
+    character_id INTEGER NOT NULL REFERENCES characters_character(id) ON DELETE CASCADE,
+    changed_by_id INTEGER REFERENCES users_user(id) ON DELETE SET NULL,
+    action VARCHAR(20) NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'DELETE', 'RESTORE')),
+    field_changes JSONB DEFAULT '{}' NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- Audit indexes
+CREATE INDEX characters_audit_character_idx ON characters_character_audit (character_id);
+CREATE INDEX characters_audit_timestamp_idx ON characters_character_audit (timestamp DESC);
+CREATE INDEX characters_audit_action_idx ON characters_character_audit (action);
+```
+
+**Tracked Field Changes:**
+- `name`: Character name changes
+- `description`: Background updates
+- `npc`: PC/NPC status changes
+- `campaign_id`: Campaign transfers (rare)
+- `player_owner_id`: Ownership changes
+- `game_system`: System changes (rare)
+
+#### NPC Field Usage Patterns
+
+**Query by Character Type:**
+```sql
+-- Get all NPCs in a campaign
+SELECT * FROM characters_character
+WHERE campaign_id = ? AND npc = true AND is_deleted = false;
+
+-- Get all PCs owned by a player
+SELECT * FROM characters_character
+WHERE player_owner_id = ? AND npc = false AND is_deleted = false;
+
+-- Get character counts by type for a campaign
+SELECT
+    npc,
+    COUNT(*) as count
+FROM characters_character
+WHERE campaign_id = ? AND is_deleted = false
+GROUP BY npc;
+```
+
+**Performance Considerations:**
+- `npc` field is indexed for efficient filtering
+- Combined with other common filters (campaign, player_owner) for optimal query performance
+- Polymorphic queries benefit from select_related() on content types
+
+**Migration History:**
+- **Issue #174**: Added `npc` field with database index
+- **Default Behavior**: New field defaults to `false` (PC) for backward compatibility
+- **Existing Data**: All existing characters treated as PCs (npc=false)
+
 ### Permission System
 
 The campaign permission system uses a hierarchical role model:

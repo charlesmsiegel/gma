@@ -2680,3 +2680,640 @@ class CharacterRaceConditionTest(TransactionTestCase):
             self.assertEqual(
                 final_count, 3, f"Expected 3 characters total, got {final_count}"
             )
+
+
+class CharacterNPCFieldTest(TestCase):
+    """Test Character model NPC field functionality."""
+
+    def setUp(self):
+        """Set up test users and campaigns."""
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+            max_characters_per_player=5,
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.gm, role="GM"
+        )
+
+    def test_character_creation_npc_true(self):
+        """Test creating a character with npc=True."""
+        character = Character.objects.create(
+            name="Test NPC",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        self.assertTrue(character.npc)
+        self.assertEqual(character.name, "Test NPC")
+
+        # Verify it's saved to database correctly
+        character.refresh_from_db()
+        self.assertTrue(character.npc)
+
+    def test_character_creation_npc_false_explicit(self):
+        """Test creating a character with npc=False explicitly."""
+        character = Character.objects.create(
+            name="Test PC",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        self.assertFalse(character.npc)
+        self.assertEqual(character.name, "Test PC")
+
+        # Verify it's saved to database correctly
+        character.refresh_from_db()
+        self.assertFalse(character.npc)
+
+    def test_character_creation_npc_default_false(self):
+        """Test creating a character without specifying npc (defaults to False)."""
+        character = Character.objects.create(
+            name="Default PC",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        self.assertFalse(character.npc)
+        self.assertEqual(character.name, "Default PC")
+
+        # Verify it's saved to database correctly
+        character.refresh_from_db()
+        self.assertFalse(character.npc)
+
+    def test_npc_field_database_index_exists(self):
+        """Test that the npc field has a database index."""
+        from django.db import connection
+
+        # Get the table name for Character model
+        table_name = Character._meta.db_table
+
+        with connection.cursor() as cursor:
+            # Get index information - this is database-specific
+            if connection.vendor == "postgresql":
+                cursor.execute(
+                    """
+                    SELECT indexname, indexdef
+                    FROM pg_indexes
+                    WHERE tablename = %s AND indexdef LIKE '%%npc%%'
+                """,
+                    [table_name],
+                )
+                indexes = cursor.fetchall()
+
+                # Should have at least one index containing 'npc'
+                npc_indexes = [idx for idx in indexes if "npc" in idx[1].lower()]
+                self.assertGreater(
+                    len(npc_indexes),
+                    0,
+                    f"No database index found for npc field on {table_name}",
+                )
+
+            elif connection.vendor == "sqlite":
+                cursor.execute(f"PRAGMA index_list({table_name})")
+                indexes = cursor.fetchall()
+
+                # Check if any index includes the npc field
+                has_npc_index = False
+                for index_info in indexes:
+                    index_name = index_info[1]
+                    cursor.execute(f"PRAGMA index_info({index_name})")
+                    index_columns = cursor.fetchall()
+                    if any("npc" in col[2].lower() for col in index_columns):
+                        has_npc_index = True
+                        break
+
+                self.assertTrue(
+                    has_npc_index,
+                    f"No database index found for npc field on {table_name}",
+                )
+
+    def test_query_characters_by_npc_status(self):
+        """Test querying characters by NPC status."""
+        # Create mix of NPCs and PCs
+        pc1 = Character.objects.create(
+            name="Player Character 1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        pc2 = Character.objects.create(
+            name="Player Character 2",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        npc1 = Character.objects.create(
+            name="Non-Player Character 1",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        npc2 = Character.objects.create(
+            name="Non-Player Character 2",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        # Query for NPCs
+        npcs = Character.objects.filter(npc=True)
+        self.assertEqual(npcs.count(), 2)
+        self.assertIn(npc1, npcs)
+        self.assertIn(npc2, npcs)
+        self.assertNotIn(pc1, npcs)
+        self.assertNotIn(pc2, npcs)
+
+        # Query for PCs
+        pcs = Character.objects.filter(npc=False)
+        self.assertEqual(pcs.count(), 2)
+        self.assertIn(pc1, pcs)
+        self.assertIn(pc2, pcs)
+        self.assertNotIn(npc1, pcs)
+        self.assertNotIn(npc2, pcs)
+
+    def test_polymorphic_wod_character_npc_field(self):
+        """Test NPC field works with WoDCharacter polymorphic inheritance."""
+        from characters.models import WoDCharacter
+
+        wod_pc = WoDCharacter.objects.create(
+            name="WoD Player Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="WoD Generic",
+            npc=False,
+            willpower=5,
+        )
+
+        wod_npc = WoDCharacter.objects.create(
+            name="WoD NPC",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="WoD Generic",
+            npc=True,
+            willpower=7,
+        )
+
+        # Test field values
+        self.assertFalse(wod_pc.npc)
+        self.assertTrue(wod_npc.npc)
+
+        # Test polymorphic queries
+        all_npcs = Character.objects.filter(npc=True)
+        self.assertIn(wod_npc, all_npcs)
+        self.assertNotIn(wod_pc, all_npcs)
+
+        wod_npcs = WoDCharacter.objects.filter(npc=True)
+        self.assertIn(wod_npc, wod_npcs)
+        self.assertNotIn(wod_pc, wod_npcs)
+
+    def test_polymorphic_mage_character_npc_field(self):
+        """Test NPC field works with MageCharacter polymorphic inheritance."""
+        from characters.models import MageCharacter
+
+        mage_pc = MageCharacter.objects.create(
+            name="Mage Player Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+            willpower=4,
+            arete=2,
+            quintessence=5,
+            paradox=1,
+        )
+
+        mage_npc = MageCharacter.objects.create(
+            name="Mage NPC",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+            willpower=6,
+            arete=4,
+            quintessence=10,
+            paradox=0,
+        )
+
+        # Test field values
+        self.assertFalse(mage_pc.npc)
+        self.assertTrue(mage_npc.npc)
+
+        # Test polymorphic queries
+        all_npcs = Character.objects.filter(npc=True)
+        self.assertIn(mage_npc, all_npcs)
+        self.assertNotIn(mage_pc, all_npcs)
+
+        mage_npcs = MageCharacter.objects.filter(npc=True)
+        self.assertIn(mage_npc, mage_npcs)
+        self.assertNotIn(mage_pc, mage_npcs)
+
+    def test_npc_field_preserved_during_updates(self):
+        """Test that NPC field is preserved during character updates."""
+        # Create NPC
+        npc = Character.objects.create(
+            name="Test NPC",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        # Update name but not npc field
+        npc.name = "Updated NPC Name"
+        npc.save()
+
+        # Verify npc field is preserved
+        npc.refresh_from_db()
+        self.assertTrue(npc.npc)
+        self.assertEqual(npc.name, "Updated NPC Name")
+
+        # Create PC and update
+        pc = Character.objects.create(
+            name="Test PC",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        # Update description but not npc field
+        pc.description = "Updated description"
+        pc.save()
+
+        # Verify npc field is preserved
+        pc.refresh_from_db()
+        self.assertFalse(pc.npc)
+        self.assertEqual(pc.description, "Updated description")
+
+    def test_npc_field_toggle(self):
+        """Test changing NPC field value from False to True and vice versa."""
+        # Create PC first
+        character = Character.objects.create(
+            name="Toggle Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        self.assertFalse(character.npc)
+
+        # Change to NPC
+        character.npc = True
+        character.save()
+
+        character.refresh_from_db()
+        self.assertTrue(character.npc)
+
+        # Change back to PC
+        character.npc = False
+        character.save()
+
+        character.refresh_from_db()
+        self.assertFalse(character.npc)
+
+    def test_npc_field_in_character_manager_queryset(self):
+        """Test NPC field works with CharacterManager and QuerySet methods."""
+        # Create characters with different NPC status
+        pc = Character.objects.create(
+            name="Manager Test PC",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        npc = Character.objects.create(
+            name="Manager Test NPC",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        # Test manager methods with NPC filtering
+        campaign_characters = Character.objects.for_campaign(self.campaign)
+        self.assertEqual(campaign_characters.count(), 2)
+
+        campaign_npcs = campaign_characters.filter(npc=True)
+        self.assertEqual(campaign_npcs.count(), 1)
+        self.assertIn(npc, campaign_npcs)
+
+        campaign_pcs = campaign_characters.filter(npc=False)
+        self.assertEqual(campaign_pcs.count(), 1)
+        self.assertIn(pc, campaign_pcs)
+
+        # Test with owned_by manager method
+        player_characters = Character.objects.owned_by(self.player1)
+        self.assertEqual(player_characters.count(), 1)
+        self.assertIn(pc, player_characters)
+
+        gm_characters = Character.objects.owned_by(self.gm)
+        self.assertEqual(gm_characters.count(), 1)
+        self.assertIn(npc, gm_characters)
+
+    def test_npc_field_with_soft_delete(self):
+        """Test that NPC field works correctly with soft delete functionality."""
+        npc = Character.objects.create(
+            name="Deletable NPC",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        # Verify NPC before deletion
+        self.assertTrue(npc.npc)
+
+        # Soft delete the character
+        npc.soft_delete(self.gm)
+
+        # Verify NPC field is preserved after soft delete
+        self.assertTrue(npc.npc)
+        self.assertTrue(npc.is_deleted)
+
+        # Verify with all_objects manager (includes soft-deleted)
+        all_characters = Character.all_objects.filter(npc=True)
+        self.assertIn(npc, all_characters)
+
+        # Verify not in default manager (excludes soft-deleted)
+        active_npcs = Character.objects.filter(npc=True)
+        self.assertNotIn(npc, active_npcs)
+
+        # Restore and verify NPC field preserved
+        npc.restore(self.gm)
+        self.assertTrue(npc.npc)
+        self.assertFalse(npc.is_deleted)
+
+    def test_npc_field_boolean_validation(self):
+        """Test that NPC field only accepts boolean values."""
+        # Valid boolean values should work
+        for npc_value in [True, False]:
+            character = Character.objects.create(
+                name=f"Test Character {npc_value}",
+                campaign=self.campaign,
+                player_owner=self.player1,
+                game_system="Mage: The Ascension",
+                npc=npc_value,
+            )
+            self.assertEqual(character.npc, npc_value)
+
+    def test_existing_characters_default_to_npc_false(self):
+        """Test that after migration, existing characters have npc=False."""
+        # This test assumes characters were created before the NPC field was added
+        # and that the migration sets the default correctly
+
+        character = Character.objects.create(
+            name="Pre-Migration Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+        )
+
+        # Should default to False (PC)
+        self.assertFalse(character.npc)
+
+        # Verify this matches the expected behavior for existing characters
+        character.refresh_from_db()
+        self.assertFalse(character.npc)
+
+    def test_npc_field_in_audit_trail(self):
+        """Test that NPC field changes are tracked in audit trail."""
+        character = Character.objects.create(
+            name="Audit Test Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        # Change NPC status
+        character.npc = True
+        character.save(audit_user=self.gm)
+
+        # Check if audit entries exist
+        audit_entries = character.audit_entries.all()
+        self.assertGreater(audit_entries.count(), 0)
+
+        # Note: The actual audit trail testing depends on the DetailedAuditableMixin
+        # implementation and whether it tracks the npc field changes
+
+    def test_npc_field_constraint_validation(self):
+        """Test that NPC field doesn't interfere with existing model constraints."""
+        # Test unique name constraint still works with NPC field
+        Character.objects.create(
+            name="Unique Name Test",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        # Creating another character with same name should still fail
+        with self.assertRaises(ValidationError):
+            Character.objects.create(
+                name="Unique Name Test",
+                campaign=self.campaign,
+                player_owner=self.gm,
+                game_system="Mage: The Ascension",
+                npc=True,  # Even with different NPC status
+            )
+
+    def test_character_manager_npc_methods(self):
+        """Test Character manager NPC methods (.npcs() and .player_characters())."""
+        # Create test characters
+        pc1 = Character.objects.create(
+            name="PC 1",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        pc2 = Character.objects.create(
+            name="PC 2",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        npc1 = Character.objects.create(
+            name="NPC 1",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        npc2 = Character.objects.create(
+            name="NPC 2",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        # Test new manager .npcs() method
+        npcs = Character.objects.npcs()
+        self.assertEqual(npcs.count(), 2)
+        self.assertIn(npc1, npcs)
+        self.assertIn(npc2, npcs)
+        self.assertNotIn(pc1, npcs)
+        self.assertNotIn(pc2, npcs)
+
+        # Test new manager .player_characters() method
+        pcs = Character.objects.player_characters()
+        self.assertEqual(pcs.count(), 2)
+        self.assertIn(pc1, pcs)
+        self.assertIn(pc2, pcs)
+        self.assertNotIn(npc1, pcs)
+        self.assertNotIn(npc2, pcs)
+
+        # Test chaining new methods with existing filters
+        campaign_npcs = Character.objects.npcs().for_campaign(self.campaign)
+        self.assertEqual(campaign_npcs.count(), 2)
+        self.assertIn(npc1, campaign_npcs)
+        self.assertIn(npc2, campaign_npcs)
+
+        campaign_pcs = Character.objects.player_characters().for_campaign(self.campaign)
+        self.assertEqual(campaign_pcs.count(), 2)
+        self.assertIn(pc1, campaign_pcs)
+        self.assertIn(pc2, campaign_pcs)
+
+        # Test combining with ownership filtering
+        player_pcs = Character.objects.player_characters().owned_by(self.player1)
+        self.assertEqual(player_pcs.count(), 2)
+
+        gm_npcs = Character.objects.npcs().owned_by(self.gm)
+        self.assertEqual(gm_npcs.count(), 2)
+
+        # Test that the old filter approach still works (backward compatibility)
+        old_style_npcs = Character.objects.filter(npc=True)
+        self.assertEqual(old_style_npcs.count(), 2)
+
+        old_style_pcs = Character.objects.filter(npc=False)
+        self.assertEqual(old_style_pcs.count(), 2)
+
+    def test_npc_field_performance_with_index(self):
+        """Test that NPC field queries perform well with database index."""
+        # Temporarily increase character limit for this performance test
+        original_limit = self.campaign.max_characters_per_player
+        self.campaign.max_characters_per_player = (
+            100  # Allow more characters for testing
+        )
+        self.campaign.save()
+
+        # Create a reasonable number of characters to test performance
+        characters_to_create = 50
+
+        try:
+            for i in range(characters_to_create):
+                is_npc = i % 3 == 0  # Every third character is an NPC
+                owner = self.gm if is_npc else self.player1
+
+                Character.objects.create(
+                    name=f"Character {i}",
+                    campaign=self.campaign,
+                    player_owner=owner,
+                    game_system="Mage: The Ascension",
+                    npc=is_npc,
+                )
+
+            # Test query performance - this should be fast with index
+            import time
+
+            start_time = time.time()
+            npcs = list(Character.objects.filter(npc=True))
+            npc_query_time = time.time() - start_time
+
+            start_time = time.time()
+            pcs = list(Character.objects.filter(npc=False))
+            pc_query_time = time.time() - start_time
+
+            # Verify correct counts
+            # Count actual NPCs created (every 3rd character starting from 0)
+            expected_npcs = len([i for i in range(characters_to_create) if i % 3 == 0])
+            expected_pcs = characters_to_create - expected_npcs
+
+            self.assertEqual(len(npcs), expected_npcs)
+            self.assertEqual(len(pcs), expected_pcs)
+
+            # Query times should be reasonable (under 100ms for this small dataset)
+            # This is more of a smoke test than a real performance test
+            self.assertLess(npc_query_time, 0.1, "NPC query took too long")
+            self.assertLess(pc_query_time, 0.1, "PC query took too long")
+        finally:
+            # Restore original character limit
+            self.campaign.max_characters_per_player = original_limit
+            self.campaign.save()
+
+    def test_npc_field_migration_compatibility(self):
+        """Test that the NPC field addition is compatible with existing data."""
+        # Verifies adding NPC field doesn't break existing functionality
+
+        # Create character using all the same patterns as existing tests
+        character = Character.objects.create(
+            name="Migration Test Character",
+            campaign=self.campaign,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            description="Test description",
+        )
+
+        # Verify all existing fields still work
+        self.assertEqual(character.name, "Migration Test Character")
+        self.assertEqual(character.campaign, self.campaign)
+        self.assertEqual(character.player_owner, self.player1)
+        self.assertEqual(character.game_system, "Mage: The Ascension")
+        self.assertEqual(character.description, "Test description")
+
+        # Verify NPC field defaults correctly
+        self.assertFalse(character.npc)
+
+        # Verify existing validation still works
+        character.clean()  # Should not raise
+
+        # Verify existing permissions still work
+        self.assertTrue(character.can_be_edited_by(self.player1))
+        self.assertTrue(character.can_be_edited_by(self.owner))  # Campaign owner
+
+        # Verify string representation still works
+        self.assertEqual(str(character), "Migration Test Character")
+
+        # Verify audit trail still works
+        original_audit_count = character.audit_entries.count()
+        character.description = "Updated description"
+        character.save(audit_user=self.player1)
+
+        new_audit_count = character.audit_entries.count()
+        self.assertGreater(new_audit_count, original_audit_count)

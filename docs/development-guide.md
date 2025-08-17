@@ -1222,6 +1222,307 @@ class TestGameSessionModel(TestCase):
         self.assertEqual(session.modified_by, modifier)  # Updated
 ```
 
+### Character NPC Field Testing Patterns
+
+The NPC field implementation (issue #174) introduced unified PC/NPC architecture. Here are essential testing patterns for Character functionality:
+
+#### Model Field Testing
+
+```python
+class CharacterNPCFieldTest(TestCase):
+    """Test Character model NPC field functionality."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player = User.objects.create_user(
+            username="player", email="player@test.com", password="testpass123"
+        )
+
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player, role="PLAYER"
+        )
+
+    def test_character_npc_field_defaults_to_false(self):
+        """Test that NPC field defaults to False (PC)."""
+        character = Character.objects.create(
+            name="Test Character",
+            campaign=self.campaign,
+            player_owner=self.player,
+            game_system="Mage: The Ascension",
+        )
+
+        self.assertFalse(character.npc)
+
+        # Verify persistence
+        character.refresh_from_db()
+        self.assertFalse(character.npc)
+
+    def test_character_npc_field_explicit_true(self):
+        """Test creating NPC with explicit npc=True."""
+        npc = Character.objects.create(
+            name="Test NPC",
+            campaign=self.campaign,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        self.assertTrue(npc.npc)
+
+        # Verify persistence
+        npc.refresh_from_db()
+        self.assertTrue(npc.npc)
+
+    def test_npc_field_toggle(self):
+        """Test toggling NPC status."""
+        character = Character.objects.create(
+            name="Toggle Character",
+            campaign=self.campaign,
+            player_owner=self.player,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        # Convert PC to NPC
+        character.npc = True
+        character.save()
+        character.refresh_from_db()
+        self.assertTrue(character.npc)
+
+        # Convert NPC back to PC
+        character.npc = False
+        character.save()
+        character.refresh_from_db()
+        self.assertFalse(character.npc)
+
+    def test_npc_field_database_index(self):
+        """Test that NPC field has database index for performance."""
+        from django.db import connection
+
+        table_name = Character._meta.db_table
+
+        with connection.cursor() as cursor:
+            if connection.vendor == "postgresql":
+                cursor.execute(
+                    """
+                    SELECT indexname, indexdef
+                    FROM pg_indexes
+                    WHERE tablename = %s AND indexdef LIKE '%%npc%%'
+                    """,
+                    [table_name],
+                )
+                indexes = cursor.fetchall()
+                npc_indexes = [idx for idx in indexes if "npc" in idx[1].lower()]
+
+                self.assertGreater(
+                    len(npc_indexes),
+                    0,
+                    f"No database index found for npc field on {table_name}",
+                )
+```
+
+#### Query Pattern Testing
+
+```python
+def test_npc_filtering_queries(self):
+    """Test efficient filtering by NPC status."""
+    # Create mixed character types
+    pc1 = Character.objects.create(
+        name="Player Character 1",
+        campaign=self.campaign,
+        player_owner=self.player,
+        game_system="Mage: The Ascension",
+        npc=False,
+    )
+
+    npc1 = Character.objects.create(
+        name="Non-Player Character 1",
+        campaign=self.campaign,
+        player_owner=self.gm,
+        game_system="Mage: The Ascension",
+        npc=True,
+    )
+
+    # Test filtering queries
+    npcs = Character.objects.filter(campaign=self.campaign, npc=True)
+    pcs = Character.objects.filter(campaign=self.campaign, npc=False)
+
+    self.assertEqual(npcs.count(), 1)
+    self.assertIn(npc1, npcs)
+    self.assertNotIn(pc1, npcs)
+
+    self.assertEqual(pcs.count(), 1)
+    self.assertIn(pc1, pcs)
+    self.assertNotIn(npc1, pcs)
+
+def test_polymorphic_inheritance_with_npc_field(self):
+    """Test NPC field works with polymorphic inheritance."""
+    from characters.models import MageCharacter
+
+    mage_pc = MageCharacter.objects.create(
+        name="Mage PC",
+        campaign=self.campaign,
+        player_owner=self.player,
+        game_system="Mage: The Ascension",
+        npc=False,
+        willpower=4,
+        arete=2,
+    )
+
+    mage_npc = MageCharacter.objects.create(
+        name="Mage NPC",
+        campaign=self.campaign,
+        player_owner=self.gm,
+        game_system="Mage: The Ascension",
+        npc=True,
+        willpower=6,
+        arete=4,
+    )
+
+    # Test polymorphic queries with NPC filtering
+    all_npcs = Character.objects.filter(npc=True)
+    mage_npcs = MageCharacter.objects.filter(npc=True)
+
+    self.assertIn(mage_npc, all_npcs)
+    self.assertIn(mage_npc, mage_npcs)
+    self.assertNotIn(mage_pc, all_npcs)
+    self.assertNotIn(mage_pc, mage_npcs)
+```
+
+#### Audit Trail Testing
+
+```python
+def test_npc_field_audit_trail(self):
+    """Test that NPC field changes are tracked in audit trail."""
+    character = Character.objects.create(
+        name="Audit Test Character",
+        campaign=self.campaign,
+        player_owner=self.player,
+        game_system="Mage: The Ascension",
+        npc=False,
+    )
+
+    # Change NPC status with audit user
+    character.npc = True
+    character.save(audit_user=self.gm)
+
+    # Verify audit entry exists
+    audit_entries = character.audit_entries.all()
+    self.assertGreater(audit_entries.count(), 0)
+
+    # Look for NPC field change in audit trail
+    npc_change_entries = audit_entries.filter(
+        field_changes__has_key='npc'
+    )
+
+    if npc_change_entries.exists():
+        audit_entry = npc_change_entries.first()
+        field_changes = audit_entry.field_changes
+        self.assertIn('npc', field_changes)
+        self.assertEqual(field_changes['npc']['old'], False)
+        self.assertEqual(field_changes['npc']['new'], True)
+```
+
+#### API Testing with NPC Field
+
+```python
+class CharacterAPITest(APITestCase):
+    """Test Character API with NPC field support."""
+
+    def test_create_pc_via_api(self):
+        """Test creating PC via API."""
+        self.client.force_authenticate(self.player)
+
+        data = {
+            "name": "API Test PC",
+            "description": "Created via API",
+            "npc": False,
+            "campaign": self.campaign.id,
+            "character_type": "Character",
+        }
+
+        response = self.client.post("/api/characters/", data)
+        self.assertEqual(response.status_code, 201)
+        self.assertFalse(response.data["npc"])
+        self.assertEqual(response.data["name"], "API Test PC")
+
+    def test_create_npc_requires_gm_permission(self):
+        """Test that creating NPCs requires GM/Owner permissions."""
+        self.client.force_authenticate(self.player)
+
+        data = {
+            "name": "API Test NPC",
+            "description": "NPC created via API",
+            "npc": True,
+            "campaign": self.campaign.id,
+            "character_type": "Character",
+        }
+
+        # Players shouldn't be able to create NPCs
+        response = self.client.post("/api/characters/", data)
+        self.assertEqual(response.status_code, 403)
+
+        # GMs should be able to create NPCs
+        self.client.force_authenticate(self.gm)
+        response = self.client.post("/api/characters/", data)
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data["npc"])
+
+    def test_npc_filtering_in_api(self):
+        """Test filtering characters by NPC status via API."""
+        # Create test characters
+        Character.objects.create(
+            name="Test PC", campaign=self.campaign,
+            player_owner=self.player, game_system="Test", npc=False
+        )
+        Character.objects.create(
+            name="Test NPC", campaign=self.campaign,
+            player_owner=self.gm, game_system="Test", npc=True
+        )
+
+        self.client.force_authenticate(self.player)
+
+        # Test filtering for NPCs only
+        response = self.client.get(f"/api/characters/?campaign_id={self.campaign.id}&npc=true")
+        self.assertEqual(response.status_code, 200)
+        results = response.data["results"]
+        self.assertEqual(len(results), 1)
+        self.assertTrue(results[0]["npc"])
+
+        # Test filtering for PCs only
+        response = self.client.get(f"/api/characters/?campaign_id={self.campaign.id}&npc=false")
+        self.assertEqual(response.status_code, 200)
+        results = response.data["results"]
+        self.assertEqual(len(results), 1)
+        self.assertFalse(results[0]["npc"])
+```
+
+**Testing Best Practices for NPC Field:**
+
+1. **Test Default Behavior**: Verify new characters default to PC (npc=False)
+2. **Test Database Performance**: Verify index exists and queries are efficient
+3. **Test Polymorphic Integration**: Ensure NPC field works with inheritance
+4. **Test Audit Trail**: Verify NPC status changes are tracked
+5. **Test API Integration**: Verify serializers include NPC field
+6. **Test Permission Logic**: Verify NPC creation restrictions
+7. **Test Query Patterns**: Verify filtering by NPC status works correctly
+8. **Test Migration Safety**: Verify existing data handles new field correctly
+
 ### Comprehensive Test Coverage
 
 ```python
