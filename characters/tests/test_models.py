@@ -3317,3 +3317,456 @@ class CharacterNPCFieldTest(TestCase):
 
         new_audit_count = character.audit_entries.count()
         self.assertGreater(new_audit_count, original_audit_count)
+
+
+class NPCPCManagerTest(TestCase):
+    """Test NPCManager and PCManager functionality for issue #175."""
+
+    def setUp(self):
+        """Set up test users, campaigns, and characters."""
+        # Create users
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm", email="gm@test.com", password="testpass123"
+        )
+        self.player1 = User.objects.create_user(
+            username="player1", email="player1@test.com", password="testpass123"
+        )
+        self.player2 = User.objects.create_user(
+            username="player2", email="player2@test.com", password="testpass123"
+        )
+
+        # Create campaigns
+        self.campaign1 = Campaign.objects.create(
+            name="Campaign One",
+            owner=self.owner,
+            game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited
+        )
+        self.campaign2 = Campaign.objects.create(
+            name="Campaign Two",
+            owner=self.owner,
+            game_system="D&D 5e",
+            max_characters_per_player=0,  # Unlimited
+        )
+
+        # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign1, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign1, user=self.player1, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign1, user=self.player2, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign2, user=self.player1, role="PLAYER"
+        )
+
+        # Create base Character instances for testing
+        self.pc1 = Character.objects.create(
+            name="Player Character 1",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        self.pc2 = Character.objects.create(
+            name="Player Character 2",
+            campaign=self.campaign1,
+            player_owner=self.player2,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+
+        self.pc3_other_campaign = Character.objects.create(
+            name="Player Character Other Campaign",
+            campaign=self.campaign2,
+            player_owner=self.player1,
+            game_system="D&D 5e",
+            npc=False,
+        )
+
+        self.npc1 = Character.objects.create(
+            name="NPC Character 1",
+            campaign=self.campaign1,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        self.npc2 = Character.objects.create(
+            name="NPC Character 2",
+            campaign=self.campaign1,
+            player_owner=self.owner,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+
+        self.npc3_other_campaign = Character.objects.create(
+            name="NPC Other Campaign",
+            campaign=self.campaign2,
+            player_owner=self.owner,
+            game_system="D&D 5e",
+            npc=True,
+        )
+
+        # Create soft-deleted characters to test exclusion
+        self.deleted_pc = Character.objects.create(
+            name="Deleted PC",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+        self.deleted_pc.soft_delete(self.player1)
+
+        self.deleted_npc = Character.objects.create(
+            name="Deleted NPC",
+            campaign=self.campaign1,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+        self.deleted_npc.soft_delete(self.gm)
+
+    def test_npc_manager_exists_on_character_model(self):
+        """Test that NPCManager is accessible as Character.npcs."""
+        self.assertTrue(hasattr(Character, "npcs"))
+        # Verify it's a manager instance
+        self.assertTrue(hasattr(Character.npcs, "all"))
+        self.assertTrue(hasattr(Character.npcs, "filter"))
+        self.assertTrue(hasattr(Character.npcs, "get"))
+
+    def test_pc_manager_exists_on_character_model(self):
+        """Test that PCManager is accessible as Character.pcs."""
+        self.assertTrue(hasattr(Character, "pcs"))
+        # Verify it's a manager instance
+        self.assertTrue(hasattr(Character.pcs, "all"))
+        self.assertTrue(hasattr(Character.pcs, "filter"))
+        self.assertTrue(hasattr(Character.pcs, "get"))
+
+    def test_objects_manager_still_exists(self):
+        """Test that existing objects manager is preserved."""
+        self.assertTrue(hasattr(Character, "objects"))
+        # Verify it still behaves as expected (excludes soft-deleted)
+        all_active_chars = Character.objects.all()
+        self.assertIn(self.pc1, all_active_chars)
+        self.assertIn(self.npc1, all_active_chars)
+        self.assertNotIn(self.deleted_pc, all_active_chars)
+        self.assertNotIn(self.deleted_npc, all_active_chars)
+
+    def test_npc_manager_returns_only_npcs(self):
+        """Test that Character.npcs.all() returns only NPC characters."""
+        npcs = Character.npcs.all()
+
+        # Verify NPCs are included
+        self.assertIn(self.npc1, npcs)
+        self.assertIn(self.npc2, npcs)
+        self.assertIn(self.npc3_other_campaign, npcs)
+
+        # Verify PCs are excluded
+        self.assertNotIn(self.pc1, npcs)
+        self.assertNotIn(self.pc2, npcs)
+        self.assertNotIn(self.pc3_other_campaign, npcs)
+
+        # Verify soft-deleted characters are excluded
+        self.assertNotIn(self.deleted_npc, npcs)
+        self.assertNotIn(self.deleted_pc, npcs)
+
+        # Count verification
+        self.assertEqual(npcs.count(), 3)
+
+    def test_pc_manager_returns_only_pcs(self):
+        """Test that Character.pcs.all() returns only PC characters."""
+        pcs = Character.pcs.all()
+
+        # Verify PCs are included
+        self.assertIn(self.pc1, pcs)
+        self.assertIn(self.pc2, pcs)
+        self.assertIn(self.pc3_other_campaign, pcs)
+
+        # Verify NPCs are excluded
+        self.assertNotIn(self.npc1, pcs)
+        self.assertNotIn(self.npc2, pcs)
+        self.assertNotIn(self.npc3_other_campaign, pcs)
+
+        # Verify soft-deleted characters are excluded
+        self.assertNotIn(self.deleted_pc, pcs)
+        self.assertNotIn(self.deleted_npc, pcs)
+
+        # Count verification
+        self.assertEqual(pcs.count(), 3)
+
+    def test_npc_manager_excludes_soft_deleted(self):
+        """Test that NPCManager excludes soft-deleted characters."""
+        # Create and delete an NPC
+        temp_npc = Character.objects.create(
+            name="Temp NPC",
+            campaign=self.campaign1,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+        )
+        temp_npc.soft_delete(self.gm)
+
+        npcs = Character.npcs.all()
+        self.assertNotIn(temp_npc, npcs)
+        self.assertNotIn(self.deleted_npc, npcs)
+
+        # Verify the manager still finds active NPCs
+        self.assertIn(self.npc1, npcs)
+        self.assertIn(self.npc2, npcs)
+
+    def test_pc_manager_excludes_soft_deleted(self):
+        """Test that PCManager excludes soft-deleted characters."""
+        # Create and delete a PC
+        temp_pc = Character.objects.create(
+            name="Temp PC",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+        )
+        temp_pc.soft_delete(self.player1)
+
+        pcs = Character.pcs.all()
+        self.assertNotIn(temp_pc, pcs)
+        self.assertNotIn(self.deleted_pc, pcs)
+
+        # Verify the manager still finds active PCs
+        self.assertIn(self.pc1, pcs)
+        self.assertIn(self.pc2, pcs)
+
+    def test_managers_work_with_polymorphic_inheritance(self):
+        """Test that managers work with polymorphic inheritance (MageCharacter)."""
+        from characters.models import MageCharacter
+
+        # Create polymorphic characters
+        mage_pc = MageCharacter.objects.create(
+            name="Mage PC",
+            campaign=self.campaign1,
+            player_owner=self.player1,
+            game_system="Mage: The Ascension",
+            npc=False,
+            arete=3,
+        )
+
+        mage_npc = MageCharacter.objects.create(
+            name="Mage NPC",
+            campaign=self.campaign1,
+            player_owner=self.gm,
+            game_system="Mage: The Ascension",
+            npc=True,
+            arete=5,
+        )
+
+        # Test that polymorphic PCs are returned by PC manager
+        pcs = Character.pcs.all()
+        self.assertIn(mage_pc, pcs)
+        self.assertNotIn(mage_npc, pcs)
+
+        # Test that polymorphic NPCs are returned by NPC manager
+        npcs = Character.npcs.all()
+        self.assertIn(mage_npc, npcs)
+        self.assertNotIn(mage_pc, npcs)
+
+        # Verify they are returned as their polymorphic type
+        retrieved_mage_pc = Character.pcs.get(id=mage_pc.id)
+        retrieved_mage_npc = Character.npcs.get(id=mage_npc.id)
+
+        self.assertIsInstance(retrieved_mage_pc, MageCharacter)
+        self.assertIsInstance(retrieved_mage_npc, MageCharacter)
+        self.assertEqual(retrieved_mage_pc.arete, 3)
+        self.assertEqual(retrieved_mage_npc.arete, 5)
+
+    def test_managers_inherit_from_polymorphic_manager(self):
+        """Test that NPCManager and PCManager inherit from PolymorphicManager."""
+        from polymorphic.managers import PolymorphicManager
+
+        # Test NPCManager inheritance
+        self.assertIsInstance(Character.npcs, PolymorphicManager)
+
+        # Test PCManager inheritance
+        self.assertIsInstance(Character.pcs, PolymorphicManager)
+
+    def test_managers_support_filtering(self):
+        """Test that managers support additional filtering operations."""
+        # Test filtering by campaign
+        campaign1_npcs = Character.npcs.filter(campaign=self.campaign1)
+        self.assertEqual(campaign1_npcs.count(), 2)
+        self.assertIn(self.npc1, campaign1_npcs)
+        self.assertIn(self.npc2, campaign1_npcs)
+        self.assertNotIn(self.npc3_other_campaign, campaign1_npcs)
+
+        campaign1_pcs = Character.pcs.filter(campaign=self.campaign1)
+        self.assertEqual(campaign1_pcs.count(), 2)
+        self.assertIn(self.pc1, campaign1_pcs)
+        self.assertIn(self.pc2, campaign1_pcs)
+        self.assertNotIn(self.pc3_other_campaign, campaign1_pcs)
+
+        # Test filtering by owner
+        player1_pcs = Character.pcs.filter(player_owner=self.player1)
+        self.assertEqual(player1_pcs.count(), 2)
+        self.assertIn(self.pc1, player1_pcs)
+        self.assertIn(self.pc3_other_campaign, player1_pcs)
+        self.assertNotIn(self.pc2, player1_pcs)
+
+        gm_npcs = Character.npcs.filter(player_owner=self.gm)
+        self.assertEqual(gm_npcs.count(), 1)
+        self.assertIn(self.npc1, gm_npcs)
+        self.assertNotIn(self.npc2, gm_npcs)
+
+    def test_managers_support_chaining_with_existing_methods(self):
+        """Test that managers can be chained with existing manager methods."""
+        # Test chaining with for_campaign if it exists
+        if hasattr(Character.npcs, "for_campaign"):
+            campaign1_npcs = Character.npcs.for_campaign(self.campaign1)
+            self.assertEqual(campaign1_npcs.count(), 2)
+            self.assertIn(self.npc1, campaign1_npcs)
+            self.assertIn(self.npc2, campaign1_npcs)
+
+        if hasattr(Character.pcs, "for_campaign"):
+            campaign1_pcs = Character.pcs.for_campaign(self.campaign1)
+            self.assertEqual(campaign1_pcs.count(), 2)
+            self.assertIn(self.pc1, campaign1_pcs)
+            self.assertIn(self.pc2, campaign1_pcs)
+
+        # Test chaining with owned_by if it exists
+        if hasattr(Character.npcs, "owned_by"):
+            gm_npcs = Character.npcs.owned_by(self.gm)
+            self.assertEqual(gm_npcs.count(), 1)
+            self.assertIn(self.npc1, gm_npcs)
+
+        if hasattr(Character.pcs, "owned_by"):
+            player1_pcs = Character.pcs.owned_by(self.player1)
+            self.assertEqual(player1_pcs.count(), 2)
+            self.assertIn(self.pc1, player1_pcs)
+            self.assertIn(self.pc3_other_campaign, player1_pcs)
+
+    def test_managers_with_empty_results(self):
+        """Test manager behavior when no results match the criteria."""
+        # Delete all NPCs
+        for npc in [self.npc1, self.npc2, self.npc3_other_campaign]:
+            npc.soft_delete(self.owner)
+
+        npcs = Character.npcs.all()
+        self.assertEqual(npcs.count(), 0)
+        self.assertQuerysetEqual(npcs, [])
+
+        # PCs should still exist
+        pcs = Character.pcs.all()
+        self.assertGreater(pcs.count(), 0)
+
+    def test_managers_distinct_from_objects_manager(self):
+        """Test that managers return different results from objects manager."""
+        all_chars = Character.objects.all()
+        npcs = Character.npcs.all()
+        pcs = Character.pcs.all()
+
+        # Verify objects includes both NPCs and PCs
+        self.assertGreater(all_chars.count(), npcs.count())
+        self.assertGreater(all_chars.count(), pcs.count())
+
+        # Verify NPCs + PCs = all objects (excluding soft-deleted)
+        combined_count = npcs.count() + pcs.count()
+        self.assertEqual(all_chars.count(), combined_count)
+
+        # Verify no overlap between NPCs and PCs
+        npc_ids = set(npcs.values_list("id", flat=True))
+        pc_ids = set(pcs.values_list("id", flat=True))
+        self.assertEqual(len(npc_ids.intersection(pc_ids)), 0)
+
+    def test_managers_work_with_select_related(self):
+        """Test that managers work with select_related optimization."""
+        npcs = Character.npcs.select_related("campaign", "player_owner").all()
+        pcs = Character.pcs.select_related("campaign", "player_owner").all()
+
+        # Verify queries work and return correct results
+        self.assertEqual(npcs.count(), 3)
+        self.assertEqual(pcs.count(), 3)
+
+        # Verify relationships are accessible without additional queries
+        for npc in npcs:
+            self.assertIsNotNone(npc.campaign.name)
+            self.assertIsNotNone(npc.player_owner.username)
+
+        for pc in pcs:
+            self.assertIsNotNone(pc.campaign.name)
+            self.assertIsNotNone(pc.player_owner.username)
+
+    def test_managers_work_with_prefetch_related(self):
+        """Test that managers work with prefetch_related optimization."""
+        npcs = Character.npcs.prefetch_related("campaign__memberships").all()
+        pcs = Character.pcs.prefetch_related("campaign__memberships").all()
+
+        # Verify queries work and return correct results
+        self.assertEqual(npcs.count(), 3)
+        self.assertEqual(pcs.count(), 3)
+
+        # Verify prefetched relationships are accessible
+        for npc in npcs:
+            memberships = npc.campaign.memberships.all()
+            self.assertGreaterEqual(len(memberships), 0)
+
+        for pc in pcs:
+            memberships = pc.campaign.memberships.all()
+            self.assertGreaterEqual(len(memberships), 0)
+
+    def test_managers_support_exists_queries(self):
+        """Test that managers work with exists() queries."""
+        # Test exists with NPCs
+        self.assertTrue(Character.npcs.exists())
+        self.assertTrue(Character.npcs.filter(campaign=self.campaign1).exists())
+        self.assertFalse(Character.npcs.filter(name="Nonexistent").exists())
+
+        # Test exists with PCs
+        self.assertTrue(Character.pcs.exists())
+        self.assertTrue(Character.pcs.filter(campaign=self.campaign1).exists())
+        self.assertFalse(Character.pcs.filter(name="Nonexistent").exists())
+
+    def test_managers_support_get_operations(self):
+        """Test that managers support get() operations."""
+        # Test getting specific NPCs
+        retrieved_npc1 = Character.npcs.get(id=self.npc1.id)
+        self.assertEqual(retrieved_npc1, self.npc1)
+
+        retrieved_npc_by_name = Character.npcs.get(name="NPC Character 1")
+        self.assertEqual(retrieved_npc_by_name, self.npc1)
+
+        # Test getting specific PCs
+        retrieved_pc1 = Character.pcs.get(id=self.pc1.id)
+        self.assertEqual(retrieved_pc1, self.pc1)
+
+        retrieved_pc_by_name = Character.pcs.get(name="Player Character 1")
+        self.assertEqual(retrieved_pc_by_name, self.pc1)
+
+        # Test that get() raises DoesNotExist for wrong type
+        with self.assertRaises(Character.DoesNotExist):
+            Character.npcs.get(id=self.pc1.id)  # PC ID with NPC manager
+
+        with self.assertRaises(Character.DoesNotExist):
+            Character.pcs.get(id=self.npc1.id)  # NPC ID with PC manager
+
+    def test_managers_maintain_queryset_type(self):
+        """Test that managers return the correct QuerySet type."""
+        npcs_qs = Character.npcs.all()
+        pcs_qs = Character.pcs.all()
+
+        # Verify they support further filtering
+        filtered_npcs = npcs_qs.filter(campaign=self.campaign1)
+        filtered_pcs = pcs_qs.filter(campaign=self.campaign1)
+
+        self.assertEqual(filtered_npcs.count(), 2)
+        self.assertEqual(filtered_pcs.count(), 2)
+
+        # Verify they support ordering
+        ordered_npcs = npcs_qs.order_by("name")
+        ordered_pcs = pcs_qs.order_by("name")
+
+        self.assertEqual(list(ordered_npcs), sorted(npcs_qs, key=lambda x: x.name))
+        self.assertEqual(list(ordered_pcs), sorted(pcs_qs, key=lambda x: x.name))

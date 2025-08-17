@@ -302,6 +302,22 @@ class AllCharacterManager(PolymorphicManager):
         return super().get_queryset()
 
 
+class NPCManager(PolymorphicManager):
+    """Manager for NPC (Non-Player Character) filtering."""
+
+    def get_queryset(self):
+        """Return QuerySet filtered to only NPCs (npc=True) and not soft-deleted."""
+        return super().get_queryset().filter(npc=True, is_deleted=False)
+
+
+class PCManager(PolymorphicManager):
+    """Manager for PC (Player Character) filtering."""
+
+    def get_queryset(self):
+        """Return QuerySet filtered to only PCs (npc=False) and not soft-deleted."""
+        return super().get_queryset().filter(npc=False, is_deleted=False)
+
+
 class Character(
     TimestampedMixin, NamedModelMixin, DetailedAuditableMixin, PolymorphicModel
 ):
@@ -355,6 +371,8 @@ class Character(
 
     objects = CharacterManager()
     all_objects = AllCharacterManager()
+    npcs = NPCManager()
+    pcs = PCManager()
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the model and store original field values for change tracking."""
