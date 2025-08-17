@@ -1,9 +1,9 @@
 """
-Tests that verify API response patterns match React frontend expectations.
+Tests that verify API response patterns match Django template integration.
 
-These tests ensure that the API responses are structured in a way that the
-React components can properly handle, including error messages, data structures,
-and HTTP status codes.
+These tests ensure that the API responses are structured in a way that
+Django templates and JavaScript can properly handle, including error messages,
+data structures, and HTTP status codes for AJAX requests.
 """
 
 import json
@@ -18,7 +18,7 @@ User = get_user_model()
 
 
 class FrontendIntegrationPatternsTest(TestCase):
-    """Test that API responses match React frontend expectations."""
+    """Test that API responses match Django template JavaScript expectations."""
 
     def setUp(self):
         """Set up test data."""
@@ -39,8 +39,8 @@ class FrontendIntegrationPatternsTest(TestCase):
         self.logout_url = reverse("api:api_logout")
         self.user_info_url = reverse("api:api_user_info")
 
-    def test_login_response_structure_for_authcontext(self):
-        """Test that login response matches AuthContext.login() expectations."""
+    def test_login_response_structure_for_javascript(self):
+        """Test that login response matches JavaScript fetch/ajax expectations."""
         # Get CSRF token
         csrf_response = self.client.get(self.csrf_url)
         csrf_token = csrf_response.data["csrfToken"]
@@ -56,12 +56,12 @@ class FrontendIntegrationPatternsTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Verify response structure matches AuthContext expectations
+        # Verify response structure matches JavaScript expectations
         self.assertIn("message", response.data)
         self.assertIn("user", response.data)
 
         user_data = response.data["user"]
-        # Verify all fields that React components expect
+        # Verify all fields that JavaScript code expects
         expected_fields = [
             "id",
             "username",
@@ -75,8 +75,8 @@ class FrontendIntegrationPatternsTest(TestCase):
         for field in expected_fields:
             self.assertIn(field, user_data)
 
-    def test_login_error_response_structure_for_authcontext(self):
-        """Test that login errors match AuthContext error handling expectations."""
+    def test_login_error_response_structure_for_javascript(self):
+        """Test that login errors match JavaScript error handling expectations."""
         csrf_response = self.client.get(self.csrf_url)
         csrf_token = csrf_response.data["csrfToken"]
 
@@ -91,9 +91,8 @@ class FrontendIntegrationPatternsTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # AuthContext.login() expects error in non_field_errors array format
-        # (line 87 in AuthContext:
-        # error.response?.data?.non_field_errors?.[0])
+        # JavaScript error handling expects error in non_field_errors array format
+        # for consistent error display in Django templates
         self.assertIn("non_field_errors", response.data)
         self.assertIsInstance(response.data["non_field_errors"], list)
         self.assertEqual(
@@ -101,9 +100,9 @@ class FrontendIntegrationPatternsTest(TestCase):
             "Invalid credentials.",
         )
 
-    def test_registration_response_structure_for_authcontext(self):
+    def test_registration_response_structure_for_javascript(self):
         """
-        Test that registration response matches AuthContext.register() expectations.
+        Test that registration response matches JavaScript registration expectations.
         """
         csrf_response = self.client.get(self.csrf_url)
         csrf_token = csrf_response.data["csrfToken"]
@@ -126,7 +125,7 @@ class FrontendIntegrationPatternsTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # Verify response structure matches AuthContext expectations
+        # Verify response structure matches JavaScript expectations
         self.assertIn("message", response.data)
         self.assertIn("user", response.data)
         self.assertEqual(
@@ -134,9 +133,9 @@ class FrontendIntegrationPatternsTest(TestCase):
             "User registered successfully",
         )
 
-    def test_registration_error_response_structure_for_authcontext(self):
+    def test_registration_error_response_structure_for_javascript(self):
         """
-        Test that registration errors match AuthContext error handling expectations.
+        Test that registration errors match JavaScript error handling expectations.
         """
         csrf_response = self.client.get(self.csrf_url)
         csrf_token = csrf_response.data["csrfToken"]
@@ -157,8 +156,8 @@ class FrontendIntegrationPatternsTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # AuthContext.register() checks for field-specific errors
-        # (lines 101-105: username, email, password, detail fields)
+        # JavaScript registration checks for field-specific errors
+        # for displaying validation messages in Django templates
         # At least one of these error types should be present
         has_expected_error = any(
             [
@@ -175,7 +174,7 @@ class FrontendIntegrationPatternsTest(TestCase):
         )
 
     def test_user_info_response_structure(self):
-        """Test that user info response matches frontend expectations."""
+        """Test that user info response matches JavaScript/template expectations."""
         # Login first
         csrf_response = self.client.get(self.csrf_url)
         csrf_token = csrf_response.data["csrfToken"]
@@ -210,8 +209,8 @@ class FrontendIntegrationPatternsTest(TestCase):
             self.assertIn(field, user_data)
 
     def test_csrf_token_response_structure(self):
-        """Test that CSRF token response matches frontend API service expectations."""
-        # frontend/src/services/api.ts line 21 expects { csrfToken: string }
+        """Test that CSRF token response matches JavaScript fetch expectations."""
+        # JavaScript fetch API expects { csrfToken: string } for AJAX requests
         response = self.client.get(self.csrf_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -220,7 +219,7 @@ class FrontendIntegrationPatternsTest(TestCase):
         self.assertGreater(len(response.data["csrfToken"]), 0)
 
     def test_logout_response_structure(self):
-        """Test that logout response matches frontend expectations."""
+        """Test that logout response matches JavaScript expectations."""
         # Login first
         csrf_response = self.client.get(self.csrf_url)
         csrf_token = csrf_response.data["csrfToken"]
@@ -245,16 +244,16 @@ class FrontendIntegrationPatternsTest(TestCase):
         self.assertEqual(response.data["message"], "Logout successful")
 
     def test_api_content_type_handling(self):
-        """Test that API properly handles JSON content type as sent by axios."""
+        """Test that API properly handles JSON content type as sent by fetch."""
         csrf_response = self.client.get(self.csrf_url)
         csrf_token = csrf_response.data["csrfToken"]
 
-        # React frontend uses axios with 'application/json' content type
+        # JavaScript fetch API uses 'application/json' content type
         login_data = {"username": "testuser", "password": "TestPass123!"}
         response = self.client.post(
             self.login_url,
             data=json.dumps(login_data),  # JSON string, not form data
-            content_type="application/json",  # axios default
+            content_type="application/json",  # fetch API default
             HTTP_X_CSRFTOKEN=csrf_token,
         )
 
@@ -263,10 +262,10 @@ class FrontendIntegrationPatternsTest(TestCase):
         # Verify response is also JSON (DRF default)
         self.assertEqual(response.get("Content-Type"), "application/json")
 
-    def test_axios_credentials_and_session_handling(self):
-        """Test that session cookies work with axios withCredentials: true."""
+    def test_fetch_credentials_and_session_handling(self):
+        """Test that session cookies work with fetch credentials: 'include'."""
         # This tests the Django side of session handling
-        # axios sends credentials: true, Django should set/read session cookies
+        # fetch sends credentials: 'include', Django should set/read session cookies
 
         csrf_response = self.client.get(self.csrf_url)
         csrf_token = csrf_response.data["csrfToken"]
@@ -290,9 +289,9 @@ class FrontendIntegrationPatternsTest(TestCase):
         user_info_response = self.client.get(self.user_info_url)
         self.assertEqual(user_info_response.status_code, status.HTTP_200_OK)
 
-    def test_error_response_status_codes_for_axios_interceptors(self):
-        """Test that error status codes match what axios error interceptors expect."""
-        # Frontend may have axios interceptors that handle different status codes
+    def test_error_response_status_codes_for_javascript(self):
+        """Test that error status codes match what JavaScript error handlers expect."""
+        # JavaScript may have error handlers that handle different status codes
 
         # 400 for validation errors
         csrf_response = self.client.get(self.csrf_url)

@@ -1,4 +1,4 @@
-.PHONY: help runserver runserver-django start-postgres start-redis stop-postgres stop-redis setup-env makemigrations migrate clean health-check test test-coverage start-frontend build-frontend stop-all check-frontend reset-migrations create-superuser reset-dev pristine
+.PHONY: help runserver runserver-django start-postgres start-redis stop-postgres stop-redis setup-env makemigrations migrate clean health-check test test-coverage stop-all reset-migrations create-superuser reset-dev pristine
 
 # Environment paths
 GMA_ENV_PATH = /home/janothar/miniconda3/envs/gma
@@ -7,10 +7,8 @@ PG_DATA = $(GMA_ENV_PATH)/var/postgres
 
 help:
 	@echo "Available commands:"
-	@echo "  runserver      - Start ALL services: PostgreSQL, Redis, Django (8080), and React (3000)"
-	@echo "  runserver-django - Start only Django server with PostgreSQL and Redis"
-	@echo "  start-frontend - Start React development server on port 3000"
-	@echo "  build-frontend - Build React app for production"
+	@echo "  runserver      - Start Django development server with PostgreSQL and Redis"
+	@echo "  runserver-django - Alias for runserver"
 	@echo "  start-postgres - Start PostgreSQL server"
 	@echo "  start-redis    - Start Redis server"
 	@echo "  stop-postgres  - Stop PostgreSQL server"
@@ -28,12 +26,11 @@ help:
 	@echo "  stop-all       - Stop all services (PostgreSQL, Redis)"
 	@echo "  clean          - Alias for stop-all"
 
-runserver: start-postgres start-redis migrate check-frontend
-	@PATH="$(GMA_ENV_PATH)/bin:$$PATH" ./scripts/run-dev-servers.sh
-
-runserver-django: start-postgres start-redis migrate
+runserver: start-postgres start-redis migrate
 	@echo "Starting Django development server on port 8080..."
 	$(GMA_ENV_PATH)/bin/python manage.py runserver 0.0.0.0:8080
+
+runserver-django: runserver
 
 start-postgres:
 	@echo "Starting PostgreSQL..."
@@ -147,22 +144,6 @@ test-coverage:
 	@echo "HTML coverage report generated at htmlcov/index.html"
 	$(GMA_ENV_PATH)/bin/python -m coverage report --fail-under=80
 
-start-frontend:
-	@echo "Starting React development server on port 3000..."
-	@cd frontend && npm start
-
-build-frontend:
-	@echo "Building React app for production..."
-	@cd frontend && npm run build:django
-
-check-frontend:
-	@echo "Checking frontend dependencies..."
-	@if [ ! -d "frontend/node_modules" ]; then \
-		echo "Installing frontend dependencies..."; \
-		cd frontend && npm install; \
-	else \
-		echo "Frontend dependencies already installed"; \
-	fi
 
 stop-all:
 	@echo "Stopping all services..."
@@ -170,9 +151,6 @@ stop-all:
 	@$(PG_BIN)/pg_ctl stop -D $(PG_DATA) 2>/dev/null || echo "PostgreSQL already stopped"
 	@# Stop Redis
 	@$(GMA_ENV_PATH)/bin/redis-cli shutdown 2>/dev/null || echo "Redis already stopped"
-	@# Kill any running React development servers
-	@-pkill -f "react-scripts start" 2>/dev/null || true
-	@-pkill -f "npm start" 2>/dev/null || true
 	@echo "All services stopped"
 
 clean: stop-all
@@ -198,8 +176,6 @@ pristine:
 	@echo "🗑️  Stopping services..."
 	@-$(PG_BIN)/pg_ctl stop -D $(PG_DATA) 2>/dev/null || echo "PostgreSQL already stopped"
 	@-$(GMA_ENV_PATH)/bin/redis-cli shutdown 2>/dev/null || echo "Redis already stopped"
-	@-pkill -f "react-scripts start" 2>/dev/null || true
-	@-pkill -f "npm start" 2>/dev/null || true
 	@echo "✅ Services stopped"
 	@echo ""
 	@echo "🗑️  Dropping database..."
@@ -232,9 +208,6 @@ pristine:
 	@rm -rf htmlcov/ .coverage .coverage.* 2>/dev/null || true
 	@echo "✅ Coverage reports cleaned"
 	@echo ""
-	@echo "🗑️  Cleaning frontend artifacts..."
-	@rm -rf frontend/build/ frontend/.cache/ 2>/dev/null || true
-	@echo "✅ Frontend artifacts cleaned"
 	@echo ""
 	@echo "🗑️  Cleaning test artifacts..."
 	@rm -rf .pytest_cache/ 2>/dev/null || true

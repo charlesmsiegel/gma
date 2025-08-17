@@ -17,13 +17,13 @@ Game Master Application (GMA) - A web-based tabletop RPG campaign management sys
 - **django-fsm-2** for state machine management
 
 ### Frontend
-- **React with TypeScript** (Progressive Web App)
+- **Django Templates** with Bootstrap 5 for responsive UI
+- **Vanilla JavaScript** for interactive features
 - **WebSocket integration** for real-time features
 
 ### Development Environment
 - **Conda** for environment management
 - **Python 3.11**
-- **Node.js 20** for frontend development
 
 ## Development Commands
 
@@ -33,9 +33,6 @@ Game Master Application (GMA) - A web-based tabletop RPG campaign management sys
 conda env create -f environment.yml
 conda activate gma
 
-# Install frontend dependencies (after initial React setup)
-cd frontend
-npm install
 ```
 
 ### Django Commands
@@ -61,11 +58,8 @@ make create-superuser
 # OR
 python manage.py createsuperuser
 
-# Run FULL development environment (PostgreSQL + Redis + Django + React)
+# Run development environment (PostgreSQL + Redis + Django)
 make runserver
-
-# Run only Django server with backend services
-make runserver-django
 # OR
 python manage.py runserver 0.0.0.0:8080
 
@@ -140,27 +134,9 @@ python manage.py createsuperuser           # Create admin user (if not exists)
 # Then access http://localhost:8080/admin/ to view health check logs
 
 # Stop all services
-make stop-all                              # Stop PostgreSQL, Redis, and any React servers
+make stop-all                              # Stop PostgreSQL and Redis
 ```
 
-### React Frontend Commands
-```bash
-# Start React development server (port 3000)
-make start-frontend
-# OR
-cd frontend && npm start
-
-# Build React components for production
-make build-frontend
-# OR
-cd frontend && npm run build:django
-
-# Run frontend tests
-cd frontend && npm test
-
-# Build frontend for development (with React DevTools)
-cd frontend && npm run build
-```
 
 ### Database Commands
 ```bash
@@ -341,52 +317,26 @@ def login_view(request):
     # Login logic
 ```
 
-## React Frontend Integration
+## Frontend Integration
 
-The project now includes React authentication components that enhance the existing Django templates:
+The project uses Django templates with Bootstrap 5 and vanilla JavaScript for interactive features:
 
 ### Architecture
-- **Hybrid approach**: React components are embedded into Django templates for enhanced functionality
-- **Fallback support**: Django forms remain as fallbacks if React fails to load
-- **API integration**: React components use Django REST API endpoints
-- **CSRF protection**: Automatic CSRF token handling for secure form submissions
+- **Template-based**: Django templates with Bootstrap 5 for responsive UI
+- **Progressive enhancement**: JavaScript enhances forms and provides AJAX functionality
+- **API integration**: JavaScript uses Django REST API endpoints for dynamic features
+- **CSRF protection**: Manual CSRF token handling for secure AJAX requests
 
-### Component Structure
-```
-frontend/src/
-├── components/
-│   ├── LoginForm.tsx          # Enhanced login with validation
-│   ├── RegisterForm.tsx       # User registration form
-│   ├── ProfileView.tsx        # Profile display component
-│   ├── ProfileEditForm.tsx    # Profile editing interface
-│   └── DjangoIntegration.tsx  # Django template integration
-├── contexts/
-│   └── AuthContext.tsx        # Authentication state management
-├── services/
-│   └── api.ts                 # API client with CSRF support
-└── types/
-    └── user.ts                # TypeScript interfaces
-```
-
-### Usage in Django Templates
-React components can be embedded using data attributes:
-```html
-<div
-    id="react-login-form"
-    data-react-component="login-form-redirect"
-    data-react-props='{"redirectUrl": "/dashboard/"}'
-></div>
-```
+### JavaScript Structure
+- **Base JavaScript**: `static/js/base.js` for common functionality (theme switching, AJAX helpers)
+- **Page-specific scripts**: Additional JavaScript files for complex interactions
+- **Fetch API**: Modern JavaScript for API communication instead of jQuery
+- **Bootstrap 5**: For responsive components and interactions
 
 ### Development Workflow
-1. **Start everything**: `make runserver` - Starts PostgreSQL, Redis, Django (8080), and React (3000)
-2. **Access application**: Visit `http://localhost:8080` for Django with React components
-3. **Stop everything**: `make stop-all` - Stops all services
-
-**Alternative (separate terminals)**:
-1. **Start Django backend**: `make runserver-django` (port 8080)
-2. **Start React frontend**: `make start-frontend` (port 3000)
-3. **Access application**: Visit `http://localhost:8080` for Django with React components
+1. **Start development**: `make runserver` - Starts PostgreSQL, Redis, and Django (port 8080)
+2. **Access application**: Visit `http://localhost:8080` for the complete application
+3. **Stop services**: `make stop-all` - Stops PostgreSQL and Redis
 
 # Workflow
 
@@ -410,7 +360,7 @@ Use the following agents for specific tasks:
 - @agent-django-backend-expert for building models, views, ervices, etc. in django
 - @agent-django-orm-expert for optimizing queries
 - @agent-docs-architect should run before commits to update documents
-- @agent-frontend-developer for building react frontned elements
+- @agent-frontend-developer for building JavaScript and template enhancements
 - @agent-simplify should run before PR to ensure the design doesn't get too complex
 - @agent-test-automator builds tests
 

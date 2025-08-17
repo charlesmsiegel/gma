@@ -2,7 +2,7 @@
 Integration tests for API authentication endpoints.
 
 These tests verify end-to-end authentication workflows that mirror
-how the React frontend interacts with Django API endpoints,
+how Django templates with JavaScript interact with Django API endpoints,
 including session management, CSRF handling, and error responses.
 """
 
@@ -18,7 +18,7 @@ User = get_user_model()
 
 
 class AuthenticationIntegrationTest(TestCase):
-    """Test complete authentication workflows as used by React frontend."""
+    """Test complete authentication workflows as used by Django templates."""
 
     def setUp(self):
         """Set up test data."""
@@ -41,13 +41,13 @@ class AuthenticationIntegrationTest(TestCase):
 
     def test_complete_login_workflow_with_csrf(self):
         """Test complete login workflow including CSRF token handling."""
-        # Step 1: Get CSRF token (as React frontend would)
+        # Step 1: Get CSRF token (as JavaScript in templates would)
         csrf_response = self.client.get(self.csrf_url)
         self.assertEqual(csrf_response.status_code, status.HTTP_200_OK)
         self.assertIn("csrfToken", csrf_response.data)
         csrf_token = csrf_response.data["csrfToken"]
 
-        # Step 2: Login with CSRF token in headers (as axios would send)
+        # Step 2: Login with CSRF token in headers (as fetch API would send)
         login_data = {"username": "testuser", "password": "TestPass123!"}
         login_response = self.client.post(
             self.login_url,
@@ -194,8 +194,8 @@ class AuthenticationIntegrationTest(TestCase):
             self.assertEqual(user_info_response.status_code, status.HTTP_200_OK)
             self.assertEqual(user_info_response.data["user"]["username"], "testuser")
 
-    def test_authentication_error_responses_for_frontend(self):
-        """Test that error responses are properly formatted for React frontend."""
+    def test_authentication_error_responses_for_javascript(self):
+        """Test that error responses are properly formatted for JavaScript."""
         csrf_response = self.client.get(self.csrf_url)
         csrf_token = csrf_response.data["csrfToken"]
 
@@ -243,7 +243,7 @@ class AuthenticationIntegrationTest(TestCase):
         )
 
         self.assertEqual(register_response.status_code, status.HTTP_400_BAD_REQUEST)
-        # Check that proper field-level errors are returned for frontend handling
+        # Check that proper field-level errors are returned for JavaScript handling
         self.assertTrue(
             "username" in register_response.data
             or "email" in register_response.data
