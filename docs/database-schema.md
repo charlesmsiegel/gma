@@ -32,6 +32,76 @@ The GMA database schema is designed around domain-driven principles with clear s
 
 ## Core Models
 
+### Core Model Mixins
+
+The GMA system provides reusable model mixins that encapsulate common functionality needed across multiple models.
+
+#### TimestampedMixin
+**Location**: `core/models/mixins.py`
+**Purpose**: Automatic timestamp tracking for model creation and updates
+
+```sql
+-- Fields added by TimestampedMixin
+created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+```
+
+**Field Specifications:**
+- `created_at`: Automatically set on model creation (`auto_now_add=True`)
+- `updated_at`: Automatically updated on every model save (`auto_now=True`)
+- Both fields use timezone-aware timestamps
+- Both fields are non-nullable with automatic defaults
+
+**Usage Guidelines:**
+
+**Use TimestampedMixin when:**
+- Creating new models that need basic timestamp tracking
+- Standardized timestamp behavior is desired
+- No custom timestamp logic is required
+
+**Don't use TimestampedMixin when:**
+- Model already has timestamp fields (e.g., Campaign, Character)
+- Custom timestamp behavior is needed
+- Timestamp tracking isn't required for the model
+
+**Implementation Example:**
+```python
+from core.models.mixins import TimestampedMixin
+
+class GameSession(TimestampedMixin):
+    """Example model using TimestampedMixin."""
+    name = models.CharField(max_length=200)
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE)
+
+    # TimestampedMixin automatically provides:
+    # created_at and updated_at fields
+```
+
+**Database Schema Impact:**
+```sql
+-- Generated table with TimestampedMixin
+CREATE TABLE example_gamesession (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    campaign_id INTEGER NOT NULL REFERENCES campaigns_campaign(id),
+
+    -- From TimestampedMixin
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+```
+
+**Indexing Considerations:**
+- Consider adding indexes on `created_at` for time-based queries
+- Consider adding indexes on `updated_at` for "recently modified" queries
+- Composite indexes may be useful for filtering by status + timestamp
+
+```sql
+-- Example indexes for timestamp fields
+CREATE INDEX idx_gamesession_created ON example_gamesession (created_at);
+CREATE INDEX idx_gamesession_updated ON example_gamesession (updated_at DESC);
+```
+
 ### Campaign Model
 **Table**: `campaigns_campaign`
 
@@ -665,4 +735,4 @@ ORDER BY idx_tup_read DESC;
 
 ---
 
-*This schema documentation should be updated when database changes are made. Last updated: 2025-01-08*
+*This schema documentation should be updated when database changes are made. Last updated: 2025-08-17*

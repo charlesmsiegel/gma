@@ -274,6 +274,57 @@ campaign, error = SecurityResponseHelper.safe_get_or_404(
 
 ## Data Model Architecture
 
+### Core Model Mixins
+
+The system provides pragmatic model mixins for common functionality that's actually needed across multiple models.
+
+#### TimestampedMixin
+Location: `core/models/mixins.py:19-36`
+
+Provides automatic timestamp tracking for future models:
+
+```python
+class TimestampedMixin(models.Model):
+    """
+    Mixin to add automatic timestamp tracking to models.
+
+    Use this for new models that need basic timestamp tracking.
+    Note: Campaign and Character models already have these fields.
+    """
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+```
+
+**Usage Philosophy:**
+- **Pragmatic over Complete**: Only provides functionality that's actually needed
+- **Future-Focused**: For new models, not retrofitting existing ones
+- **Simple Design**: Avoids complex inheritance hierarchies
+- **Real Requirements**: Based on actual usage patterns, not theoretical completeness
+
+**When to Use:**
+- New models that need simple timestamp tracking
+- Models without existing timestamp fields
+- Situations where standardized timestamp behavior is desired
+
+**When NOT to Use:**
+- Existing models (Campaign, Character) already have their own implementations
+- Models requiring custom timestamp behavior
+- Models where timestamp fields aren't needed
+
+**Example Usage:**
+```python
+class NewGameComponent(TimestampedMixin):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+
+    # Automatically includes:
+    # - created_at (set on creation)
+    # - updated_at (updated on each save)
+```
+
 ### Campaign Domain Models
 
 #### Campaign Model
@@ -502,4 +553,4 @@ FROM python:3.11-slim AS runtime
 
 ---
 
-*This architecture documentation should be reviewed and updated as the system evolves. Last updated: 2025-01-08*
+*This architecture documentation should be reviewed and updated as the system evolves. Last updated: 2025-08-17*
