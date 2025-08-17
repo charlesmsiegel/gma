@@ -122,6 +122,42 @@ make test-coverage
 
 ### Test Categories
 
+#### Migration Safety Tests
+Test database migration safety and data integrity:
+
+```python
+# Example: core/tests/test_migration_strategy.py
+class TestMigrationSafety(TransactionTestCase):
+    """Test migration safety for mixin field application."""
+
+    def test_character_data_preservation(self):
+        """Test character data preservation during migration."""
+        # Create test data
+        original_data = self.create_sample_data(20)
+
+        # Verify count preserved
+        self.assertEqual(Character.objects.count(), 20)
+
+        # Verify each character's data preserved
+        for char in original_data["characters"]:
+            char.refresh_from_db()
+            self.assertIsNotNone(char.name)
+            self.assertIsNotNone(char.campaign)
+            self.assertIsNotNone(char.created_at)
+            self.assertIsNotNone(char.updated_at)
+
+    def test_migration_rollback_safety(self):
+        """Test that migrations can be safely rolled back."""
+        # Test data integrity after hypothetical rollback
+        original_data = self.create_sample_data(10)
+
+        # Verify core data would survive rollback
+        for char in original_data["characters"]:
+            self.assertIsNotNone(char.name)
+            self.assertIsNotNone(char.campaign_id)
+            self.assertIsNotNone(char.player_owner_id)
+```
+
 #### Unit Tests
 Test individual components in isolation:
 
@@ -201,6 +237,9 @@ python manage.py test campaigns
 # Run specific test class
 python manage.py test campaigns.tests.test_services.TestMembershipService
 
+# Run migration safety tests
+python manage.py test core.tests.test_migration_strategy
+
 # Run with coverage
 make test-coverage
 python -m coverage report
@@ -208,6 +247,9 @@ python -m coverage html  # Generate HTML report
 
 # Run specific test with verbose output
 python manage.py test campaigns.tests.test_api.TestCampaignAPI.test_create_campaign -v 2
+
+# Run performance tests for migrations
+python manage.py test core.tests.test_migration_strategy.MigrationPerformanceTest -v 2
 ```
 
 ### Test Database Management
@@ -719,6 +761,8 @@ export const campaignApi = {
 
 ### Migration Best Practices
 
+#### Schema Migrations
+
 ```python
 # Good migration with proper field definitions
 class Migration(migrations.Migration):
@@ -744,6 +788,87 @@ class Migration(migrations.Migration):
         ),
     ]
 ```
+
+#### Data Migrations
+
+For migrations that need to populate data, create separate data migration files:
+
+```python
+# Good data migration with rollback support
+from django.db import migrations
+
+def populate_audit_fields(apps, schema_editor):
+    """Populate audit fields for existing records."""
+    Model = apps.get_model("app_name", "ModelName")
+
+    for obj in Model.objects.all():
+        if obj.created_by_id is None and hasattr(obj, 'owner'):
+            obj.created_by_id = obj.owner_id
+            obj.save(update_fields=["created_by_id"])
+
+def reverse_audit_fields(apps, schema_editor):
+    """Reverse data migration for rollback safety."""
+    Model = apps.get_model("app_name", "ModelName")
+    Model.objects.update(created_by=None, modified_by=None)
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ('app_name', '0003_add_audit_fields'),
+    ]
+
+    operations = [
+        migrations.RunPython(
+            populate_audit_fields,
+            reverse_audit_fields,
+            elidable=True,  # Can be optimized during squashing
+        ),
+    ]
+```
+
+#### Migration Safety Testing
+
+The project includes comprehensive migration safety tests in `core/tests/test_migration_strategy.py`:
+
+```bash
+# Run migration safety tests before deploying
+python manage.py test core.tests.test_migration_strategy
+
+# Test specific migration scenarios
+python manage.py test core.tests.test_migration_strategy.ForwardMigrationDataPreservationTest
+python manage.py test core.tests.test_migration_strategy.MigrationRollbackTest
+
+# Performance testing with larger datasets
+python manage.py test core.tests.test_migration_strategy.MigrationPerformanceTest
+```
+
+**Migration Testing Categories:**
+- **Data Preservation**: Ensures existing data survives migration
+- **Default Values**: Verifies proper application of default values
+- **Data Integrity**: Confirms foreign keys and constraints remain valid
+- **Edge Cases**: Tests null values, boundary conditions, and user deletion
+- **Performance**: Validates migration performance with realistic data volumes
+- **Rollback Safety**: Ensures migrations can be safely reversed
+
+#### Migration Rollback Procedures
+
+If a migration needs to be rolled back, use the provided rollback script:
+
+```bash
+# Interactive rollback with confirmation
+./scripts/rollback_mixin_migrations.sh
+
+# Manual rollback commands
+python manage.py migrate characters 0002  # Rollback to before mixin fields
+python manage.py migrate items 0002
+python manage.py migrate locations 0002
+```
+
+**Rollback Safety Features:**
+- Interactive confirmation to prevent accidental rollbacks
+- Step-by-step rollback of data migrations before schema migrations
+- Verification of migration state before and after rollback
+- Automatic environment detection (conda/virtualenv)
+- Clear status reporting throughout the process
 
 ### Query Optimization
 

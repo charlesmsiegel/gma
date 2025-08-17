@@ -684,6 +684,89 @@ LIMIT 25;
 
 ## Data Migration Patterns
 
+### Applying Model Mixins to Existing Models
+
+The GMA project includes a comprehensive migration strategy for safely applying model mixins to existing models without data loss. This approach is used for adding audit fields (`created_by`, `modified_by`) to Character, Item, and Location models.
+
+#### Migration Strategy Implementation
+
+**Current Implementation (Characters, Items, Locations):**
+- **Schema Migration**: Adds new mixin fields with proper defaults and indexes
+- **Data Migration**: Populates audit fields for existing records using logical defaults
+- **Safety Testing**: Comprehensive test suite validates migration safety
+- **Rollback Support**: Interactive script for safe migration rollback
+
+**Migration Files:**
+- `characters/migrations/0003_character_created_by_character_modified_by_and_more.py` - Schema changes
+- `characters/migrations/0004_populate_audit_fields.py` - Data population
+- `items/migrations/0003_item_modified_by_alter_item_created_at_and_more.py` - Schema changes
+- `items/migrations/0004_populate_audit_fields.py` - Data population
+- `locations/migrations/0003_location_modified_by_alter_location_created_at_and_more.py` - Schema changes
+- `locations/migrations/0004_populate_audit_fields.py` - Data population
+
+#### Migration Safety Testing
+
+The project includes 21 comprehensive tests in `core/tests/test_migration_strategy.py`:
+
+**Test Categories:**
+- **Data Preservation Tests**: Verify existing data survives migration
+- **Default Value Tests**: Ensure proper application of default values
+- **Data Integrity Tests**: Confirm foreign keys and constraints remain valid
+- **Edge Case Tests**: Handle null values, boundary conditions, user deletion
+- **Performance Tests**: Validate migration performance with realistic data volumes
+- **Concurrency Tests**: Test concurrent access patterns after migration
+- **Rollback Tests**: Ensure migrations can be safely reversed
+- **Audit Integrity Tests**: Verify audit trail functionality remains intact
+
+```bash
+# Run migration safety tests
+python manage.py test core.tests.test_migration_strategy
+
+# Run specific test categories
+python manage.py test core.tests.test_migration_strategy.ForwardMigrationDataPreservationTest
+python manage.py test core.tests.test_migration_strategy.MigrationPerformanceTest
+python manage.py test core.tests.test_migration_strategy.MigrationRollbackTest
+```
+
+#### Rollback Procedures
+
+If migration rollback is needed, use the provided interactive script:
+
+```bash
+# Interactive rollback with safety confirmations
+./scripts/rollback_mixin_migrations.sh
+
+# Manual rollback commands (if needed)
+python manage.py migrate characters 0002
+python manage.py migrate items 0002
+python manage.py migrate locations 0002
+```
+
+**Rollback Features:**
+- Step-by-step rollback of data migrations before schema migrations
+- Interactive confirmation to prevent accidental rollbacks
+- Migration state verification before and after rollback
+- Environment detection (conda/virtualenv support)
+- Clear status reporting throughout the process
+
+#### Data Population Strategy
+
+For existing models, the data migrations use logical defaults:
+
+**Characters:**
+- `created_by` → Set to `player_owner` (most logical default)
+- `modified_by` → Set to `player_owner` (assumes owner last modified)
+
+**Items and Locations:**
+- `created_by` → Preserved from existing field
+- `modified_by` → Set to `created_by` (assumes creator last modified)
+
+**Safety Considerations:**
+- Uses `update_fields` to minimize database impact
+- Preserves existing timestamp values
+- Maintains foreign key integrity
+- Handles edge cases (null values, deleted users)
+
 ### Schema Evolution Examples
 
 **Adding New Fields:**

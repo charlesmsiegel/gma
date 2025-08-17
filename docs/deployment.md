@@ -301,13 +301,107 @@ SELECT pg_reload_conf();
 
 ### Database Migration
 
-```bash
-# Production migration process
-python manage.py collectstatic --noinput
-python manage.py migrate --settings=gm_app.settings.production
+#### Pre-Migration Safety Checks
 
-# Create superuser
+Before applying migrations in production, always run the comprehensive migration safety tests:
+
+```bash
+# Run migration safety tests in staging environment
+python manage.py test core.tests.test_migration_strategy --settings=gm_app.settings.staging
+
+# Verify specific migration components
+python manage.py test core.tests.test_migration_strategy.ForwardMigrationDataPreservationTest
+python manage.py test core.tests.test_migration_strategy.MigrationPerformanceTest
+python manage.py test core.tests.test_migration_strategy.MigrationRollbackTest
+
+# Check current migration status
+python manage.py showmigrations --settings=gm_app.settings.production
+```
+
+#### Production Migration Process
+
+```bash
+# 1. Create database backup before migration
+pg_dump gma_production > /var/backups/gma/pre_migration_$(date +%Y%m%d_%H%M%S).sql
+
+# 2. Verify rollback script is available
+ls -la ./scripts/rollback_mixin_migrations.sh
+chmod +x ./scripts/rollback_mixin_migrations.sh
+
+# 3. Apply migrations with monitoring
+python manage.py migrate --settings=gm_app.settings.production --verbosity=2
+
+# 4. Verify migration completion
+python manage.py showmigrations --settings=gm_app.settings.production
+
+# 5. Test audit functionality
+python manage.py shell --settings=gm_app.settings.production
+# Test audit field population in shell
+
+# 6. Collect static files
+python manage.py collectstatic --noinput --settings=gm_app.settings.production
+
+# 7. Create superuser (first deployment only)
 echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@yourdomain.com', 'secure-password')" | python manage.py shell --settings=gm_app.settings.production
+```
+
+#### Migration Rollback in Production
+
+If migration rollback is needed in production:
+
+```bash
+# Method 1: Interactive rollback script (recommended)
+./scripts/rollback_mixin_migrations.sh
+
+# Method 2: Manual rollback with confirmation
+python manage.py migrate characters 0002 --settings=gm_app.settings.production
+python manage.py migrate items 0002 --settings=gm_app.settings.production
+python manage.py migrate locations 0002 --settings=gm_app.settings.production
+
+# Method 3: Emergency database restore (if needed)
+# Stop application first, then:
+psql -U gma_user -d gma_production < /var/backups/gma/pre_migration_YYYYMMDD_HHMMSS.sql
+```
+
+#### Post-Migration Verification
+
+```bash
+# 1. Verify database structure
+python manage.py dbshell --settings=gm_app.settings.production
+\d characters_character  # Check table structure
+\d items_item           # Verify indexes and constraints
+\d locations_location
+
+# 2. Test application functionality
+python manage.py shell --settings=gm_app.settings.production
+# Test model creation with audit fields
+# Verify save() method with user parameter
+
+# 3. Monitor performance
+# Check query performance for timestamp-based queries
+# Verify audit field population rates
+
+# 4. Application smoke tests
+curl -H "Content-Type: application/json" http://localhost:8080/api/health/
+# Test critical application endpoints
+```
+
+#### Migration Performance Considerations
+
+**For Large Databases (>100K records):**
+
+```bash
+# Monitor migration progress
+tail -f /var/log/postgresql/postgresql.log
+
+# Consider maintenance window
+# Expect 30-60 seconds downtime for audit field addition
+# Performance tests show <30 seconds for 100K records
+
+# Post-migration index verification
+python manage.py dbshell --settings=gm_app.settings.production
+EXPLAIN ANALYZE SELECT * FROM characters_character WHERE created_at > NOW() - INTERVAL '7 days';
+EXPLAIN ANALYZE SELECT * FROM items_item ORDER BY updated_at DESC LIMIT 10;
 ```
 
 ### Database Backup
