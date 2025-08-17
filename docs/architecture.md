@@ -276,33 +276,67 @@ campaign, error = SecurityResponseHelper.safe_get_or_404(
 
 ### Core Model Mixins
 
-The system provides pragmatic model mixins for common functionality that's actually needed across multiple models.
+The system provides reusable model mixins for common functionality across multiple models, with performance optimizations and comprehensive documentation.
 
-#### TimestampedMixin
-Location: `core/models/mixins.py:19-36`
+#### Available Mixins
 
-Provides automatic timestamp tracking for future models:
+**TimestampedMixin** (`core/models/mixins.py:30-56`):
+- Automatic `created_at` and `updated_at` fields with database indexes
+- Performance-optimized for time-based queries
+- Comprehensive help text for admin interface
 
+**DisplayableMixin** (`core/models/mixins.py:58-83`):
+- `is_displayed` boolean flag for visibility control
+- `display_order` integer field for custom ordering (indexed)
+- Optimized for display and sorting operations
+
+**NamedModelMixin** (`core/models/mixins.py:85-108`):
+- Standard `name` field with `__str__()` method implementation
+- Consistent naming across models
+
+**DescribedModelMixin** (`core/models/mixins.py:110-130`):
+- Optional `description` TextField for detailed information
+- Blank-allowed with empty string default
+
+**AuditableMixin** (`core/models/mixins.py:132-189`):
+- `created_by` and `modified_by` user tracking
+- **Enhanced save() method** with automatic user assignment
+- Performance-optimized with foreign key relationships
+
+**GameSystemMixin** (`core/models/mixins.py:191-235`):
+- `game_system` field with predefined choices
+- Supports World of Darkness focus with popular RPG systems
+
+#### Enhanced Features
+
+**Performance Optimizations:**
 ```python
-class TimestampedMixin(models.Model):
-    """
-    Mixin to add automatic timestamp tracking to models.
-
-    Use this for new models that need basic timestamp tracking.
-    Note: Campaign and Character models already have these fields.
-    """
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
+# Database indexes automatically added
+created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+updated_at = models.DateTimeField(auto_now=True, db_index=True)
+display_order = models.PositiveIntegerField(default=0, db_index=True)
 ```
 
+**Automatic User Tracking:**
+```python
+# Enhanced AuditableMixin usage
+obj = MyModel(name="Example")
+obj.save(user=request.user)  # Automatically sets created_by and modified_by
+
+# On updates
+obj.name = "Updated"
+obj.save(user=request.user)  # Updates modified_by, preserves created_by
+```
+
+**Comprehensive Help Text:**
+All mixin fields include detailed help text visible in Django admin, API documentation, and development tools.
+
 **Usage Philosophy:**
-- **Pragmatic over Complete**: Only provides functionality that's actually needed
+- **Performance-First**: Database indexes on commonly queried fields
+- **Developer-Friendly**: Comprehensive help text and documentation
+- **Pragmatic Design**: Only provides functionality that's actually needed
 - **Future-Focused**: For new models, not retrofitting existing ones
 - **Simple Design**: Avoids complex inheritance hierarchies
-- **Real Requirements**: Based on actual usage patterns, not theoretical completeness
 
 **When to Use:**
 - New models that need simple timestamp tracking

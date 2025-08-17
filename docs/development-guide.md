@@ -882,6 +882,8 @@ class TestTimestampedMixin(TestCase):
 - **Test Integration**: Verify mixin works correctly with actual models
 - **Keep Tests Simple**: Avoid over-testing implementation details
 - **Test Edge Cases**: But only the ones that matter in practice
+- **Test Performance Features**: Verify indexes exist and help text is present
+- **Test Enhanced Functionality**: For AuditableMixin, test automatic user tracking
 
 **When Testing Models with Mixins:**
 
@@ -925,6 +927,31 @@ class TestGameSessionModel(TestCase):
 
         self.assertGreater(session.updated_at, original_updated)
         self.assertEqual(session.status, 'COMPLETED')
+
+    def test_session_with_user_tracking(self):
+        """Test that session with AuditableMixin tracks users automatically."""
+        user = User.objects.create_user("creator", "creator@example.com")
+
+        # Create session with user tracking
+        session = GameSession(
+            name="Session with Tracking",
+            campaign=self.campaign
+        )
+        session.save(user=user)
+
+        # Verify automatic user tracking
+        self.assertEqual(session.created_by, user)
+        self.assertEqual(session.modified_by, user)
+
+        # Update with different user
+        modifier = User.objects.create_user("modifier", "modifier@example.com")
+        session.status = 'COMPLETED'
+        session.save(user=modifier)
+
+        # Verify created_by unchanged, modified_by updated
+        session.refresh_from_db()
+        self.assertEqual(session.created_by, user)  # Unchanged
+        self.assertEqual(session.modified_by, modifier)  # Updated
 ```
 
 ### Comprehensive Test Coverage

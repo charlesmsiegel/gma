@@ -386,6 +386,74 @@ class AuditableMixinTest(TestCase):
         self.assertIn(obj, created_objects)
         self.assertIn(obj, modified_objects)
 
+    def test_automatic_user_tracking_on_save(self):
+        """Test that save(user=user) automatically sets audit fields."""
+        obj = AuditableTestModel(title="Test Object")
+
+        # Save with user parameter
+        obj.save(user=self.user1)
+
+        # Both created_by and modified_by should be set for new objects
+        self.assertEqual(obj.created_by, self.user1)
+        self.assertEqual(obj.modified_by, self.user1)
+
+    def test_automatic_user_tracking_on_update(self):
+        """Test that save(user=user) updates modified_by but not created_by."""
+        # Create object with original user
+        obj = AuditableTestModel.objects.create(
+            title="Test Object", created_by=self.user1, modified_by=self.user1
+        )
+        original_created_by = obj.created_by
+
+        # Update with different user
+        obj.title = "Updated Title"
+        obj.save(user=self.user2)
+
+        # created_by should remain unchanged, modified_by should update
+        self.assertEqual(obj.created_by, original_created_by)
+        self.assertEqual(obj.modified_by, self.user2)
+
+    def test_automatic_user_tracking_respects_existing_created_by(self):
+        """Test that automatic tracking doesn't override existing created_by."""
+        obj = AuditableTestModel(title="Test Object", created_by=self.user1)
+
+        # Save with different user
+        obj.save(user=self.user2)
+
+        # created_by should remain as originally set, modified_by should update
+        self.assertEqual(obj.created_by, self.user1)
+        self.assertEqual(obj.modified_by, self.user2)
+
+    def test_save_without_user_parameter(self):
+        """Test that normal save() still works without user parameter."""
+        obj = AuditableTestModel.objects.create(title="Test Object")
+
+        # Normal save should work
+        obj.title = "Updated Title"
+        obj.save()
+
+        # Audit fields should remain None
+        self.assertIsNone(obj.created_by)
+        self.assertIsNone(obj.modified_by)
+
+    def test_save_with_invalid_user(self):
+        """Test that save handles invalid user gracefully."""
+        obj = AuditableTestModel(title="Test Object")
+
+        # Save with None user
+        obj.save(user=None)
+        self.assertIsNone(obj.created_by)
+        self.assertIsNone(obj.modified_by)
+
+        # Save with user that has no pk
+        class MockUser:
+            pk = None
+
+        mock_user = MockUser()
+        obj.save(user=mock_user)
+        self.assertIsNone(obj.created_by)
+        self.assertIsNone(obj.modified_by)
+
     def test_abstract_base_class(self):
         """Test that AuditableMixin is an abstract base class."""
         self.assertTrue(AuditableMixin._meta.abstract)
