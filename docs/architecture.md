@@ -274,6 +274,91 @@ campaign, error = SecurityResponseHelper.safe_get_or_404(
 
 ## Data Model Architecture
 
+### Core Model Mixins
+
+The system provides reusable model mixins for common functionality across multiple models, with performance optimizations and comprehensive documentation.
+
+#### Available Mixins
+
+**TimestampedMixin** (`core/models/mixins.py:30-56`):
+- Automatic `created_at` and `updated_at` fields with database indexes
+- Performance-optimized for time-based queries
+- Comprehensive help text for admin interface
+
+**DisplayableMixin** (`core/models/mixins.py:58-83`):
+- `is_displayed` boolean flag for visibility control
+- `display_order` integer field for custom ordering (indexed)
+- Optimized for display and sorting operations
+
+**NamedModelMixin** (`core/models/mixins.py:85-108`):
+- Standard `name` field with `__str__()` method implementation
+- Consistent naming across models
+
+**DescribedModelMixin** (`core/models/mixins.py:110-130`):
+- Optional `description` TextField for detailed information
+- Blank-allowed with empty string default
+
+**AuditableMixin** (`core/models/mixins.py:132-189`):
+- `created_by` and `modified_by` user tracking
+- **Enhanced save() method** with automatic user assignment
+- Performance-optimized with foreign key relationships
+
+**GameSystemMixin** (`core/models/mixins.py:191-235`):
+- `game_system` field with predefined choices
+- Supports World of Darkness focus with popular RPG systems
+
+#### Enhanced Features
+
+**Performance Optimizations:**
+```python
+# Database indexes automatically added
+created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+updated_at = models.DateTimeField(auto_now=True, db_index=True)
+display_order = models.PositiveIntegerField(default=0, db_index=True)
+```
+
+**Automatic User Tracking:**
+```python
+# Enhanced AuditableMixin usage
+obj = MyModel(name="Example")
+obj.save(user=request.user)  # Automatically sets created_by and modified_by
+
+# On updates
+obj.name = "Updated"
+obj.save(user=request.user)  # Updates modified_by, preserves created_by
+```
+
+**Comprehensive Help Text:**
+All mixin fields include detailed help text visible in Django admin, API documentation, and development tools.
+
+**Usage Philosophy:**
+- **Performance-First**: Database indexes on commonly queried fields
+- **Developer-Friendly**: Comprehensive help text and documentation
+- **Pragmatic Design**: Only provides functionality that's actually needed
+- **Future-Focused**: For new models, not retrofitting existing ones
+- **Simple Design**: Avoids complex inheritance hierarchies
+
+**When to Use:**
+- New models that need simple timestamp tracking
+- Models without existing timestamp fields
+- Situations where standardized timestamp behavior is desired
+
+**When NOT to Use:**
+- Existing models (Campaign, Character) already have their own implementations
+- Models requiring custom timestamp behavior
+- Models where timestamp fields aren't needed
+
+**Example Usage:**
+```python
+class NewGameComponent(TimestampedMixin):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+
+    # Automatically includes:
+    # - created_at (set on creation)
+    # - updated_at (updated on each save)
+```
+
 ### Campaign Domain Models
 
 #### Campaign Model
@@ -502,4 +587,4 @@ FROM python:3.11-slim AS runtime
 
 ---
 
-*This architecture documentation should be reviewed and updated as the system evolves. Last updated: 2025-01-08*
+*This architecture documentation should be reviewed and updated as the system evolves. Last updated: 2025-08-17*

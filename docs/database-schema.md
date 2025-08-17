@@ -32,6 +32,189 @@ The GMA database schema is designed around domain-driven principles with clear s
 
 ## Core Models
 
+### Core Model Mixins
+
+The GMA system provides reusable model mixins that encapsulate common functionality needed across multiple models. These mixins include performance optimizations such as database indexing and comprehensive help text.
+
+#### TimestampedMixin
+**Location**: `core/models/mixins.py:30-56`
+**Purpose**: Automatic timestamp tracking for model creation and updates with performance optimization
+
+```sql
+-- Fields added by TimestampedMixin (with performance indexes)
+created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+
+-- Automatic indexes for performance
+CREATE INDEX <table>_created_at_idx ON <table> (created_at);
+CREATE INDEX <table>_updated_at_idx ON <table> (updated_at);
+```
+
+**Field Specifications:**
+- `created_at`: Automatically set on model creation (`auto_now_add=True`, indexed)
+- `updated_at`: Automatically updated on every model save (`auto_now=True`, indexed)
+- Both fields use timezone-aware timestamps
+- Both fields are non-nullable with automatic defaults
+- Both fields include comprehensive help text for admin interface
+- **Performance**: Both fields are indexed (`db_index=True`) for efficient date-based queries
+
+#### DisplayableMixin
+**Location**: `core/models/mixins.py:58-83`
+**Purpose**: Control display visibility and ordering with performance optimization
+
+```sql
+-- Fields added by DisplayableMixin
+is_displayed BOOLEAN DEFAULT true NOT NULL,
+display_order INTEGER DEFAULT 0 NOT NULL,
+
+-- Performance index for ordering
+CREATE INDEX <table>_display_order_idx ON <table> (display_order);
+```
+
+**Field Specifications:**
+- `is_displayed`: Boolean flag controlling visibility (default: `True`)
+- `display_order`: Integer for custom ordering (default: `0`, indexed for performance)
+- **Performance**: `display_order` field is indexed for efficient ordering queries
+- Consider composite indexes like `(is_displayed, display_order)` for heavy-use models
+
+#### NamedModelMixin
+**Location**: `core/models/mixins.py:85-108`
+**Purpose**: Standardized name field with string representation
+
+```sql
+-- Fields added by NamedModelMixin
+name VARCHAR(100) NOT NULL
+```
+
+**Field Specifications:**
+- `name`: Required CharField with 100 character limit
+- Provides `__str__()` method returning the name
+- **Performance**: Consider adding `db_index=True` if frequently searching by name
+
+#### DescribedModelMixin
+**Location**: `core/models/mixins.py:110-130`
+**Purpose**: Optional description field for detailed information
+
+```sql
+-- Fields added by DescribedModelMixin
+description TEXT DEFAULT '' NOT NULL
+```
+
+**Field Specifications:**
+- `description`: Optional TextField with blank=True and default empty string
+- **Performance**: Not indexed by default (appropriate for large text fields)
+- Use `description__icontains` for text search, consider full-text search for large datasets
+
+#### AuditableMixin
+**Location**: `core/models/mixins.py:132-189`
+**Purpose**: User audit tracking with automatic user management
+
+```sql
+-- Fields added by AuditableMixin
+created_by_id INTEGER REFERENCES users_user(id) ON DELETE CASCADE,
+modified_by_id INTEGER REFERENCES users_user(id) ON DELETE CASCADE
+```
+
+**Field Specifications:**
+- `created_by`: Optional ForeignKey to User who created the object
+- `modified_by`: Optional ForeignKey to User who last modified the object
+- **Enhanced save() method**: Accepts `user` parameter for automatic tracking
+- **Performance**: Use `select_related('created_by', 'modified_by')` for efficient queries
+
+**Automatic User Tracking:**
+```python
+# Automatic user tracking
+obj.save(user=request.user)  # Sets modified_by and created_by for new objects
+
+# Manual tracking still works
+obj.created_by = user
+obj.save()
+```
+
+#### GameSystemMixin
+**Location**: `core/models/mixins.py:191-235`
+**Purpose**: Game system selection for campaign-related models
+
+```sql
+-- Fields added by GameSystemMixin
+game_system VARCHAR(50) DEFAULT 'generic' NOT NULL
+    CHECK (game_system IN ('generic', 'wod', 'mage', 'vampire', ...))
+```
+
+**Field Specifications:**
+- `game_system`: CharField with predefined choices for popular RPG systems
+- Default value: `'generic'`
+- **Performance**: Choices are efficient for filtering, consider `db_index=True` for frequent filtering
+
+### Mixin Performance Optimizations
+
+**Database Indexes:**
+All mixins include strategic database indexing for commonly queried fields:
+- `TimestampedMixin`: Indexes on `created_at` and `updated_at` for time-based queries
+- `DisplayableMixin`: Index on `display_order` for efficient sorting
+- `AuditableMixin`: Foreign key indexes automatically created by Django
+- `GameSystemMixin`: Consider adding index if filtering by game_system frequently
+
+**Help Text Documentation:**
+All mixin fields include comprehensive help text visible in:
+- Django admin interface
+- API documentation
+- Development tools
+- Database schema documentation
+
+**Usage Guidelines:**
+- Use `select_related()` when querying models with audit tracking
+- Consider composite indexes for models using multiple mixins
+- Monitor query performance and add additional indexes as needed
+
+**Use TimestampedMixin when:**
+- Creating new models that need basic timestamp tracking
+- Standardized timestamp behavior is desired
+- No custom timestamp logic is required
+
+**Don't use TimestampedMixin when:**
+- Model already has timestamp fields (e.g., Campaign, Character)
+- Custom timestamp behavior is needed
+- Timestamp tracking isn't required for the model
+
+**Implementation Example:**
+```python
+from core.models.mixins import TimestampedMixin
+
+class GameSession(TimestampedMixin):
+    """Example model using TimestampedMixin."""
+    name = models.CharField(max_length=200)
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE)
+
+    # TimestampedMixin automatically provides:
+    # created_at and updated_at fields
+```
+
+**Database Schema Impact:**
+```sql
+-- Generated table with TimestampedMixin
+CREATE TABLE example_gamesession (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    campaign_id INTEGER NOT NULL REFERENCES campaigns_campaign(id),
+
+    -- From TimestampedMixin
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+```
+
+**Indexing Considerations:**
+- Consider adding indexes on `created_at` for time-based queries
+- Consider adding indexes on `updated_at` for "recently modified" queries
+- Composite indexes may be useful for filtering by status + timestamp
+
+```sql
+-- Example indexes for timestamp fields
+CREATE INDEX idx_gamesession_created ON example_gamesession (created_at);
+CREATE INDEX idx_gamesession_updated ON example_gamesession (updated_at DESC);
+```
+
 ### Campaign Model
 **Table**: `campaigns_campaign`
 
@@ -665,4 +848,4 @@ ORDER BY idx_tup_read DESC;
 
 ---
 
-*This schema documentation should be updated when database changes are made. Last updated: 2025-01-08*
+*This schema documentation should be updated when database changes are made. Last updated: 2025-08-17*

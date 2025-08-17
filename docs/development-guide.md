@@ -247,6 +247,45 @@ black --check --diff .
 
 #### Model Design
 
+**Using Core Model Mixins:**
+
+```python
+# Good: Using TimestampedMixin for new models
+from core.models.mixins import TimestampedMixin
+
+class GameSession(TimestampedMixin):
+    """Game session model with automatic timestamp tracking."""
+    name = models.CharField(max_length=200, help_text="Session name")
+    campaign = models.ForeignKey(
+        Campaign,
+        on_delete=models.CASCADE,
+        related_name="sessions"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=[('ACTIVE', 'Active'), ('COMPLETED', 'Completed')],
+        default='ACTIVE'
+    )
+
+    class Meta:
+        db_table = "campaigns_gamesession"
+        ordering = ["-updated_at", "name"]
+        indexes = [
+            models.Index(fields=["campaign", "status"]),
+            models.Index(fields=["updated_at"]),  # For recent activity queries
+        ]
+
+    def __str__(self):
+        return f"{self.campaign.name}: {self.name}"
+```
+
+**Mixin Usage Guidelines:**
+
+- **Use TimestampedMixin** for new models needing timestamp tracking
+- **Don't retrofit existing models** that already have timestamp fields
+- **Keep it simple** - mixins should provide focused functionality
+- **Test mixin behavior** as part of model tests
+
 ```python
 # Good: Clear, focused model with proper validation
 class Campaign(models.Model):
@@ -788,6 +827,133 @@ class CampaignFactory(factory.django.DjangoModelFactory):
     game_system = factory.Faker('word')
 ```
 
+### Testing Model Mixins
+
+When testing models that use mixins, focus on the essential functionality and integration:
+
+```python
+# core/tests/test_mixins.py
+class TimestampedTestModel(TimestampedMixin):
+    """Test model for mixin functionality."""
+    title = models.CharField(max_length=100)
+
+    class Meta:
+        app_label = "core"
+
+class TestTimestampedMixin(TestCase):
+    """Test TimestampedMixin functionality."""
+
+    def test_has_timestamp_fields(self):
+        """Test that mixin provides required fields."""
+        fields = {f.name: f for f in TimestampedTestModel._meta.get_fields()}
+
+        self.assertIn("created_at", fields)
+        self.assertIn("updated_at", fields)
+        self.assertIsInstance(fields["created_at"], models.DateTimeField)
+        self.assertIsInstance(fields["updated_at"], models.DateTimeField)
+
+    def test_timestamps_set_on_create(self):
+        """Test automatic timestamp setting on creation."""
+        before_create = timezone.now()
+        obj = TimestampedTestModel.objects.create(title="Test")
+        after_create = timezone.now()
+
+        self.assertIsNotNone(obj.created_at)
+        self.assertIsNotNone(obj.updated_at)
+        self.assertGreaterEqual(obj.created_at, before_create)
+        self.assertLessEqual(obj.created_at, after_create)
+
+    def test_updated_at_changes_on_save(self):
+        """Test that updated_at changes when object is saved."""
+        obj = TimestampedTestModel.objects.create(title="Test")
+        original_updated_at = obj.updated_at
+
+        time.sleep(0.1)  # Ensure time difference
+        obj.title = "Updated"
+        obj.save()
+        obj.refresh_from_db()
+
+        self.assertGreater(obj.updated_at, original_updated_at)
+```
+
+**Mixin Testing Philosophy:**
+
+- **Focus on Essential Behavior**: Test the core functionality the mixin provides
+- **Test Integration**: Verify mixin works correctly with actual models
+- **Keep Tests Simple**: Avoid over-testing implementation details
+- **Test Edge Cases**: But only the ones that matter in practice
+- **Test Performance Features**: Verify indexes exist and help text is present
+- **Test Enhanced Functionality**: For AuditableMixin, test automatic user tracking
+
+**When Testing Models with Mixins:**
+
+```python
+class TestGameSessionModel(TestCase):
+    """Test GameSession model (includes TimestampedMixin)."""
+
+    def setUp(self):
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=User.objects.create_user("owner", "owner@example.com")
+        )
+
+    def test_session_creation_includes_timestamps(self):
+        """Test that session creation includes automatic timestamps."""
+        session = GameSession.objects.create(
+            name="Session 1",
+            campaign=self.campaign
+        )
+
+        # Test mixin functionality
+        self.assertIsNotNone(session.created_at)
+        self.assertIsNotNone(session.updated_at)
+
+        # Test model-specific functionality
+        self.assertEqual(session.name, "Session 1")
+        self.assertEqual(session.campaign, self.campaign)
+
+    def test_session_update_changes_timestamp(self):
+        """Test that session updates change the updated_at timestamp."""
+        session = GameSession.objects.create(
+            name="Session 1",
+            campaign=self.campaign
+        )
+        original_updated = session.updated_at
+
+        time.sleep(0.1)
+        session.status = 'COMPLETED'
+        session.save()
+        session.refresh_from_db()
+
+        self.assertGreater(session.updated_at, original_updated)
+        self.assertEqual(session.status, 'COMPLETED')
+
+    def test_session_with_user_tracking(self):
+        """Test that session with AuditableMixin tracks users automatically."""
+        user = User.objects.create_user("creator", "creator@example.com")
+
+        # Create session with user tracking
+        session = GameSession(
+            name="Session with Tracking",
+            campaign=self.campaign
+        )
+        session.save(user=user)
+
+        # Verify automatic user tracking
+        self.assertEqual(session.created_by, user)
+        self.assertEqual(session.modified_by, user)
+
+        # Update with different user
+        modifier = User.objects.create_user("modifier", "modifier@example.com")
+        session.status = 'COMPLETED'
+        session.save(user=modifier)
+
+        # Verify created_by unchanged, modified_by updated
+        session.refresh_from_db()
+        self.assertEqual(session.created_by, user)  # Unchanged
+        self.assertEqual(session.modified_by, modifier)  # Updated
+```
+
 ### Comprehensive Test Coverage
 
 ```python
@@ -1042,4 +1208,4 @@ python manage.py create_test_data --users=5 --campaigns=3
 
 ---
 
-*This development guide should be updated as new patterns and practices are established. Last updated: 2025-01-08*
+*This development guide should be updated as new patterns and practices are established. Last updated: 2025-08-17*
