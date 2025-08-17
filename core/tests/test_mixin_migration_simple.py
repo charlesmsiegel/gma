@@ -8,7 +8,7 @@ to Character, Item, and Location models.
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from campaigns.models import Campaign
+from campaigns.models import Campaign, CampaignMembership
 from characters.models import Character
 from items.models import Item
 from locations.models import Location
@@ -30,6 +30,11 @@ class MixinMigrationTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign", owner=self.owner, game_system="mage"
+        )
+
+        # Add player as campaign member
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player, role="PLAYER"
         )
 
     def test_character_mixin_fields(self):
