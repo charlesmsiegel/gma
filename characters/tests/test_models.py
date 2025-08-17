@@ -3114,7 +3114,6 @@ class CharacterNPCFieldTest(TestCase):
             player_owner=self.player1,
             game_system="Mage: The Ascension",
             npc=False,
-            audit_user=self.player1,
         )
 
         # Change NPC status
@@ -3204,43 +3203,56 @@ class CharacterNPCFieldTest(TestCase):
 
     def test_npc_field_performance_with_index(self):
         """Test that NPC field queries perform well with database index."""
+        # Temporarily increase character limit for this performance test
+        original_limit = self.campaign.max_characters_per_player
+        self.campaign.max_characters_per_player = (
+            100  # Allow more characters for testing
+        )
+        self.campaign.save()
+
         # Create a reasonable number of characters to test performance
         characters_to_create = 50
 
-        for i in range(characters_to_create):
-            is_npc = i % 3 == 0  # Every third character is an NPC
-            owner = self.gm if is_npc else self.player1
+        try:
+            for i in range(characters_to_create):
+                is_npc = i % 3 == 0  # Every third character is an NPC
+                owner = self.gm if is_npc else self.player1
 
-            Character.objects.create(
-                name=f"Character {i}",
-                campaign=self.campaign,
-                player_owner=owner,
-                game_system="Mage: The Ascension",
-                npc=is_npc,
-            )
+                Character.objects.create(
+                    name=f"Character {i}",
+                    campaign=self.campaign,
+                    player_owner=owner,
+                    game_system="Mage: The Ascension",
+                    npc=is_npc,
+                )
 
-        # Test query performance - this should be fast with index
-        import time
+            # Test query performance - this should be fast with index
+            import time
 
-        start_time = time.time()
-        npcs = list(Character.objects.filter(npc=True))
-        npc_query_time = time.time() - start_time
+            start_time = time.time()
+            npcs = list(Character.objects.filter(npc=True))
+            npc_query_time = time.time() - start_time
 
-        start_time = time.time()
-        pcs = list(Character.objects.filter(npc=False))
-        pc_query_time = time.time() - start_time
+            start_time = time.time()
+            pcs = list(Character.objects.filter(npc=False))
+            pc_query_time = time.time() - start_time
 
-        # Verify correct counts
-        expected_npcs = characters_to_create // 3
-        expected_pcs = characters_to_create - expected_npcs
+            # Verify correct counts
+            # Count actual NPCs created (every 3rd character starting from 0)
+            expected_npcs = len([i for i in range(characters_to_create) if i % 3 == 0])
+            expected_pcs = characters_to_create - expected_npcs
 
-        self.assertEqual(len(npcs), expected_npcs)
-        self.assertEqual(len(pcs), expected_pcs)
+            self.assertEqual(len(npcs), expected_npcs)
+            self.assertEqual(len(pcs), expected_pcs)
 
-        # Query times should be reasonable (under 100ms for this small dataset)
-        # This is more of a smoke test than a real performance test
-        self.assertLess(npc_query_time, 0.1, "NPC query took too long")
-        self.assertLess(pc_query_time, 0.1, "PC query took too long")
+            # Query times should be reasonable (under 100ms for this small dataset)
+            # This is more of a smoke test than a real performance test
+            self.assertLess(npc_query_time, 0.1, "NPC query took too long")
+            self.assertLess(pc_query_time, 0.1, "PC query took too long")
+        finally:
+            # Restore original character limit
+            self.campaign.max_characters_per_player = original_limit
+            self.campaign.save()
 
     def test_npc_field_migration_compatibility(self):
         """Test that the NPC field addition is compatible with existing data."""

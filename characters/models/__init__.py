@@ -298,6 +298,11 @@ class Character(
     game_system: models.CharField = models.CharField(
         max_length=100, help_text="The game system this character uses"
     )
+    npc: models.BooleanField = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether this character is an NPC (Non-Player Character)",
+    )
 
     # Soft delete fields
     is_deleted: models.BooleanField = models.BooleanField(
@@ -328,6 +333,7 @@ class Character(
         self._original_name = self.__dict__.get("name", "")
         self._original_description = self.__dict__.get("description", "")
         self._original_game_system = self.__dict__.get("game_system", "")
+        self._original_npc = self.__dict__.get("npc", False)
 
     class Meta:
         db_table = "characters_character"
@@ -366,7 +372,14 @@ class Character(
 
     def _get_tracked_fields(self):
         """Get list of fields to track for Character audit trail."""
-        return ["name", "description", "game_system", "campaign_id", "player_owner_id"]
+        return [
+            "name",
+            "description",
+            "game_system",
+            "campaign_id",
+            "player_owner_id",
+            "npc",
+        ]
 
     def _has_campaign_changed(self) -> bool:
         """Check if the campaign field has changed since the instance was loaded."""
@@ -482,6 +495,7 @@ class Character(
         self._original_name = self.name
         self._original_description = self.description
         self._original_game_system = self.game_system
+        self._original_npc = self.npc
 
     def refresh_from_db(
         self, using: Optional[str] = None, fields: Optional[List[str]] = None
