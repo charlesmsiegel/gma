@@ -22,6 +22,7 @@ The GMA database schema is designed around domain-driven principles with clear s
 - **Content Management**: Characters, scenes, items, locations
 - **Real-time Features**: Health checks, notifications
 - **System Management**: Migrations, admin logs
+- **State Management**: Workflow transitions using django-fsm-2
 
 ### Database Technology
 - **PostgreSQL 16** as the primary database
@@ -29,6 +30,7 @@ The GMA database schema is designed around domain-driven principles with clear s
 - **Row-level security** for multi-tenant data isolation
 - **JSONB fields** for flexible configuration storage
 - **Full-text search** capabilities for content discovery
+- **State management** with django-fsm-2 for workflow transitions
 
 ## Core Models
 
@@ -189,6 +191,163 @@ class GameSession(TimestampedMixin):
     # TimestampedMixin automatically provides:
     # created_at and updated_at fields
 ```
+
+### State Machine Fields
+
+The GMA system uses **django-fsm-2** for managing model state transitions. State machine fields provide workflow management for campaigns, scenes, and characters.
+
+#### FSMField Database Schema
+
+**Basic State Field:**
+```sql
+-- State field with choices constraint
+status VARCHAR(50) DEFAULT 'draft' NOT NULL
+    CHECK (status IN ('draft', 'active', 'completed', 'cancelled'))
+```
+
+**State Field with Index:**
+```sql
+-- State field optimized for filtering
+state VARCHAR(50) DEFAULT 'pending' NOT NULL,
+
+-- Index for efficient state-based queries
+CREATE INDEX <table>_state_idx ON <table> (state);
+```
+
+#### State Machine Integration Patterns
+
+**Campaign State Management:**
+```python
+# Future implementation example
+from django_fsm import FSMField, transition
+
+class Campaign(models.Model):
+    # Existing fields...
+    state = FSMField(default='draft', max_length=50)
+
+    @transition(field=state, source='draft', target='active')
+    def activate(self):
+        """Activate campaign for player participation."""
+        pass
+```
+
+**Database Impact:**
+```sql
+-- Additional field for Campaign table
+ALTER TABLE campaigns_campaign
+ADD COLUMN state VARCHAR(50) DEFAULT 'draft' NOT NULL;
+
+-- Index for efficient state filtering
+CREATE INDEX campaigns_campaign_state_idx
+ON campaigns_campaign (state);
+
+-- Constraint for valid states
+ALTER TABLE campaigns_campaign
+ADD CONSTRAINT campaigns_campaign_state_check
+CHECK (state IN ('draft', 'active', 'completed', 'archived'));
+```
+
+#### State Transition Audit Trail
+
+**Future Enhancement - State History:**
+```sql
+-- State transition log table
+CREATE TABLE core_statetransitionlog (
+    id SERIAL PRIMARY KEY,
+    content_type_id INTEGER NOT NULL REFERENCES django_content_type(id),
+    object_id INTEGER NOT NULL,
+
+    -- Transition details
+    from_state VARCHAR(50) NOT NULL,
+    to_state VARCHAR(50) NOT NULL,
+    transition_method VARCHAR(100) NOT NULL,
+
+    -- Audit information
+    user_id INTEGER REFERENCES users_user(id) ON DELETE SET NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    notes TEXT DEFAULT ''
+);
+
+-- Indexes for efficient querying
+CREATE INDEX statetransition_content_object_idx
+ON core_statetransitionlog (content_type_id, object_id);
+
+CREATE INDEX statetransition_timestamp_idx
+ON core_statetransitionlog (timestamp DESC);
+```
+
+#### State-Based Query Patterns
+
+**Filtering by State:**
+```sql
+-- Active campaigns only
+SELECT * FROM campaigns_campaign
+WHERE state = 'active' AND is_public = true;
+
+-- Campaigns by state priority
+SELECT * FROM campaigns_campaign
+ORDER BY
+    CASE state
+        WHEN 'active' THEN 1
+        WHEN 'draft' THEN 2
+        WHEN 'completed' THEN 3
+        ELSE 4
+    END,
+    updated_at DESC;
+```
+
+**State Transition Analytics:**
+```sql
+-- State distribution analysis
+SELECT
+    state,
+    COUNT(*) as count,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
+FROM campaigns_campaign
+GROUP BY state
+ORDER BY count DESC;
+
+-- Recent state changes (with future audit table)
+SELECT
+    c.name as campaign_name,
+    stl.from_state,
+    stl.to_state,
+    stl.timestamp,
+    u.username as changed_by
+FROM core_statetransitionlog stl
+JOIN campaigns_campaign c ON stl.object_id = c.id
+JOIN users_user u ON stl.user_id = u.id
+WHERE stl.content_type_id = (
+    SELECT id FROM django_content_type
+    WHERE app_label = 'campaigns' AND model = 'campaign'
+)
+ORDER BY stl.timestamp DESC
+LIMIT 10;
+```
+
+#### Performance Considerations
+
+**State Field Indexing:**
+- Always index state fields for efficient filtering
+- Consider composite indexes for state + other frequently queried fields
+- Use partial indexes for specific state combinations
+
+**Query Optimization:**
+```sql
+-- Efficient state-based filtering with composite index
+CREATE INDEX campaigns_active_updated_idx
+ON campaigns_campaign (state, updated_at DESC)
+WHERE state = 'active';
+
+-- Efficient owner + state queries
+CREATE INDEX campaigns_owner_state_idx
+ON campaigns_campaign (owner_id, state);
+```
+
+**State Validation:**
+- Use database constraints to enforce valid state values
+- Consider using ENUMs for better type safety (PostgreSQL)
+- Document state transition rules in application code
 
 **Database Schema Impact:**
 ```sql

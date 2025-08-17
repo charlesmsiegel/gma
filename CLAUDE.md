@@ -14,6 +14,7 @@ Game Master Application (GMA) - A web-based tabletop RPG campaign management sys
 - **PostgreSQL 16** as primary database
 - **Redis 7.2** for caching and Channels layer
 - **django-polymorphic** for game system character inheritance
+- **django-fsm-2** for state machine management
 
 ### Frontend
 - **React with TypeScript** (Progressive Web App)
@@ -124,6 +125,9 @@ python manage.py test core.tests.test_migration_strategy  # Run all migration sa
 python manage.py test core.tests.test_migration_strategy.ForwardMigrationDataPreservationTest  # Data preservation tests
 python manage.py test core.tests.test_migration_strategy.MigrationPerformanceTest  # Performance tests
 python manage.py test core.tests.test_migration_strategy.MigrationRollbackTest  # Rollback safety tests
+
+# State machine testing commands
+python manage.py test core.tests.test_django_fsm_installation  # Test django-fsm-2 installation and functionality
 
 # Migration rollback support
 ./scripts/rollback_mixin_migrations.sh      # Interactive rollback script for mixin migrations
@@ -267,7 +271,7 @@ Tests are organized by functionality and complexity:
 - **campaigns/tests/**: Campaign models, membership, invitations, permissions
 - **api/tests/**: API endpoints, error handling, security, serializers
 - **users/tests/**: Authentication, user management, profile operations
-- **core/tests/**: Management commands, health checks, WebSocket connections
+- **core/tests/**: Management commands, health checks, WebSocket connections, django-fsm-2 integration
 
 ### Running Tests
 ```bash
