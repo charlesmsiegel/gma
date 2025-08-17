@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from polymorphic.managers import PolymorphicManager  # type: ignore[import-untyped]
 from polymorphic.models import PolymorphicModel  # type: ignore[import-untyped]
+from polymorphic.query import PolymorphicQuerySet  # type: ignore[import-untyped]
 
 from campaigns.models import Campaign
 from core.models import DetailedAuditableMixin, NamedModelMixin, TimestampedMixin
@@ -98,7 +99,7 @@ class CharacterAuditLog(models.Model):
         )
 
 
-class CharacterQuerySet(models.QuerySet):
+class CharacterQuerySet(PolymorphicQuerySet):
     """Custom QuerySet for Character with filtering methods."""
 
     def active(self) -> "CharacterQuerySet":
@@ -148,6 +149,22 @@ class CharacterQuerySet(models.QuerySet):
             "campaign__memberships__user"
         )
 
+    def npcs(self) -> "CharacterQuerySet":
+        """Filter to only NPCs (Non-Player Characters).
+
+        Returns:
+            QuerySet of only NPC characters
+        """
+        return self.filter(npc=True)
+
+    def player_characters(self) -> "CharacterQuerySet":
+        """Filter to only Player Characters (PCs).
+
+        Returns:
+            QuerySet of only PC characters
+        """
+        return self.filter(npc=False)
+
     def editable_by(
         self, user: Optional["AbstractUser"], campaign: Campaign
     ) -> "CharacterQuerySet":
@@ -187,8 +204,8 @@ class CharacterManager(PolymorphicManager):
     """Custom manager for Character with query methods."""
 
     def get_queryset(self):
-        """Return the polymorphic QuerySet, excluding soft-deleted by default."""
-        return super().get_queryset().filter(is_deleted=False)
+        """Return the custom CharacterQuerySet, excluding soft-deleted by default."""
+        return CharacterQuerySet(self.model, using=self._db).filter(is_deleted=False)
 
     def for_campaign(self, campaign: Campaign):
         """Get characters for a specific campaign.
@@ -247,6 +264,22 @@ class CharacterManager(PolymorphicManager):
         else:
             # Observers and others cannot edit any characters
             return self.none()
+
+    def npcs(self):
+        """Get only NPCs (Non-Player Characters).
+
+        Returns:
+            QuerySet of only NPC characters
+        """
+        return self.get_queryset().filter(npc=True)
+
+    def player_characters(self):
+        """Get only Player Characters (PCs).
+
+        Returns:
+            QuerySet of only PC characters
+        """
+        return self.get_queryset().filter(npc=False)
 
     def with_campaign_memberships(self):
         """Get characters with prefetched campaign memberships.

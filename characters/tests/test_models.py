@@ -3149,7 +3149,7 @@ class CharacterNPCFieldTest(TestCase):
             )
 
     def test_character_manager_npc_methods(self):
-        """Test that Character manager can be extended with NPC-specific methods."""
+        """Test Character manager NPC methods (.npcs() and .player_characters())."""
         # Create test characters
         pc1 = Character.objects.create(
             name="PC 1",
@@ -3183,23 +3183,46 @@ class CharacterNPCFieldTest(TestCase):
             npc=True,
         )
 
-        # Test that we can filter by campaign and NPC status together
-        campaign_npcs = Character.objects.for_campaign(self.campaign).filter(npc=True)
+        # Test new manager .npcs() method
+        npcs = Character.objects.npcs()
+        self.assertEqual(npcs.count(), 2)
+        self.assertIn(npc1, npcs)
+        self.assertIn(npc2, npcs)
+        self.assertNotIn(pc1, npcs)
+        self.assertNotIn(pc2, npcs)
+
+        # Test new manager .player_characters() method
+        pcs = Character.objects.player_characters()
+        self.assertEqual(pcs.count(), 2)
+        self.assertIn(pc1, pcs)
+        self.assertIn(pc2, pcs)
+        self.assertNotIn(npc1, pcs)
+        self.assertNotIn(npc2, pcs)
+
+        # Test chaining new methods with existing filters
+        campaign_npcs = Character.objects.npcs().for_campaign(self.campaign)
         self.assertEqual(campaign_npcs.count(), 2)
         self.assertIn(npc1, campaign_npcs)
         self.assertIn(npc2, campaign_npcs)
 
-        campaign_pcs = Character.objects.for_campaign(self.campaign).filter(npc=False)
+        campaign_pcs = Character.objects.player_characters().for_campaign(self.campaign)
         self.assertEqual(campaign_pcs.count(), 2)
         self.assertIn(pc1, campaign_pcs)
         self.assertIn(pc2, campaign_pcs)
 
         # Test combining with ownership filtering
-        player_pcs = Character.objects.owned_by(self.player1).filter(npc=False)
+        player_pcs = Character.objects.player_characters().owned_by(self.player1)
         self.assertEqual(player_pcs.count(), 2)
 
-        gm_npcs = Character.objects.owned_by(self.gm).filter(npc=True)
+        gm_npcs = Character.objects.npcs().owned_by(self.gm)
         self.assertEqual(gm_npcs.count(), 2)
+
+        # Test that the old filter approach still works (backward compatibility)
+        old_style_npcs = Character.objects.filter(npc=True)
+        self.assertEqual(old_style_npcs.count(), 2)
+
+        old_style_pcs = Character.objects.filter(npc=False)
+        self.assertEqual(old_style_pcs.count(), 2)
 
     def test_npc_field_performance_with_index(self):
         """Test that NPC field queries perform well with database index."""
