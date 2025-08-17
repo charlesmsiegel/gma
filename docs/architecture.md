@@ -633,6 +633,14 @@ audit_entry = character.audit_entries.filter(
 **Optimized Query Methods:**
 ```python
 class CharacterManager(PolymorphicManager):
+    def npcs(self):
+        """Get only NPCs (Non-Player Characters)."""
+        return self.get_queryset().filter(npc=True)
+
+    def player_characters(self):
+        """Get only Player Characters (PCs)."""
+        return self.get_queryset().filter(npc=False)
+
     def for_campaign(self, campaign):
         return self.get_queryset().filter(campaign=campaign)
 
@@ -645,6 +653,30 @@ class CharacterManager(PolymorphicManager):
             return self.filter(campaign=campaign, player_owner=user)  # Own characters only
         else:
             return self.none()
+```
+
+**Manager Method Usage Examples:**
+```python
+# Get all NPCs in the system
+all_npcs = Character.objects.npcs()
+
+# Get all Player Characters
+all_pcs = Character.objects.player_characters()
+
+# Get NPCs for a specific campaign
+campaign_npcs = Character.objects.npcs().for_campaign(campaign)
+
+# Get Player Characters owned by a user
+user_pcs = Character.objects.player_characters().owned_by(user)
+
+# Combine multiple filters
+campaign_player_pcs = (Character.objects
+                      .player_characters()
+                      .for_campaign(campaign)
+                      .owned_by(player))
+
+# Backward compatibility - old approach still works
+old_style_npcs = Character.objects.filter(npc=True)
 ```
 
 **Performance Optimizations:**
