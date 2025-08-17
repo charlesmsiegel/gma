@@ -25,6 +25,7 @@ The GMA database schema is designed around domain-driven principles with clear s
 - **State Management**: Workflow transitions using django-fsm-2
 
 ### Database Technology
+
 - **PostgreSQL 16** as the primary database
 - **UTF-8 encoding** for international character support
 - **Row-level security** for multi-tenant data isolation
@@ -39,6 +40,7 @@ The GMA database schema is designed around domain-driven principles with clear s
 The GMA system provides reusable model mixins that encapsulate common functionality needed across multiple models. These mixins include performance optimizations such as database indexing and comprehensive help text.
 
 #### TimestampedMixin
+
 **Location**: `core/models/mixins.py:30-56`
 **Purpose**: Automatic timestamp tracking for model creation and updates with performance optimization
 
@@ -53,6 +55,7 @@ CREATE INDEX <table>_updated_at_idx ON <table> (updated_at);
 ```
 
 **Field Specifications:**
+
 - `created_at`: Automatically set on model creation (`auto_now_add=True`, indexed)
 - `updated_at`: Automatically updated on every model save (`auto_now=True`, indexed)
 - Both fields use timezone-aware timestamps
@@ -61,6 +64,7 @@ CREATE INDEX <table>_updated_at_idx ON <table> (updated_at);
 - **Performance**: Both fields are indexed (`db_index=True`) for efficient date-based queries
 
 #### DisplayableMixin
+
 **Location**: `core/models/mixins.py:58-83`
 **Purpose**: Control display visibility and ordering with performance optimization
 
@@ -74,12 +78,14 @@ CREATE INDEX <table>_display_order_idx ON <table> (display_order);
 ```
 
 **Field Specifications:**
+
 - `is_displayed`: Boolean flag controlling visibility (default: `True`)
 - `display_order`: Integer for custom ordering (default: `0`, indexed for performance)
 - **Performance**: `display_order` field is indexed for efficient ordering queries
 - Consider composite indexes like `(is_displayed, display_order)` for heavy-use models
 
 #### NamedModelMixin
+
 **Location**: `core/models/mixins.py:85-108`
 **Purpose**: Standardized name field with string representation
 
@@ -89,11 +95,13 @@ name VARCHAR(100) NOT NULL
 ```
 
 **Field Specifications:**
+
 - `name`: Required CharField with 100 character limit
 - Provides `__str__()` method returning the name
 - **Performance**: Consider adding `db_index=True` if frequently searching by name
 
 #### DescribedModelMixin
+
 **Location**: `core/models/mixins.py:110-130`
 **Purpose**: Optional description field for detailed information
 
@@ -103,11 +111,13 @@ description TEXT DEFAULT '' NOT NULL
 ```
 
 **Field Specifications:**
+
 - `description`: Optional TextField with blank=True and default empty string
 - **Performance**: Not indexed by default (appropriate for large text fields)
 - Use `description__icontains` for text search, consider full-text search for large datasets
 
 #### AuditableMixin
+
 **Location**: `core/models/mixins.py:132-189`
 **Purpose**: User audit tracking with automatic user management
 
@@ -118,12 +128,14 @@ modified_by_id INTEGER REFERENCES users_user(id) ON DELETE CASCADE
 ```
 
 **Field Specifications:**
+
 - `created_by`: Optional ForeignKey to User who created the object
 - `modified_by`: Optional ForeignKey to User who last modified the object
 - **Enhanced save() method**: Accepts `user` parameter for automatic tracking
 - **Performance**: Use `select_related('created_by', 'modified_by')` for efficient queries
 
 **Automatic User Tracking:**
+
 ```python
 # Automatic user tracking
 obj.save(user=request.user)  # Sets modified_by and created_by for new objects
@@ -134,6 +146,7 @@ obj.save()
 ```
 
 #### GameSystemMixin
+
 **Location**: `core/models/mixins.py:191-235`
 **Purpose**: Game system selection for campaign-related models
 
@@ -144,6 +157,7 @@ game_system VARCHAR(50) DEFAULT 'generic' NOT NULL
 ```
 
 **Field Specifications:**
+
 - `game_system`: CharField with predefined choices for popular RPG systems
 - Default value: `'generic'`
 - **Performance**: Choices are efficient for filtering, consider `db_index=True` for frequent filtering
@@ -152,6 +166,7 @@ game_system VARCHAR(50) DEFAULT 'generic' NOT NULL
 
 **Database Indexes:**
 All mixins include strategic database indexing for commonly queried fields:
+
 - `TimestampedMixin`: Indexes on `created_at` and `updated_at` for time-based queries
 - `DisplayableMixin`: Index on `display_order` for efficient sorting
 - `AuditableMixin`: Foreign key indexes automatically created by Django
@@ -159,27 +174,32 @@ All mixins include strategic database indexing for commonly queried fields:
 
 **Help Text Documentation:**
 All mixin fields include comprehensive help text visible in:
+
 - Django admin interface
 - API documentation
 - Development tools
 - Database schema documentation
 
 **Usage Guidelines:**
+
 - Use `select_related()` when querying models with audit tracking
 - Consider composite indexes for models using multiple mixins
 - Monitor query performance and add additional indexes as needed
 
 **Use TimestampedMixin when:**
+
 - Creating new models that need basic timestamp tracking
 - Standardized timestamp behavior is desired
 - No custom timestamp logic is required
 
 **Don't use TimestampedMixin when:**
+
 - Model already has timestamp fields (e.g., Campaign, Character)
 - Custom timestamp behavior is needed
 - Timestamp tracking isn't required for the model
 
 **Implementation Example:**
+
 ```python
 from core.models.mixins import TimestampedMixin
 
@@ -199,6 +219,7 @@ The GMA system uses **django-fsm-2** for managing model state transitions. State
 #### FSMField Database Schema
 
 **Basic State Field:**
+
 ```sql
 -- State field with choices constraint
 status VARCHAR(50) DEFAULT 'draft' NOT NULL
@@ -206,6 +227,7 @@ status VARCHAR(50) DEFAULT 'draft' NOT NULL
 ```
 
 **State Field with Index:**
+
 ```sql
 -- State field optimized for filtering
 state VARCHAR(50) DEFAULT 'pending' NOT NULL,
@@ -217,6 +239,7 @@ CREATE INDEX <table>_state_idx ON <table> (state);
 #### State Machine Integration Patterns
 
 **Campaign State Management:**
+
 ```python
 # Future implementation example
 from django_fsm import FSMField, transition
@@ -232,6 +255,7 @@ class Campaign(models.Model):
 ```
 
 **Database Impact:**
+
 ```sql
 -- Additional field for Campaign table
 ALTER TABLE campaigns_campaign
@@ -250,6 +274,7 @@ CHECK (state IN ('draft', 'active', 'completed', 'archived'));
 #### State Transition Audit Trail
 
 **Future Enhancement - State History:**
+
 ```sql
 -- State transition log table
 CREATE TABLE core_statetransitionlog (
@@ -279,6 +304,7 @@ ON core_statetransitionlog (timestamp DESC);
 #### State-Based Query Patterns
 
 **Filtering by State:**
+
 ```sql
 -- Active campaigns only
 SELECT * FROM campaigns_campaign
@@ -297,6 +323,7 @@ ORDER BY
 ```
 
 **State Transition Analytics:**
+
 ```sql
 -- State distribution analysis
 SELECT
@@ -328,11 +355,13 @@ LIMIT 10;
 #### Performance Considerations
 
 **State Field Indexing:**
+
 - Always index state fields for efficient filtering
 - Consider composite indexes for state + other frequently queried fields
 - Use partial indexes for specific state combinations
 
 **Query Optimization:**
+
 ```sql
 -- Efficient state-based filtering with composite index
 CREATE INDEX campaigns_active_updated_idx
@@ -345,11 +374,13 @@ ON campaigns_campaign (owner_id, state);
 ```
 
 **State Validation:**
+
 - Use database constraints to enforce valid state values
 - Consider using ENUMs for better type safety (PostgreSQL)
 - Document state transition rules in application code
 
 **Database Schema Impact:**
+
 ```sql
 -- Generated table with TimestampedMixin
 CREATE TABLE example_gamesession (
@@ -364,6 +395,7 @@ CREATE TABLE example_gamesession (
 ```
 
 **Indexing Considerations:**
+
 - Consider adding indexes on `created_at` for time-based queries
 - Consider adding indexes on `updated_at` for "recently modified" queries
 - Composite indexes may be useful for filtering by status + timestamp
@@ -375,6 +407,7 @@ CREATE INDEX idx_gamesession_updated ON example_gamesession (updated_at DESC);
 ```
 
 ### Campaign Model
+
 **Table**: `campaigns_campaign`
 
 The central entity around which all game content is organized.
@@ -405,17 +438,20 @@ CREATE TABLE campaigns_campaign (
 ```
 
 **Key Features:**
+
 - **Auto-generated slug**: URL-friendly unique identifier
 - **Visibility control**: Public/private campaign access
 - **Owner cascade deletion**: When owner is deleted, campaign is removed
 - **Join permissions**: Configurable self-service joining
 
 **Relationships:**
+
 - **Owner**: Many campaigns → One user (owner)
 - **Members**: Many-to-many through CampaignMembership
 - **Invitations**: One campaign → Many invitations
 
 ### CampaignMembership Model
+
 **Table**: `campaigns_campaignmembership`
 
 Manages user participation in campaigns with role-based access.
@@ -437,12 +473,14 @@ CREATE TABLE campaigns_campaignmembership (
 ```
 
 **Business Rules:**
+
 - **Unique membership**: One membership per user per campaign
 - **Role hierarchy**: Defines permission levels
 - **Cascade deletion**: Remove membership when campaign or user deleted
 - **Owner exclusion**: Campaign owner cannot be a member (enforced at service layer)
 
 ### CampaignInvitation Model
+
 **Table**: `campaigns_campaigninvitation`
 
 Manages invitation lifecycle for campaign membership.
@@ -472,12 +510,14 @@ CREATE TABLE campaigns_campaigninvitation (
 ```
 
 **Invitation Lifecycle:**
+
 1. **PENDING**: Invitation created, awaiting response
 2. **ACCEPTED**: User accepted and became member
 3. **DECLINED**: User declined invitation
 4. **EXPIRED**: Invitation expired without response
 
 **Business Rules:**
+
 - **7-day expiration**: Default invitation lifetime
 - **No duplicate pending**: One pending invitation per user per campaign
 - **Automatic cleanup**: Expired invitations cleaned up periodically
@@ -485,6 +525,7 @@ CREATE TABLE campaigns_campaigninvitation (
 ## Campaign Domain
 
 ### Character Model
+
 **Table**: `characters_character`
 
 The core character model supporting polymorphic inheritance for different game systems, with unified PC/NPC architecture.
@@ -531,11 +572,13 @@ CREATE INDEX characters_character_updated_at_idx ON characters_character (update
 **Field Specifications:**
 
 **Core Identity:**
+
 - `name`: Character name, must be unique within campaign (VARCHAR 100, indexed via constraint)
 - `description`: Optional character background and description (TEXT, blank allowed)
 - `game_system`: Game system identifier (VARCHAR 100, matches campaign system)
 
 **PC/NPC Architecture:**
+
 - `npc`: Boolean flag distinguishing NPCs from PCs (BOOLEAN, default: false, indexed)
   - `false`: Player Character (PC) - controlled by players
   - `true`: Non-Player Character (NPC) - controlled by GMs
@@ -543,28 +586,33 @@ CREATE INDEX characters_character_updated_at_idx ON characters_character (update
   - **Unified Model**: Same Character model serves both PCs and NPCs
 
 **Relationships:**
+
 - `campaign_id`: Campaign this character belongs to (CASCADE delete)
 - `player_owner_id`: User who owns/controls this character (CASCADE delete)
   - For PCs: The actual player
   - For NPCs: Usually the GM who created them
 
 **Polymorphic Support:**
+
 - `polymorphic_ctype_id`: Django content type for polymorphic inheritance
 - Supports inheritance: Character → WoDCharacter → MageCharacter
 - Enables game-system-specific fields while maintaining unified queries
 
 **Audit Trail (via DetailedAuditableMixin):**
+
 - `created_by_id`: User who created the character (SET NULL on user deletion)
 - `modified_by_id`: User who last modified the character (SET NULL on user deletion)
 - `created_at`: Character creation timestamp (indexed for audit queries)
 - `updated_at`: Last modification timestamp (indexed for audit queries)
 
 **Soft Delete Support:**
+
 - `is_deleted`: Soft delete flag (default: false)
 - `deleted_at`: Deletion timestamp (null for active characters)
 - `deleted_by_id`: User who deleted the character (SET NULL on user deletion)
 
 **Business Rules:**
+
 - Character names must be unique within a campaign
 - Player must be a campaign member to own characters
 - Campaign owners and GMs can edit all campaign characters
@@ -575,6 +623,7 @@ CREATE INDEX characters_character_updated_at_idx ON characters_character (update
 #### Polymorphic Character Inheritance
 
 **WoD Character Extension:**
+
 ```sql
 -- World of Darkness character extension
 CREATE TABLE characters_wodcharacter (
@@ -584,6 +633,7 @@ CREATE TABLE characters_wodcharacter (
 ```
 
 **Mage Character Extension:**
+
 ```sql
 -- Mage: The Ascension character extension
 CREATE TABLE characters_magecharacter (
@@ -597,6 +647,7 @@ CREATE TABLE characters_magecharacter (
 #### Character Audit Trail
 
 **Audit Log Table:**
+
 ```sql
 -- Character-specific audit trail
 CREATE TABLE characters_character_audit (
@@ -615,6 +666,7 @@ CREATE INDEX characters_audit_action_idx ON characters_character_audit (action);
 ```
 
 **Tracked Field Changes:**
+
 - `name`: Character name changes
 - `description`: Background updates
 - `npc`: PC/NPC status changes
@@ -625,6 +677,7 @@ CREATE INDEX characters_audit_action_idx ON characters_character_audit (action);
 #### NPC Field Usage Patterns
 
 **Query by Character Type:**
+
 ```sql
 -- Get all NPCs in a campaign
 SELECT * FROM characters_character
@@ -644,11 +697,13 @@ GROUP BY npc;
 ```
 
 **Performance Considerations:**
+
 - `npc` field is indexed for efficient filtering
 - Combined with other common filters (campaign, player_owner) for optimal query performance
 - Polymorphic queries benefit from select_related() on content types
 
 **Migration History:**
+
 - **Issue #174**: Added `npc` field with database index
 - **Default Behavior**: New field defaults to `false` (PC) for backward compatibility
 - **Existing Data**: All existing characters treated as PCs (npc=false)
@@ -686,11 +741,13 @@ OBSERVER (Read-only Access)
 Campaigns support two visibility modes:
 
 **Public Campaigns:**
+
 - Visible to all authenticated users
 - Can be browsed in campaign directory
 - Join permissions controlled by allow_*_join flags
 
 **Private Campaigns:**
+
 - Visible only to owner and members
 - Invitation-only access
 - Hidden from public campaign lists
@@ -698,6 +755,7 @@ Campaigns support two visibility modes:
 ### Campaign Query Patterns
 
 **Visibility Filtering:**
+
 ```sql
 -- Campaigns visible to authenticated user
 SELECT c.* FROM campaigns_campaign c
@@ -710,6 +768,7 @@ WHERE c.is_public = true
 ```
 
 **Role-based Access:**
+
 ```sql
 -- User's role in campaign
 SELECT
@@ -726,6 +785,7 @@ WHERE c.id = :campaign_id;
 ## User Domain
 
 ### User Model
+
 **Table**: `users_user`
 
 Extended Django user model with GMA-specific features.
@@ -757,6 +817,7 @@ CREATE TABLE users_user (
 ```
 
 **Custom Fields:**
+
 - **display_name**: Optional display name for UI
 - **timezone**: User's preferred timezone
 - **notification_preferences**: Flexible notification settings
@@ -764,6 +825,7 @@ CREATE TABLE users_user (
 ### User Query Patterns
 
 **Search for Invitations:**
+
 ```sql
 -- Find users available for campaign invitation
 SELECT u.id, u.username, u.email
@@ -793,6 +855,7 @@ LIMIT 10;
 Django's session framework with Redis backend:
 
 **Session Storage:**
+
 ```python
 # Session in Redis
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
@@ -801,6 +864,7 @@ SESSION_COOKIE_AGE = 86400  # 24 hours
 ```
 
 **Session Data Structure:**
+
 ```json
 {
   "_auth_user_id": "123",
@@ -814,6 +878,7 @@ SESSION_COOKIE_AGE = 86400  # 24 hours
 ### CSRF Protection
 
 CSRF tokens are managed through Django's built-in middleware:
+
 - Token stored in session and cookie
 - Required for all state-changing operations
 - Validated on each POST/PUT/DELETE request
@@ -846,6 +911,7 @@ CREATE TABLE core_healthchecklog (
 ```
 
 **Usage:**
+
 - Automated health checks every 5 minutes
 - API endpoint for external monitoring
 - Performance trend analysis
@@ -855,11 +921,13 @@ CREATE TABLE core_healthchecklog (
 Real-time features use Django Channels with Redis channel layer:
 
 **Channel Groups:**
+
 - `campaign_{id}`: Campaign-wide notifications
 - `user_{id}`: User-specific notifications
 - `scene_{id}`: Scene-specific chat and updates
 
 **Message Types:**
+
 ```json
 {
   "type": "campaign.membership.added",
@@ -975,6 +1043,7 @@ CREATE INDEX users_user_search_idx
 ### Query Performance Analysis
 
 **Campaign List with User Role:**
+
 ```sql
 EXPLAIN ANALYZE
 SELECT
@@ -1006,6 +1075,7 @@ LIMIT 25;
 ```
 
 **Expected Performance:**
+
 - **Small datasets (< 1000 campaigns)**: < 10ms
 - **Medium datasets (< 10000 campaigns)**: < 50ms
 - **Large datasets (< 100000 campaigns)**: < 200ms
@@ -1019,12 +1089,14 @@ The GMA project includes a comprehensive migration strategy for safely applying 
 #### Migration Strategy Implementation
 
 **Current Implementation (Characters, Items, Locations):**
+
 - **Schema Migration**: Adds new mixin fields with proper defaults and indexes
 - **Data Migration**: Populates audit fields for existing records using logical defaults
 - **Safety Testing**: Comprehensive test suite validates migration safety
 - **Rollback Support**: Interactive script for safe migration rollback
 
 **Migration Files:**
+
 - `characters/migrations/0003_character_created_by_character_modified_by_and_more.py` - Schema changes
 - `characters/migrations/0004_populate_audit_fields.py` - Data population
 - `items/migrations/0003_item_modified_by_alter_item_created_at_and_more.py` - Schema changes
@@ -1037,6 +1109,7 @@ The GMA project includes a comprehensive migration strategy for safely applying 
 The project includes 21 comprehensive tests in `core/tests/test_migration_strategy.py`:
 
 **Test Categories:**
+
 - **Data Preservation Tests**: Verify existing data survives migration
 - **Default Value Tests**: Ensure proper application of default values
 - **Data Integrity Tests**: Confirm foreign keys and constraints remain valid
@@ -1071,6 +1144,7 @@ python manage.py migrate locations 0002
 ```
 
 **Rollback Features:**
+
 - Step-by-step rollback of data migrations before schema migrations
 - Interactive confirmation to prevent accidental rollbacks
 - Migration state verification before and after rollback
@@ -1082,14 +1156,17 @@ python manage.py migrate locations 0002
 For existing models, the data migrations use logical defaults:
 
 **Characters:**
+
 - `created_by` → Set to `player_owner` (most logical default)
 - `modified_by` → Set to `player_owner` (assumes owner last modified)
 
 **Items and Locations:**
+
 - `created_by` → Preserved from existing field
 - `modified_by` → Set to `created_by` (assumes creator last modified)
 
 **Safety Considerations:**
+
 - Uses `update_fields` to minimize database impact
 - Preserves existing timestamp values
 - Maintains foreign key integrity
@@ -1098,6 +1175,7 @@ For existing models, the data migrations use logical defaults:
 ### Schema Evolution Examples
 
 **Adding New Fields:**
+
 ```python
 # Migration: Add notification preferences
 class Migration(migrations.Migration):
@@ -1111,6 +1189,7 @@ class Migration(migrations.Migration):
 ```
 
 **Complex Data Migrations:**
+
 ```python
 # Migration: Populate display names from first/last name
 def populate_display_names(apps, schema_editor):
@@ -1131,6 +1210,7 @@ class Migration(migrations.Migration):
 ```
 
 **Index Creation:**
+
 ```python
 # Migration: Add performance indexes
 class Migration(migrations.Migration):
@@ -1149,6 +1229,7 @@ class Migration(migrations.Migration):
 ### Common Query Patterns
 
 **Efficient Campaign Loading:**
+
 ```python
 # Good: Use select_related for foreign keys
 campaigns = (
@@ -1167,6 +1248,7 @@ for campaign in campaigns:
 ```
 
 **Efficient Permission Checking:**
+
 ```python
 # Good: Single query with EXISTS
 def user_can_access_campaign(user_id, campaign_id):
@@ -1188,6 +1270,7 @@ def user_can_access_campaign_bad(user_id, campaign_id):
 ```
 
 **Bulk Operations:**
+
 ```python
 # Good: Bulk operations
 def add_multiple_members(campaign_id, user_role_pairs):
@@ -1218,6 +1301,7 @@ def add_multiple_members_bad(campaign_id, user_role_pairs):
 ### Database Maintenance
 
 **Regular Maintenance Tasks:**
+
 ```sql
 -- Update table statistics (weekly)
 ANALYZE campaigns_campaign;
@@ -1237,6 +1321,7 @@ REINDEX TABLE campaigns_campaign;
 ```
 
 **Monitoring Queries:**
+
 ```sql
 -- Slow query detection
 SELECT query, mean_time, calls, total_time

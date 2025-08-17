@@ -36,13 +36,15 @@ Configure these settings for the `main` branch in GitHub:
 
 ## How to Apply These Settings
 
-### Via GitHub Web Interface:
+### Via GitHub Web Interface
+
 1. Go to your repository on GitHub
 2. Navigate to Settings → Branches
 3. Click "Add Rule"
 4. Follow the settings above
 
-### Via GitHub CLI:
+### Via GitHub CLI
+
 ```bash
 # Install GitHub CLI if not already installed
 # Configure branch protection
@@ -73,6 +75,7 @@ The branch protection rules work with our CI workflows:
 ## Pre-commit Integration
 
 Pre-commit hooks (configured in `.pre-commit-config.yaml`) run locally and include:
+
 - Code formatting (black, isort)
 - Linting (flake8)
 - Type checking (mypy)
@@ -87,6 +90,7 @@ If CI checks are failing and blocking PRs:
 
 1. **Check the workflow runs** in the Actions tab
 2. **Fix issues locally** using the same tools:
+
    ```bash
    # Run pre-commit to fix formatting
    pre-commit run --all-files
@@ -97,11 +101,13 @@ If CI checks are failing and blocking PRs:
    # Check coverage
    make test-coverage
    ```
+
 3. **Push fixes** to update the PR
 4. **Wait for CI to re-run** and verify green status
 
 ## Emergency Override
 
 Repository administrators can bypass protection rules if needed:
+
 - Check "Include administrators" to enforce rules for all users
 - Uncheck to allow admin override in emergencies

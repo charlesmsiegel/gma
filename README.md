@@ -26,6 +26,7 @@ GMA is a comprehensive campaign management platform that bridges the gap between
 ### Technology Stack
 
 **Backend:**
+
 - **Django 5.2.4** with Django REST Framework for robust API development
 - **Django Channels** for WebSocket support and real-time features
 - **PostgreSQL 16** as the primary database for data integrity
@@ -33,11 +34,13 @@ GMA is a comprehensive campaign management platform that bridges the gap between
 - **django-polymorphic** for flexible character model inheritance
 
 **Frontend:**
+
 - **React with TypeScript** for enhanced user interactions
 - **Progressive Web App** architecture for mobile and offline support
 - **WebSocket integration** for real-time collaborative features
 
 **Development Environment:**
+
 - **Conda** for consistent environment management
 - **Python 3.11** with comprehensive type checking
 - **Node.js 20** for modern frontend development
@@ -55,12 +58,14 @@ GMA is a comprehensive campaign management platform that bridges the gap between
 ### Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/charlesmsiegel/gma.git
    cd gma
    ```
 
 2. **Set up the development environment:**
+
    ```bash
    # Create and activate conda environment
    conda env create -f environment.yml
@@ -68,6 +73,7 @@ GMA is a comprehensive campaign management platform that bridges the gap between
    ```
 
 3. **Install frontend dependencies:**
+
    ```bash
    cd frontend
    npm install
@@ -75,21 +81,23 @@ GMA is a comprehensive campaign management platform that bridges the gap between
    ```
 
 4. **Initialize the database:**
+
    ```bash
    # Set up the database and create a superuser
    make reset-dev
    ```
 
 5. **Start all services:**
+
    ```bash
    # Start PostgreSQL, Redis, Django (port 8080), and React (port 3000)
    make runserver
    ```
 
 6. **Access the application:**
-   - **Main Application**: http://localhost:8080
-   - **Admin Interface**: http://localhost:8080/admin/
-   - **API Documentation**: http://localhost:8080/api/schema/swagger-ui/
+   - **Main Application**: <http://localhost:8080>
+   - **Admin Interface**: <http://localhost:8080/admin/>
+   - **API Documentation**: <http://localhost:8080/api/schema/swagger-ui/>
 
 ### Alternative Development Setup
 
@@ -137,6 +145,7 @@ The application follows a domain-driven monolithic architecture with clear separ
 ### Service Layer Pattern
 
 Each Django app implements a clean service layer architecture:
+
 - **Models**: Data persistence and business rules
 - **Services**: Business logic and cross-app operations
 - **Views**: Request handling and response formatting
