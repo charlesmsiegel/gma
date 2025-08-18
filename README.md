@@ -90,7 +90,7 @@ GMA is a comprehensive campaign management platform that bridges the gap between
 5. **Start all services:**
 
    ```bash
-   # Start PostgreSQL, Redis, Django (port 8080), and React (port 3000)
+   # Start PostgreSQL, Redis, and Django (port 8080)
    make runserver
    ```
 

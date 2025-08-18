@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "corsheaders",
+    # "corsheaders",  # Not needed for Django template frontend
     "channels",
     "core",
     "users",
@@ -59,7 +59,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    # "corsheaders.middleware.CorsMiddleware",  # Not needed
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -252,14 +252,11 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "api.authentication.custom_exception_handler",
 }
 
-# CORS settings for React frontend
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React development server
-]
+# CORS settings - currently not needed for Django template-based frontend
+# CORS_ALLOWED_ORIGINS = []
+# CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_CREDENTIALS = True
-
-# Allow CSRF tokens from React frontend
+# CSRF trusted origins for production deployment
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
+    # Add production domain when deploying
 ]

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django_fsm import FSMField, transition  # type: ignore[import-untyped]
 from polymorphic.managers import PolymorphicManager  # type: ignore[import-untyped]
 from polymorphic.models import PolymorphicModel  # type: ignore[import-untyped]
 from polymorphic.query import PolymorphicQuerySet  # type: ignore[import-untyped]
@@ -353,6 +354,25 @@ class Character(
         help_text="Whether this character is an NPC (Non-Player Character)",
     )
 
+    # Character status FSM field
+    STATUS_CHOICES = [
+        ("DRAFT", "Draft"),
+        ("SUBMITTED", "Submitted"),
+        ("ACTIVE", "Active"),
+        ("INACTIVE", "Inactive"),
+        ("RETIRED", "Retired"),
+        ("DECEASED", "Deceased"),
+    ]
+
+    status: FSMField = FSMField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="DRAFT",
+        protected=False,  # Allow direct setting during creation
+        db_index=True,
+        help_text="Current status of the character in the campaign",
+    )
+
     # Soft delete fields
     is_deleted: models.BooleanField = models.BooleanField(
         default=False, help_text="Whether this character has been soft deleted"
@@ -385,6 +405,7 @@ class Character(
         self._original_description = self.__dict__.get("description", "")
         self._original_game_system = self.__dict__.get("game_system", "")
         self._original_npc = self.__dict__.get("npc", False)
+        self._original_status = self.__dict__.get("status", "DRAFT")
 
     class Meta:
         db_table = "characters_character"
@@ -430,6 +451,7 @@ class Character(
             "campaign_id",
             "player_owner_id",
             "npc",
+            "status",
         ]
 
     def _has_campaign_changed(self) -> bool:
@@ -547,6 +569,7 @@ class Character(
         self._original_description = self.description
         self._original_game_system = self.game_system
         self._original_npc = self.npc
+        self._original_status = self.status
 
     def refresh_from_db(
         self, using: Optional[str] = None, fields: Optional[List[str]] = None
@@ -721,6 +744,9 @@ class Character(
                     f"exactly: '{self.name}'"
                 )
 
+        # Store original status before soft deletion
+        original_status = self.status
+
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.deleted_by = user
@@ -728,7 +754,12 @@ class Character(
 
         # Create audit entry using DetailedAuditableMixin method
         self._create_audit_entry(
-            user, "DELETE", {"is_deleted": {"old": False, "new": True}}
+            user,
+            "DELETE",
+            {
+                "is_deleted": {"old": False, "new": True},
+                "status_at_deletion": {"old": None, "new": original_status},
+            },
         )
 
         return self
@@ -787,6 +818,115 @@ class Character(
 
         self.delete()
         return self
+
+    # FSM Status Transition Methods
+
+    @transition(field=status, source="DRAFT", target="SUBMITTED")
+    def submit_for_approval(self, user: "AbstractUser") -> None:
+        """Transition from DRAFT to SUBMITTED status.
+
+        Args:
+            user: The user performing the transition (must be character owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        if self.player_owner != user:
+            raise PermissionError(
+                "Only character owners can submit characters for approval"
+            )
+
+    @transition(field=status, source="SUBMITTED", target="ACTIVE")
+    def approve(self, user: "AbstractUser") -> None:
+        """Transition from SUBMITTED to ACTIVE status.
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        user_role = self.campaign.get_user_role(user)
+        if user_role not in ["GM", "OWNER"]:
+            raise PermissionError("Only GMs and campaign owners can approve characters")
+
+    @transition(field=status, source="SUBMITTED", target="DRAFT")
+    def reject(self, user: "AbstractUser") -> None:
+        """Transition from SUBMITTED to DRAFT status (rejection).
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        user_role = self.campaign.get_user_role(user)
+        if user_role not in ["GM", "OWNER"]:
+            raise PermissionError("Only GMs and campaign owners can reject characters")
+
+    @transition(field=status, source="ACTIVE", target="INACTIVE")
+    def deactivate(self, user: "AbstractUser") -> None:
+        """Transition from ACTIVE to INACTIVE status.
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        user_role = self.campaign.get_user_role(user)
+        if user_role not in ["GM", "OWNER"]:
+            raise PermissionError(
+                "Only GMs and campaign owners can deactivate characters"
+            )
+
+    @transition(field=status, source="INACTIVE", target="ACTIVE")
+    def activate(self, user: "AbstractUser") -> None:
+        """Transition from INACTIVE to ACTIVE status.
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        user_role = self.campaign.get_user_role(user)
+        if user_role not in ["GM", "OWNER"]:
+            raise PermissionError(
+                "Only GMs and campaign owners can activate characters"
+            )
+
+    @transition(field=status, source="ACTIVE", target="RETIRED")
+    def retire(self, user: "AbstractUser") -> None:
+        """Transition from ACTIVE to RETIRED status.
+
+        Args:
+            user: The user performing the transition
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        user_role = self.campaign.get_user_role(user)
+        if self.player_owner != user and user_role not in ["GM", "OWNER"]:
+            raise PermissionError(
+                "Only character owners, GMs, and campaign owners can retire characters"
+            )
+
+    @transition(field=status, source="ACTIVE", target="DECEASED")
+    def mark_deceased(self, user: "AbstractUser") -> None:
+        """Transition from ACTIVE to DECEASED status.
+
+        Args:
+            user: The user performing the transition (must be GM or campaign owner)
+
+        Raises:
+            PermissionError: If user doesn't have permission
+        """
+        user_role = self.campaign.get_user_role(user)
+        if user_role not in ["GM", "OWNER"]:
+            raise PermissionError(
+                "Only GMs and campaign owners can mark characters as deceased"
+            )
 
 
 class WoDCharacter(Character):
