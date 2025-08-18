@@ -358,7 +358,7 @@ class Character(
     STATUS_CHOICES = [
         ("DRAFT", "Draft"),
         ("SUBMITTED", "Submitted"),
-        ("ACTIVE", "Active"),
+        ("APPROVED", "Approved"),
         ("INACTIVE", "Inactive"),
         ("RETIRED", "Retired"),
         ("DECEASED", "Deceased"),
@@ -836,9 +836,9 @@ class Character(
                 "Only character owners can submit characters for approval"
             )
 
-    @transition(field=status, source="SUBMITTED", target="ACTIVE")
+    @transition(field=status, source="SUBMITTED", target="APPROVED")
     def approve(self, user: "AbstractUser") -> None:
-        """Transition from SUBMITTED to ACTIVE status.
+        """Transition from SUBMITTED to APPROVED status.
 
         Args:
             user: The user performing the transition (must be GM or campaign owner)
@@ -864,9 +864,9 @@ class Character(
         if user_role not in ["GM", "OWNER"]:
             raise PermissionError("Only GMs and campaign owners can reject characters")
 
-    @transition(field=status, source="ACTIVE", target="INACTIVE")
+    @transition(field=status, source="APPROVED", target="INACTIVE")
     def deactivate(self, user: "AbstractUser") -> None:
-        """Transition from ACTIVE to INACTIVE status.
+        """Transition from APPROVED to INACTIVE status.
 
         Args:
             user: The user performing the transition (must be GM or campaign owner)
@@ -880,9 +880,9 @@ class Character(
                 "Only GMs and campaign owners can deactivate characters"
             )
 
-    @transition(field=status, source="INACTIVE", target="ACTIVE")
+    @transition(field=status, source="INACTIVE", target="APPROVED")
     def activate(self, user: "AbstractUser") -> None:
-        """Transition from INACTIVE to ACTIVE status.
+        """Transition from INACTIVE to APPROVED status.
 
         Args:
             user: The user performing the transition (must be GM or campaign owner)
@@ -896,9 +896,9 @@ class Character(
                 "Only GMs and campaign owners can activate characters"
             )
 
-    @transition(field=status, source="ACTIVE", target="RETIRED")
+    @transition(field=status, source="APPROVED", target="RETIRED")
     def retire(self, user: "AbstractUser") -> None:
-        """Transition from ACTIVE to RETIRED status.
+        """Transition from APPROVED to RETIRED status.
 
         Args:
             user: The user performing the transition
@@ -912,9 +912,9 @@ class Character(
                 "Only character owners, GMs, and campaign owners can retire characters"
             )
 
-    @transition(field=status, source="ACTIVE", target="DECEASED")
+    @transition(field=status, source="APPROVED", target="DECEASED")
     def mark_deceased(self, user: "AbstractUser") -> None:
-        """Transition from ACTIVE to DECEASED status.
+        """Transition from APPROVED to DECEASED status.
 
         Args:
             user: The user performing the transition (must be GM or campaign owner)

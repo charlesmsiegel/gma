@@ -3850,7 +3850,7 @@ class CharacterStatusFSMTest(TestCase):
         expected_choices = [
             ("DRAFT", "Draft"),
             ("SUBMITTED", "Submitted"),
-            ("ACTIVE", "Active"),
+            ("APPROVED", "Approved"),
             ("INACTIVE", "Inactive"),
             ("RETIRED", "Retired"),
             ("DECEASED", "Deceased"),
@@ -3881,7 +3881,7 @@ class CharacterStatusFSMTest(TestCase):
 
         # SUBMITTED → ACTIVE (requires GM/OWNER)
         self.character.approve(user=self.gm)
-        self.assertEqual(self.character.status, "ACTIVE")
+        self.assertEqual(self.character.status, "APPROVED")
 
         # ACTIVE → INACTIVE (requires GM/OWNER)
         self.character.deactivate(user=self.owner)
@@ -3889,7 +3889,7 @@ class CharacterStatusFSMTest(TestCase):
 
         # INACTIVE → ACTIVE (requires GM/OWNER)
         self.character.activate(user=self.gm)
-        self.assertEqual(self.character.status, "ACTIVE")
+        self.assertEqual(self.character.status, "APPROVED")
 
         # ACTIVE → RETIRED (players can do this)
         self.character.retire(user=self.player1)
@@ -3904,7 +3904,7 @@ class CharacterStatusFSMTest(TestCase):
         )
         character2.submit_for_approval(user=self.player1)
         character2.approve(user=self.gm)
-        self.assertEqual(character2.status, "ACTIVE")
+        self.assertEqual(character2.status, "APPROVED")
 
         # ACTIVE → DECEASED (requires GM/OWNER)
         character2.mark_deceased(user=self.owner)
@@ -3990,7 +3990,7 @@ class CharacterStatusFSMTest(TestCase):
 
         # GM should be able to approve
         character2.approve(user=self.gm)
-        self.assertEqual(character2.status, "ACTIVE")
+        self.assertEqual(character2.status, "APPROVED")
 
         # Test that only character owner can retire their character
         with self.assertRaises(PermissionError):
@@ -4043,7 +4043,7 @@ class CharacterStatusFSMTest(TestCase):
         self.assertEqual(original_status, "DRAFT")
 
         # Try to manually change status (should be protected)
-        test_character.status = "ACTIVE"
+        test_character.status = "APPROVED"
 
         # The protection should prevent the change or it should be reset
         # This depends on implementation - let's test both scenarios
@@ -4070,21 +4070,21 @@ class CharacterStatusFSMTest(TestCase):
         # Set character to ACTIVE status
         self.character.submit_for_approval(user=self.player1)
         self.character.approve(user=self.gm)
-        self.assertEqual(self.character.status, "ACTIVE")
+        self.assertEqual(self.character.status, "APPROVED")
 
         # Soft delete the character
         deleted_character = self.character.soft_delete(user=self.player1)
         self.assertTrue(deleted_character.is_deleted)
 
         # Verify status is preserved after soft delete
-        self.assertEqual(deleted_character.status, "ACTIVE")
+        self.assertEqual(deleted_character.status, "APPROVED")
 
         # Restore the character
         restored_character = deleted_character.restore(user=self.player1)
         self.assertFalse(restored_character.is_deleted)
 
         # Verify status is still preserved after restore
-        self.assertEqual(restored_character.status, "ACTIVE")
+        self.assertEqual(restored_character.status, "APPROVED")
 
         # Verify FSM transitions still work after restore
         restored_character.deactivate(user=self.gm)
@@ -4112,7 +4112,7 @@ class CharacterStatusFSMTest(TestCase):
         self.assertEqual(character.status, "SUBMITTED")
 
         character.approve(user=self.gm)
-        self.assertEqual(character.status, "ACTIVE")
+        self.assertEqual(character.status, "APPROVED")
 
     def test_audit_trail_captures_status_changes(self):
         """Test that audit trail captures status changes."""
@@ -4165,7 +4165,7 @@ class CharacterStatusFSMTest(TestCase):
         status_displays = {
             "DRAFT": "Draft",
             "SUBMITTED": "Submitted",
-            "ACTIVE": "Active",
+            "APPROVED": "Approved",
             "INACTIVE": "Inactive",
             "RETIRED": "Retired",
             "DECEASED": "Deceased",
@@ -4183,7 +4183,7 @@ class CharacterStatusFSMTest(TestCase):
             # Use transition methods to reach each state
             if status_code == "SUBMITTED":
                 character.submit_for_approval(user=self.player1)
-            elif status_code == "ACTIVE":
+            elif status_code == "APPROVED":
                 character.submit_for_approval(user=self.player1)
                 character.approve(user=self.gm)
             elif status_code == "INACTIVE":
@@ -4249,7 +4249,7 @@ class CharacterStatusFSMTest(TestCase):
         self.assertEqual(len(batch_submitted_chars), 1)
         self.assertEqual(batch_submitted_chars[0], characters[1])
 
-        batch_active_chars = [char for char in characters if char.status == "ACTIVE"]
+        batch_active_chars = [char for char in characters if char.status == "APPROVED"]
         self.assertEqual(len(batch_active_chars), 1)
         self.assertEqual(batch_active_chars[0], characters[2])
 
@@ -4298,4 +4298,4 @@ class CharacterStatusFSMTest(TestCase):
 
         # Verify the character is in a valid final state
         self.character.refresh_from_db()
-        self.assertIn(self.character.status, ["ACTIVE", "DRAFT"])
+        self.assertIn(self.character.status, ["APPROVED", "DRAFT"])
