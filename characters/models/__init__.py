@@ -835,7 +835,6 @@ class Character(
             raise PermissionError(
                 "Only character owners can submit characters for approval"
             )
-        self.save(audit_user=user)
 
     @transition(field=status, source="SUBMITTED", target="ACTIVE")
     def approve(self, user: "AbstractUser") -> None:
@@ -850,7 +849,6 @@ class Character(
         user_role = self.campaign.get_user_role(user)
         if user_role not in ["GM", "OWNER"]:
             raise PermissionError("Only GMs and campaign owners can approve characters")
-        self.save(audit_user=user)
 
     @transition(field=status, source="SUBMITTED", target="DRAFT")
     def reject(self, user: "AbstractUser") -> None:
@@ -865,7 +863,6 @@ class Character(
         user_role = self.campaign.get_user_role(user)
         if user_role not in ["GM", "OWNER"]:
             raise PermissionError("Only GMs and campaign owners can reject characters")
-        self.save(audit_user=user)
 
     @transition(field=status, source="ACTIVE", target="INACTIVE")
     def deactivate(self, user: "AbstractUser") -> None:
@@ -882,7 +879,6 @@ class Character(
             raise PermissionError(
                 "Only GMs and campaign owners can deactivate characters"
             )
-        self.save(audit_user=user)
 
     @transition(field=status, source="INACTIVE", target="ACTIVE")
     def activate(self, user: "AbstractUser") -> None:
@@ -899,7 +895,6 @@ class Character(
             raise PermissionError(
                 "Only GMs and campaign owners can activate characters"
             )
-        self.save(audit_user=user)
 
     @transition(field=status, source="ACTIVE", target="RETIRED")
     def retire(self, user: "AbstractUser") -> None:
@@ -916,7 +911,6 @@ class Character(
             raise PermissionError(
                 "Only character owners, GMs, and campaign owners can retire characters"
             )
-        self.save(audit_user=user)
 
     @transition(field=status, source="ACTIVE", target="DECEASED")
     def mark_deceased(self, user: "AbstractUser") -> None:
@@ -933,7 +927,6 @@ class Character(
             raise PermissionError(
                 "Only GMs and campaign owners can mark characters as deceased"
             )
-        self.save(audit_user=user)
 
 
 class WoDCharacter(Character):

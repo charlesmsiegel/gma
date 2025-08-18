@@ -12,21 +12,14 @@ This document tracks all hardcoded configuration values that should be converted
 "PORT": os.environ.get("DB_PORT", "5432"),      # Default value hardcoded
 ```
 
-## CORS Configuration
-**Location**: `gm_app/settings.py:275-277`
-```python
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React development server - hardcoded
-]
-```
-
 ## CSRF Trusted Origins
-**Location**: `gm_app/settings.py:282-284`
+**Location**: `gm_app/settings.py:260-262`
 ```python
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",  # Hardcoded
+    # Add production domain when deploying
 ]
 ```
+**Note**: Currently empty as application uses Django templates. Add production domain for deployment.
 
 ## Redis Configuration
 **Location**: `gm_app/settings.py:192`
@@ -63,20 +56,7 @@ ALLOWED_HOSTS = []  # Should include production domains
 from .secrets import SECRET_KEY  # Currently in separate file, should be env var
 ```
 
-## Frontend API Base URL
-**Location**: `frontend/src/services/api.ts:5`
-```typescript
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
-// Default hardcoded to localhost:8080
-```
 
-## React Bundle URL in Django Template
-**Location**: `templates/base.html:57-59`
-```html
-{% if debug %}
-    <script src="http://localhost:3000/static/js/bundle.js"></script>
-{% endif %}
-```
 
 ## Makefile Paths
 **Location**: `Makefile:4-6`

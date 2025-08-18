@@ -54,7 +54,6 @@ make runserver
 
 - **Django Application**: http://localhost:8080
 - **Django Admin**: http://localhost:8080/admin/
-- **React Development Server**: http://localhost:3000 (started with Django)
 - **API Base**: http://localhost:8080/api/
 
 ### Environment Variables
