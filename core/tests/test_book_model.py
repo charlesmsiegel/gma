@@ -46,7 +46,7 @@ class BookModelTest(TestCase):
             system="Mage: The Ascension",
             edition="20th Anniversary",
             publisher="Onyx Path Publishing",
-            isbn="978-1-58846-475-3",
+            isbn="978-0-306-40615-7",  # Valid ISBN-13
             url=(
                 "https://www.drivethrurpg.com/product/149562/"
                 "Mage-the-Ascension-20th-Anniversary-Edition"
@@ -58,7 +58,7 @@ class BookModelTest(TestCase):
         self.assertEqual(book.system, "Mage: The Ascension")
         self.assertEqual(book.edition, "20th Anniversary")
         self.assertEqual(book.publisher, "Onyx Path Publishing")
-        self.assertEqual(book.isbn, "978-1-58846-475-3")
+        self.assertEqual(book.isbn, "978-0-306-40615-7")
         self.assertEqual(
             book.url,
             (
@@ -83,11 +83,11 @@ class BookModelTest(TestCase):
         """Test string representation with special characters and unicode."""
         book = Book.objects.create(
             title="Wraith: The Oblivion Players Guide — 2nd Edition",
-            abbreviation="WrPG2",
+            abbreviation="WrPG2",  # Will be normalized to WRPG2
             system="Wraith: The Oblivion",
         )
 
-        expected_str = "WrPG2 - Wraith: The Oblivion Players Guide — 2nd Edition"
+        expected_str = "WRPG2 - Wraith: The Oblivion Players Guide — 2nd Edition"
         self.assertEqual(str(book), expected_str)
 
 
@@ -213,7 +213,7 @@ class BookUniqueConstraintTest(TestCase):
 
     def test_title_unique_constraint_violation(self):
         """Test that duplicate titles are not allowed."""
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ValidationError):
             Book.objects.create(
                 title="Mage: The Ascension 20th Anniversary Edition",  # Duplicate title
                 abbreviation="M20-DUPE",
@@ -229,7 +229,7 @@ class BookUniqueConstraintTest(TestCase):
 
     def test_abbreviation_unique_constraint_violation(self):
         """Test that duplicate abbreviations are not allowed."""
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ValidationError):
             Book.objects.create(
                 title="Different Title",
                 abbreviation="M20",  # Duplicate abbreviation
@@ -237,16 +237,15 @@ class BookUniqueConstraintTest(TestCase):
             )
 
     def test_case_sensitive_uniqueness(self):
-        """Test that uniqueness constraints are case-sensitive."""
-        # Different case should be allowed (this is Django's default behavior)
-        Book.objects.create(
-            title="mage: the ascension 20th anniversary edition",  # Different case
-            abbreviation="m20",  # Different case
-            system="Mage: The Ascension",
-        )
-
-        # Should succeed without IntegrityError
-        self.assertEqual(Book.objects.count(), 2)
+        """Test that abbreviation normalization prevents case-based duplicates."""
+        # Since abbreviations are normalized to uppercase, different case
+        # should now be treated as the same abbreviation
+        with self.assertRaises(ValidationError):
+            Book.objects.create(
+                title="mage: the ascension 20th anniversary edition",  # Different case
+                abbreviation="m20",  # Will be normalized to M20, causing conflict
+                system="Mage: The Ascension",
+            )
 
     def test_duplicate_non_unique_fields_allowed(self):
         """Test that non-unique fields can have duplicate values."""
@@ -383,7 +382,8 @@ class BookEdgeCasesTest(TestCase):
         long_system = "C" * 100  # Max length for system
         long_edition = "D" * 50  # Max length for edition
         long_publisher = "E" * 100  # Max length for publisher
-        long_isbn = "F" * 17  # Max length for ISBN
+        # Use valid ISBN-13 for testing
+        valid_isbn = "978-0-306-40615-7"  # Valid ISBN instead of random letters
 
         book = Book.objects.create(
             title=long_title,
@@ -391,16 +391,18 @@ class BookEdgeCasesTest(TestCase):
             system=long_system,
             edition=long_edition,
             publisher=long_publisher,
-            isbn=long_isbn,
+            isbn=valid_isbn,
             url="https://example.com",
         )
 
         self.assertEqual(book.title, long_title)
-        self.assertEqual(book.abbreviation, long_abbreviation)
+        self.assertEqual(
+            book.abbreviation, long_abbreviation.upper()
+        )  # Normalized to uppercase
         self.assertEqual(book.system, long_system)
         self.assertEqual(book.edition, long_edition)
         self.assertEqual(book.publisher, long_publisher)
-        self.assertEqual(book.isbn, long_isbn)
+        self.assertEqual(book.isbn, valid_isbn)
 
     def test_special_characters_in_fields(self):
         """Test handling of special characters in text fields."""
@@ -410,13 +412,15 @@ class BookEdgeCasesTest(TestCase):
             system="Mage: The Ascension (1st Edition)",
             edition="2nd & Revised",
             publisher="White Wolf Publishing, Inc.",
-            isbn="978-1-58846-475-3",
+            isbn="978-0-306-40615-7",  # Use valid ISBN
         )
 
         self.assertIn("—", book.title)
         self.assertIn("™", book.title)
+        # Abbreviation will be normalized to uppercase
         self.assertIn(":", book.abbreviation)
         self.assertIn("-", book.abbreviation)
+        self.assertEqual(book.abbreviation, "M:A-PG")
         self.assertIn("(", book.system)
         self.assertIn(")", book.system)
         self.assertIn("&", book.edition)
@@ -438,13 +442,13 @@ class BookEdgeCasesTest(TestCase):
         self.assertEqual(book.publisher, "La Factoría de Ideas")
 
     def test_isbn_formats(self):
-        """Test various ISBN formats."""
+        """Test various valid ISBN formats."""
+        # Use valid ISBNs with correct checksums
         isbn_formats = [
-            "0123456789",  # ISBN-10 without hyphens
-            "0-123-45678-9",  # ISBN-10 with hyphens
-            "9781234567890",  # ISBN-13 without hyphens
-            "978-1-234-56789-0",  # ISBN-13 with hyphens
-            "979-0-123456-78-9",  # ISBN-13 with 979 prefix
+            "0306406152",  # Valid ISBN-10 without hyphens
+            "0-306-40615-2",  # Valid ISBN-10 with hyphens
+            "9780306406157",  # Valid ISBN-13 without hyphens
+            "978-0-306-40615-7",  # Valid ISBN-13 with hyphens
         ]
 
         for i, isbn in enumerate(isbn_formats):
@@ -457,13 +461,12 @@ class BookEdgeCasesTest(TestCase):
             self.assertEqual(book.isbn, isbn)
 
     def test_long_url(self):
-        """Test handling of long URLs."""
+        """Test handling of reasonably long URLs."""
+        # Use a shorter URL that fits within Django's URLField limit (200 chars)
         long_url = (
             "https://www.drivethrurpg.com/product/149562/"
-            "Mage-the-Ascension-20th-Anniversary-Edition-Players-Guide-"
-            "with-extremely-long-title-and-parameters?"
-            "affiliate_id=123456&campaign=test&utm_source=test&"
-            "utm_medium=test&utm_campaign=test"
+            "Mage-the-Ascension-20th-Anniversary-Edition-Players-Guide"
+            "?affiliate_id=123456&campaign=test"
         )
 
         book = Book.objects.create(
@@ -675,3 +678,237 @@ class BookQueryTest(TestCase):
         )  # "Mage: The Ascension..." comes second
         # Third should be Vampire book
         self.assertEqual(all_books[2], self.vampire_book)
+
+
+class BookEnhancedValidationTest(TestCase):
+    """Test enhanced validation features for Book model."""
+
+    def test_abbreviation_normalization_uppercase(self):
+        """Test that abbreviation is normalized to uppercase."""
+        book = Book.objects.create(
+            title="Test Book",
+            abbreviation="m20",  # lowercase
+            system="Mage: The Ascension",
+        )
+
+        # Should be converted to uppercase
+        book.refresh_from_db()
+        self.assertEqual(book.abbreviation, "M20")
+
+    def test_abbreviation_normalization_mixed_case(self):
+        """Test abbreviation normalization with mixed case."""
+        book = Book.objects.create(
+            title="Test Book",
+            abbreviation="VtM5e",  # mixed case
+            system="Vampire: The Masquerade",
+        )
+
+        book.refresh_from_db()
+        self.assertEqual(book.abbreviation, "VTM5E")
+
+    def test_valid_isbn10_without_hyphens(self):
+        """Test valid ISBN-10 without hyphens passes validation."""
+        # ISBN-10: 0306406152 (valid checksum)
+        book = Book.objects.create(
+            title="Test Book",
+            abbreviation="TB",
+            system="Test System",
+            isbn="0306406152",
+        )
+
+        self.assertEqual(book.isbn, "0306406152")
+
+    def test_valid_isbn10_with_hyphens(self):
+        """Test valid ISBN-10 with hyphens passes validation."""
+        book = Book.objects.create(
+            title="Test Book",
+            abbreviation="TB",
+            system="Test System",
+            isbn="0-306-40615-2",
+        )
+
+        self.assertEqual(book.isbn, "0-306-40615-2")
+
+    def test_valid_isbn10_with_x_check_digit(self):
+        """Test valid ISBN-10 with X check digit."""
+        # ISBN-10: 043942089X (valid with X check digit)
+        book = Book.objects.create(
+            title="Test Book",
+            abbreviation="TB",
+            system="Test System",
+            isbn="043942089X",
+        )
+
+        self.assertEqual(book.isbn, "043942089X")
+
+    def test_valid_isbn13_without_hyphens(self):
+        """Test valid ISBN-13 without hyphens passes validation."""
+        # ISBN-13: 9780306406157 (valid checksum)
+        book = Book.objects.create(
+            title="Test Book",
+            abbreviation="TB",
+            system="Test System",
+            isbn="9780306406157",
+        )
+
+        self.assertEqual(book.isbn, "9780306406157")
+
+    def test_valid_isbn13_with_hyphens(self):
+        """Test valid ISBN-13 with hyphens passes validation."""
+        book = Book.objects.create(
+            title="Test Book",
+            abbreviation="TB",
+            system="Test System",
+            isbn="978-0-306-40615-7",
+        )
+
+        self.assertEqual(book.isbn, "978-0-306-40615-7")
+
+    def test_invalid_isbn10_checksum_raises_error(self):
+        """Test invalid ISBN-10 checksum raises ValidationError."""
+        with self.assertRaises(ValidationError) as cm:
+            Book.objects.create(
+                title="Test Book",
+                abbreviation="TB",
+                system="Test System",
+                isbn="0306406153",  # Invalid checksum (should be 2)
+            )
+
+        self.assertIn("isbn", cm.exception.message_dict)
+        self.assertIn("Invalid ISBN format", cm.exception.message_dict["isbn"][0])
+
+    def test_invalid_isbn13_checksum_raises_error(self):
+        """Test invalid ISBN-13 checksum raises ValidationError."""
+        with self.assertRaises(ValidationError) as cm:
+            Book.objects.create(
+                title="Test Book",
+                abbreviation="TB",
+                system="Test System",
+                isbn="9780306406158",  # Invalid checksum (should be 7)
+            )
+
+        self.assertIn("isbn", cm.exception.message_dict)
+
+    def test_invalid_isbn_length_raises_error(self):
+        """Test ISBN with invalid length raises ValidationError."""
+        with self.assertRaises(ValidationError):
+            Book.objects.create(
+                title="Test Book",
+                abbreviation="TB",
+                system="Test System",
+                isbn="123456789",  # 9 digits, invalid length
+            )
+
+    def test_isbn_with_letters_raises_error(self):
+        """Test ISBN with invalid characters raises ValidationError."""
+        with self.assertRaises(ValidationError):
+            Book.objects.create(
+                title="Test Book",
+                abbreviation="TB",
+                system="Test System",
+                isbn="ABCDEFGHIJ",  # Letters instead of numbers
+            )
+
+    def test_empty_isbn_is_valid(self):
+        """Test that empty ISBN is valid (optional field)."""
+        book = Book.objects.create(
+            title="Test Book", abbreviation="TB", system="Test System", isbn=""
+        )
+
+        self.assertEqual(book.isbn, "")
+
+    def test_isbn_normalization_preserves_original_format(self):
+        """Test that ISBN validation doesn't modify the original format."""
+        original_isbn = "978-0-306-40615-7"
+        book = Book.objects.create(
+            title="Test Book",
+            abbreviation="TB",
+            system="Test System",
+            isbn=original_isbn,
+        )
+
+        # Original format should be preserved
+        self.assertEqual(book.isbn, original_isbn)
+
+
+class BookTimestampTest(TestCase):
+    """Test timestamp functionality from TimestampedMixin."""
+
+    def test_created_at_set_on_creation(self):
+        """Test that created_at is set when book is created."""
+        book = Book.objects.create(
+            title="Test Book", abbreviation="TB", system="Test System"
+        )
+
+        self.assertIsNotNone(book.created_at)
+
+    def test_updated_at_set_on_creation(self):
+        """Test that updated_at is set when book is created."""
+        book = Book.objects.create(
+            title="Test Book", abbreviation="TB", system="Test System"
+        )
+
+        self.assertIsNotNone(book.updated_at)
+
+    def test_updated_at_changes_on_save(self):
+        """Test that updated_at changes when book is modified."""
+        book = Book.objects.create(
+            title="Test Book", abbreviation="TB", system="Test System"
+        )
+
+        original_updated_at = book.updated_at
+
+        # Small delay to ensure timestamp difference
+        import time
+
+        time.sleep(0.01)
+
+        book.title = "Updated Test Book"
+        book.save()
+
+        book.refresh_from_db()
+        self.assertGreater(book.updated_at, original_updated_at)
+
+    def test_created_at_unchanged_on_update(self):
+        """Test that created_at doesn't change when book is updated."""
+        book = Book.objects.create(
+            title="Test Book", abbreviation="TB", system="Test System"
+        )
+
+        original_created_at = book.created_at
+
+        book.title = "Updated Test Book"
+        book.save()
+
+        book.refresh_from_db()
+        self.assertEqual(book.created_at, original_created_at)
+
+
+class BookDatabaseIndexTest(TestCase):
+    """Test database index functionality."""
+
+    def test_system_index_exists(self):
+        """Test that system field has database index."""
+        # Verify the model has the correct Meta.indexes configuration
+        book_indexes = Book._meta.indexes
+        system_index_exists = any("system" in idx.fields for idx in book_indexes)
+
+        self.assertTrue(system_index_exists)
+
+    def test_abbreviation_index_exists(self):
+        """Test that abbreviation field has database index."""
+        book_indexes = Book._meta.indexes
+        abbreviation_index_exists = any(
+            "abbreviation" in idx.fields for idx in book_indexes
+        )
+
+        self.assertTrue(abbreviation_index_exists)
+
+    def test_compound_system_title_index_exists(self):
+        """Test that compound system+title index exists."""
+        book_indexes = Book._meta.indexes
+        compound_index_exists = any(
+            idx.fields == ["system", "title"] for idx in book_indexes
+        )
+
+        self.assertTrue(compound_index_exists)
