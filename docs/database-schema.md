@@ -301,7 +301,50 @@ CREATE INDEX statetransition_timestamp_idx
 ON core_statetransitionlog (timestamp DESC);
 ```
 
-#### State-Based Query Patterns
+#### Character Status Query Patterns
+
+**Filtering by Character Status:**
+
+```sql
+-- Get all approved characters in a campaign
+SELECT * FROM characters_character
+WHERE campaign_id = ? AND status = 'APPROVED' AND is_deleted = false;
+
+-- Get characters pending approval
+SELECT * FROM characters_character
+WHERE campaign_id = ? AND status = 'SUBMITTED' AND is_deleted = false;
+
+-- Get all draft characters owned by a player
+SELECT * FROM characters_character
+WHERE player_owner_id = ? AND status = 'DRAFT' AND is_deleted = false;
+
+-- Character status distribution for a campaign
+SELECT
+    status,
+    npc,
+    COUNT(*) as count
+FROM characters_character
+WHERE campaign_id = ? AND is_deleted = false
+GROUP BY status, npc
+ORDER BY status, npc;
+
+-- Characters by status priority (for GM dashboard)
+SELECT * FROM characters_character
+WHERE campaign_id = ? AND is_deleted = false
+ORDER BY
+    CASE status
+        WHEN 'SUBMITTED' THEN 1  -- Needs attention
+        WHEN 'APPROVED' THEN 2   -- Active characters
+        WHEN 'DRAFT' THEN 3      -- In progress
+        WHEN 'INACTIVE' THEN 4   -- Temporarily out
+        WHEN 'RETIRED' THEN 5    -- Historical
+        WHEN 'DECEASED' THEN 6   -- Historical
+        ELSE 7
+    END,
+    updated_at DESC;
+```
+
+#### State-Based Query Patterns (Campaigns)
 
 **Filtering by State:**
 
@@ -322,7 +365,52 @@ ORDER BY
     updated_at DESC;
 ```
 
-**State Transition Analytics:**
+**Character Status Transition Analytics:**
+
+```sql
+-- Character status distribution analysis
+SELECT
+    status,
+    COUNT(*) as count,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
+FROM characters_character
+WHERE is_deleted = false
+GROUP BY status
+ORDER BY count DESC;
+
+-- Recent character status changes
+SELECT
+    c.name as character_name,
+    camp.name as campaign_name,
+    (audit.field_changes->'status'->>'old') as from_status,
+    (audit.field_changes->'status'->>'new') as to_status,
+    audit.timestamp,
+    u.username as changed_by
+FROM characters_character_audit audit
+JOIN characters_character c ON audit.character_id = c.id
+JOIN campaigns_campaign camp ON c.campaign_id = camp.id
+JOIN users_user u ON audit.changed_by_id = u.id
+WHERE audit.field_changes ? 'status'
+ORDER BY audit.timestamp DESC
+LIMIT 10;
+
+-- Character approval workflow metrics
+SELECT
+    camp.name as campaign_name,
+    COUNT(*) FILTER (WHERE c.status = 'DRAFT') as draft_count,
+    COUNT(*) FILTER (WHERE c.status = 'SUBMITTED') as submitted_count,
+    COUNT(*) FILTER (WHERE c.status = 'APPROVED') as approved_count,
+    COUNT(*) FILTER (WHERE c.status = 'INACTIVE') as inactive_count,
+    COUNT(*) FILTER (WHERE c.status = 'RETIRED') as retired_count,
+    COUNT(*) FILTER (WHERE c.status = 'DECEASED') as deceased_count
+FROM characters_character c
+JOIN campaigns_campaign camp ON c.campaign_id = camp.id
+WHERE c.is_deleted = false
+GROUP BY camp.id, camp.name
+ORDER BY camp.name;
+```
+
+**State Transition Analytics (Campaigns):**
 
 ```sql
 -- State distribution analysis
@@ -354,13 +442,39 @@ LIMIT 10;
 
 #### Performance Considerations
 
-**State Field Indexing:**
+**Character Status Field Indexing:**
+
+- Status field is indexed for efficient filtering
+- Composite index on (campaign_id, status) for common query patterns
+- Database CHECK constraint ensures data integrity
+- Consider partial indexes for specific status combinations
+
+**Query Optimization:**
+
+```sql
+-- Efficient status-based filtering with composite index
+CREATE INDEX characters_campaign_status_approved_idx
+ON characters_character (campaign_id, updated_at DESC)
+WHERE status = 'APPROVED' AND is_deleted = false;
+
+-- Efficient owner + status queries
+CREATE INDEX characters_owner_status_idx
+ON characters_character (player_owner_id, status)
+WHERE is_deleted = false;
+
+-- Audit trail optimization for status changes
+CREATE INDEX characters_audit_status_timeline_idx
+ON characters_character_audit (character_id, timestamp DESC)
+WHERE field_changes ? 'status';
+```
+
+**State Field Indexing (General):**
 
 - Always index state fields for efficient filtering
 - Consider composite indexes for state + other frequently queried fields
 - Use partial indexes for specific state combinations
 
-**Query Optimization:**
+**Query Optimization (General):**
 
 ```sql
 -- Efficient state-based filtering with composite index
@@ -546,6 +660,10 @@ CREATE TABLE characters_character (
     -- Polymorphic type tracking
     polymorphic_ctype_id INTEGER NOT NULL REFERENCES django_content_type(id),
 
+    -- Character status workflow (Issue #180)
+    status VARCHAR(20) DEFAULT 'DRAFT' NOT NULL
+        CHECK (status IN ('DRAFT', 'SUBMITTED', 'APPROVED', 'INACTIVE', 'RETIRED', 'DECEASED')),
+
     -- Audit trail fields (via DetailedAuditableMixin)
     created_by_id INTEGER REFERENCES users_user(id) ON DELETE SET NULL,
     modified_by_id INTEGER REFERENCES users_user(id) ON DELETE SET NULL,
@@ -563,10 +681,14 @@ CREATE TABLE characters_character (
 
 -- Performance indexes
 CREATE INDEX characters_character_npc_idx ON characters_character (npc);  -- NPC filtering
+CREATE INDEX characters_character_status_idx ON characters_character (status);  -- Status filtering
 CREATE INDEX characters_character_count_idx ON characters_character (campaign_id, player_owner_id);  -- Character limits
 CREATE INDEX characters_character_campaign_idx ON characters_character (campaign_id);  -- Campaign queries
 CREATE INDEX characters_character_created_at_idx ON characters_character (created_at);  -- Audit queries
 CREATE INDEX characters_character_updated_at_idx ON characters_character (updated_at);  -- Audit queries
+
+-- Composite index for common queries
+CREATE INDEX characters_character_campaign_status_idx ON characters_character (campaign_id, status);  -- Campaign + status queries
 ```
 
 **Field Specifications:**
@@ -584,6 +706,19 @@ CREATE INDEX characters_character_updated_at_idx ON characters_character (update
   - `true`: Non-Player Character (NPC) - controlled by GMs
   - **Performance**: Indexed for efficient filtering queries
   - **Unified Model**: Same Character model serves both PCs and NPCs
+
+**Character Status Workflow (Issue #180):**
+
+- `status`: Character lifecycle status (VARCHAR 20, default: 'DRAFT', indexed)
+  - `DRAFT`: Initial character creation state
+  - `SUBMITTED`: Character submitted for GM approval
+  - `APPROVED`: Character approved for campaign play
+  - `INACTIVE`: Character temporarily inactive
+  - `RETIRED`: Character permanently retired (terminal state)
+  - `DECEASED`: Character marked as deceased (terminal state)
+  - **Constraints**: Database CHECK constraint enforces valid status values
+  - **Performance**: Indexed for efficient status-based filtering
+  - **Workflow**: Managed by django-fsm-2 state transitions
 
 **Relationships:**
 
@@ -619,6 +754,16 @@ CREATE INDEX characters_character_updated_at_idx ON characters_character (update
 - Players can only edit their own characters
 - Character limit per player enforced at campaign level
 - NPC/PC status can be toggled (useful for character ownership transfers)
+- **Status Workflow Rules:**
+  - Characters start in DRAFT status
+  - Only character owners can submit for approval (DRAFT → SUBMITTED)
+  - Only GMs/owners can approve characters (SUBMITTED → APPROVED)
+  - Only GMs/owners can reject characters (SUBMITTED → DRAFT)
+  - Only GMs/owners can deactivate/activate characters (APPROVED ⇄ INACTIVE)
+  - Character owners can retire their own characters (APPROVED → RETIRED)
+  - GMs/owners can retire any character (APPROVED → RETIRED)
+  - Only GMs/owners can mark characters deceased (APPROVED → DECEASED)
+  - RETIRED and DECEASED are terminal states (no further transitions)
 
 #### Polymorphic Character Inheritance
 
@@ -663,6 +808,7 @@ CREATE TABLE characters_character_audit (
 CREATE INDEX characters_audit_character_idx ON characters_character_audit (character_id);
 CREATE INDEX characters_audit_timestamp_idx ON characters_character_audit (timestamp DESC);
 CREATE INDEX characters_audit_action_idx ON characters_character_audit (action);
+CREATE INDEX characters_audit_status_changes_idx ON characters_character_audit USING gin (field_changes) WHERE field_changes ? 'status';
 ```
 
 **Tracked Field Changes:**
@@ -670,9 +816,35 @@ CREATE INDEX characters_audit_action_idx ON characters_character_audit (action);
 - `name`: Character name changes
 - `description`: Background updates
 - `npc`: PC/NPC status changes
+- `status`: Character status transitions (NEW in #180)
 - `campaign_id`: Campaign transfers (rare)
 - `player_owner_id`: Ownership changes
 - `game_system`: System changes (rare)
+
+**Status Transition Audit Examples:**
+
+```json
+{
+  "status": {
+    "old": "DRAFT",
+    "new": "SUBMITTED"
+  }
+}
+
+{
+  "status": {
+    "old": "SUBMITTED",
+    "new": "APPROVED"
+  }
+}
+
+{
+  "status": {
+    "old": "APPROVED",
+    "new": "RETIRED"
+  }
+}
+```
 
 #### Character Manager System (Issue #175)
 

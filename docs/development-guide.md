@@ -550,9 +550,41 @@ class TestCampaignService(TestCase):
 
 The GMA project uses django-fsm-2 for managing state transitions in domain models. This provides workflow management for campaigns, scenes, and characters.
 
+#### Character Status Implementation (Current)
+
+The Character model includes a fully implemented status workflow:
+
+```python
+from django_fsm import FSMField, transition
+
+class Character(models.Model):
+    """Character model with status workflow."""
+    status = FSMField(default='DRAFT', max_length=20)
+
+    @transition(field=status, source='DRAFT', target='SUBMITTED')
+    def submit_for_approval(self, user):
+        """Character owner submits for approval."""
+        if self.player_owner != user:
+            raise PermissionError("Only character owners can submit for approval")
+
+    @transition(field=status, source='SUBMITTED', target='APPROVED')
+    def approve(self, user):
+        """GM approves character for campaign."""
+        user_role = self.campaign.get_user_role(user)
+        if user_role not in ["GM", "OWNER"]:
+            raise PermissionError("Only GMs and campaign owners can approve characters")
+
+    @transition(field=status, source='APPROVED', target='RETIRED')
+    def retire(self, user):
+        """Retire character from active play."""
+        user_role = self.campaign.get_user_role(user)
+        if self.player_owner != user and user_role not in ["GM", "OWNER"]:
+            raise PermissionError("Only character owners, GMs, and campaign owners can retire characters")
+```
+
 #### State Machine Patterns
 
-**Basic FSM Model:**
+**Basic FSM Model (Example for Future Development):**
 ```python
 from django_fsm import FSMField, transition
 
@@ -600,7 +632,99 @@ class Campaign(models.Model):
         return self.memberships.filter(role='PLAYER').exists()
 ```
 
-**Testing State Machines:**
+**Testing Character Status Transitions:**
+```python
+class TestCharacterStatusFSM(TestCase):
+    def setUp(self):
+        # Set up users and campaign
+        self.owner = User.objects.create_user("owner", "owner@test.com")
+        self.gm = User.objects.create_user("gm", "gm@test.com")
+        self.player = User.objects.create_user("player", "player@test.com")
+
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign", owner=self.owner, game_system="Test"
+        )
+
+        # Add memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.gm, role="GM"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.player, role="PLAYER"
+        )
+
+        self.character = Character.objects.create(
+            name="Test Character",
+            campaign=self.campaign,
+            player_owner=self.player,
+            game_system="Test"
+        )
+
+    def test_character_lifecycle(self):
+        """Test complete character status lifecycle."""
+        # Initial state
+        self.assertEqual(self.character.status, 'DRAFT')
+
+        # Submit for approval
+        self.character.submit_for_approval(user=self.player)
+        self.character.save(audit_user=self.player)
+        self.assertEqual(self.character.status, 'SUBMITTED')
+
+        # Approve character
+        self.character.approve(user=self.gm)
+        self.character.save(audit_user=self.gm)
+        self.assertEqual(self.character.status, 'APPROVED')
+
+        # Retire character
+        self.character.retire(user=self.player)
+        self.character.save(audit_user=self.player)
+        self.assertEqual(self.character.status, 'RETIRED')
+
+    def test_permission_validation(self):
+        """Test that transitions validate permissions."""
+        self.character.submit_for_approval(user=self.player)
+        self.character.save(audit_user=self.player)
+
+        # Player cannot approve their own character
+        with self.assertRaises(PermissionError):
+            self.character.approve(user=self.player)
+
+        # GM can approve
+        self.character.approve(user=self.gm)
+        self.character.save(audit_user=self.gm)
+        self.assertEqual(self.character.status, 'APPROVED')
+
+    def test_invalid_transitions(self):
+        """Test that invalid transitions are blocked."""
+        # Cannot approve from DRAFT (must submit first)
+        with self.assertRaises(TransitionNotAllowed):
+            self.character.approve(user=self.gm)
+
+        # Cannot retire from DRAFT (must be APPROVED)
+        with self.assertRaises(TransitionNotAllowed):
+            self.character.retire(user=self.player)
+
+    def test_audit_trail_integration(self):
+        """Test that status transitions create audit entries."""
+        initial_count = self.character.audit_entries.count()
+
+        # Perform transition
+        self.character.submit_for_approval(user=self.player)
+        self.character.save(audit_user=self.player)
+
+        # Check audit entry was created
+        new_count = self.character.audit_entries.count()
+        self.assertEqual(new_count, initial_count + 1)
+
+        # Verify audit content
+        audit_entry = self.character.audit_entries.latest('timestamp')
+        self.assertEqual(audit_entry.changed_by, self.player)
+        self.assertIn('status', audit_entry.field_changes)
+        self.assertEqual(audit_entry.field_changes['status']['old'], 'DRAFT')
+        self.assertEqual(audit_entry.field_changes['status']['new'], 'SUBMITTED')
+```
+
+**Testing State Machines (General Pattern):**
 ```python
 class TestGameSessionFSM(TestCase):
     def setUp(self):
@@ -627,19 +751,6 @@ class TestGameSessionFSM(TestCase):
 
         with self.assertRaises(TransitionNotAllowed):
             self.session.start_session()
-
-    def test_transition_with_validation(self):
-        """Test transition with business logic validation."""
-        campaign = Campaign.objects.create(name="Test Campaign")
-
-        # Should fail without players
-        with self.assertRaises(ValidationError):
-            campaign.activate()
-
-        # Add player and retry
-        self.create_campaign_member(campaign, role='PLAYER')
-        campaign.activate()  # Should succeed
-        self.assertEqual(campaign.state, 'active')
 ```
 
 #### FSM Integration Guidelines
@@ -651,11 +762,21 @@ class TestGameSessionFSM(TestCase):
 - API endpoints that modify model state
 
 **Best Practices:**
-- Use descriptive state names ('draft', 'active', 'completed')
+- Use descriptive state names ('DRAFT', 'SUBMITTED', 'APPROVED')
 - Include validation logic in transition methods
 - Test all valid and invalid transition paths
 - Consider permission checks in transition methods
 - Document state diagrams for complex workflows
+- Integrate with audit trail systems (DetailedAuditableMixin)
+- Use consistent naming patterns for transition methods
+
+**Character Status Implementation Best Practices:**
+- Always validate user permissions in transition methods
+- Use save(audit_user=user) after transitions for audit trail
+- Test both successful transitions and permission errors
+- Verify audit entries are created for each transition
+- Test edge cases like terminal states (RETIRED, DECEASED)
+- Use descriptive error messages for permission failures
 
 **State Machine Testing:**
 ```python
@@ -1219,6 +1340,72 @@ class TestGameSessionModel(TestCase):
         session.refresh_from_db()
         self.assertEqual(session.created_by, user)  # Unchanged
         self.assertEqual(session.modified_by, modifier)  # Updated
+```
+
+### Character Status Transition Testing Patterns (Issue #180)
+
+The Character model now includes a comprehensive status workflow system using django-fsm-2. Test patterns for character status transitions:
+
+#### Status Transition Testing
+
+```python
+class CharacterStatusTransitionTest(TestCase):
+    """Test Character status transition functionality."""
+
+    def test_submit_for_approval_workflow(self):
+        """Test character submission workflow."""
+        character = Character.objects.create(
+            name="Test Character",
+            campaign=self.campaign,
+            player_owner=self.player,
+            game_system="Test System"
+        )
+
+        # Character starts in DRAFT
+        self.assertEqual(character.status, "DRAFT")
+
+        # Player can submit for approval
+        character.submit_for_approval(user=self.player)
+        character.save(audit_user=self.player)
+        self.assertEqual(character.status, "SUBMITTED")
+
+        # GM can approve
+        character.approve(user=self.gm)
+        character.save(audit_user=self.gm)
+        self.assertEqual(character.status, "APPROVED")
+
+    def test_permission_based_transitions(self):
+        """Test that transitions respect permission rules."""
+        character = self._create_submitted_character()
+
+        # Only GMs/owners can approve
+        with self.assertRaises(PermissionError):
+            character.approve(user=self.player)
+
+        # GMs can approve
+        character.approve(user=self.gm)
+        character.save(audit_user=self.gm)
+        self.assertEqual(character.status, "APPROVED")
+
+    def test_audit_trail_for_status_changes(self):
+        """Test that status changes create audit entries."""
+        character = self._create_character()
+
+        initial_count = character.audit_entries.count()
+
+        character.submit_for_approval(user=self.player)
+        character.save(audit_user=self.player)
+
+        # Should create audit entry for status change
+        new_count = character.audit_entries.count()
+        self.assertEqual(new_count, initial_count + 1)
+
+        # Verify audit entry content
+        audit_entry = character.audit_entries.latest('timestamp')
+        self.assertEqual(audit_entry.action, 'UPDATE')
+        self.assertIn('status', audit_entry.field_changes)
+        self.assertEqual(audit_entry.field_changes['status']['old'], 'DRAFT')
+        self.assertEqual(audit_entry.field_changes['status']['new'], 'SUBMITTED')
 ```
 
 ### Character Manager Testing Patterns (Issue #175)
