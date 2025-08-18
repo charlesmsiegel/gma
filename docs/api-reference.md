@@ -10,8 +10,9 @@
 6. [Invitation API](#invitation-api)
 7. [User API](#user-api)
 8. [Character API](#character-api)
-9. [Data Models](#data-models)
-10. [Testing the API](#testing-the-api)
+9. [Source Reference API](#source-reference-api)
+10. [Data Models](#data-models)
+11. [Testing the API](#testing-the-api)
 
 ## Overview
 
@@ -1102,6 +1103,54 @@ Character.objects.filter(npc=True)               # Manual filtering still works
 - Full polymorphic inheritance support
 - Reduced application-level filtering logic
 
+## Source Reference API
+
+### Book Model Support
+
+The system includes a Book model for tracking RPG source references, but API endpoints have not yet been implemented. Future API endpoints would support:
+
+**Potential Endpoints:**
+- `GET /api/books/` - List RPG source books
+- `GET /api/books/{id}/` - Get book details
+- `POST /api/books/` - Create new book reference (admin only)
+- `PUT /api/books/{id}/` - Update book information (admin only)
+- `DELETE /api/books/{id}/` - Remove book reference (admin only)
+
+**Book Model Structure:**
+```json
+{
+  "id": 1,
+  "title": "Mage: The Ascension 20th Anniversary Edition",
+  "abbreviation": "M20",
+  "system": "Mage: The Ascension",
+  "edition": "20th Anniversary",
+  "publisher": "Onyx Path Publishing",
+  "isbn": "978-1-58846-475-3",
+  "url": "https://www.drivethrurpg.com/product/149562/Mage-the-Ascension-20th-Anniversary-Edition"
+}
+```
+
+**Future Integration:**
+The Book model is designed for future integration with:
+- Character sheet source citations
+- Rule and spell references
+- Equipment and item sources
+- Campaign setting books
+
+**Implementation Status:**
+- ✅ **Database Model**: Implemented with comprehensive test suite
+- ❌ **API Endpoints**: Not yet implemented
+- ❌ **Admin Interface**: Not yet configured
+- ❌ **Frontend Integration**: Awaiting API implementation
+
+**Development Notes:**
+When implementing Book API endpoints, consider:
+- Read-only access for most users
+- Admin-only creation/modification
+- Search functionality by title, abbreviation, or system
+- Filtering by game system
+- Integration with character sheets and other content models
+
 ## Data Models
 
 ### Role Choices
@@ -1219,6 +1268,34 @@ STATUS_CHOICES = [
 5. **RETIRED** - Character permanently retired from campaign
 6. **DECEASED** - Character marked as deceased
 
+### Book Model
+
+**Core Fields:**
+- `id`: Integer, primary key
+- `title`: String (max 200 chars), unique book title
+- `abbreviation`: String (max 20 chars), unique short reference
+- `system`: String (max 100 chars), game system identifier
+- `edition`: String (max 50 chars), optional edition information
+- `publisher`: String (max 100 chars), optional publisher name
+- `isbn`: String (max 17 chars), optional ISBN-10 or ISBN-13
+- `url`: URLField, optional purchase or information URL
+
+**Business Rules:**
+- Book titles must be unique across all systems
+- Abbreviations must be unique across all systems
+- System field is required for categorization
+- Optional fields default to empty string
+- Ordering by system, then title
+
+**Usage Examples:**
+- **Title**: "Mage: The Ascension 20th Anniversary Edition"
+- **Abbreviation**: "M20"
+- **System**: "Mage: The Ascension"
+- **Edition**: "20th Anniversary"
+- **Publisher**: "Onyx Path Publishing"
+- **ISBN**: "978-1-58846-475-3"
+- **URL**: "https://www.drivethrurpg.com/product/149562/..."
+
 ### Invitation Status Choices
 
 ```python
@@ -1312,4 +1389,4 @@ print(campaigns.json())
 
 ---
 
-*This API reference should be updated as new endpoints are added. Last updated: 2025-01-08*
+*This API reference should be updated as new endpoints are added. Last updated: 2025-08-18*

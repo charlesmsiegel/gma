@@ -445,6 +445,68 @@ The system includes comprehensive FSM testing:
 
 ## Data Model Architecture
 
+### Book Model (Source References)
+
+**Location**: `core/models/sources.py:11-58`
+
+The Book model provides a centralized repository for RPG source book references, enabling consistent citations and source tracking throughout the application.
+
+```python
+class Book(models.Model):
+    # Core identification
+    title = CharField(max_length=200, unique=True)
+    abbreviation = CharField(max_length=20, unique=True)  # e.g., "M20", "V20"
+    system = CharField(max_length=100)  # e.g., "Mage: The Ascension"
+
+    # Optional metadata
+    edition = CharField(max_length=50, blank=True, default="")
+    publisher = CharField(max_length=100, blank=True, default="")
+    isbn = CharField(max_length=17, blank=True, default="")  # ISBN-13 with hyphens
+    url = URLField(blank=True, default="")
+
+    class Meta:
+        ordering = ["system", "title"]
+```
+
+**Key Features:**
+- **Unique Constraints**: Both title and abbreviation must be unique across all systems
+- **Flexible System Support**: Not limited to World of Darkness games
+- **Citation Ready**: Designed for use in character sheets, items, and rules references
+- **URL Integration**: Links to purchase pages or digital versions
+- **Consistent Ordering**: System-first ordering for logical grouping
+
+**Architectural Benefits:**
+
+1. **Centralized Reference Management**: Single source of truth for book metadata
+2. **Citation Support**: Ready for integration with character sheets and rule references
+3. **Cross-System Compatibility**: Supports any RPG system, not just World of Darkness
+4. **Future-Proof Design**: Extensible for additional metadata fields
+5. **Performance Optimized**: Unique constraints provide implicit indexing
+
+**Integration Patterns:**
+
+```python
+# Future integration examples
+class CharacterSheet(models.Model):
+    # Could reference source books
+    source_books = ManyToManyField(Book, blank=True)
+
+class Rule(models.Model):
+    # Could cite specific books
+    source_book = ForeignKey(Book, on_delete=CASCADE)
+    page_reference = CharField(max_length=20)  # e.g., "p. 142"
+
+class Equipment(models.Model):
+    # Could track item sources
+    source_book = ForeignKey(Book, on_delete=SET_NULL, null=True)
+```
+
+**Usage Philosophy:**
+- **Canonical References**: Authoritative source for book information
+- **Abbreviation Standards**: Consistent short references (M20, V20, etc.)
+- **System Agnostic**: Works with any RPG system
+- **Citation Ready**: Formatted for academic-style references
+
 ### Core Model Mixins
 
 The system provides reusable model mixins for common functionality across multiple models, with performance optimizations and comprehensive documentation.
@@ -1011,4 +1073,4 @@ FROM python:3.11-slim AS runtime
 
 ---
 
-*This architecture documentation should be reviewed and updated as the system evolves. Last updated: 2025-08-17*
+*This architecture documentation should be reviewed and updated as the system evolves. Last updated: 2025-08-18*

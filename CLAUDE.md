@@ -199,7 +199,7 @@ The project follows a domain-driven monolithic architecture with these Django ap
 - **locations**: Hierarchical campaign locations
 - **items**: Equipment and treasure management
 - **api**: Modular DRF views, serializers, standardized error handling
-- **core**: Front page, utilities, base templates, management commands
+- **core**: Front page, utilities, base templates, management commands, source references (Book model)
 
 #### Internal Structure
 The models, views, urls, and tests modules in every app should be managed as python modules rather than individual files.
@@ -247,7 +247,7 @@ Tests are organized by functionality and complexity:
 - **campaigns/tests/**: Campaign models, membership, invitations, permissions
 - **api/tests/**: API endpoints, error handling, security, serializers
 - **users/tests/**: Authentication, user management, profile operations
-- **core/tests/**: Management commands, health checks, WebSocket connections, django-fsm-2 integration
+- **core/tests/**: Management commands, health checks, WebSocket connections, django-fsm-2 integration, Book model tests
 
 ### Running Tests
 ```bash
