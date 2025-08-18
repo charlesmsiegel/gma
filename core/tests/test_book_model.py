@@ -16,55 +16,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.test import TestCase
 
-
-# Test model for Book - defined here since the actual model doesn't exist yet
-class Book(models.Model):
-    """
-    Model for storing canonical RPG source books.
-
-    This is a test model that defines the expected structure based on the requirements.
-    The actual model should be implemented in core/models/sources.py.
-    """
-
-    title = models.CharField(
-        max_length=200, unique=True, help_text="Full title of the book"
-    )
-    abbreviation = models.CharField(
-        max_length=20,
-        unique=True,
-        help_text=(
-            "Short abbreviation for the book (e.g., 'M20' for Mage 20th Anniversary)"
-        ),
-    )
-    system = models.CharField(
-        max_length=100,
-        help_text="Game system this book belongs to (e.g., 'Mage: The Ascension')",
-    )
-    edition = models.CharField(
-        max_length=50,
-        blank=True,
-        default="",
-        help_text="Edition information (e.g., 'Revised', '20th Anniversary')",
-    )
-    publisher = models.CharField(
-        max_length=100, blank=True, default="", help_text="Publisher of the book"
-    )
-    isbn = models.CharField(
-        max_length=17,  # ISBN-13 with hyphens: 978-0-123456-78-9
-        blank=True,
-        default="",
-        help_text="ISBN-10 or ISBN-13 of the book",
-    )
-    url = models.URLField(
-        blank=True, default="", help_text="URL to purchase or learn more about the book"
-    )
-
-    class Meta:
-        app_label = "core"
-        ordering = ["system", "title"]
-
-    def __str__(self):
-        return f"{self.abbreviation} - {self.title}"
+from core.models import Book
 
 
 class BookModelTest(TestCase):
