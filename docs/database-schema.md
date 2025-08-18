@@ -35,6 +35,89 @@ The GMA database schema is designed around domain-driven principles with clear s
 
 ## Core Models
 
+### Book Model
+
+**Table**: `core_book`
+
+Stores canonical RPG source books with metadata for citations and references throughout the application.
+
+```sql
+CREATE TABLE core_book (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(200) UNIQUE NOT NULL,
+    abbreviation VARCHAR(20) UNIQUE NOT NULL,
+    system VARCHAR(100) NOT NULL,
+    edition VARCHAR(50) DEFAULT '' NOT NULL,
+    publisher VARCHAR(100) DEFAULT '' NOT NULL,
+    isbn VARCHAR(17) DEFAULT '' NOT NULL,  -- ISBN-13 with hyphens: 978-0-123456-78-9
+    url VARCHAR(200) DEFAULT '' NOT NULL
+);
+
+-- Performance indexes
+CREATE INDEX core_book_system_idx ON core_book (system);
+CREATE INDEX core_book_title_idx ON core_book (title);
+```
+
+**Field Specifications:**
+
+**Core Fields:**
+- `title`: Full book title (VARCHAR 200, UNIQUE, required)
+- `abbreviation`: Short book abbreviation (VARCHAR 20, UNIQUE, required)
+  - Examples: "M20" for Mage 20th Anniversary, "V20" for Vampire 20th Anniversary
+- `system`: Game system this book belongs to (VARCHAR 100, required)
+  - Examples: "Mage: The Ascension", "Vampire: The Masquerade", "Werewolf: The Apocalypse"
+
+**Optional Metadata:**
+- `edition`: Edition information (VARCHAR 50, optional)
+  - Examples: "Revised", "20th Anniversary", "2nd Edition"
+- `publisher`: Book publisher (VARCHAR 100, optional)
+  - Examples: "Onyx Path Publishing", "White Wolf Publishing", "Modiphius Entertainment"
+- `isbn`: ISBN-10 or ISBN-13 identifier (VARCHAR 17, optional)
+  - Supports both formats with or without hyphens
+- `url`: Purchase or information URL (URLField, optional)
+  - DriveThruRPG links, publisher websites, etc.
+
+**Business Rules:**
+- Book titles must be unique across all systems
+- Abbreviations must be unique across all systems
+- System field is required for proper categorization
+- All optional fields default to empty string (not NULL)
+- Ordering by system, then title for consistent display
+
+**Usage Patterns:**
+```sql
+-- Find books by game system
+SELECT * FROM core_book
+WHERE system = 'Mage: The Ascension'
+ORDER BY title;
+
+-- Search books by title or abbreviation
+SELECT * FROM core_book
+WHERE title ILIKE '%players guide%'
+   OR abbreviation ILIKE '%pg%';
+
+-- Get book by abbreviation (common usage)
+SELECT * FROM core_book
+WHERE abbreviation = 'M20';
+
+-- Find books by publisher
+SELECT * FROM core_book
+WHERE publisher = 'Onyx Path Publishing'
+ORDER BY system, title;
+```
+
+**Performance Considerations:**
+- Index on `system` field for game system filtering
+- Index on `title` field for search operations
+- Unique constraints on `title` and `abbreviation` provide implicit indexes
+- Consider full-text search index for complex title searches
+
+**Future Enhancements:**
+- Foreign key relationships to character sheets, items, or other content
+- Book ratings or review system
+- Publication date tracking
+- Multi-language support for international editions
+
 ### Core Model Mixins
 
 The GMA system provides reusable model mixins that encapsulate common functionality needed across multiple models. These mixins include performance optimizations such as database indexing and comprehensive help text.
@@ -1602,4 +1685,4 @@ ORDER BY idx_tup_read DESC;
 
 ---
 
-*This schema documentation should be updated when database changes are made. Last updated: 2025-08-17*
+*This schema documentation should be updated when database changes are made. Last updated: 2025-08-18*
