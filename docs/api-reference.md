@@ -739,10 +739,20 @@ Get list of characters. Supports filtering by campaign and character type. The C
 - `Character.pcs`: Only PCs, excludes soft-deleted **[New in #175]**
 - `Character.all_objects`: Includes soft-deleted characters
 
+**Character Status System (Issue #180):**
+Characters now include a comprehensive status workflow:
+- **DRAFT**: Initial character creation state
+- **SUBMITTED**: Character submitted for GM approval
+- **APPROVED**: Character approved for campaign play
+- **INACTIVE**: Temporarily inactive character
+- **RETIRED**: Permanently retired character
+- **DECEASED**: Character marked as deceased
+
 **Query Parameters:**
 - `campaign_id` (optional): Filter characters by campaign ID
 - `npc` (optional): Filter by character type (`true` for NPCs, `false` for PCs)
 - `player_owner` (optional): Filter by player owner ID
+- `status` (optional): Filter by character status (`DRAFT`, `SUBMITTED`, `APPROVED`, `INACTIVE`, `RETIRED`, `DECEASED`)
 
 **Success Response (200):**
 ```json
@@ -767,6 +777,7 @@ Get list of characters. Supports filtering by campaign and character type. The C
         "email": "player1@example.com"
       },
       "character_type": "MageCharacter",
+      "status": "APPROVED",
       "is_deleted": false,
       "deleted_at": null,
       "deleted_by": null,
@@ -794,6 +805,7 @@ Get list of characters. Supports filtering by campaign and character type. The C
         "email": "gm@example.com"
       },
       "character_type": "MageCharacter",
+      "status": "APPROVED",
       "is_deleted": false,
       "deleted_at": null,
       "deleted_by": null,
@@ -834,6 +846,7 @@ Get detailed information about a specific character.
     "email": "player1@example.com"
   },
   "character_type": "MageCharacter",
+  "status": "APPROVED",
   "is_deleted": false,
   "deleted_at": null,
   "deleted_by": null,
@@ -886,6 +899,7 @@ Create a new character. Requires campaign membership.
     "email": "player1@example.com"
   },
   "character_type": "MageCharacter",
+  "status": "DRAFT",
   "is_deleted": false,
   "deleted_at": null,
   "deleted_by": null,
@@ -921,7 +935,122 @@ Soft delete a character. Only character owner, campaign owner, or GM can delete 
 
 **Success Response (204):** No content
 
-**Character Type Filtering Examples:**
+### Character Status Transitions
+
+**POST** `/api/characters/{id}/submit-for-approval/`
+
+Submit character for GM approval (character owners only).
+
+**Success Response (200):**
+```json
+{
+  "detail": "Character submitted for approval.",
+  "status": "SUBMITTED"
+}
+```
+
+**POST** `/api/characters/{id}/approve/`
+
+Approve character for campaign play (GMs/owners only).
+
+**Success Response (200):**
+```json
+{
+  "detail": "Character approved.",
+  "status": "APPROVED"
+}
+```
+
+**POST** `/api/characters/{id}/reject/`
+
+Reject character back to draft (GMs/owners only).
+
+**Success Response (200):**
+```json
+{
+  "detail": "Character rejected.",
+  "status": "DRAFT"
+}
+```
+
+**POST** `/api/characters/{id}/deactivate/`
+
+Deactivate approved character (GMs/owners only).
+
+**Success Response (200):**
+```json
+{
+  "detail": "Character deactivated.",
+  "status": "INACTIVE"
+}
+```
+
+**POST** `/api/characters/{id}/activate/`
+
+Reactivate inactive character (GMs/owners only).
+
+**Success Response (200):**
+```json
+{
+  "detail": "Character activated.",
+  "status": "APPROVED"
+}
+```
+
+**POST** `/api/characters/{id}/retire/`
+
+Retire character from campaign (owners + GMs/owners).
+
+**Success Response (200):**
+```json
+{
+  "detail": "Character retired.",
+  "status": "RETIRED"
+}
+```
+
+**POST** `/api/characters/{id}/mark-deceased/`
+
+Mark character as deceased (GMs/owners only).
+
+**Success Response (200):**
+```json
+{
+  "detail": "Character marked as deceased.",
+  "status": "DECEASED"
+}
+```
+
+### Character Audit Trail
+
+**GET** `/api/characters/{id}/audit-log/`
+
+Get character audit trail including status transitions.
+
+**Success Response (200):**
+```json
+{
+  "results": [
+    {
+      "id": 1,
+      "action": "UPDATE",
+      "field_changes": {
+        "status": {
+          "old": "DRAFT",
+          "new": "SUBMITTED"
+        }
+      },
+      "changed_by": {
+        "id": 2,
+        "username": "player1"
+      },
+      "timestamp": "2024-01-20T14:45:00Z"
+    }
+  ]
+}
+```
+
+**Character Filtering Examples:**
 
 ```bash
 # Get all NPCs in a campaign
@@ -930,7 +1059,16 @@ GET /api/characters/?campaign_id=1&npc=true
 # Get all PCs owned by a specific player
 GET /api/characters/?player_owner=2&npc=false
 
-# Get all characters in a campaign (both PCs and NPCs)
+# Get all approved characters in a campaign
+GET /api/characters/?campaign_id=1&status=APPROVED
+
+# Get all characters pending approval
+GET /api/characters/?campaign_id=1&status=SUBMITTED
+
+# Get all draft characters owned by a player
+GET /api/characters/?player_owner=2&status=DRAFT
+
+# Get all characters in a campaign (all statuses)
 GET /api/characters/?campaign_id=1
 ```
 
@@ -987,6 +1125,13 @@ ROLE_CHOICES = [
 - `npc`: Boolean, character type flag
   - `false`: Player Character (PC) - controlled by players
   - `true`: Non-Player Character (NPC) - controlled by GMs
+- `status`: String, character workflow status
+  - `DRAFT`: Initial creation state
+  - `SUBMITTED`: Awaiting approval
+  - `APPROVED`: Approved for campaign play
+  - `INACTIVE`: Temporarily inactive
+  - `RETIRED`: Permanently retired
+  - `DECEASED`: Marked as deceased
 - `created_at`: Timestamp, character creation time
 - `updated_at`: Timestamp, last modification time
 
@@ -1032,8 +1177,47 @@ ROLE_CHOICES = [
 - Player must be campaign member to own characters
 - NPC creation limited to GMs and campaign owners
 - Character limits apply only to PCs, not NPCs
-- Audit trail tracks all character changes including NPC status
+- **Status Workflow Rules:**
+  - Characters start in DRAFT status
+  - Only character owners can submit for approval
+  - Only GMs/owners can approve, reject, deactivate, or mark deceased
+  - Character owners can retire their own characters
+  - GMs/owners can retire any character
+  - RETIRED and DECEASED are terminal states
+- Audit trail tracks all character changes including status transitions
 - Manager-level filtering automatically excludes soft-deleted characters
+
+**Status Transition Matrix:**
+```
+DRAFT      → SUBMITTED (character owners)
+SUBMITTED  → APPROVED (GMs/owners) | DRAFT (GMs/owners - rejection)
+APPROVED   → INACTIVE (GMs/owners) | RETIRED (owners + GMs/owners) | DECEASED (GMs/owners)
+INACTIVE   → APPROVED (GMs/owners)
+RETIRED    → No transitions (terminal)
+DECEASED   → No transitions (terminal)
+```
+
+### Character Status Choices
+
+```python
+STATUS_CHOICES = [
+    ('DRAFT', 'Draft'),
+    ('SUBMITTED', 'Submitted'),
+    ('APPROVED', 'Approved'),
+    ('INACTIVE', 'Inactive'),
+    ('RETIRED', 'Retired'),
+    ('DECEASED', 'Deceased')
+]
+```
+
+### Character Status Lifecycle
+
+1. **DRAFT** - Character in creation/editing phase
+2. **SUBMITTED** - Character submitted for GM approval
+3. **APPROVED** - Character approved for campaign play
+4. **INACTIVE** - Character temporarily unavailable
+5. **RETIRED** - Character permanently retired from campaign
+6. **DECEASED** - Character marked as deceased
 
 ### Invitation Status Choices
 

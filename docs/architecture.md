@@ -331,19 +331,29 @@ class Scene(models.Model):
 
 **Character Development:**
 ```python
-# Future implementation example
+# Current implementation - Character Status FSM
 class Character(models.Model):
-    status = FSMField(default='created', max_length=50)
+    status = FSMField(default='DRAFT', max_length=20)
 
-    @transition(field=status, source='created', target='approved')
-    def approve_character(self):
-        """GM approves character for campaign."""
-        pass
+    @transition(field=status, source='DRAFT', target='SUBMITTED')
+    def submit_for_approval(self, user):
+        """Character owner submits character for approval."""
+        if self.player_owner != user:
+            raise PermissionError("Only character owners can submit for approval")
 
-    @transition(field=status, source='approved', target='active')
-    def activate_character(self):
-        """Character enters active play."""
-        pass
+    @transition(field=status, source='SUBMITTED', target='APPROVED')
+    def approve(self, user):
+        """GM approves character for campaign play."""
+        user_role = self.campaign.get_user_role(user)
+        if user_role not in ["GM", "OWNER"]:
+            raise PermissionError("Only GMs and campaign owners can approve characters")
+
+    @transition(field=status, source='APPROVED', target='RETIRED')
+    def retire(self, user):
+        """Retire character from active play."""
+        user_role = self.campaign.get_user_role(user)
+        if self.player_owner != user and user_role not in ["GM", "OWNER"]:
+            raise PermissionError("Only character owners, GMs, and campaign owners can retire characters")
 ```
 
 #### Integration Benefits
@@ -354,25 +364,78 @@ class Character(models.Model):
 4. **Permission Integration**: Combine FSM transitions with role-based permissions
 5. **API Consistency**: Standardize state management across REST endpoints
 
+#### Character Status Implementation (Issue #180)
+
+The Character model now includes a comprehensive status workflow system using django-fsm-2:
+
+**Status Workflow:**
+```
+DRAFT → SUBMITTED → APPROVED → {INACTIVE, RETIRED, DECEASED}
+              ↓
+            DRAFT (rejection)
+
+INACTIVE ↔ APPROVED (deactivation/reactivation)
+```
+
+**Transition Methods:**
+- `submit_for_approval()`: DRAFT → SUBMITTED (character owners only)
+- `approve()`: SUBMITTED → APPROVED (GMs/owners only)
+- `reject()`: SUBMITTED → DRAFT (GMs/owners only)
+- `deactivate()`: APPROVED → INACTIVE (GMs/owners only)
+- `activate()`: INACTIVE → APPROVED (GMs/owners only)
+- `retire()`: APPROVED → RETIRED (owners + GMs/owners)
+- `mark_deceased()`: APPROVED → DECEASED (GMs/owners only)
+
+**Permission Matrix:**
+- **Character Owners**: Can submit characters, retire their own characters
+- **GMs**: Can approve/reject/deactivate/activate/mark deceased all characters
+- **Campaign Owners**: Same permissions as GMs
+- **Players/Observers**: Read-only access
+
+**Audit Integration:**
+All status transitions are automatically logged via DetailedAuditableMixin, capturing:
+- User who performed the transition
+- Timestamp of the change
+- Old and new status values
+- Complete audit trail accessible via `character.audit_entries.all()`
+
 #### Testing and Validation
 
-The system includes comprehensive FSM testing in `core/tests/test_django_fsm_installation.py`:
-- **Package Import Validation**: Ensures django-fsm-2 is properly installed
-- **Basic FSM Functionality**: Tests state transitions and field behavior
-- **Django Integration**: Validates compatibility with Django ORM
+The system includes comprehensive FSM testing:
 
-**Current Test Coverage:**
-- FSM field creation and default values
-- State transition mechanics
-- Django model integration
-- Error handling for invalid transitions
+**Installation Tests** (`core/tests/test_django_fsm_installation.py`):
+- Package import validation
+- Basic FSM functionality
+- Django ORM integration
 
-#### Future Implementation Strategy
+**Character Status Tests** (`characters/tests/test_fsm_basic.py` - 28 tests):
+- Status field choices and defaults
+- Complete transition workflow testing
+- Permission validation for each transition
+- Audit logging verification
+- Edge cases and error conditions
+- Multi-step transition flows
+- Role-based access control validation
 
-1. **Phase 1**: Apply FSM to Campaign model for basic lifecycle management
-2. **Phase 2**: Extend to Scene model for workflow control
-3. **Phase 3**: Integrate with Character model for approval workflows
-4. **Phase 4**: Add complex multi-model state dependencies
+**Test Categories:**
+- **Status Field Tests**: Default values, choices validation
+- **Transition Flow Tests**: Basic approval workflow, rejection flow, reactivation
+- **Permission Tests**: Role-based transition access control
+- **Audit Tests**: Automatic logging of status changes
+- **Edge Case Tests**: Invalid transitions, terminal states, direct status changes
+
+#### Implementation Status
+
+**Completed:**
+- ✅ **Character Model FSM**: Full status workflow implementation with comprehensive testing
+- ✅ **Permission Integration**: Role-based transition controls
+- ✅ **Audit Trail Integration**: Automatic status change logging
+- ✅ **API Integration**: Status transitions exposed via REST endpoints
+
+**Future Phases:**
+1. **Phase 2**: Apply FSM to Campaign model for lifecycle management
+2. **Phase 3**: Extend to Scene model for workflow control
+3. **Phase 4**: Add complex multi-model state dependencies
 
 **Implementation Guidelines:**
 - Use clear, descriptive state names (e.g., 'draft', 'active', 'completed')
