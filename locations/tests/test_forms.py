@@ -474,10 +474,20 @@ class LocationFormWidgetTest(TestCase):
         """Test campaign field widget configuration."""
         form = LocationForm(user=self.user)
 
-        form.fields["campaign"]
+        campaign_field = form.fields["campaign"]
+
+        # Verify field exists and has proper configuration
+        self.assertIsNotNone(campaign_field)
+        self.assertTrue(hasattr(campaign_field, "widget"))
+
+        # Should have a queryset that includes accessible campaigns
+        self.assertTrue(hasattr(campaign_field, "queryset"))
+        self.assertIn(self.campaign, campaign_field.queryset)
 
         # Should display campaign name and owner
         # Widget configuration depends on implementation
+        widget = campaign_field.widget
+        self.assertIsNotNone(widget)
 
     def test_form_field_help_text(self):
         """Test that form fields have helpful help text."""

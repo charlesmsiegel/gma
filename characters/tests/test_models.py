@@ -1859,20 +1859,44 @@ class CharacterEnhancedValidationTest(TestCase):
             game_system="Mage: The Ascension",
         )
 
+        # Verify initial state
+        self.assertEqual(character.player_owner, self.player1)
+        self.assertEqual(character.campaign.owner, self.owner)
+        self.assertEqual(character.name, "Player Character")
+
         # Transfer campaign ownership to another user
         new_owner = User.objects.create_user(
             username="new_owner", email="new_owner@test.com", password="testpass123"
         )
+        old_owner = self.campaign.owner
         self.campaign.owner = new_owner
         self.campaign.save()
+
+        # Verify campaign ownership changed
+        self.campaign.refresh_from_db()
+        self.assertEqual(self.campaign.owner, new_owner)
+        self.assertNotEqual(self.campaign.owner, old_owner)
 
         # Existing character should still be valid
         character.name = "Updated Player Character"
         character.full_clean()  # Should not raise ValidationError
         character.save()
 
+        # Verify character was updated successfully
+        character.refresh_from_db()
+        self.assertEqual(character.name, "Updated Player Character")
+        self.assertEqual(
+            character.player_owner, self.player1
+        )  # Should remain unchanged
+        self.assertEqual(
+            character.campaign.owner, new_owner
+        )  # Campaign owner should be updated
+
         # Original owner should still be able to own characters if they remain a member
         # (campaign owner change doesn't affect existing memberships)
+        # Verify character is still valid and accessible
+        self.assertFalse(character.is_deleted)
+        self.assertTrue(character.campaign.is_member(self.player1))
 
     def test_character_name_with_special_characters(self):
         """Test character validation with special characters in names."""
