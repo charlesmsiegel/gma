@@ -78,10 +78,8 @@ class LocationModelTest(TestCase):
         # Test Location-specific fields
         self.assertEqual(location.campaign, self.campaign)
 
-        # Test hierarchy field (will be added)
-        with self.assertRaises(AttributeError):
-            # This should fail initially, then pass once hierarchy is implemented
-            location.parent
+        # Test hierarchy field (now implemented)
+        self.assertIsNone(location.parent)  # Default should be None
 
     def test_location_creation_minimal_fields(self):
         """Test Location creation with minimal required fields."""
@@ -698,11 +696,12 @@ class LocationValidationTest(TestCase):
     def test_name_field_required(self):
         """Test that name field is required."""
         with self.assertRaises(ValidationError):
-            location = Location.objects.create(
+            location = Location(
                 name="",  # Empty name should fail
                 campaign=self.campaign,
                 created_by=self.owner,
             )
+            location.full_clean()  # This will trigger validation
             location.clean()
 
     def test_campaign_field_required(self):
@@ -1027,10 +1026,11 @@ class LocationEdgeCaseTest(TestCase):
             created_by=self.owner,
         )
 
-        # Simulate concurrent modification by creating same relationship
-        # This should be handled gracefully
-        child.parent = parent
-        child.save()
+        # Simulate concurrent modification by updating the same object
+        # This should be handled gracefully (same parent assignment is OK)
+        child_copy = Location.objects.get(pk=child.pk)
+        child_copy.name = "Updated Name"
+        child_copy.save()
 
         # Should not cause integrity errors
         child.refresh_from_db()

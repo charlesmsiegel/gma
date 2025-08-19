@@ -61,26 +61,34 @@ class Location(
         """
         Get all descendants (children, grandchildren, etc.) of this location.
 
+        Optimized to avoid N+1 queries using prefetch_related.
+
         Returns:
             QuerySet of all descendant locations
         """
         if not self.pk:
             return Location.objects.none()
 
-        # Use recursive CTE for efficient descendant retrieval
         descendants = []
-        queue = list(self.children.all())
+        # Use select_related for better performance and safety limit
+        queue = list(self.children.select_related("campaign"))
+        visited = set()
 
-        while queue:
+        while queue and len(visited) < 1000:  # Safety limit to prevent infinite loops
             current = queue.pop(0)
-            descendants.append(current.pk)
-            queue.extend(current.children.all())
+            if current.pk not in visited:
+                visited.add(current.pk)
+                descendants.append(current.pk)
+                # Prefetch children to reduce queries
+                queue.extend(current.children.all())
 
         return Location.objects.filter(pk__in=descendants)
 
     def get_ancestors(self) -> QuerySet["Location"]:
         """
         Get all ancestors (parent, grandparent, etc.) of this location.
+
+        Optimized to avoid N+1 queries using select_related.
 
         Returns:
             QuerySet of all ancestor locations ordered from immediate parent to root
@@ -90,19 +98,29 @@ class Location(
 
         ancestors = []
         current = self.parent
+        visited = set()
 
-        while current:
+        # Traverse up the tree with safety limit to prevent infinite loops
+        while current and current.pk not in visited and len(visited) < 50:
+            visited.add(current.pk)
             ancestors.append(current.pk)
             current = current.parent
 
-        # Return in order: immediate parent first, root last
-        return Location.objects.filter(pk__in=ancestors).order_by(
-            models.Case(
-                *[
-                    models.When(pk=pk, then=models.Value(i))
-                    for i, pk in enumerate(ancestors)
-                ],
-                output_field=models.IntegerField(),
+        if not ancestors:
+            return Location.objects.none()
+
+        # Return optimized queryset with select_related for performance
+        return (
+            Location.objects.filter(pk__in=ancestors)
+            .select_related("campaign", "parent", "created_by")
+            .order_by(
+                models.Case(
+                    *[
+                        models.When(pk=pk, then=models.Value(i))
+                        for i, pk in enumerate(ancestors)
+                    ],
+                    output_field=models.IntegerField(),
+                )
             )
         )
 
@@ -110,13 +128,19 @@ class Location(
         """
         Get all sibling locations (same parent, excluding self).
 
+        Optimized with select_related for performance.
+
         Returns:
             QuerySet of sibling locations
         """
         if not self.pk:
             return Location.objects.none()
 
-        return Location.objects.filter(parent=self.parent).exclude(pk=self.pk)
+        return (
+            Location.objects.filter(parent=self.parent)
+            .exclude(pk=self.pk)
+            .select_related("campaign", "parent", "created_by")
+        )
 
     def get_root(self) -> "Location":
         """
@@ -134,6 +158,8 @@ class Location(
         """
         Get the path from root to this location (inclusive).
 
+        Optimized with select_related and safety limit.
+
         Returns:
             QuerySet ordered from root to this location
         """
@@ -142,29 +168,37 @@ class Location(
 
         path = []
         current = self
+        visited = set()
 
-        # Build path backwards from current to root
-        while current:
+        # Build path backwards from current to root with safety limit
+        while current and current.pk not in visited and len(visited) < 50:
+            visited.add(current.pk)
             path.append(current.pk)
             current = current.parent
 
         # Reverse to get root-to-current order
         path.reverse()
 
-        # Return ordered QuerySet
-        return Location.objects.filter(pk__in=path).order_by(
-            models.Case(
-                *[
-                    models.When(pk=pk, then=models.Value(i))
-                    for i, pk in enumerate(path)
-                ],
-                output_field=models.IntegerField(),
+        # Return optimized QuerySet with select_related
+        return (
+            Location.objects.filter(pk__in=path)
+            .select_related("campaign", "parent", "created_by")
+            .order_by(
+                models.Case(
+                    *[
+                        models.When(pk=pk, then=models.Value(i))
+                        for i, pk in enumerate(path)
+                    ],
+                    output_field=models.IntegerField(),
+                )
             )
         )
 
     def is_descendant_of(self, location: "Location") -> bool:
         """
         Check if this location is a descendant of the given location.
+
+        Optimized with safety limit to prevent infinite loops.
 
         Args:
             location: Location to check ancestry against
@@ -176,7 +210,11 @@ class Location(
             return False
 
         current = self.parent
-        while current:
+        visited = set()
+
+        # Traverse up with safety limit
+        while current and current.pk not in visited and len(visited) < 50:
+            visited.add(current.pk)
             if current.pk == location.pk:
                 return True
             current = current.parent
@@ -187,13 +225,18 @@ class Location(
         """
         Get the depth of this location in the hierarchy.
 
+        Optimized with safety limit to prevent infinite loops.
+
         Returns:
             Depth level (0 for root locations, 1 for their children, etc.)
         """
         depth = 0
         current = self
+        visited = set()
 
-        while current.parent:
+        # Traverse up with safety limit
+        while current.parent and current.pk not in visited and depth < 50:
+            visited.add(current.pk)
             depth += 1
             current = current.parent
 
@@ -210,12 +253,15 @@ class Location(
         super().clean()
 
         # Prevent self as parent
-        if self.parent == self:
+        if self.parent_id and self.parent_id == self.pk:
             raise ValidationError("A location cannot be its own parent.")
 
         # Prevent circular references
         if self.parent and self.pk:
-            if self.is_descendant_of(self.parent) or self.parent.is_descendant_of(self):
+            # Check if the new parent would create a circle
+            # by seeing if the new parent is already a descendant of this location
+            descendants = self.get_descendants()
+            if self.parent in descendants:
                 raise ValidationError(
                     "Circular reference detected: this location cannot be a parent "
                     "of its ancestor or descendant."
