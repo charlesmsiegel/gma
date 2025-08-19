@@ -378,8 +378,8 @@ class CSRFTokenHandlingTest(TestCase):
 
         # Verify initial token response
         self.assertEqual(response1.status_code, 200)
-        self.assertIn("csrftoken", response1.data)
-        initial_token = response1.data.get("csrftoken")
+        self.assertIn("csrfToken", response1.data)
+        initial_token = response1.data.get("csrfToken")
         self.assertIsNotNone(initial_token)
         self.assertTrue(len(initial_token) > 0)
 
@@ -391,8 +391,8 @@ class CSRFTokenHandlingTest(TestCase):
 
         # Verify new token response
         self.assertEqual(response2.status_code, 200)
-        self.assertIn("csrftoken", response2.data)
-        new_token = response2.data.get("csrftoken")
+        self.assertIn("csrfToken", response2.data)
+        new_token = response2.data.get("csrfToken")
         self.assertIsNotNone(new_token)
         self.assertTrue(len(new_token) > 0)
 
@@ -407,8 +407,8 @@ class CSRFTokenHandlingTest(TestCase):
         # Get token before login
         response1 = self.client.get(self.csrf_url)
         self.assertEqual(response1.status_code, 200)
-        self.assertIn("csrftoken", response1.data)
-        pre_login_token = response1.data.get("csrftoken")
+        self.assertIn("csrfToken", response1.data)
+        pre_login_token = response1.data.get("csrfToken")
         self.assertIsNotNone(pre_login_token)
 
         # Create user and login
@@ -426,8 +426,8 @@ class CSRFTokenHandlingTest(TestCase):
         # Get token after login
         response2 = self.client.get(self.csrf_url)
         self.assertEqual(response2.status_code, 200)
-        self.assertIn("csrftoken", response2.data)
-        post_login_token = response2.data.get("csrftoken")
+        self.assertIn("csrfToken", response2.data)
+        post_login_token = response2.data.get("csrfToken")
         self.assertIsNotNone(post_login_token)
 
         # Tokens might change after authentication state change
