@@ -159,8 +159,6 @@ class HealthCheckLogAdminTest(TestCase):
         """Test that HealthCheckLog is properly registered in admin."""
         from django.contrib.admin.sites import site
 
-        from core.models import HealthCheckLog
-
         # Check that the model is registered
         self.assertIn(HealthCheckLog, site._registry)
 

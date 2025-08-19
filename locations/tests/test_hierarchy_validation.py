@@ -394,7 +394,7 @@ class LocationHierarchyValidationTest(TestCase):
             try:
                 # Delete the object to prevent constraint violations during teardown
                 Location.objects.filter(pk=location_to_cleanup.pk).delete()
-            except:
+            except Exception:
                 pass  # Ignore cleanup errors
 
         self.assertTrue(

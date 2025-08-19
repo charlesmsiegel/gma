@@ -1,0 +1,82 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='locations' %}">Locations</a>
+    &rsaquo; <a href="{% url 'admin:locations_location_changelist' %}">Locations</a>
+    &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="module">
+    <p>You have selected {{ queryset|length }} location(s) to move to a new parent:</p>
+
+    <ul>
+        {% for location in queryset %}
+            <li><strong>{{ location.name }}</strong> ({{ location.campaign.name }})</li>
+        {% endfor %}
+    </ul>
+
+    <form method="post" action="">
+        {% csrf_token %}
+
+        <input type="hidden" name="action" value="{{ action }}">
+        <input type="hidden" name="_selected_action" value="{{ selected_ids }}">
+
+        <div class="form-row">
+            <label for="new_parent_id">Select new parent location:</label>
+            <select name="new_parent_id" id="new_parent_id" required>
+                {% for value, label in parent_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="submit-row">
+            <input type="submit" value="Move Locations" class="default" />
+            <a href="{% url 'admin:locations_location_changelist' %}" class="button cancel-link">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .form-row {
+        margin: 20px 0;
+    }
+
+    .form-row label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    .form-row select {
+        width: 400px;
+        padding: 5px;
+        font-size: 13px;
+    }
+
+    .submit-row {
+        margin-top: 20px;
+        padding: 10px 0;
+        border-top: 1px solid #ddd;
+    }
+
+    .cancel-link {
+        margin-left: 10px;
+        text-decoration: none;
+        color: #666;
+    }
+
+    .cancel-link:hover {
+        color: #000;
+    }
+</style>
+{% endblock %}

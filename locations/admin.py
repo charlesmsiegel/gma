@@ -254,9 +254,106 @@ class LocationAdmin(admin.ModelAdmin):
         self, request: HttpRequest, queryset: QuerySet[Location]
     ) -> None:
         """Bulk action to move selected locations to a new parent."""
-        # This would require additional UI for parent selection
-        # For now, it's a placeholder for the test
-        pass
+        from django.contrib import messages
+        from django.http import HttpResponseRedirect
+        from django.shortcuts import render
+        from django.urls import reverse
+
+        # Get the new parent ID from POST data
+        new_parent_id = request.POST.get("new_parent_id")
+
+        if new_parent_id == "":
+            # Empty string means move to root (no parent)
+            new_parent = None
+        elif new_parent_id:
+            try:
+                new_parent = Location.objects.get(pk=new_parent_id)
+            except Location.DoesNotExist:
+                self.message_user(
+                    request, "Selected parent location does not exist.", messages.ERROR
+                )
+                return
+        else:
+            # No parent selected, show selection form
+            # Get all possible parent locations (from same campaigns as selected locations)
+            campaign_ids = list(
+                queryset.values_list("campaign_id", flat=True).distinct()
+            )
+
+            # Exclude the selected locations from potential parents
+            selected_ids = list(queryset.values_list("pk", flat=True))
+            potential_parents = (
+                Location.objects.filter(campaign_id__in=campaign_ids)
+                .exclude(pk__in=selected_ids)
+                .select_related("campaign")
+            )
+
+            # Add "No parent (root level)" option
+            parent_choices = [("", "No parent (root level)")]
+            parent_choices.extend(
+                [
+                    (loc.pk, f"{loc.campaign.name}: {loc.name}")
+                    for loc in potential_parents
+                ]
+            )
+
+            context = {
+                "title": f"Select new parent for {queryset.count()} locations",
+                "queryset": queryset,
+                "parent_choices": parent_choices,
+                "action": "bulk_move_to_parent",
+                "selected_ids": ",".join(map(str, selected_ids)),
+            }
+
+            return render(
+                request, "admin/locations/bulk_move_parent_form.html", context
+            )
+
+        # Perform the bulk move operation
+        updated_count = 0
+        error_count = 0
+
+        for location in queryset:
+            try:
+                # Validate that the move won't create circular references
+                if new_parent:
+                    # Check if new parent is in same campaign
+                    if location.campaign_id != new_parent.campaign_id:
+                        error_count += 1
+                        continue
+
+                    # Check for circular references
+                    if location.pk == new_parent.pk or new_parent.is_descendant_of(
+                        location
+                    ):
+                        error_count += 1
+                        continue
+
+                # Update the parent
+                location.parent = new_parent
+                location.save()
+                updated_count += 1
+
+            except (ValidationError, ValueError):
+                error_count += 1
+
+        # Show results message using self.message_user for better test compatibility
+        if updated_count > 0:
+            self.message_user(
+                request,
+                f"Successfully moved {updated_count} location(s) to new parent.",
+                messages.SUCCESS,
+            )
+
+        if error_count > 0:
+            self.message_user(
+                request,
+                f"{error_count} location(s) could not be moved due to validation errors.",
+                messages.WARNING,
+            )
+
+        # Redirect back to the changelist
+        return HttpResponseRedirect(reverse("admin:locations_location_changelist"))
 
     bulk_move_to_parent.short_description = "Move selected locations to new parent"
 

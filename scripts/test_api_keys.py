@@ -26,7 +26,7 @@ def test_codacy_api():
         import gm_app.secrets as secrets
 
         api_key = getattr(secrets, "CODACY_API_KEY", None)
-    except:
+    except ImportError:
         api_key = os.environ.get("CODACY_API_KEY")
 
     if not api_key:
