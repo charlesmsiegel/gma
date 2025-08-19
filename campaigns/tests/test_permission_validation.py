@@ -149,8 +149,6 @@ class CampaignPermissionMatrixTest(TestCase):
         CampaignInvitation.objects.filter(campaign=self.campaign).delete()
 
         # Ensure observer is a member (in case it was removed)
-        from campaigns.models import CampaignMembership
-
         CampaignMembership.objects.get_or_create(
             campaign=self.campaign, user=self.observer, defaults={"role": "OBSERVER"}
         )

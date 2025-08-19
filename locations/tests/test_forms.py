@@ -584,13 +584,13 @@ class LocationFormAjaxTest(TestCase):
         """Test dynamic hierarchy display in form."""
         # Create hierarchy for testing dynamic display
         parent = Location.objects.create(
-            name="AJAX Parent",
+            name="A Parent Location",
             campaign=self.campaign,
             created_by=self.user,
         )
 
         child = Location.objects.create(
-            name="AJAX Child",
+            name="B Child Location",
             campaign=self.campaign,
             parent=parent,
             created_by=self.user,

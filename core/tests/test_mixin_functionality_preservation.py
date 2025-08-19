@@ -15,11 +15,9 @@ These tests ensure that mixin application is backward compatible
 and doesn't break any existing functionality.
 """
 
-from unittest.mock import patch
-
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 

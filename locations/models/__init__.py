@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Optional
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import IntegrityError, models
 from django.db.models import Q, QuerySet
 
 from campaigns.models import Campaign
@@ -256,29 +256,52 @@ class Location(
         if self.parent_id and self.parent_id == self.pk:
             raise ValidationError("A location cannot be its own parent.")
 
-        # Prevent circular references
-        if self.parent and self.pk:
-            # Check if the new parent would create a circle
-            # by seeing if the new parent is already a descendant of this location
-            descendants = self.get_descendants()
-            if self.parent in descendants:
-                raise ValidationError(
-                    "Circular reference detected: this location cannot be a parent "
-                    "of its ancestor or descendant."
-                )
+        # Skip validation if campaign is None (will fail at database level)
+        if not self.campaign_id:
+            return
 
-        # Check cross-campaign parent
-        if self.parent and self.campaign_id != self.parent.campaign_id:
-            raise ValidationError("Parent location must be in the same campaign.")
+        # Perform hierarchy validation when we have parent_id
+        if self.parent_id:
+            try:
+                # Try to access parent - this works for valid parent_id
+                parent = self.parent
 
-        # Check maximum depth
-        if self.parent:
-            future_depth = self.parent.get_depth() + 1
-            if future_depth >= 10:  # Maximum depth of 10 levels (0-9)
-                raise ValidationError(
-                    f"Maximum depth of 10 levels exceeded. "
-                    f"This location would be at depth {future_depth}."
-                )
+                # Prevent circular references (only for existing objects)
+                if self.pk and parent:
+                    # Check if the new parent would create a circle
+                    # by seeing if the new parent is already a descendant of this location
+                    descendants = self.get_descendants()
+                    if parent in descendants:
+                        raise ValidationError(
+                            "Circular reference detected: this location cannot be a parent "
+                            "of its ancestor or descendant."
+                        )
+
+                # Check cross-campaign parent
+                if (
+                    parent
+                    and self.campaign_id
+                    and self.campaign_id != parent.campaign_id
+                ):
+                    raise ValidationError(
+                        "Parent location must be in the same campaign."
+                    )
+
+                # Check maximum depth
+                if parent:
+                    future_depth = parent.get_depth() + 1
+                    if future_depth >= 10:  # Maximum depth of 10 levels (0-9)
+                        raise ValidationError(
+                            f"Maximum depth of 10 levels exceeded. "
+                            f"This location would be at depth {future_depth}."
+                        )
+
+            except Location.DoesNotExist:
+                # Parent doesn't exist - let database foreign key constraint handle this
+                pass
+            except (AttributeError, ValueError, IntegrityError):
+                # Other access errors - let database handle the constraint
+                pass
 
     def save(self, *args, **kwargs) -> None:
         """

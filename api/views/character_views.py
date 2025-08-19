@@ -193,7 +193,7 @@ class CharacterViewSet(viewsets.ModelViewSet):
                     other_campaigns_filter = Q(
                         campaign__id__in=[
                             camp_id
-                            for camp_id in user_roles_dict.keys()
+                            for camp_id in user_roles_dict
                             if camp_id not in player_only_campaigns
                         ]
                     )

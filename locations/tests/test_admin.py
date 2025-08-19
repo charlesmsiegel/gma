@@ -266,7 +266,7 @@ class LocationAdminTest(TestCase):
         # Test that children locations can be managed as inlines
         if hasattr(self.admin, "inlines"):
             # Check for children inline
-            inline_classes = [inline for inline in self.admin.inlines]
+            inline_classes = list(self.admin.inlines)
 
             # Look for location children inline
             children_inline = None

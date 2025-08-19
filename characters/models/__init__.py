@@ -515,8 +515,6 @@ class Character(
         Raises:
             ValidationError: If character limit would be exceeded
         """
-        from campaigns.models import Campaign
-
         # Lock the campaign to prevent concurrent character creation
         Campaign.objects.select_for_update().get(pk=self.campaign.pk)
 

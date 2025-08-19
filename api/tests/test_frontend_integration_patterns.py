@@ -170,7 +170,7 @@ class FrontendIntegrationPatternsTest(TestCase):
         )
         self.assertTrue(
             has_expected_error,
-            f"Response should contain expected error fields: " f"{response.data}",
+            f"Response should contain expected error fields: {response.data}",
         )
 
     def test_user_info_response_structure(self):

@@ -117,7 +117,7 @@ def list_campaign_invitations(request, campaign_id):
     if isinstance(result, Response):
         return result
 
-    campaign, user_role = result
+    campaign, _ = result
 
     # Get invitations using service
     invitation_service = InvitationService(campaign)

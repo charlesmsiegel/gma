@@ -185,8 +185,9 @@ class SourceReference(TimestampedMixin, models.Model):
         help_text="Page number in the book (optional, positive integer)",
     )
     chapter = models.TextField(
-        blank=True,
         null=True,
+        blank=True,
+        default=None,
         help_text="Chapter or section name in the book (optional)",
     )
 

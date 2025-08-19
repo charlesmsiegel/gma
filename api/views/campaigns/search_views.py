@@ -43,7 +43,7 @@ def campaign_user_search(request, campaign_id):
     if isinstance(result, Response):
         return result
 
-    campaign, user_role = result
+    campaign, _ = result
 
     # Get search query
     query = request.GET.get("q", "").strip()

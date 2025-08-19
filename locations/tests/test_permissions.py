@@ -490,7 +490,9 @@ class LocationPermissionSecurityTest(TestCase):
 
         # Test that changing user properties doesn't grant unauthorized access
         original_username = self.attacker.username
-        self.attacker.username = self.victim.username
+        self.attacker.username = (
+            "fake_victim_username"  # Different name that doesn't conflict
+        )
         self.attacker.save()
 
         # Should still not have access (permissions based on user object, not name)

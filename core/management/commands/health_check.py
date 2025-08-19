@@ -2,6 +2,8 @@
 Django management command to test database and Redis connections.
 """
 
+import sys
+
 from django.core.cache import caches
 from django.core.management.base import BaseCommand
 from django.db import connections
@@ -42,4 +44,4 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("\n✅ All services OK"))
         else:
             self.stdout.write(self.style.ERROR("\n❌ Health check failed"))
-            exit(1)
+            sys.exit(1)

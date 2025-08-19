@@ -14,8 +14,6 @@ These tests ensure:
 5. No regressions in existing Character functionality
 """
 
-from unittest.mock import patch
-
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models

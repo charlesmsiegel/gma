@@ -121,7 +121,7 @@ class ThemeContextProcessorTests(TestCase):
         # Manually set invalid theme (bypassing validation)
         self.user.theme = "invalid_theme"
         # Save without full_clean to bypass validation
-        User.objects.filter(id=self.user.id).update(theme="invalid_theme")
+        User.objects.filter(pk=self.user.pk).update(theme="invalid_theme")
 
         # Refresh user from database
         self.user.refresh_from_db()

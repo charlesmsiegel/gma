@@ -5,6 +5,7 @@ Provides campaign-scoped character management views with proper permission check
 """
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -60,14 +61,12 @@ class CampaignCharactersView(CampaignCharacterMixin, CampaignListView):
                 # Validate player_id is a positive integer
                 player_id_int = int(player_id)
                 if player_id_int > 0:
-                    from django.contrib.auth import get_user_model
-
-                    User = get_user_model()
-                    player = User.objects.get(pk=player_id_int)
+                    user_model = get_user_model()
+                    player = user_model.objects.get(pk=player_id_int)
                     # Only filter if the player is a member of the campaign
                     if self.campaign.is_member(player):
                         queryset = queryset.filter(player_owner=player)
-            except (ValueError, User.DoesNotExist):
+            except (ValueError, user_model.DoesNotExist):
                 # Invalid player ID, ignore filter
                 pass
 
@@ -93,13 +92,11 @@ class CampaignCharactersView(CampaignCharacterMixin, CampaignListView):
 
         # Add campaign members for filtering dropdown (for OWNER/GM only)
         if user_role in ["OWNER", "GM"]:
-            from django.contrib.auth import get_user_model
-
-            User = get_user_model()
+            user_model = get_user_model()
 
             # Get all campaign members who have characters
             members_with_characters = (
-                User.objects.filter(owned_characters__campaign=self.campaign)
+                user_model.objects.filter(owned_characters__campaign=self.campaign)
                 .distinct()
                 .order_by("username")
             )

@@ -166,7 +166,7 @@ class ResetDevDbCommandTest(TransactionTestCase):
             if args[0] == "flush":
                 return None  # flush succeeds
             elif args[0] == "migrate":
-                raise Exception("Migration error")
+                raise RuntimeError("Migration error")
 
         mock_call_command.side_effect = mock_side_effect
 

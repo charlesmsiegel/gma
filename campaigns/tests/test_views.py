@@ -841,7 +841,7 @@ class CampaignDetailViewTest(TestCase):
             ("observer", 2, ["View Characters", "View Scenes"]),
         ]
 
-        for role, expected_count, expected_content in roles_and_expected_cards:
+        for role, _, expected_content in roles_and_expected_cards:
             with self.subTest(role=role):
                 # Get appropriate user for role
                 if role == "owner":

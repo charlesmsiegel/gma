@@ -28,20 +28,20 @@ def authenticate_by_email_or_username(
     if not username or not password:
         return None
 
-    User = get_user_model()
+    user_model = get_user_model()
 
     # Check if input looks like email and try to get user by email first
     if "@" in username:
         try:
             # Look up user by email (case-insensitive)
-            user_obj = User.objects.get(email__iexact=username)
+            user_obj = user_model.objects.get(email__iexact=username)
             # Use the found user's username for authentication
             return authenticate(
                 request=request,
                 username=user_obj.get_username(),
                 password=password,
             )
-        except User.DoesNotExist:
+        except user_model.DoesNotExist:
             # Fall back to regular username authentication
             pass
 

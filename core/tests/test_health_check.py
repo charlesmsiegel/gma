@@ -151,7 +151,6 @@ class HealthCheckLogAdminTest(TestCase):
         from django.contrib.admin.sites import site
 
         from core.admin import HealthCheckLogAdmin
-        from core.models import HealthCheckLog
 
         self.admin_class = HealthCheckLogAdmin
         self.admin_instance = self.admin_class(HealthCheckLog, site)
