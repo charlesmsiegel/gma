@@ -17,8 +17,8 @@
   /* Background Colors */
   --theme-bg-body: #e1f5fe;
   --theme-bg-surface: #e0f2f1;
-  --theme-bg-card: #ffffff;
-  --theme-bg-modal: #ffffff;
+  --theme-bg-card: #fff;
+  --theme-bg-modal: #fff;
   --theme-bg-navbar: #0277bd;
   --theme-bg-sidebar: #e0f2f1;
   --theme-bg-hover: rgb(2 119 189  / 8%);
@@ -29,8 +29,8 @@
   --theme-text-secondary: #37474f;
   --theme-text-muted: #546e7a;
   --theme-text-light: #78909c;
-  --theme-text-white: #ffffff;
-  --theme-text-inverse: #ffffff;
+  --theme-text-white: #fff;
+  --theme-text-inverse: #fff;
 
   /* Border Colors */
   --theme-border-color: #b3e5fc;
@@ -39,14 +39,14 @@
   --theme-border-focus: var(--theme-primary);
 
   /* Form Controls */
-  --theme-input-bg: #ffffff;
+  --theme-input-bg: #fff;
   --theme-input-border: #b3e5fc;
   --theme-input-focus-border: var(--theme-primary);
   --theme-input-focus-shadow: 0 0 0 0.2rem rgb(2 119 189  / 25%);
   --theme-input-placeholder: #546e7a;
 
   /* Navigation */
-  --theme-nav-link-color: #ffffff;
+  --theme-nav-link-color: #fff;
   --theme-nav-link-hover: #b3e5fc;
   --theme-nav-link-active: #81d4fa;
 
@@ -70,13 +70,13 @@
 }
 
 [data-theme="ocean"] .navbar-brand {
-  color: #ffffff !important;
+  color: #fff !important;
   font-weight: 600;
   text-shadow: 0 1px 2px rgb(0 0 0  / 20%);
 }
 
 [data-theme="ocean"] .card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fdff 100%);
+  background: linear-gradient(135deg, #fff 0%, #f8fdff 100%);
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 0.25rem 0.75rem rgb(3 169 244  / 15%);
   border-radius: 12px;
@@ -105,7 +105,7 @@
 [data-theme="ocean"] .btn-secondary {
   background: linear-gradient(135deg, #546e7a 0%, #37474f 100%);
   border-color: var(--theme-secondary);
-  color: #ffffff;
+  color: #fff;
 }
 
 [data-theme="ocean"] .alert-info {
@@ -121,7 +121,7 @@
 }
 
 [data-theme="ocean"] .dropdown-menu {
-  background-color: #ffffff;
+  background-color: #fff;
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 0.5rem 1.5rem rgb(3 169 244  / 20%);
   border-radius: 8px;
@@ -167,7 +167,7 @@
 
 /* Campaign-specific styling for ocean theme */
 [data-theme="ocean"] .campaign-card {
-  background: linear-gradient(135deg, #ffffff 0%, #e1f5fe 100%);
+  background: linear-gradient(135deg, #fff 0%, #e1f5fe 100%);
   border: 2px solid #81d4fa;
   box-shadow: 0 0.5rem 1.5rem rgb(3 169 244  / 20%);
   border-radius: 16px;
@@ -180,7 +180,7 @@
 }
 
 [data-theme="ocean"] .character-sheet {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+  background: linear-gradient(135deg, #fff 0%, #f0f9ff 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 16px;
   box-shadow: 0 0.5rem 1rem rgb(3 169 244  / 15%);
@@ -219,7 +219,7 @@
 }
 
 [data-theme="ocean"] .modal-content {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+  background: linear-gradient(135deg, #fff 0%, #f0f9ff 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 16px;
   box-shadow: 0 1rem 3rem rgb(3 169 244  / 30%);

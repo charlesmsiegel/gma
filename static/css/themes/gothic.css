@@ -19,7 +19,7 @@
   --theme-bg-surface: #2a2a2a;
   --theme-bg-card: #3a3a3a;
   --theme-bg-modal: #3a3a3a;
-  --theme-bg-navbar: #000000;
+  --theme-bg-navbar: #000;
   --theme-bg-sidebar: #2a2a2a;
   --theme-bg-hover: rgb(139 0 0  / 15%);
   --theme-bg-active: rgb(139 0 0  / 25%);
@@ -29,13 +29,13 @@
   --theme-text-secondary: #d3d3d3;
   --theme-text-muted: #a9a9a9;
   --theme-text-light: #808080;
-  --theme-text-white: #ffffff;
+  --theme-text-white: #fff;
   --theme-text-inverse: #1a1a1a;
 
   /* Border Colors - Ornate details */
   --theme-border-color: #555555;
   --theme-border-light: #444444;
-  --theme-border-dark: #666666;
+  --theme-border-dark: #666;
   --theme-border-focus: var(--theme-primary);
 
   /* Form Controls */
@@ -85,7 +85,7 @@
 }
 
 [data-theme="gothic"] .navbar {
-  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
   border-bottom: 2px solid #8b0000;
   box-shadow: 0 4px 20px rgb(139 0 0  / 50%);
   position: relative;
@@ -247,7 +247,7 @@
 }
 
 [data-theme="gothic"] .progress {
-  background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+  background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
   border: 1px solid #8b0000;
   border-radius: 0;
   box-shadow: inset 0 2px 4px rgb(0 0 0  / 80%);

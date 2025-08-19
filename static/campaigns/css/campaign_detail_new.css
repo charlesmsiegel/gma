@@ -368,7 +368,7 @@
 }
 
 /* Tablet breakpoint - 4 cards become 2x2 */
-@media (max-width: 1024px) {
+@media (width <= 1024px) {
     .management-grid.cards-4 {
         grid-template-columns: repeat(2, 1fr);
     }

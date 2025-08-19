@@ -13,41 +13,41 @@
   --theme-warning: #f57c00;
   --theme-danger: #d32f2f;
   --theme-light: #f3e5f5;
-  --theme-dark: #000000;
+  --theme-dark: #000;
 
   /* Background Colors */
-  --theme-bg-body: #000000;
+  --theme-bg-body: #000;
   --theme-bg-surface: #121212;
   --theme-bg-card: #1e1e1e;
   --theme-bg-modal: #1e1e1e;
-  --theme-bg-navbar: #000000;
+  --theme-bg-navbar: #000;
   --theme-bg-sidebar: #121212;
   --theme-bg-hover: rgb(156 39 176  / 12%);
   --theme-bg-active: rgb(156 39 176  / 24%);
 
   /* Text Colors */
-  --theme-text-primary: #ffffff;
+  --theme-text-primary: #fff;
   --theme-text-secondary: #b0bec5;
   --theme-text-muted: #78909c;
   --theme-text-light: #546e7a;
-  --theme-text-white: #ffffff;
-  --theme-text-inverse: #000000;
+  --theme-text-white: #fff;
+  --theme-text-inverse: #000;
 
   /* Border Colors */
-  --theme-border-color: #333333;
+  --theme-border-color: #333;
   --theme-border-light: #2a2a2a;
   --theme-border-dark: #555555;
   --theme-border-focus: var(--theme-primary);
 
   /* Form Controls */
   --theme-input-bg: #1e1e1e;
-  --theme-input-border: #333333;
+  --theme-input-border: #333;
   --theme-input-focus-border: var(--theme-primary);
   --theme-input-focus-shadow: 0 0 0 0.2rem rgb(156 39 176  / 25%);
   --theme-input-placeholder: #78909c;
 
   /* Navigation */
-  --theme-nav-link-color: #ffffff;
+  --theme-nav-link-color: #fff;
   --theme-nav-link-hover: var(--theme-primary);
   --theme-nav-link-active: var(--theme-primary-light);
 
@@ -66,13 +66,13 @@
 
 /* Midnight theme specific enhancements */
 [data-theme="midnight"] .navbar {
-  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
-  border-bottom: 1px solid #333333;
+  background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
+  border-bottom: 1px solid #333;
   box-shadow: 0 2px 10px rgb(156 39 176  / 30%);
 }
 
 [data-theme="midnight"] .navbar-brand {
-  color: #ffffff !important;
+  color: #fff !important;
   font-weight: 700;
   text-shadow: 0 0 10px rgb(156 39 176  / 80%);
 }
@@ -136,7 +136,7 @@
 [data-theme="midnight"] .btn-secondary {
   background: linear-gradient(135deg, #455a64 0%, #263238 100%);
   border-color: var(--theme-secondary);
-  color: #ffffff;
+  color: #fff;
   box-shadow: 0 4px 15px rgb(69 90 100  / 40%);
 }
 
@@ -218,7 +218,7 @@
 /* Campaign-specific styling for midnight theme */
 [data-theme="midnight"] .campaign-card {
   background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 50%, #1e1e1e 100%);
-  border: 2px solid #333333;
+  border: 2px solid #333;
   box-shadow: 0 1rem 2rem rgb(0 0 0  / 80%), 0 0 30px rgb(156 39 176  / 20%);
   border-radius: 16px;
   transition: all 0.4s ease;
@@ -263,7 +263,7 @@
 }
 
 [data-theme="midnight"] .dice-roller {
-  background: linear-gradient(45deg, #1e1e1e, #333333);
+  background: linear-gradient(45deg, #1e1e1e, #333);
   border: 3px solid var(--theme-primary);
   border-radius: 50%;
   box-shadow: 0 0 30px rgb(156 39 176  / 60%), inset 0 2px 4px rgb(0 0 0  / 50%);

@@ -17,8 +17,8 @@
   /* Background Colors */
   --theme-bg-body: #fff8e1;
   --theme-bg-surface: #ffe0b2;
-  --theme-bg-card: #ffffff;
-  --theme-bg-modal: #ffffff;
+  --theme-bg-card: #fff;
+  --theme-bg-modal: #fff;
   --theme-bg-navbar: #e65100;
   --theme-bg-sidebar: #ffe0b2;
   --theme-bg-hover: rgb(230 81 0  / 8%);
@@ -29,8 +29,8 @@
   --theme-text-secondary: #5d4037;
   --theme-text-muted: #8d6e63;
   --theme-text-light: #a1887f;
-  --theme-text-white: #ffffff;
-  --theme-text-inverse: #ffffff;
+  --theme-text-white: #fff;
+  --theme-text-inverse: #fff;
 
   /* Border Colors */
   --theme-border-color: #ffcc02;
@@ -39,14 +39,14 @@
   --theme-border-focus: var(--theme-primary);
 
   /* Form Controls */
-  --theme-input-bg: #ffffff;
+  --theme-input-bg: #fff;
   --theme-input-border: #ffcc02;
   --theme-input-focus-border: var(--theme-primary);
   --theme-input-focus-shadow: 0 0 0 0.2rem rgb(230 81 0  / 25%);
   --theme-input-placeholder: #8d6e63;
 
   /* Navigation */
-  --theme-nav-link-color: #ffffff;
+  --theme-nav-link-color: #fff;
   --theme-nav-link-hover: #ffcc02;
   --theme-nav-link-active: #ffd54f;
 
@@ -70,13 +70,13 @@
 }
 
 [data-theme="sunset"] .navbar-brand {
-  color: #ffffff !important;
+  color: #fff !important;
   font-weight: 600;
   text-shadow: 0 2px 4px rgb(0 0 0  / 30%);
 }
 
 [data-theme="sunset"] .card {
-  background: linear-gradient(135deg, #ffffff 0%, #fff8e1 100%);
+  background: linear-gradient(135deg, #fff 0%, #fff8e1 100%);
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 0.25rem 0.75rem rgb(255 152 0  / 20%);
   border-radius: 12px;
@@ -105,7 +105,7 @@
 [data-theme="sunset"] .btn-secondary {
   background: linear-gradient(135deg, #8d6e63 0%, #6d4c41 100%);
   border-color: var(--theme-secondary);
-  color: #ffffff;
+  color: #fff;
 }
 
 [data-theme="sunset"] .alert-warning {
@@ -121,7 +121,7 @@
 }
 
 [data-theme="sunset"] .dropdown-menu {
-  background-color: #ffffff;
+  background-color: #fff;
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 0.5rem 1.5rem rgb(255 152 0  / 30%);
   border-radius: 8px;
@@ -172,7 +172,7 @@
 
 /* Campaign-specific styling for sunset theme */
 [data-theme="sunset"] .campaign-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fff8e1 50%, #ffe0b2 100%);
+  background: linear-gradient(135deg, #fff 0%, #fff8e1 50%, #ffe0b2 100%);
   border: 2px solid #ff9800;
   box-shadow: 0 0.5rem 1.5rem rgb(255 152 0  / 30%);
   border-radius: 16px;
@@ -203,7 +203,7 @@
 }
 
 [data-theme="sunset"] .character-sheet {
-  background: linear-gradient(135deg, #ffffff 0%, #fff8e1 100%);
+  background: linear-gradient(135deg, #fff 0%, #fff8e1 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 16px;
   box-shadow: 0 0.5rem 1rem rgb(255 152 0  / 20%);
@@ -242,7 +242,7 @@
 }
 
 [data-theme="sunset"] .modal-content {
-  background: linear-gradient(135deg, #ffffff 0%, #fff8e1 100%);
+  background: linear-gradient(135deg, #fff 0%, #fff8e1 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 16px;
   box-shadow: 0 1rem 3rem rgb(255 152 0  / 40%);

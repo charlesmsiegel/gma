@@ -52,7 +52,7 @@ def send_campaign_invitation(request, campaign_id):
     if isinstance(result, Response):
         return result
 
-    campaign, user_role = result
+    campaign, _ = result
 
     # Get invitation data
     invited_user_id = request.data.get("invited_user_id")

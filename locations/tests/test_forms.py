@@ -495,7 +495,7 @@ class LocationFormWidgetTest(TestCase):
         form = LocationForm(user=self.user)
 
         # Check that fields have Bootstrap/CSS classes for styling
-        for field_name, field in form.fields.items():
+        for _, field in form.fields.items():
             widget = field.widget
 
             # Should have CSS classes for styling

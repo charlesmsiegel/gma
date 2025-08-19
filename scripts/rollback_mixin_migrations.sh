@@ -53,15 +53,15 @@ rollback_app() {
 
     # Show current state
     echo "Current migration state for $app:"
-    $PYTHON manage.py showmigrations $app
+    "$PYTHON" manage.py showmigrations "$app"
 
     # Perform rollback
-    $PYTHON manage.py migrate $app $target_migration
+    "$PYTHON" manage.py migrate "$app" "$target_migration"
 
     # Show new state
     echo ""
     echo "New migration state for $app:"
-    $PYTHON manage.py showmigrations $app
+    "$PYTHON" manage.py showmigrations "$app"
     echo ""
 }
 

@@ -2,6 +2,7 @@
 
 [![Test and Coverage](https://github.com/charlesmsiegel/gma/actions/workflows/test-and-coverage.yml/badge.svg)](https://github.com/charlesmsiegel/gma/actions/workflows/test-and-coverage.yml)
 [![Coverage](https://img.shields.io/badge/coverage-80%25-green.svg)](https://github.com/charlesmsiegel/gma/actions/workflows/test-and-coverage.yml)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/cca7850a93094e0daeb176dd181e0469)](https://app.codacy.com/gh/charlesmsiegel/gma/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://python.org)
 [![Django](https://img.shields.io/badge/django-5.2.4-green.svg)](https://djangoproject.com)
 [![Code Style](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)

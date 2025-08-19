@@ -29,7 +29,7 @@
   --theme-text-secondary: #654321;
   --theme-text-muted: #8b7355;
   --theme-text-light: #a0956b;
-  --theme-text-white: #ffffff;
+  --theme-text-white: #fff;
   --theme-text-inverse: #f5f5dc;
 
   /* Border Colors - Weathered edges */
@@ -272,7 +272,7 @@
 
 [data-theme="vintage"] .form-control:focus {
   background:
-    linear-gradient(135deg, #ffffff 0%, #faf8f1 100%);
+    linear-gradient(135deg, #fff 0%, #faf8f1 100%);
   border-color: var(--theme-primary);
   color: var(--theme-text-primary);
   box-shadow: 0 0 0 0.2rem rgb(139 69 19  / 25%);

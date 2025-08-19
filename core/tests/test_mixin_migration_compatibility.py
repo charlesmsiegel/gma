@@ -14,19 +14,12 @@ mixin applications will work safely in production.
 """
 
 from django.contrib.auth import get_user_model
-from django.core.management import call_command
-from django.db import connection, models
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase
 from django.utils import timezone
 
 from campaigns.models import Campaign, CampaignMembership
 from characters.models import Character
-from core.models.mixins import (
-    AuditableMixin,
-    DescribedModelMixin,
-    NamedModelMixin,
-    TimestampedMixin,
-)
+from core.models.mixins import NamedModelMixin, TimestampedMixin
 from items.models import Item
 from locations.models import Location
 
@@ -102,7 +95,7 @@ class MixinMigrationCompatibilityTest(TestCase):
     def test_item_field_deduplication_compatibility(self):
         """Test that Item field deduplication will work correctly."""
         # Create item with existing data structure
-        item = Item.objects.create(
+        Item.objects.create(
             name="Pre-Migration Item",
             description="Item created before mixin application",
             campaign=self.campaign,
@@ -136,7 +129,7 @@ class MixinMigrationCompatibilityTest(TestCase):
     def test_location_field_deduplication_compatibility(self):
         """Test that Location field deduplication will work correctly."""
         # Create location with existing data structure
-        location = Location.objects.create(
+        Location.objects.create(
             name="Pre-Migration Location",
             description="Location created before mixin application",
             campaign=self.campaign,
@@ -167,7 +160,7 @@ class MixinMigrationCompatibilityTest(TestCase):
     def test_database_constraint_preservation(self):
         """Test that database constraints are preserved during migration."""
         # Character model has unique constraint on (campaign, name)
-        character1 = Character.objects.create(
+        Character.objects.create(
             name="Unique Test Character",
             campaign=self.campaign,
             player_owner=self.player1,
@@ -191,7 +184,7 @@ class MixinMigrationCompatibilityTest(TestCase):
     def test_index_preservation_and_enhancement(self):
         """Test that existing indexes are preserved and new ones can be added."""
         # Character model has existing indexes
-        character = Character.objects.create(
+        Character.objects.create(
             name="Index Test Character",
             campaign=self.campaign,
             player_owner=self.player1,
@@ -206,8 +199,6 @@ class MixinMigrationCompatibilityTest(TestCase):
 
         # TimestampedMixin will add db_index=True to timestamp fields
         # This should enhance performance without conflicts
-        fields = {f.name: f for f in Character._meta.get_fields()}
-
         # Note: Current timestamp fields don't have db_index, but mixin will add it
         # This is an enhancement that will be provided by the mixin
 
@@ -406,9 +397,6 @@ class MixinDataMigrationTest(TestCase):
         self.assertEqual(Location.objects.count(), 50)
 
         # Test that data with names > 100 chars exists (for migration planning)
-        long_name_items = Item.objects.filter(name__regex=r".{101,}")
-        long_name_locations = Location.objects.filter(name__regex=r".{101,}")
-
         # Some items and locations should have names > 100 chars
         # These would need data migration when applying NamedModelMixin
 

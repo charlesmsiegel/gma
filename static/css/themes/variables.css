@@ -28,11 +28,11 @@
   --theme-dark-rgb: 33, 37, 41;
 
   /* Background Colors */
-  --theme-bg-body: #ffffff;
+  --theme-bg-body: #fff;
   --theme-bg-surface: #f8f9fa;
-  --theme-bg-card: #ffffff;
-  --theme-bg-modal: #ffffff;
-  --theme-bg-navbar: #ffffff;
+  --theme-bg-card: #fff;
+  --theme-bg-modal: #fff;
+  --theme-bg-navbar: #fff;
   --theme-bg-sidebar: #f8f9fa;
   --theme-bg-hover: rgb(0 0 0  / 4%);
   --theme-bg-active: rgb(0 0 0  / 8%);
@@ -51,8 +51,8 @@
   --theme-text-secondary: #6c757d;
   --theme-text-muted: #868e96;
   --theme-text-light: #adb5bd;
-  --theme-text-white: #ffffff;
-  --theme-text-inverse: #ffffff;
+  --theme-text-white: #fff;
+  --theme-text-inverse: #fff;
 
   /* Border Colors */
   --theme-border-color: #dee2e6;
@@ -61,7 +61,7 @@
   --theme-border-focus: var(--theme-primary);
 
   /* Form Controls */
-  --theme-input-bg: #ffffff;
+  --theme-input-bg: #fff;
   --theme-input-border: #ced4da;
   --theme-input-focus-border: var(--theme-primary);
   --theme-input-focus-shadow: 0 0 0 0.2rem rgb(13 110 253  / 25%);

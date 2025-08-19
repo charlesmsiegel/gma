@@ -17,8 +17,8 @@
   /* Background Colors - Warm and cozy */
   --theme-bg-body: #efebe9;
   --theme-bg-surface: #f5f5f5;
-  --theme-bg-card: #ffffff;
-  --theme-bg-modal: #ffffff;
+  --theme-bg-card: #fff;
+  --theme-bg-modal: #fff;
   --theme-bg-navbar: #6d4c41;
   --theme-bg-sidebar: #f5f5f5;
   --theme-bg-hover: rgb(141 110 99  / 8%);
@@ -29,8 +29,8 @@
   --theme-text-secondary: #5d4037;
   --theme-text-muted: #8d6e63;
   --theme-text-light: #a1887f;
-  --theme-text-white: #ffffff;
-  --theme-text-inverse: #ffffff;
+  --theme-text-white: #fff;
+  --theme-text-inverse: #fff;
 
   /* Border Colors - Subtle and warm */
   --theme-border-color: #d7ccc8;
@@ -39,14 +39,14 @@
   --theme-border-focus: var(--theme-primary);
 
   /* Form Controls */
-  --theme-input-bg: #ffffff;
+  --theme-input-bg: #fff;
   --theme-input-border: #d7ccc8;
   --theme-input-focus-border: var(--theme-primary);
   --theme-input-focus-shadow: 0 0 0 0.2rem rgb(141 110 99  / 25%);
   --theme-input-placeholder: #8d6e63;
 
   /* Navigation */
-  --theme-nav-link-color: #ffffff;
+  --theme-nav-link-color: #fff;
   --theme-nav-link-hover: #efebe9;
   --theme-nav-link-active: #d7ccc8;
 
@@ -70,14 +70,14 @@
 }
 
 [data-theme="warm"] .navbar-brand {
-  color: #ffffff !important;
+  color: #fff !important;
   font-weight: 600;
   text-shadow: 0 1px 2px rgb(0 0 0  / 20%);
   font-family: 'Georgia', serif;
 }
 
 [data-theme="warm"] .card {
-  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+  background: linear-gradient(135deg, #fff 0%, #fafafa 100%);
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 0.25rem 1rem rgb(141 110 99  / 15%);
   border-radius: 8px;
@@ -107,7 +107,7 @@
 [data-theme="warm"] .btn-secondary {
   background: linear-gradient(135deg, #a1887f 0%, #8d6e63 100%);
   border-color: var(--theme-secondary);
-  color: #ffffff;
+  color: #fff;
 }
 
 [data-theme="warm"] .alert-warning {
@@ -129,7 +129,7 @@
 }
 
 [data-theme="warm"] .dropdown-menu {
-  background-color: #ffffff;
+  background-color: #fff;
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 0.5rem 1.5rem rgb(141 110 99  / 20%);
   border-radius: 6px;
@@ -202,7 +202,7 @@
 
 /* Campaign-specific styling for warm theme */
 [data-theme="warm"] .campaign-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fafafa 50%, #f5f5f5 100%);
+  background: linear-gradient(135deg, #fff 0%, #fafafa 50%, #f5f5f5 100%);
   border: 2px solid #d7ccc8;
   box-shadow: 0 0.5rem 1.5rem rgb(141 110 99  / 20%);
   border-radius: 12px;
@@ -227,7 +227,7 @@
 }
 
 [data-theme="warm"] .character-sheet {
-  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+  background: linear-gradient(135deg, #fff 0%, #fafafa 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 12px;
   box-shadow: 0 0.5rem 1rem rgb(141 110 99  / 15%);
@@ -269,7 +269,7 @@
 }
 
 [data-theme="warm"] .modal-content {
-  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+  background: linear-gradient(135deg, #fff 0%, #fafafa 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 12px;
   box-shadow: 0 1rem 3rem rgb(141 110 99  / 25%);

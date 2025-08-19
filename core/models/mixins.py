@@ -263,10 +263,11 @@ class DetailedAuditableMixin(AuditableMixin):
         """Store original field values for change tracking."""
         self._original_values = {}
         if self.pk is not None:
-            # Only store values for existing objects, but only use __dict__ to avoid recursion
-            # during Django's object loading and deletion cascade operations
+            # Only store values for existing objects, but only use __dict__
+            # to avoid recursion during Django's object loading and deletion
             for field in self._meta.concrete_fields:
-                # Only access fields that are already loaded in __dict__ to avoid deferred field loading
+                # Only access fields already loaded in __dict__ to avoid
+                # deferred field loading
                 if field.name in self.__dict__:
                     self._original_values[field.name] = self.__dict__[field.name]
 
@@ -309,7 +310,7 @@ class DetailedAuditableMixin(AuditableMixin):
                         new_value = new_value.pk
                     if hasattr(old_value, "pk"):
                         old_value = old_value.pk
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
             if old_value != new_value:
@@ -380,7 +381,7 @@ class DetailedAuditableMixin(AuditableMixin):
                         if hasattr(field, "related_model"):
                             if hasattr(value, "pk"):
                                 value = value.pk
-                    except:
+                    except (AttributeError, ValueError):
                         pass
                     initial_changes[field_name] = {"old": None, "new": value}
 

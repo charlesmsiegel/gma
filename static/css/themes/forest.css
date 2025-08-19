@@ -17,8 +17,8 @@
   /* Background Colors */
   --theme-bg-body: #f1f8e9;
   --theme-bg-surface: #e8f5e8;
-  --theme-bg-card: #ffffff;
-  --theme-bg-modal: #ffffff;
+  --theme-bg-card: #fff;
+  --theme-bg-modal: #fff;
   --theme-bg-navbar: #2d5016;
   --theme-bg-sidebar: #e8f5e8;
   --theme-bg-hover: rgb(45 80 22  / 8%);
@@ -29,8 +29,8 @@
   --theme-text-secondary: #4e342e;
   --theme-text-muted: #795548;
   --theme-text-light: #a1887f;
-  --theme-text-white: #ffffff;
-  --theme-text-inverse: #ffffff;
+  --theme-text-white: #fff;
+  --theme-text-inverse: #fff;
 
   /* Border Colors */
   --theme-border-color: #c8e6c9;
@@ -39,14 +39,14 @@
   --theme-border-focus: var(--theme-primary);
 
   /* Form Controls */
-  --theme-input-bg: #ffffff;
+  --theme-input-bg: #fff;
   --theme-input-border: #c8e6c9;
   --theme-input-focus-border: var(--theme-primary);
   --theme-input-focus-shadow: 0 0 0 0.2rem rgb(45 80 22  / 25%);
   --theme-input-placeholder: #795548;
 
   /* Navigation */
-  --theme-nav-link-color: #ffffff;
+  --theme-nav-link-color: #fff;
   --theme-nav-link-hover: #c8e6c9;
   --theme-nav-link-active: #a5d6a7;
 
@@ -70,12 +70,12 @@
 }
 
 [data-theme="forest"] .navbar-brand {
-  color: #ffffff !important;
+  color: #fff !important;
   font-weight: 600;
 }
 
 [data-theme="forest"] .card {
-  background: linear-gradient(135deg, #ffffff 0%, #f9fbe7 100%);
+  background: linear-gradient(135deg, #fff 0%, #f9fbe7 100%);
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 0.25rem 0.5rem rgb(76 175 80  / 15%);
 }
@@ -102,7 +102,7 @@
 [data-theme="forest"] .btn-secondary {
   background: linear-gradient(135deg, #8d6e63 0%, #5d4037 100%);
   border-color: var(--theme-secondary);
-  color: #ffffff;
+  color: #fff;
 }
 
 [data-theme="forest"] .alert-success {
@@ -118,7 +118,7 @@
 }
 
 [data-theme="forest"] .dropdown-menu {
-  background-color: #ffffff;
+  background-color: #fff;
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 0.5rem 1rem rgb(76 175 80  / 20%);
 }
@@ -137,7 +137,7 @@
 
 /* Campaign-specific styling for forest theme */
 [data-theme="forest"] .campaign-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f1f8e9 100%);
+  background: linear-gradient(135deg, #fff 0%, #f1f8e9 100%);
   border: 2px solid #c8e6c9;
   box-shadow: 0 0.5rem 1rem rgb(76 175 80  / 20%);
   transition: all 0.3s ease;
@@ -149,7 +149,7 @@
 }
 
 [data-theme="forest"] .character-sheet {
-  background: linear-gradient(135deg, #ffffff 0%, #f9fbe7 100%);
+  background: linear-gradient(135deg, #fff 0%, #f9fbe7 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 12px;
 }
@@ -178,7 +178,7 @@
 }
 
 [data-theme="forest"] .modal-content {
-  background: linear-gradient(135deg, #ffffff 0%, #f9fbe7 100%);
+  background: linear-gradient(135deg, #fff 0%, #f9fbe7 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 12px;
 }

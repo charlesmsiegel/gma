@@ -17,8 +17,8 @@
   /* Background Colors */
   --theme-bg-body: #fce4ec;
   --theme-bg-surface: #f3e5f5;
-  --theme-bg-card: #ffffff;
-  --theme-bg-modal: #ffffff;
+  --theme-bg-card: #fff;
+  --theme-bg-modal: #fff;
   --theme-bg-navbar: #7c4dff;
   --theme-bg-sidebar: #f3e5f5;
   --theme-bg-hover: rgb(124 77 255  / 8%);
@@ -29,8 +29,8 @@
   --theme-text-secondary: #6a1b9a;
   --theme-text-muted: #8e24aa;
   --theme-text-light: #ba68c8;
-  --theme-text-white: #ffffff;
-  --theme-text-inverse: #ffffff;
+  --theme-text-white: #fff;
+  --theme-text-inverse: #fff;
 
   /* Border Colors */
   --theme-border-color: #e1bee7;
@@ -39,14 +39,14 @@
   --theme-border-focus: var(--theme-primary);
 
   /* Form Controls */
-  --theme-input-bg: #ffffff;
+  --theme-input-bg: #fff;
   --theme-input-border: #e1bee7;
   --theme-input-focus-border: var(--theme-primary);
   --theme-input-focus-shadow: 0 0 0 0.2rem rgb(124 77 255  / 25%);
   --theme-input-placeholder: #8e24aa;
 
   /* Navigation */
-  --theme-nav-link-color: #ffffff;
+  --theme-nav-link-color: #fff;
   --theme-nav-link-hover: #f3e5f5;
   --theme-nav-link-active: #e1bee7;
 
@@ -70,13 +70,13 @@
 }
 
 [data-theme="lavender"] .navbar-brand {
-  color: #ffffff !important;
+  color: #fff !important;
   font-weight: 600;
   text-shadow: 0 1px 3px rgb(0 0 0  / 30%);
 }
 
 [data-theme="lavender"] .card {
-  background: linear-gradient(135deg, #ffffff 0%, #fce4ec 100%);
+  background: linear-gradient(135deg, #fff 0%, #fce4ec 100%);
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 0.25rem 1rem rgb(156 39 176  / 15%);
   border-radius: 16px;
@@ -117,7 +117,7 @@
 [data-theme="lavender"] .btn-secondary {
   background: linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%);
   border-color: var(--theme-secondary);
-  color: #ffffff;
+  color: #fff;
   box-shadow: 0 4px 12px rgb(142 36 170  / 40%);
 }
 
@@ -140,7 +140,7 @@
 }
 
 [data-theme="lavender"] .dropdown-menu {
-  background: linear-gradient(135deg, #ffffff 0%, #fce4ec 100%);
+  background: linear-gradient(135deg, #fff 0%, #fce4ec 100%);
   border: 1px solid var(--theme-border-color);
   box-shadow: 0 1rem 2rem rgb(156 39 176  / 20%);
   border-radius: 12px;
@@ -215,7 +215,7 @@
 
 /* Campaign-specific styling for lavender theme */
 [data-theme="lavender"] .campaign-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fce4ec 50%, #f3e5f5 100%);
+  background: linear-gradient(135deg, #fff 0%, #fce4ec 50%, #f3e5f5 100%);
   border: 2px solid #e1bee7;
   box-shadow: 0 1rem 2rem rgb(156 39 176  / 20%);
   border-radius: 20px;
@@ -244,7 +244,7 @@
 }
 
 [data-theme="lavender"] .character-sheet {
-  background: linear-gradient(135deg, #ffffff 0%, #fce4ec 100%);
+  background: linear-gradient(135deg, #fff 0%, #fce4ec 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 20px;
   box-shadow: 0 1rem 2rem rgb(124 77 255  / 15%);
@@ -288,7 +288,7 @@
 }
 
 [data-theme="lavender"] .modal-content {
-  background: linear-gradient(135deg, #ffffff 0%, #fce4ec 100%);
+  background: linear-gradient(135deg, #fff 0%, #fce4ec 100%);
   border: 2px solid var(--theme-border-color);
   border-radius: 20px;
   box-shadow: 0 2rem 4rem rgb(124 77 255  / 30%);
