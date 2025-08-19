@@ -507,6 +507,118 @@ class Equipment(models.Model):
 - **System Agnostic**: Works with any RPG system
 - **Citation Ready**: Formatted for academic-style references
 
+### SourceReference Model (Generic Source Attribution)
+
+**Location**: `core/models/sources.py:150-212`
+
+The SourceReference model provides a flexible way to link any model in the application to source books with optional page and chapter references, using Django's GenericForeignKey system for maximum flexibility.
+
+```python
+class SourceReference(TimestampedMixin, models.Model):
+    # Link to source book
+    book = ForeignKey(Book, on_delete=CASCADE, related_name="source_references")
+
+    # GenericForeignKey to link to any model
+    content_type = ForeignKey(ContentType, on_delete=CASCADE)
+    object_id = PositiveIntegerField()
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    # Optional reference details
+    page_number = PositiveIntegerField(null=True, blank=True)
+    chapter = TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["book__abbreviation", "page_number"]
+        indexes = [
+            # Optimized for object lookup
+            models.Index(fields=["content_type", "object_id"]),
+            # Optimized for book browsing
+            models.Index(fields=["book", "page_number"]),
+            # Individual field indexes
+            models.Index(fields=["content_type"]),
+            models.Index(fields=["object_id"]),
+        ]
+```
+
+**Key Features:**
+- **Universal Linking**: Can reference any model in the application via GenericForeignKey
+- **Flexible References**: Supports general book references, specific pages, or chapter citations
+- **Performance Optimized**: Multiple database indexes for efficient querying
+- **Rich Metadata**: Optional page numbers and chapter names for precise citations
+- **Cascade Safety**: Proper cleanup when books or referenced objects are deleted
+
+**Architectural Benefits:**
+
+1. **System-Wide Source Attribution**: Any model can be linked to source books without schema changes
+2. **Flexible Citation Levels**: Supports general references, page-specific citations, or chapter-based organization
+3. **Query Performance**: Optimized indexes for common access patterns
+4. **Data Integrity**: Proper foreign key relationships with cascade deletion
+5. **Future-Proof Design**: GenericForeignKey allows references to new models without changes
+
+**Common Integration Patterns:**
+
+```python
+# Character source attribution
+character = Character.objects.create(name="Mage Character")
+SourceReference.objects.create(
+    book=mage_book,
+    content_object=character,
+    page_number=65,
+    chapter="Character Creation"
+)
+
+# Equipment with source reference
+magical_item = Equipment.objects.create(name="Wand of Fireballs")
+SourceReference.objects.create(
+    book=magic_items_book,
+    content_object=magical_item,
+    page_number=127
+)
+
+# General book reference for a campaign setting
+setting = CampaignSetting.objects.create(name="Technocracy")
+SourceReference.objects.create(
+    book=technocracy_book,
+    content_object=setting
+    # No page/chapter for general reference
+)
+```
+
+**Query Optimization Patterns:**
+
+```python
+# Efficient object source lookup
+def get_object_sources(obj):
+    return SourceReference.objects.filter(
+        content_type=ContentType.objects.get_for_model(obj),
+        object_id=obj.id
+    ).select_related('book').order_by('book__abbreviation', 'page_number')
+
+# Book reference browsing
+def get_book_references(book):
+    return SourceReference.objects.filter(
+        book=book
+    ).select_related('content_type').order_by('page_number')
+
+# System-wide source analysis
+def get_system_references(system_name):
+    return SourceReference.objects.filter(
+        book__system=system_name
+    ).select_related('book', 'content_type')
+```
+
+**Performance Considerations:**
+- **Compound Indexes**: `(content_type, object_id)` for object lookup, `(book, page_number)` for browsing
+- **Select Related**: Always use `select_related('book')` for queries involving book data
+- **Prefetch Related**: Use `prefetch_related('content_object')` when accessing linked objects
+- **Content Type Caching**: Cache ContentType lookups for frequently accessed models
+
+**Future Enhancements:**
+- **Quote Storage**: Text field for storing specific quotes or excerpts
+- **Confidence Ratings**: Community validation of source accuracy
+- **Version Tracking**: Support for different book editions with same content
+- **Bulk Operations**: Management commands for importing/exporting source data
+
 ### Core Model Mixins
 
 The system provides reusable model mixins for common functionality across multiple models, with performance optimizations and comprehensive documentation.
