@@ -7,6 +7,8 @@ and references for use throughout the application.
 
 import re
 
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -143,3 +145,67 @@ class Book(TimestampedMixin, models.Model):
 
     def __str__(self):
         return f"{self.abbreviation} - {self.title}"
+
+
+class SourceReference(TimestampedMixin, models.Model):
+    """
+    Model for linking any model to a source book with page/chapter references.
+
+    This model uses a GenericForeignKey to link to any model in the application
+    and provides a ForeignKey to the Book model for source attribution.
+    """
+
+    book = models.ForeignKey(
+        Book,
+        on_delete=models.CASCADE,
+        related_name="source_references",
+        help_text="The book this reference points to",
+    )
+
+    # GenericForeignKey fields
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        help_text="The content type of the object this reference links to",
+    )
+    object_id = models.PositiveIntegerField(
+        help_text="The ID of the object this reference links to"
+    )
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    # Optional reference details
+    page_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Page number in the book (optional, positive integer)",
+    )
+    chapter = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Chapter or section name in the book (optional)",
+    )
+
+    class Meta:
+        ordering = ["book__abbreviation", "page_number"]
+        indexes = [
+            models.Index(fields=["content_type"]),
+            models.Index(fields=["object_id"]),
+            models.Index(fields=["content_type", "object_id"]),
+            models.Index(fields=["book", "page_number"]),
+        ]
+        verbose_name = "Source Reference"
+        verbose_name_plural = "Source References"
+
+    def __str__(self):
+        """Return string representation showing book and page/chapter information."""
+        parts = [str(self.book)]
+
+        # Add chapter if present (not None and not empty)
+        if self.chapter:
+            parts.append(self.chapter)
+
+        # Add page number if present
+        if self.page_number:
+            parts.append(f"p. {self.page_number}")
+
+        return ", ".join(parts)

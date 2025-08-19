@@ -8,10 +8,11 @@ from .mixins import (
     NamedModelMixin,
     TimestampedMixin,
 )
-from .sources import Book
+from .sources import Book, SourceReference
 
 __all__ = [
     "Book",
+    "SourceReference",
     "HealthCheckLog",
     "TimestampedMixin",
     "DisplayableMixin",
