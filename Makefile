@@ -138,10 +138,11 @@ test:
 test-coverage:
 	@echo "Running tests with coverage..."
 	$(GMA_ENV_PATH)/bin/python -m coverage run manage.py test --settings=gm_app.test_settings
-	$(GMA_ENV_PATH)/bin/python -m coverage combine
+	$(GMA_ENV_PATH)/bin/python -m coverage xml
 	$(GMA_ENV_PATH)/bin/python -m coverage report --precision=2 --show-missing --skip-covered
 	$(GMA_ENV_PATH)/bin/python -m coverage html
 	@echo "HTML coverage report generated at htmlcov/index.html"
+	@echo "XML coverage report generated at coverage.xml for DeepSource"
 	$(GMA_ENV_PATH)/bin/python -m coverage report --fail-under=80
 
 

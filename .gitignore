@@ -182,3 +182,5 @@ PHASE_1_ISSUES.md
 CODACY.md
 SONARQUBE.md
 DEEPSOURCE.md
+
+# Keep coverage configuration (don't ignore .coveragerc)
