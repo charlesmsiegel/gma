@@ -21,7 +21,7 @@ import json
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import requests
 
@@ -187,26 +187,26 @@ class CodacyFetcher(CodeQualityFetcher):
             category_groups[category].append(issue)
 
         output = [
-            f"# Codacy Code Quality Issues",
-            f"",
+            "# Codacy Code Quality Issues",
+            "",
             f"**Last Updated**: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}",
             f"**Total Issues**: {len(issues)}",
-            f"",
-            f"## Issue Summary",
-            f"",
-            f"### By Severity",
+            "",
+            "## Issue Summary",
+            "",
+            "### By Severity",
         ]
 
         for severity, severity_issues in severity_groups.items():
             if severity_issues:
                 output.append(f"- **{severity}**: {len(severity_issues)} issues")
 
-        output.extend([f"", f"### By Category"])
+        output.extend(["", "### By Category"])
 
         for category, category_issues in sorted(category_groups.items()):
             output.append(f"- **{category}**: {len(category_issues)} issues")
 
-        output.extend([f"", f"## Detailed Issues", f""])
+        output.extend(["", "## Detailed Issues", ""])
 
         # Output detailed issues by severity
         severity_icons = {"Error": "🔴", "Warning": "🟠", "Info": "🔵"}

@@ -231,6 +231,24 @@ class CampaignMembershipModelTest(TestCase):
                 campaign=self.campaign, user=user, role=role
             )
             # Should not raise ValidationError
+            membership.full_clean()  # This should pass without exception
+            membership.save()  # Save to verify it works
+
+            # Verify the membership was created correctly
+            self.assertEqual(membership.role, role)
+            self.assertEqual(membership.campaign, self.campaign)
+            self.assertEqual(membership.user, user)
+
+        # Test invalid role
+        invalid_user = User.objects.create_user(
+            username="invalid_test", email="invalid@test.com", password="pass123"
+        )
+        membership = CampaignMembership(
+            campaign=self.campaign, user=invalid_user, role="INVALID_ROLE"
+        )
+
+        # Should raise ValidationError for invalid role
+        with self.assertRaises(ValidationError):
             membership.full_clean()
 
 

@@ -598,7 +598,8 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
                             field_errors = exc.detail.copy()
                             field_errors.pop("non_field_errors", None)
                             field_errors["name"] = [
-                                "A character with this name already exists in this campaign."
+                                "A character with this name already exists in "
+                                "this campaign."
                             ]
                             raise serializers.ValidationError(field_errors)
             raise

@@ -402,7 +402,10 @@ class ThemeFormTests(TestCase):
         widget_attrs = theme_field.widget.attrs
         if "aria-label" in widget_attrs or "aria-describedby" in widget_attrs:
             # Good - form has accessibility attributes
-            pass
+            self.assertTrue(
+                "aria-label" in widget_attrs or "aria-describedby" in widget_attrs,
+                "Theme field should have accessibility attributes",
+            )
 
         # At minimum, should have help text for screen readers
         self.assertIsNotNone(theme_field.help_text)

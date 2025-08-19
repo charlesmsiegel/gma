@@ -1,8 +1,12 @@
 import zoneinfo
+from typing import TYPE_CHECKING
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
+
+if TYPE_CHECKING:
+    from .theme import Theme
 
 
 def validate_timezone(value: str) -> None:
@@ -107,7 +111,7 @@ class User(AbstractUser):
         # Final fallback to light theme
         return "light"
 
-    def get_theme_object(self):
+    def get_theme_object(self) -> "Theme | None":
         """
         Get the Theme object for this user.
 

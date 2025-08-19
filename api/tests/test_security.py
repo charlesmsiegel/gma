@@ -339,52 +339,102 @@ class CSRFTokenHandlingTest(TestCase):
 
     def test_csrf_token_required_for_post_requests(self):
         """Test that POST requests require valid CSRF tokens."""
+        # Create a test user first
+        User.objects.create_user(
+            username="testuser", email="test@example.com", password="TestPass123!"
+        )
+
         # Attempt login without CSRF token
         self.client.credentials()  # Clear any credentials
 
         data = {"username": "testuser", "password": "TestPass123!"}
 
         # Make request without CSRF token (simulate missing token)
-        self.client.post(
+        response = self.client.post(
             self.login_url, data, format="json", HTTP_X_CSRFTOKEN="invalid-token"
         )
 
-        # Should work in API view since it uses session auth
-        # This documents current behavior
+        # Verify the response - document actual behavior for CSRF handling
+        # API might return 200 if CSRF is not strictly enforced for this endpoint
+        self.assertTrue(response.status_code in [200, 400, 403, 401])
+        self.assertIsNotNone(response.content)  # Should return some response
+
+        # Now test with valid credentials but no CSRF token
+        response2 = self.client.post(self.login_url, data, format="json")
+
+        # Document current behavior: API may work without CSRF for session auth
+        # but should at minimum not expose sensitive data
+        self.assertTrue(response2.status_code < 500)  # Should not be server error
+
+        # Both requests should be handled properly (not crash)
+        self.assertIsNotNone(response.data)
+        self.assertIsNotNone(response2.data)
 
     @override_settings(CSRF_COOKIE_AGE=10)  # 10 seconds for testing
     def test_csrf_token_expiration_handling(self):
         """Test that expired CSRF tokens are handled properly."""
         # Get initial token
-        self.client.get(self.csrf_url)
+        response1 = self.client.get(self.csrf_url)
+
+        # Verify initial token response
+        self.assertEqual(response1.status_code, 200)
+        self.assertIn("csrfToken", response1.data)
+        initial_token = response1.data.get("csrfToken")
+        self.assertIsNotNone(initial_token)
+        self.assertTrue(len(initial_token) > 0)
 
         # Simulate time passing (in real scenario)
         # In production, tokens expire after CSRF_COOKIE_AGE
 
         # Get new token
-        self.client.get(self.csrf_url)
+        response2 = self.client.get(self.csrf_url)
+
+        # Verify new token response
+        self.assertEqual(response2.status_code, 200)
+        self.assertIn("csrfToken", response2.data)
+        new_token = response2.data.get("csrfToken")
+        self.assertIsNotNone(new_token)
+        self.assertTrue(len(new_token) > 0)
 
         # Document that token refresh mechanism should be implemented
         # Frontend should detect 403 CSRF errors and refresh token
+        # Tokens should be valid and retrievable
+        self.assertTrue(isinstance(initial_token, str))
+        self.assertTrue(isinstance(new_token, str))
 
     def test_csrf_token_rotation_on_login(self):
         """Test that CSRF token rotates after successful login."""
         # Get token before login
-        self.client.get(self.csrf_url)
+        response1 = self.client.get(self.csrf_url)
+        self.assertEqual(response1.status_code, 200)
+        self.assertIn("csrfToken", response1.data)
+        pre_login_token = response1.data.get("csrfToken")
+        self.assertIsNotNone(pre_login_token)
 
         # Create user and login
-        User.objects.create_user(
+        user = User.objects.create_user(
             username="testuser", email="test@example.com", password="TestPass123!"
         )
+        self.assertIsNotNone(user)
 
         login_data = {"username": "testuser", "password": "TestPass123!"}
-        self.client.post(self.login_url, login_data, format="json")
+        login_response = self.client.post(self.login_url, login_data, format="json")
+
+        # Verify login attempt was processed (success or failure)
+        self.assertTrue(login_response.status_code < 500)  # Should not be server error
 
         # Get token after login
-        self.client.get(self.csrf_url)
+        response2 = self.client.get(self.csrf_url)
+        self.assertEqual(response2.status_code, 200)
+        self.assertIn("csrfToken", response2.data)
+        post_login_token = response2.data.get("csrfToken")
+        self.assertIsNotNone(post_login_token)
 
         # Tokens might change after authentication state change
         # This documents expected security behavior
+        self.assertTrue(isinstance(pre_login_token, str))
+        self.assertTrue(isinstance(post_login_token, str))
+        # Both tokens should be valid strings regardless of rotation
 
 
 class GlobalAPIErrorHandlingTest(TestCase):

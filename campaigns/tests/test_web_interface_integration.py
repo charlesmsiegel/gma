@@ -290,8 +290,20 @@ class CampaignMembershipFormTest(TestCase):
                     campaign=self.campaign, invited_user=self.invitee
                 ).exists()
                 self.assertTrue(invitation_exists)
+
+                # Verify invitation details if it exists
+                if invitation_exists:
+                    invitation = CampaignInvitation.objects.get(
+                        campaign=self.campaign, invited_user=self.invitee
+                    )
+                    self.assertEqual(invitation.role, "PLAYER")
+                    self.assertEqual(invitation.message, "Join our campaign!")
+                    self.assertEqual(invitation.status, "PENDING")
+
             except ImportError:
-                pass  # Model not implemented yet
+                # Model not implemented yet - verify at least the response is handled
+                self.assertIn(response.status_code, [200, 302, 404])
+                # This documents that the form attempt was processed
 
         except Exception as e:
             # Skip gracefully if form doesn't exist yet
