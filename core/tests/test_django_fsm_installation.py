@@ -25,7 +25,7 @@ class DjangoFsm2InstallationTest(TestCase):
         """Test that basic FSM functionality works correctly."""
         from django_fsm import FSMField, transition
 
-        class TestFSMModel(models.Model):
+        class BasicTestFSMModel(models.Model):
             state = FSMField(default="draft", max_length=50)
             name = models.CharField(max_length=100, default="test")
 
@@ -41,7 +41,7 @@ class DjangoFsm2InstallationTest(TestCase):
                 app_label = "core"
 
         # Test model creation and initial state
-        obj = TestFSMModel(name="Test Object")
+        obj = BasicTestFSMModel(name="Test Object")
         self.assertEqual(obj.state, "draft")
         self.assertEqual(obj.name, "Test Object")
 
@@ -57,7 +57,7 @@ class DjangoFsm2InstallationTest(TestCase):
         """Test that django-fsm-2 integrates properly with Django."""
         from django_fsm import FSMField, transition
 
-        class TestFSMModel(models.Model):
+        class IntegrationTestFSMModel(models.Model):
             state = FSMField(default="active", max_length=50)
 
             @transition(field=state, source="active", target="inactive")
@@ -68,13 +68,13 @@ class DjangoFsm2InstallationTest(TestCase):
                 app_label = "core"
 
         # Test that the field has Django field properties
-        field = TestFSMModel._meta.get_field("state")
+        field = IntegrationTestFSMModel._meta.get_field("state")
         self.assertIsInstance(field, FSMField)
         self.assertEqual(field.default, "active")
         self.assertEqual(field.max_length, 50)
 
         # Test that Django can create the model
-        obj = TestFSMModel()
+        obj = IntegrationTestFSMModel()
         self.assertEqual(obj.state, "active")
 
         # Test transition method exists and works
