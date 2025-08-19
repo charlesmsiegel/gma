@@ -1,6 +1,18 @@
 """Test settings for Django project using SQLite."""
 
+import warnings
+
 from .settings import *  # noqa: F403,F401
+
+# Suppress pkg_resources deprecation warnings from django-polymorphic during tests
+# This is a third-party library issue - django-polymorphic uses pkg_resources
+# to get its version number, which is deprecated. This will be fixed upstream.
+warnings.filterwarnings(
+    "ignore",
+    message="pkg_resources is deprecated as an API",
+    category=UserWarning,
+    module="polymorphic",
+)
 
 # Use SQLite for testing to avoid PostgreSQL dependency
 DATABASES = {
