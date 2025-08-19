@@ -47,8 +47,10 @@ dependencies:
   # Pip dependencies (for packages not in conda)
   - pip
   - pip:
+    # Pin setuptools to avoid pkg_resources deprecation warnings
+    - setuptools<81
     # Django polymorphic for character model inheritance
-    - django-polymorphic==3.1
+    - django-polymorphic==4.1.0
     # State machine support
     - django-fsm-2>=4.0.0
     # Additional Django packages
