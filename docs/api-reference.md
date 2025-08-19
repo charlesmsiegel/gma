@@ -1105,16 +1105,26 @@ Character.objects.filter(npc=True)               # Manual filtering still works
 
 ## Source Reference API
 
-### Book Model Support
+### Book and SourceReference Models
 
-The system includes a Book model for tracking RPG source references, but API endpoints have not yet been implemented. Future API endpoints would support:
+The system includes comprehensive source reference capabilities through two related models: `Book` for tracking RPG source books, and `SourceReference` for linking any model to books with page and chapter details.
 
-**Potential Endpoints:**
-- `GET /api/books/` - List RPG source books
-- `GET /api/books/{id}/` - Get book details
+#### Book Model
+
+**Database Implementation:**
+- ✅ **Model**: Fully implemented with validation and test coverage
+- ✅ **Database Schema**: Optimized with indexes and constraints
+- ✅ **Test Coverage**: 25 comprehensive tests covering all features
+- ❌ **API Endpoints**: Not yet implemented
+- ❌ **Admin Interface**: Not yet configured
+
+**Future API Endpoints:**
+- `GET /api/books/` - List RPG source books with filtering
+- `GET /api/books/{id}/` - Get detailed book information
 - `POST /api/books/` - Create new book reference (admin only)
 - `PUT /api/books/{id}/` - Update book information (admin only)
 - `DELETE /api/books/{id}/` - Remove book reference (admin only)
+- `GET /api/books/{id}/references/` - Get all source references for a book
 
 **Book Model Structure:**
 ```json
@@ -1126,30 +1136,139 @@ The system includes a Book model for tracking RPG source references, but API end
   "edition": "20th Anniversary",
   "publisher": "Onyx Path Publishing",
   "isbn": "978-1-58846-475-3",
-  "url": "https://www.drivethrurpg.com/product/149562/Mage-the-Ascension-20th-Anniversary-Edition"
+  "url": "https://www.drivethrurpg.com/product/149562/Mage-the-Ascension-20th-Anniversary-Edition",
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
 }
 ```
 
-**Future Integration:**
-The Book model is designed for future integration with:
-- Character sheet source citations
-- Rule and spell references
-- Equipment and item sources
-- Campaign setting books
+#### SourceReference Model
 
-**Implementation Status:**
-- ✅ **Database Model**: Implemented with comprehensive test suite
+**Database Implementation:**
+- ✅ **Model**: Fully implemented with GenericForeignKey support
+- ✅ **Database Schema**: Performance-optimized with compound indexes
+- ✅ **Test Coverage**: 50 comprehensive tests covering all scenarios
 - ❌ **API Endpoints**: Not yet implemented
 - ❌ **Admin Interface**: Not yet configured
-- ❌ **Frontend Integration**: Awaiting API implementation
+
+**Future API Endpoints:**
+- `GET /api/source-references/` - List source references with filtering
+- `GET /api/source-references/{id}/` - Get specific source reference
+- `POST /api/source-references/` - Create new source reference
+- `PUT /api/source-references/{id}/` - Update source reference
+- `DELETE /api/source-references/{id}/` - Remove source reference
+- `GET /api/{model}/{id}/sources/` - Get all source references for any object
+
+**SourceReference Model Structure:**
+```json
+{
+  "id": 1,
+  "book": {
+    "id": 1,
+    "title": "Mage: The Ascension 20th Anniversary Edition",
+    "abbreviation": "M20",
+    "system": "Mage: The Ascension"
+  },
+  "content_type": "characters.character",
+  "object_id": 42,
+  "content_object": {
+    "id": 42,
+    "name": "Alexis the Technomancer",
+    "type": "MageCharacter"
+  },
+  "page_number": 65,
+  "chapter": "Character Creation",
+  "created_at": "2024-01-15T14:22:00Z",
+  "updated_at": "2024-01-15T14:22:00Z"
+}
+```
+
+**Query Parameters (Future Implementation):**
+
+Books API:
+- `system` - Filter by game system
+- `search` - Search title and abbreviation
+- `publisher` - Filter by publisher
+- `ordering` - Sort by `system`, `title`, `abbreviation`, `created_at`
+
+Source References API:
+- `book` - Filter by book ID
+- `book__system` - Filter by book's game system
+- `content_type` - Filter by content type
+- `page_number` - Filter by page number range
+- `chapter` - Search chapter names
+- `ordering` - Sort by `book__abbreviation`, `page_number`, `created_at`
+
+**Future Integration Patterns:**
+
+```json
+// Character with source references
+{
+  "id": 42,
+  "name": "Alexis the Technomancer",
+  "source_references": [
+    {
+      "book": "M20",
+      "page_number": 65,
+      "chapter": "Character Creation"
+    },
+    {
+      "book": "M20",
+      "page_number": 205,
+      "chapter": "Forces Sphere"
+    }
+  ]
+}
+
+// Equipment with source attribution
+{
+  "id": 15,
+  "name": "Wand of Fireballs",
+  "source_references": [
+    {
+      "book": "M20",
+      "page_number": 384,
+      "chapter": "Wonders and Talismans"
+    }
+  ]
+}
+
+// Spell with multiple sources
+{
+  "id": 8,
+  "name": "Mind Reading",
+  "source_references": [
+    {
+      "book": "M20",
+      "page_number": 520,
+      "chapter": "Mind Sphere"
+    },
+    {
+      "book": "MIND",
+      "page_number": 78,
+      "chapter": "Advanced Techniques"
+    }
+  ]
+}
+```
+
+**Implementation Status:**
+- ✅ **Database Models**: Both models fully implemented with comprehensive validation
+- ✅ **Test Coverage**: 75 total tests covering all features and edge cases
+- ✅ **Performance Optimization**: Database indexes for efficient queries
+- ✅ **Data Integrity**: Proper foreign keys and cascade deletion
+- ❌ **API Endpoints**: Awaiting API implementation
+- ❌ **Admin Interface**: Awaiting admin configuration
+- ❌ **Frontend Integration**: Depends on API implementation
 
 **Development Notes:**
-When implementing Book API endpoints, consider:
-- Read-only access for most users
-- Admin-only creation/modification
-- Search functionality by title, abbreviation, or system
-- Filtering by game system
-- Integration with character sheets and other content models
+
+When implementing source reference API endpoints:
+- **Security**: Read-only access for most users, admin-only modification
+- **Performance**: Use `select_related()` and `prefetch_related()` for efficient queries
+- **Filtering**: Support complex filtering by book, content type, and page ranges
+- **Validation**: Ensure positive page numbers and valid content type relationships
+- **Integration**: Provide helper endpoints for adding sources to existing objects
 
 ## Data Models
 

@@ -118,6 +118,161 @@ ORDER BY system, title;
 - Publication date tracking
 - Multi-language support for international editions
 
+### SourceReference Model
+
+**Table**: `core_sourcereference`
+
+Links any model in the application to source books with optional page and chapter references using Django's GenericForeignKey system.
+
+```sql
+CREATE TABLE core_sourcereference (
+    id SERIAL PRIMARY KEY,
+    book_id INTEGER NOT NULL REFERENCES core_book(id) ON DELETE CASCADE,
+    content_type_id INTEGER NOT NULL REFERENCES django_content_type(id) ON DELETE CASCADE,
+    object_id INTEGER NOT NULL,
+    page_number INTEGER CHECK (page_number > 0),
+    chapter TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+-- Performance indexes
+CREATE INDEX core_sourcereference_content_type_idx ON core_sourcereference (content_type_id);
+CREATE INDEX core_sourcereference_object_id_idx ON core_sourcereference (object_id);
+CREATE INDEX core_sourcereference_content_type_object_id_idx ON core_sourcereference (content_type_id, object_id);
+CREATE INDEX core_sourcereference_book_page_number_idx ON core_sourcereference (book_id, page_number);
+```
+
+**Field Specifications:**
+
+**Required Fields:**
+- `book`: ForeignKey to Book model (CASCADE delete, required)
+- `content_type`: ForeignKey to Django's ContentType (CASCADE delete, required)
+- `object_id`: PositiveIntegerField for the linked object's ID (required)
+- `content_object`: GenericForeignKey combining content_type and object_id
+
+**Optional Reference Details:**
+- `page_number`: PositiveIntegerField for specific page references (optional)
+  - Must be positive integer if provided
+  - Null allowed for general book references
+- `chapter`: TextField for chapter or section names (optional)
+  - Supports full chapter titles or section identifiers
+  - Null allowed for page-only or general references
+
+**Inherited Fields (from TimestampedMixin):**
+- `created_at`: Automatic creation timestamp (indexed)
+- `updated_at`: Automatic modification timestamp (indexed)
+
+**Business Rules:**
+- Each source reference must link to exactly one Book
+- Each source reference must link to exactly one content object via GenericForeignKey
+- Page numbers must be positive integers when provided
+- References are ordered by book abbreviation, then page number
+- Cascade deletion when referenced book or content object is deleted
+
+**Usage Patterns:**
+```sql
+-- Find all source references for a specific object
+SELECT sr.*, b.title, b.abbreviation
+FROM core_sourcereference sr
+JOIN core_book b ON sr.book_id = b.id
+JOIN django_content_type ct ON sr.content_type_id = ct.id
+WHERE ct.app_label = 'characters'
+  AND ct.model = 'character'
+  AND sr.object_id = 123;
+
+-- Find all references to a specific book
+SELECT sr.*, ct.app_label, ct.model, sr.object_id
+FROM core_sourcereference sr
+JOIN django_content_type ct ON sr.content_type_id = ct.id
+WHERE sr.book_id = 1
+ORDER BY sr.page_number;
+
+-- Find references with specific page numbers
+SELECT sr.*, b.abbreviation, sr.page_number
+FROM core_sourcereference sr
+JOIN core_book b ON sr.book_id = b.id
+WHERE sr.page_number BETWEEN 100 AND 200
+ORDER BY b.abbreviation, sr.page_number;
+
+-- Find references by chapter
+SELECT sr.*, b.title, sr.chapter
+FROM core_sourcereference sr
+JOIN core_book b ON sr.book_id = b.id
+WHERE sr.chapter ILIKE '%magic%'
+ORDER BY b.system, sr.chapter;
+```
+
+**Performance Considerations:**
+- Compound index on `(content_type_id, object_id)` for efficient object lookup
+- Compound index on `(book_id, page_number)` for book browsing
+- Individual indexes on `content_type_id` and `object_id` for general queries
+- Consider adding `book_id` index if frequently filtering by book alone
+
+**Common Query Patterns:**
+```python
+# Django ORM patterns for efficient querying
+
+# Get all source references for an object
+references = SourceReference.objects.filter(
+    content_type=ContentType.objects.get_for_model(obj),
+    object_id=obj.id
+).select_related('book').order_by('book__abbreviation', 'page_number')
+
+# Get references with specific details
+detailed_refs = SourceReference.objects.filter(
+    book__system='Mage: The Ascension',
+    page_number__isnull=False
+).select_related('book').prefetch_related('content_object')
+
+# Reverse lookup from Book to all references
+book_references = SourceReference.objects.filter(
+    book=book
+).select_related('content_type').order_by('page_number')
+```
+
+**Integration Examples:**
+
+This model enables source attribution across the entire application:
+
+```python
+# Character with source reference
+character = Character.objects.create(name="Mage Character")
+SourceReference.objects.create(
+    book=mage_book,
+    content_object=character,
+    page_number=65,
+    chapter="Character Creation"
+)
+
+# Spell with multiple source references
+spell = Spell.objects.create(name="Mind Reading")
+SourceReference.objects.create(
+    book=mage_core_book,
+    content_object=spell,
+    page_number=205
+)
+SourceReference.objects.create(
+    book=mind_sphere_guide,
+    content_object=spell,
+    chapter="Advanced Mind Magic"
+)
+
+# Campaign setting with general reference
+setting = CampaignSetting.objects.create(name="Technocracy")
+SourceReference.objects.create(
+    book=technocracy_book,
+    content_object=setting
+    # No page or chapter - general reference to entire book
+)
+```
+
+**Future Enhancements:**
+- Quote or excerpt field for storing specific text references
+- Confidence or accuracy rating for community-contributed references
+- Version tracking for references that change between book editions
+- Bulk import tools for existing source attribution data
+
 ### Core Model Mixins
 
 The GMA system provides reusable model mixins that encapsulate common functionality needed across multiple models. These mixins include performance optimizations such as database indexing and comprehensive help text.

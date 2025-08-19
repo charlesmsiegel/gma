@@ -6,12 +6,13 @@
 2. [Test-Driven Development Workflow](#test-driven-development-workflow)
 3. [Code Standards and Best Practices](#code-standards-and-best-practices)
 4. [Service Layer Development](#service-layer-development)
-5. [API Development Patterns](#api-development-patterns)
-6. [Frontend Development](#frontend-development)
-7. [Database Development](#database-development)
-8. [Testing Practices](#testing-practices)
-9. [Git Workflow](#git-workflow)
-10. [Debugging and Troubleshooting](#debugging-and-troubleshooting)
+5. [Source Reference Development](#source-reference-development)
+6. [API Development Patterns](#api-development-patterns)
+7. [Frontend Development](#frontend-development)
+8. [Database Development](#database-development)
+9. [Testing Practices](#testing-practices)
+10. [Git Workflow](#git-workflow)
+11. [Debugging and Troubleshooting](#debugging-and-troubleshooting)
 
 ## Development Environment Setup
 
@@ -805,6 +806,305 @@ def test_invalid_transitions(self):
     with self.assertRaises(TransitionNotAllowed):
         session.start_session()
 ```
+
+## Source Reference Development
+
+### Overview
+
+The source reference system provides a flexible way to link any model in the application to RPG source books with optional page and chapter references. This system consists of two models: `Book` and `SourceReference`.
+
+### Model Usage Patterns
+
+#### Basic Source Reference Creation
+
+```python
+from core.models import Book, SourceReference
+from django.contrib.contenttypes.models import ContentType
+
+# Create or get a book
+book = Book.objects.get_or_create(
+    title="Mage: The Ascension 20th Anniversary Edition",
+    abbreviation="M20",
+    defaults={
+        'system': "Mage: The Ascension",
+        'edition': "20th Anniversary",
+        'publisher': "Onyx Path Publishing"
+    }
+)[0]
+
+# Link a character to a source with page reference
+character = Character.objects.get(id=42)
+source_ref = SourceReference.objects.create(
+    book=book,
+    content_object=character,
+    page_number=65,
+    chapter="Character Creation"
+)
+```
+
+#### Query Patterns for Source References
+
+```python
+# Get all source references for an object
+def get_object_sources(obj):
+    content_type = ContentType.objects.get_for_model(obj)
+    return SourceReference.objects.filter(
+        content_type=content_type,
+        object_id=obj.id
+    ).select_related('book').order_by('book__abbreviation', 'page_number')
+
+# Get all objects referencing a specific book
+def get_book_references(book):
+    return SourceReference.objects.filter(
+        book=book
+    ).select_related('content_type').order_by('page_number')
+
+# Find references by page range
+def get_references_by_page_range(book, start_page, end_page):
+    return SourceReference.objects.filter(
+        book=book,
+        page_number__gte=start_page,
+        page_number__lte=end_page
+    ).select_related('content_type')
+
+# Search references by chapter
+def search_by_chapter(chapter_text):
+    return SourceReference.objects.filter(
+        chapter__icontains=chapter_text
+    ).select_related('book', 'content_type')
+```
+
+#### Adding Source References to Models
+
+For models that frequently need source references, consider adding helper methods:
+
+```python
+class Character(models.Model):
+    name = models.CharField(max_length=100)
+    # ... other fields
+
+    def add_source_reference(self, book, page_number=None, chapter=None):
+        """Add a source reference to this character."""
+        return SourceReference.objects.create(
+            book=book,
+            content_object=self,
+            page_number=page_number,
+            chapter=chapter
+        )
+
+    def get_source_references(self):
+        """Get all source references for this character."""
+        content_type = ContentType.objects.get_for_model(self)
+        return SourceReference.objects.filter(
+            content_type=content_type,
+            object_id=self.id
+        ).select_related('book').order_by('book__abbreviation', 'page_number')
+
+    @property
+    def primary_source(self):
+        """Get the primary (first) source reference."""
+        sources = self.get_source_references()
+        return sources.first() if sources.exists() else None
+```
+
+#### Bulk Operations
+
+```python
+# Bulk create source references for multiple objects
+def bulk_add_sources(objects, book, page_number=None, chapter=None):
+    """Add the same source reference to multiple objects."""
+    source_refs = []
+    for obj in objects:
+        content_type = ContentType.objects.get_for_model(obj)
+        source_refs.append(SourceReference(
+            book=book,
+            content_type=content_type,
+            object_id=obj.id,
+            page_number=page_number,
+            chapter=chapter
+        ))
+
+    return SourceReference.objects.bulk_create(source_refs)
+
+# Bulk update page numbers
+def update_page_numbers(source_refs, new_page):
+    """Update page numbers for multiple source references."""
+    for ref in source_refs:
+        ref.page_number = new_page
+
+    SourceReference.objects.bulk_update(source_refs, ['page_number'])
+```
+
+#### Performance Optimization
+
+```python
+# Efficient querying with related data
+def get_characters_with_sources(campaign):
+    """Get characters with their source references efficiently."""
+    return Character.objects.filter(
+        campaign=campaign
+    ).prefetch_related(
+        Prefetch(
+            'sourcereference_set',
+            queryset=SourceReference.objects.select_related('book')
+        )
+    )
+
+# Cache frequently accessed books
+from django.core.cache import cache
+
+def get_book_by_abbreviation(abbreviation):
+    """Get book with caching for frequently accessed books."""
+    cache_key = f"book_abbrev_{abbreviation}"
+    book = cache.get(cache_key)
+
+    if book is None:
+        try:
+            book = Book.objects.get(abbreviation=abbreviation)
+            cache.set(cache_key, book, 3600)  # Cache for 1 hour
+        except Book.DoesNotExist:
+            return None
+
+    return book
+```
+
+#### Template Integration
+
+```python
+# Custom template tag for displaying source references
+# core/templatetags/source_tags.py
+from django import template
+from core.models import SourceReference
+from django.contrib.contenttypes.models import ContentType
+
+register = template.Library()
+
+@register.inclusion_tag('core/source_references.html')
+def show_sources(obj):
+    """Display source references for any object."""
+    content_type = ContentType.objects.get_for_model(obj)
+    sources = SourceReference.objects.filter(
+        content_type=content_type,
+        object_id=obj.id
+    ).select_related('book')
+
+    return {'sources': sources}
+
+@register.simple_tag
+def source_citation(source_ref):
+    """Format a source reference as a citation."""
+    citation = str(source_ref.book)
+    if source_ref.chapter:
+        citation += f", {source_ref.chapter}"
+    if source_ref.page_number:
+        citation += f", p. {source_ref.page_number}"
+    return citation
+```
+
+#### API Integration Patterns
+
+```python
+# Serializer for models with source references
+class CharacterSerializer(serializers.ModelSerializer):
+    source_references = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Character
+        fields = ['id', 'name', 'description', 'source_references']
+
+    def get_source_references(self, obj):
+        sources = obj.get_source_references()
+        return [{
+            'book': source.book.abbreviation,
+            'title': source.book.title,
+            'page_number': source.page_number,
+            'chapter': source.chapter
+        } for source in sources]
+
+# API view for adding source references
+class AddSourceReferenceView(APIView):
+    def post(self, request):
+        book_id = request.data.get('book_id')
+        content_type_id = request.data.get('content_type_id')
+        object_id = request.data.get('object_id')
+        page_number = request.data.get('page_number')
+        chapter = request.data.get('chapter')
+
+        try:
+            book = Book.objects.get(id=book_id)
+            content_type = ContentType.objects.get(id=content_type_id)
+
+            source_ref = SourceReference.objects.create(
+                book=book,
+                content_type=content_type,
+                object_id=object_id,
+                page_number=page_number,
+                chapter=chapter
+            )
+
+            return Response({
+                'id': source_ref.id,
+                'book': source_ref.book.abbreviation,
+                'page_number': source_ref.page_number,
+                'chapter': source_ref.chapter
+            })
+
+        except (Book.DoesNotExist, ContentType.DoesNotExist) as e:
+            return Response({'error': str(e)}, status=400)
+```
+
+### Testing Patterns
+
+```python
+# Test source reference functionality
+class SourceReferenceTestCase(TestCase):
+    def setUp(self):
+        self.book = Book.objects.create(
+            title="Test Book",
+            abbreviation="TB",
+            system="Test System"
+        )
+        self.character = Character.objects.create(name="Test Character")
+
+    def test_create_source_reference(self):
+        """Test creating a source reference."""
+        source_ref = SourceReference.objects.create(
+            book=self.book,
+            content_object=self.character,
+            page_number=100,
+            chapter="Test Chapter"
+        )
+
+        self.assertEqual(source_ref.content_object, self.character)
+        self.assertEqual(source_ref.book, self.book)
+        self.assertEqual(source_ref.page_number, 100)
+
+    def test_query_object_sources(self):
+        """Test querying sources for an object."""
+        SourceReference.objects.create(
+            book=self.book,
+            content_object=self.character,
+            page_number=50
+        )
+
+        sources = self.character.get_source_references()
+        self.assertEqual(sources.count(), 1)
+        self.assertEqual(sources.first().page_number, 50)
+```
+
+### Best Practices
+
+1. **Always use select_related()**: When querying SourceReference, always include `select_related('book')` to avoid N+1 queries.
+
+2. **Cache frequently accessed books**: Use Django's caching framework for commonly referenced books.
+
+3. **Validate page numbers**: Ensure page numbers are positive when provided.
+
+4. **Use bulk operations**: For creating multiple source references, use `bulk_create()` for better performance.
+
+5. **Consider data migration**: When adding source references to existing data, create data migrations for bulk operations.
+
+6. **Template integration**: Create template tags for consistent source reference display across the application.
 
 ## API Development Patterns
 
