@@ -257,6 +257,6 @@ REST_FRAMEWORK = {
 # CORS_ALLOW_CREDENTIALS = True
 
 # CSRF trusted origins for production deployment
-CSRF_TRUSTED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS: list[str] = [
     # Add production domain when deploying
 ]

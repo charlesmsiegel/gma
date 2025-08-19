@@ -15,14 +15,13 @@ These tests ensure:
 """
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.test import TestCase
 from django.utils import timezone
 
 from campaigns.models import Campaign, CampaignMembership
 from characters.models import Character, CharacterAuditLog
-from core.models.mixins import AuditableMixin, NamedModelMixin, TimestampedMixin
+from core.models.mixins import NamedModelMixin, TimestampedMixin
 
 User = get_user_model()
 
@@ -167,14 +166,15 @@ class CharacterMixinApplicationTest(TestCase):
         # Test that current Character fields match what mixins would provide
 
         # TimestampedMixin field compatibility
-        character = Character.objects.create(
+        Character.objects.create(
             name="Dedup Test",
             campaign=self.campaign,
             player_owner=self.player1,
             game_system="mage",
         )
 
-        # Existing created_at and updated_at should have same properties as TimestampedMixin
+        # Existing created_at and updated_at should have same properties as
+        # TimestampedMixin
         fields = {f.name: f for f in Character._meta.get_fields()}
 
         # Check created_at field matches TimestampedMixin expectations
@@ -226,7 +226,7 @@ class CharacterMixinApplicationTest(TestCase):
         self.assertFalse(character.is_deleted)
 
     def test_enhanced_audit_system_compatibility(self):
-        """Test that enhanced AuditableMixin is compatible with existing audit system."""
+        """Test enhanced AuditableMixin compatibility with existing audit system."""
         # Create a mock enhanced auditable mixin save method
         # This simulates what will happen when AuditableMixin is applied
 
@@ -348,10 +348,10 @@ class CharacterMixinApplicationTest(TestCase):
         self.assertIsNotNone(character.updated_at)
 
     def test_migration_simulation_field_compatibility(self):
-        """Test that field types and constraints match mixin expectations for migration."""
+        """Test field types/constraints match mixin expectations for migration."""
         # This test simulates what happens during migration when fields are deduplicated
 
-        character = Character.objects.create(
+        Character.objects.create(
             name="Migration Test",
             campaign=self.campaign,
             player_owner=self.player1,
@@ -460,7 +460,7 @@ class CharacterMixinEnhancementTest(TestCase):
     def test_database_index_compatibility(self):
         """Test that database indexes will be compatible with mixins."""
         # Character model should have indexes that match or exceed mixin requirements
-        fields = {f.name: f for f in Character._meta.get_fields()}
+        Character._meta.get_fields()  # Access fields for validation
 
         # TimestampedMixin requires db_index=True on timestamp fields
         # Note: Current Character fields don't have db_index, but mixin will add it

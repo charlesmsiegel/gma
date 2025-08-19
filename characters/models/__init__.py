@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -204,11 +204,11 @@ class CharacterQuerySet(PolymorphicQuerySet):
 class CharacterManager(PolymorphicManager):
     """Custom manager for Character with query methods."""
 
-    def get_queryset(self):
+    def get_queryset(self) -> CharacterQuerySet:
         """Return the custom CharacterQuerySet, excluding soft-deleted by default."""
         return CharacterQuerySet(self.model, using=self._db).filter(is_deleted=False)
 
-    def for_campaign(self, campaign: Campaign):
+    def for_campaign(self, campaign: Campaign) -> CharacterQuerySet:
         """Get characters for a specific campaign.
 
         Args:
@@ -221,7 +221,7 @@ class CharacterManager(PolymorphicManager):
             raise ValueError("Campaign parameter cannot be None")
         return self.get_queryset().filter(campaign=campaign)
 
-    def owned_by(self, user: Optional["AbstractUser"]):
+    def owned_by(self, user: Optional["AbstractUser"]) -> CharacterQuerySet:
         """Get characters owned by a specific user.
 
         Args:
@@ -234,7 +234,9 @@ class CharacterManager(PolymorphicManager):
             return self.none()
         return self.get_queryset().filter(player_owner=user)
 
-    def editable_by(self, user: Optional["AbstractUser"], campaign: Campaign):
+    def editable_by(
+        self, user: Optional["AbstractUser"], campaign: Campaign
+    ) -> CharacterQuerySet:
         """Get characters that can be edited by a user in a campaign.
 
         Args:
@@ -266,7 +268,7 @@ class CharacterManager(PolymorphicManager):
             # Observers and others cannot edit any characters
             return self.none()
 
-    def npcs(self):
+    def npcs(self) -> CharacterQuerySet:
         """Get only NPCs (Non-Player Characters).
 
         Returns:
@@ -274,7 +276,7 @@ class CharacterManager(PolymorphicManager):
         """
         return self.get_queryset().filter(npc=True)
 
-    def player_characters(self):
+    def player_characters(self) -> CharacterQuerySet:
         """Get only Player Characters (PCs).
 
         Returns:
@@ -282,7 +284,7 @@ class CharacterManager(PolymorphicManager):
         """
         return self.get_queryset().filter(npc=False)
 
-    def with_campaign_memberships(self):
+    def with_campaign_memberships(self) -> CharacterQuerySet:
         """Get characters with prefetched campaign memberships.
 
         Returns:
@@ -570,7 +572,7 @@ class Character(
         self._original_status = self.status
 
     def refresh_from_db(
-        self, using: Optional[str] = None, fields: Optional[List[str]] = None
+        self, using: str | None = None, fields: Sequence[str] | None = None
     ) -> None:
         """Refresh the instance from the database and reset change tracking."""
         # For soft-deleted characters, we need to use all_objects manager
@@ -587,17 +589,27 @@ class Character(
             # Use all_objects but be careful with polymorphic fields
             fresh_instance = self.__class__.all_objects.using(using).get(pk=self.pk)
 
-            # Update only the requested fields or all fields
+            # Update only the requested fields or all concrete fields
             if fields is None:
-                fields = [field.name for field in self._meta.concrete_fields]
+                # Only include concrete fields (exclude reverse relations)
+                fields = [
+                    field.name
+                    for field in self._meta.get_fields()
+                    if hasattr(field, "name")
+                    and not field.many_to_many
+                    and not field.one_to_many
+                ]
 
             # Clear the related object cache to force fresh retrieval
             if hasattr(self, "_state"):
                 self._state.fields_cache.clear()
 
             for field_name in fields:
-                if hasattr(fresh_instance, field_name):
-                    setattr(self, field_name, getattr(fresh_instance, field_name))
+                if hasattr(fresh_instance, field_name) and hasattr(self, field_name):
+                    # Skip reverse foreign key relations to avoid the error
+                    field = self._meta.get_field(field_name)
+                    if not (field.one_to_many or field.many_to_many):
+                        setattr(self, field_name, getattr(fresh_instance, field_name))
 
         except self.__class__.DoesNotExist:
             # Fallback to default behavior for hard-deleted objects
