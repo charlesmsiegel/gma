@@ -704,6 +704,16 @@ class SourceReferenceErrorHandlingTest(TestCase):
         self.assertTrue(isinstance(source_ref.page_number, (int, float)))
         self.assertGreaterEqual(source_ref.page_number, 42)
 
+    def test_page_number_negative_value_rejected(self):
+        """Test that negative page numbers are properly rejected."""
+        with self.assertRaises((ValidationError, IntegrityError)):
+            with transaction.atomic():
+                SourceReference.objects.create(
+                    book=self.book,
+                    content_object=self.character,
+                    page_number=-1,  # Should be rejected by PositiveIntegerField
+                )
+
 
 class SourceReferenceQueryTest(TestCase):
     """Test querying and filtering of SourceReference model."""

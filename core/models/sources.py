@@ -89,7 +89,12 @@ class Book(TimestampedMixin, models.Model):
         Validate ISBN-10 or ISBN-13 format.
 
         Supports both formats with or without hyphens/spaces.
-        Performs checksum validation for both ISBN-10 and ISBN-13.
+        Performs industry-standard checksum validation for both formats:
+        - ISBN-10: Uses modulo-11 checksum algorithm (ISO 2108)
+        - ISBN-13: Uses modulo-10 checksum algorithm (EAN-13)
+
+        These algorithms prevent common data entry errors and ensure
+        the ISBN is mathematically valid according to international standards.
         """
         # Remove all non-digit characters except 'X' for ISBN-10
         clean_isbn = re.sub(r"[^0-9X]", "", isbn.upper())
