@@ -30,7 +30,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+try:
+    from .secrets import DEBUG  # noqa: F401
+except ImportError:
+    # Default debug mode for development only
+    DEBUG = False
 
 ALLOWED_HOSTS: List[str] = []
 
