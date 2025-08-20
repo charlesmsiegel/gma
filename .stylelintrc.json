@@ -1,0 +1,53 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-prettier"
+  ],
+  "plugins": [
+    "stylelint-scss",
+    "stylelint-order",
+    "stylelint-declaration-block-no-ignored-properties"
+  ],
+  "rules": {
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "extends",
+          "apply",
+          "tailwind",
+          "components",
+          "utilities",
+          "screen"
+        ]
+      }
+    ],
+    "color-hex-length": "short",
+    "color-function-notation": "modern",
+    "alpha-value-notation": "percentage",
+    "media-feature-range-notation": "context",
+    "declaration-block-no-redundant-longhand-properties": true,
+    "shorthand-property-no-redundant-values": true,
+    "length-zero-no-unit": true,
+    "number-max-precision": 4,
+    "no-duplicate-selectors": true,
+    "no-empty-source": null,
+    "block-no-empty": null,
+    "comment-no-empty": true,
+    "declaration-no-important": true,
+    "max-nesting-depth": 4,
+    "selector-max-compound-selectors": 4,
+    "selector-max-id": 1,
+    "order/properties-alphabetical-order": true,
+    "plugin/declaration-block-no-ignored-properties": true,
+    "custom-property-pattern": "^[a-z][a-zA-Z0-9]*(-[a-zA-Z0-9]+)*$",
+    "selector-class-pattern": "^[a-z]([a-z0-9-]+)?(__([a-z0-9]+-?)+)?(--([a-z0-9]+-?)+){0,2}$|^[a-z][a-zA-Z0-9]*$",
+    "keyframes-name-pattern": "^[a-z][a-zA-Z0-9]*(-[a-zA-Z0-9]+)*$"
+  },
+  "ignoreFiles": [
+    "**/*.min.css",
+    "**/vendor/**/*.css",
+    "**/node_modules/**/*.css",
+    "htmlcov/**/*.css"
+  ]
+}

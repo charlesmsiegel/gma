@@ -186,7 +186,7 @@
     linear-gradient(135deg, #ede7d3 0%, #e6d3a3 100%),
     repeating-linear-gradient(
       90deg,
-      rgb(139 69 19  / 5%) 0px,
+      rgb(139 69 19  / 5%) 0,
       rgb(139 69 19  / 5%) 2px,
       transparent 2px,
       transparent 4px
@@ -498,7 +498,7 @@
     linear-gradient(180deg, #f4f1e8 0%, #ede7d3 100%),
     repeating-linear-gradient(
       0deg,
-      rgb(139 69 19  / 5%) 0px,
+      rgb(139 69 19  / 5%) 0,
       rgb(139 69 19  / 5%) 1px,
       transparent 1px,
       transparent 20px

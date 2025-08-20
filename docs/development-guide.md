@@ -425,7 +425,7 @@ def my_api_view(request):
         result = service.do_something()
         return Response({"data": result})
     except ValidationError as e:
-        return APIError.validation_error(e)
+        return APIError.create_validation_error_response(e)
     except SomeModel.DoesNotExist:
         return APIError.not_found()
     except PermissionDenied:
@@ -1240,7 +1240,7 @@ class AcceptInvitationAPIView(generics.GenericAPIView):
             return Response(serializer.data)
 
         except ValidationError as e:
-            return APIError.validation_error(e)
+            return APIError.create_validation_error_response(e)
 ```
 
 ## Frontend Development

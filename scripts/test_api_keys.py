@@ -116,7 +116,7 @@ def test_sonarqube_api():
         import gm_app.secrets as secrets
 
         token = getattr(secrets, "SONARQUBE_TOKEN", None)
-    except:
+    except ImportError:
         token = os.environ.get("SONARQUBE_TOKEN")
 
     if not token:
@@ -174,7 +174,7 @@ def test_deepsource_api():
         import gm_app.secrets as secrets
 
         token = getattr(secrets, "DEEPSOURCE_TOKEN", None)
-    except:
+    except ImportError:
         token = os.environ.get("DEEPSOURCE_TOKEN")
 
     if not token:

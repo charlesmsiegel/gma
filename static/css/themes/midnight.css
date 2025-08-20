@@ -36,7 +36,7 @@
   /* Border Colors */
   --theme-border-color: #333;
   --theme-border-light: #2a2a2a;
-  --theme-border-dark: #555555;
+  --theme-border-dark: #555;
   --theme-border-focus: var(--theme-primary);
 
   /* Form Controls */

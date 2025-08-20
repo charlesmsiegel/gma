@@ -29,7 +29,7 @@
   --theme-text-primary: #000;
   --theme-text-secondary: #333;
   --theme-text-muted: #666;
-  --theme-text-light: #999999;
+  --theme-text-light: #999;
   --theme-text-white: #fff;
   --theme-text-inverse: #fff;
 
@@ -136,7 +136,7 @@
 }
 
 [data-theme="high-contrast"] .btn-danger {
-  background-color: #cc0000;
+  background-color: #c00;
   border-color: #000;
   color: #fff;
 }

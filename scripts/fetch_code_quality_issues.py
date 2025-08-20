@@ -217,7 +217,7 @@ class CodacyFetcher(CodeQualityFetcher):
                 continue
 
             icon = severity_icons.get(severity, "⚪")
-            output.extend([f"### {icon} {severity} Level Issues", f""])
+            output.extend([f"### {icon} {severity} Level Issues", ""])
 
             for i, issue in enumerate(severity_issues, 1):
                 # Extract fields according to Codacy API structure
@@ -242,7 +242,7 @@ class CodacyFetcher(CodeQualityFetcher):
                         f"- **Category**: {category}",
                         f"- **File**: `{file_path}`",
                         f"- **Line**: {line_number}",
-                        f"",
+                        "",
                     ]
                 )
 
@@ -340,12 +340,12 @@ class SonarQubeFetcher(CodeQualityFetcher):
 
         output = [
             f"# SonarQube Code Quality Issues",
-            f"",
+            "",
             f"**Last Updated**: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}",
             f"**Total Issues**: {len(issues)}",
-            f"",
+            "",
             f"## Issue Summary",
-            f"",
+            "",
             f"### By Severity",
         ]
 
@@ -353,12 +353,12 @@ class SonarQubeFetcher(CodeQualityFetcher):
             if severity_issues:
                 output.append(f"- **{severity}**: {len(severity_issues)} issues")
 
-        output.extend([f"", f"### By Type"])
+        output.extend(["", f"### By Type"])
 
         for issue_type, type_issues in sorted(type_groups.items()):
             output.append(f"- **{issue_type}**: {len(type_issues)} issues")
 
-        output.extend([f"", f"## Detailed Issues", f""])
+        output.extend(["", f"## Detailed Issues", ""])
 
         # Output detailed issues by severity
         severity_icons = {
@@ -375,7 +375,7 @@ class SonarQubeFetcher(CodeQualityFetcher):
                 continue
 
             icon = severity_icons.get(severity, "⚪")
-            output.extend([f"### {icon} {severity} Level Issues", f""])
+            output.extend([f"### {icon} {severity} Level Issues", ""])
 
             for i, issue in enumerate(severity_issues, 1):
                 component = issue.get("component", "").replace(
@@ -393,7 +393,7 @@ class SonarQubeFetcher(CodeQualityFetcher):
                         f"- **Type**: {issue_type}",
                         f"- **File**: `{component}`",
                         f"- **Line**: {line}",
-                        f"",
+                        "",
                     ]
                 )
 
@@ -573,12 +573,12 @@ class DeepSourceFetcher(CodeQualityFetcher):
 
         output = [
             f"# DeepSource Code Quality Issues",
-            f"",
+            "",
             f"**Last Updated**: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}",
             f"**Total Issues**: {len(issues)}",
-            f"",
+            "",
             f"## Issue Summary",
-            f"",
+            "",
             f"### By Type",
         ]
 
@@ -597,13 +597,13 @@ class DeepSourceFetcher(CodeQualityFetcher):
                     f"- {icon} **{type_name.title()}**: {len(type_issues)} issues"
                 )
 
-        output.extend([f"", f"### By Rule"])
+        output.extend(["", f"### By Rule"])
 
         for rule, rule_issues in sorted(rule_groups.items()):
             if len(rule_issues) > 1:
                 output.append(f"- **{rule}**: {len(rule_issues)} occurrences")
 
-        output.extend([f"", f"## All Issues", f""])
+        output.extend(["", f"## All Issues", ""])
 
         # Output all issues in order
         for i, issue in enumerate(issues, 1):
@@ -624,7 +624,7 @@ class DeepSourceFetcher(CodeQualityFetcher):
                     f"### {i}. {title}",
                     f"- **Rule**: `{shortcode}`",
                     f"- **Description**: {description}",
-                    f"",
+                    "",
                 ]
             )
 

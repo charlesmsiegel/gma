@@ -176,7 +176,7 @@
 }
 
 [data-theme="gothic"] .btn-primary:hover {
-  background: linear-gradient(135deg, #660000 0%, #4a0000 100%);
+  background: linear-gradient(135deg, #600 0%, #4a0000 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 25px rgb(139 0 0  / 60%);
   text-shadow: 0 0 10px rgb(245 245 220  / 80%);
@@ -421,7 +421,7 @@
   }
   50% {
     transform: translate(-50%, -50%) scale(1.1);
-    text-shadow: 0 0 30px rgb(139 0 0 / 1);
+    text-shadow: 0 0 30px rgb(139 0 0 / 100%);
   }
 }
 
@@ -437,8 +437,8 @@
 }
 
 [data-theme="gothic"] ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #8b0000, #660000);
-  border: 1px solid #cc3333;
+  background: linear-gradient(135deg, #8b0000, #600);
+  border: 1px solid #c33;
   box-shadow: 0 0 10px rgb(139 0 0  / 50%);
 }
 

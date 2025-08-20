@@ -151,7 +151,7 @@ class ItemMixinApplicationTest(TestCase):
 
     def test_field_deduplication_compatibility(self):
         """Test that existing fields are compatible with mixin field deduplication."""
-        item = Item.objects.create(
+        Item.objects.create(
             name="Dedup Test Item",
             description="Test description for deduplication",
             campaign=self.campaign,
@@ -238,7 +238,7 @@ class ItemMixinApplicationTest(TestCase):
     def test_field_constraint_compatibility(self):
         """Test that existing field constraints work with mixin integration."""
         # Create item to test constraints
-        item = Item.objects.create(
+        Item.objects.create(
             name="Constraint Test Item",
             description="Testing constraints",
             campaign=self.campaign,
@@ -292,7 +292,7 @@ class ItemMixinApplicationTest(TestCase):
 
     def test_migration_simulation_field_compatibility(self):
         """Test field compatibility for migration planning."""
-        item = Item.objects.create(
+        Item.objects.create(
             name="Migration Test Item",
             description="Testing migration compatibility",
             campaign=self.campaign,
@@ -397,7 +397,7 @@ class ItemMixinEnhancementTest(TestCase):
         # TimestampedMixin adds db_index=True to timestamp fields
         # This will improve query performance for date-based filtering
 
-        item = Item.objects.create(
+        Item.objects.create(
             name="Index Test Item",
             description="Testing index enhancements",
             campaign=self.campaign,
@@ -405,7 +405,7 @@ class ItemMixinEnhancementTest(TestCase):
         )
 
         # Current fields might not have indexes
-        fields = {f.name: f for f in Item._meta.get_fields()}
+        {f.name: f for f in Item._meta.get_fields()}
 
         # After mixin application, these should have indexes
         mixin_fields = {f.name: f for f in TimestampedMixin._meta.get_fields()}

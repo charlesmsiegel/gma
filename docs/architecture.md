@@ -169,7 +169,7 @@ Provides standardized error response builders:
 ```python
 # Standard error responses
 return APIError.not_found()
-return APIError.validation_error(errors)
+return APIError.create_validation_error_response(errors)
 return APIError.permission_denied_as_not_found()  # Security-focused
 ```
 
@@ -223,11 +223,13 @@ The serializer system provides consistent API responses with role-based field ex
 #### Key Serializers
 
 **CampaignDetailSerializer** (lines 240-300):
+
 - Includes memberships, members, and settings
 - Settings only exposed to campaign owners
 - Includes user role calculation
 
 **Bulk Operation Serializers** (lines 407-455):
+
 - Structured responses for bulk operations
 - Separate success and error tracking
 - Consistent error reporting format
@@ -283,6 +285,7 @@ The GMA system uses **django-fsm-2** (version 4.0.0+) for managing complex state
 #### Technology Choice Rationale
 
 **django-fsm-2 vs django-fsm:**
+
 - **Active Maintenance**: django-fsm-2 is actively maintained with Django 5.x support
 - **Enhanced Features**: Improved transition validation and error handling
 - **Better Documentation**: More comprehensive documentation and examples
@@ -378,6 +381,7 @@ INACTIVE ↔ APPROVED (deactivation/reactivation)
 ```
 
 **Transition Methods:**
+
 - `submit_for_approval()`: DRAFT → SUBMITTED (character owners only)
 - `approve()`: SUBMITTED → APPROVED (GMs/owners only)
 - `reject()`: SUBMITTED → DRAFT (GMs/owners only)
@@ -387,13 +391,16 @@ INACTIVE ↔ APPROVED (deactivation/reactivation)
 - `mark_deceased()`: APPROVED → DECEASED (GMs/owners only)
 
 **Permission Matrix:**
+
 - **Character Owners**: Can submit characters, retire their own characters
 - **GMs**: Can approve/reject/deactivate/activate/mark deceased all characters
 - **Campaign Owners**: Same permissions as GMs
 - **Players/Observers**: Read-only access
 
 **Audit Integration:**
+
 All status transitions are automatically logged via DetailedAuditableMixin, capturing:
+
 - User who performed the transition
 - Timestamp of the change
 - Old and new status values
@@ -404,11 +411,13 @@ All status transitions are automatically logged via DetailedAuditableMixin, capt
 The system includes comprehensive FSM testing:
 
 **Installation Tests** (`core/tests/test_django_fsm_installation.py`):
+
 - Package import validation
 - Basic FSM functionality
 - Django ORM integration
 
 **Character Status Tests** (`characters/tests/test_fsm_basic.py` - 28 tests):
+
 - Status field choices and defaults
 - Complete transition workflow testing
 - Permission validation for each transition
@@ -418,6 +427,7 @@ The system includes comprehensive FSM testing:
 - Role-based access control validation
 
 **Test Categories:**
+
 - **Status Field Tests**: Default values, choices validation
 - **Transition Flow Tests**: Basic approval workflow, rejection flow, reactivation
 - **Permission Tests**: Role-based transition access control
@@ -427,17 +437,20 @@ The system includes comprehensive FSM testing:
 #### Implementation Status
 
 **Completed:**
+
 - ✅ **Character Model FSM**: Full status workflow implementation with comprehensive testing
 - ✅ **Permission Integration**: Role-based transition controls
 - ✅ **Audit Trail Integration**: Automatic status change logging
 - ✅ **API Integration**: Status transitions exposed via REST endpoints
 
 **Future Phases:**
+
 1. **Phase 2**: Apply FSM to Campaign model for lifecycle management
 2. **Phase 3**: Extend to Scene model for workflow control
 3. **Phase 4**: Add complex multi-model state dependencies
 
 **Implementation Guidelines:**
+
 - Use clear, descriptive state names (e.g., 'draft', 'active', 'completed')
 - Include transition validation logic in transition methods
 - Maintain backward compatibility with existing state fields
@@ -469,6 +482,7 @@ class Book(models.Model):
 ```
 
 **Key Features:**
+
 - **Unique Constraints**: Both title and abbreviation must be unique across all systems
 - **Flexible System Support**: Not limited to World of Darkness games
 - **Citation Ready**: Designed for use in character sheets, items, and rules references
@@ -502,6 +516,7 @@ class Equipment(models.Model):
 ```
 
 **Usage Philosophy:**
+
 - **Canonical References**: Authoritative source for book information
 - **Abbreviation Standards**: Consistent short references (M20, V20, etc.)
 - **System Agnostic**: Works with any RPG system
@@ -541,6 +556,7 @@ class SourceReference(TimestampedMixin, models.Model):
 ```
 
 **Key Features:**
+
 - **Universal Linking**: Can reference any model in the application via GenericForeignKey
 - **Flexible References**: Supports general book references, specific pages, or chapter citations
 - **Performance Optimized**: Multiple database indexes for efficient querying
@@ -608,12 +624,14 @@ def get_system_references(system_name):
 ```
 
 **Performance Considerations:**
+
 - **Compound Indexes**: `(content_type, object_id)` for object lookup, `(book, page_number)` for browsing
 - **Select Related**: Always use `select_related('book')` for queries involving book data
 - **Prefetch Related**: Use `prefetch_related('content_object')` when accessing linked objects
 - **Content Type Caching**: Cache ContentType lookups for frequently accessed models
 
 **Future Enhancements:**
+
 - **Quote Storage**: Text field for storing specific quotes or excerpts
 - **Confidence Ratings**: Community validation of source accuracy
 - **Version Tracking**: Support for different book editions with same content
@@ -626,29 +644,35 @@ The system provides reusable model mixins for common functionality across multip
 #### Available Mixins
 
 **TimestampedMixin** (`core/models/mixins.py:30-56`):
+
 - Automatic `created_at` and `updated_at` fields with database indexes
 - Performance-optimized for time-based queries
 - Comprehensive help text for admin interface
 
 **DisplayableMixin** (`core/models/mixins.py:58-83`):
+
 - `is_displayed` boolean flag for visibility control
 - `display_order` integer field for custom ordering (indexed)
 - Optimized for display and sorting operations
 
 **NamedModelMixin** (`core/models/mixins.py:85-108`):
+
 - Standard `name` field with `__str__()` method implementation
 - Consistent naming across models
 
 **DescribedModelMixin** (`core/models/mixins.py:110-130`):
+
 - Optional `description` TextField for detailed information
 - Blank-allowed with empty string default
 
 **AuditableMixin** (`core/models/mixins.py:132-189`):
+
 - `created_by` and `modified_by` user tracking
 - **Enhanced save() method** with automatic user assignment
 - Performance-optimized with foreign key relationships
 
 **GameSystemMixin** (`core/models/mixins.py:191-235`):
+
 - `game_system` field with predefined choices
 - Supports World of Darkness focus with popular RPG systems
 
@@ -677,6 +701,7 @@ obj.save(user=request.user)  # Updates modified_by, preserves created_by
 All mixin fields include detailed help text visible in Django admin, API documentation, and development tools.
 
 **Usage Philosophy:**
+
 - **Performance-First**: Database indexes on commonly queried fields
 - **Developer-Friendly**: Comprehensive help text and documentation
 - **Pragmatic Design**: Only provides functionality that's actually needed
@@ -684,11 +709,13 @@ All mixin fields include detailed help text visible in Django admin, API documen
 - **Simple Design**: Avoids complex inheritance hierarchies
 
 **When to Use:**
+
 - New models that need simple timestamp tracking
 - Models without existing timestamp fields
 - Situations where standardized timestamp behavior is desired
 
 **When NOT to Use:**
+
 - Existing models (Campaign, Character) already have their own implementations
 - Models requiring custom timestamp behavior
 - Models where timestamp fields aren't needed
@@ -721,6 +748,7 @@ class Campaign(models.Model):
 ```
 
 **Key Features:**
+
 - Auto-generated unique slugs
 - Visibility filtering via custom manager
 - Performance indexes on common queries
@@ -738,6 +766,7 @@ class CampaignMembership(models.Model):
 ```
 
 **Business Rules:**
+
 - Unique constraint on (campaign, user)
 - Owner cannot be member (enforced at service layer)
 - Role validation via choices
@@ -755,6 +784,7 @@ class CampaignInvitation(models.Model):
 ```
 
 **Features:**
+
 - Automatic expiration calculation
 - Cleanup management via custom manager
 - Constraint prevents duplicate invitations
@@ -840,6 +870,7 @@ Character (Base)
 ```
 
 **Polymorphic Benefits:**
+
 - Unified queries across all character types
 - Game-system-specific fields without database table explosion
 - Type-safe casting and field access
@@ -860,6 +891,7 @@ audit_entry = character.audit_entries.filter(
 ```
 
 **Tracked Operations:**
+
 - Character creation with initial PC/NPC status
 - NPC status toggles (PC ↔ NPC conversions)
 - Ownership transfers (important for NPCs)
@@ -965,6 +997,7 @@ Character.all_objects.all()                # Including soft-deleted characters
 - **Memory Efficiency**: QuerySet lazy evaluation with optimized filters
 
 **Performance Optimizations:**
+
 - Database index on `npc` field for type filtering
 - Composite index on `(campaign, player_owner)` for character limits
 - Prefetch related data with `with_campaign_memberships()`
@@ -1015,11 +1048,13 @@ class CharacterService:
 ### Database Optimization
 
 #### Indexes
+
 - Composite indexes on frequently queried combinations
 - Performance indexes on is_active and is_public fields
 - Foreign key indexes for relationship queries
 
 #### Query Optimization
+
 - `select_related()` for single foreign keys
 - `prefetch_related()` for reverse foreign keys and many-to-many
 - Custom managers for common query patterns
@@ -1038,6 +1073,7 @@ The frontend uses a hybrid approach combining Django templates with React compon
 ### Component Architecture
 
 #### Key Components
+
 Location: `frontend/src/components/`
 
 - `LoginForm.tsx`: Enhanced authentication with validation
@@ -1055,9 +1091,11 @@ React components are embedded via data attributes:
 ```
 
 #### API Client
+
 Location: `frontend/src/services/api.ts`
 
 Provides CSRF-protected API access:
+
 - Automatic CSRF token handling
 - Consistent error handling
 - TypeScript interface definitions
@@ -1111,6 +1149,7 @@ def login_view(request):
 ```
 
 **Additional Recommendations:**
+
 - `django-ratelimit` for API endpoint protection
 - `django-axes` for login attempt monitoring
 - Infrastructure-level rate limiting (Cloudflare, nginx)

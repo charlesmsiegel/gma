@@ -1,0 +1,231 @@
+/*
+ * Accessibility Enhancement Styles
+ * Provides enhanced focus indicators, screen reader support, and improved contrast
+ */
+
+/* Skip Navigation Links */
+.skip-nav {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  z-index: 1000;
+  padding: 8px 16px;
+  background-color: var(--bs-primary);
+  color: white;
+  text-decoration: none;
+  border-radius: 0 0 4px 4px;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: all 0.3s ease;
+}
+
+.skip-nav:focus {
+  top: 0;
+  opacity: 1;
+  transform: translateY(0);
+  color: white;
+  text-decoration: none;
+}
+
+/* Enhanced Focus Indicators */
+*:focus {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* High contrast focus for interactive elements */
+.btn:focus,
+.form-control:focus,
+.form-select:focus,
+.nav-link:focus,
+.dropdown-toggle:focus {
+  outline: 3px solid var(--bs-warning);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.25);
+}
+
+/* Ensure links are distinguishable without color alone */
+a:not(.btn):not(.nav-link):not(.dropdown-item) {
+  text-decoration: underline;
+}
+
+a:not(.btn):not(.nav-link):not(.dropdown-item):hover {
+  text-decoration: none;
+}
+
+/* Screen Reader Only Content */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.sr-only:focus {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: inherit !important;
+  margin: inherit !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .btn {
+    border-width: 2px;
+  }
+
+  .form-control,
+  .form-select {
+    border-width: 2px;
+  }
+
+  .card {
+    border-width: 2px;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Enhanced Button States for Screen Readers */
+.btn[aria-pressed="true"] {
+  font-weight: bold;
+}
+
+.btn[aria-expanded="true"]::after {
+  content: " (expanded)";
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Form Validation Accessibility */
+.was-validated .form-control:invalid,
+.form-control.is-invalid {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.was-validated .form-control:valid,
+.form-control.is-valid {
+  border-color: #198754;
+  box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+/* Alert Accessibility */
+.alert {
+  border-left: 4px solid currentColor;
+}
+
+.alert-success {
+  border-left-color: #198754;
+}
+
+.alert-danger {
+  border-left-color: #dc3545;
+}
+
+.alert-warning {
+  border-left-color: #ffc107;
+}
+
+.alert-info {
+  border-left-color: #0dcaf0;
+}
+
+/* Loading States */
+.loading {
+  position: relative;
+}
+
+.loading::after {
+  content: "Loading...";
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Table Accessibility */
+table {
+  caption-side: top;
+}
+
+th[scope="col"],
+th[scope="row"] {
+  font-weight: 600;
+}
+
+/* Navigation Accessibility */
+.navbar-nav .nav-link[aria-current="page"] {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* Pagination Accessibility */
+.pagination .page-link[aria-current="page"] {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+/* Modal Accessibility */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+/* Dropdown Accessibility */
+.dropdown-menu .dropdown-item:focus {
+  background-color: var(--bs-primary);
+  color: white;
+}
+
+/* Error State Announcements */
+.form-error-live {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Status Messages */
+.status-message {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Enhanced Breadcrumb Navigation */
+.breadcrumb-item + .breadcrumb-item::before {
+  content: "→";
+  font-weight: bold;
+}
+
+.breadcrumb-item.active {
+  font-weight: 600;
+}

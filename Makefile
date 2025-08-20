@@ -23,6 +23,9 @@ help:
 	@echo "  health-check   - Test database and Redis connections"
 	@echo "  test           - Run all tests"
 	@echo "  test-coverage  - Run tests with coverage report"
+	@echo "  lint-css       - Run CSS linting with automatic fixes"
+	@echo "  lint-css-check - Check CSS without fixing"
+	@echo "  setup-frontend - Install frontend dependencies"
 	@echo "  stop-all       - Stop all services (PostgreSQL, Redis)"
 	@echo "  clean          - Alias for stop-all"
 
@@ -219,3 +222,24 @@ pristine:
 	@echo "🔄 To get back to working state, run:"
 	@echo "   make reset-dev    # Recreate DB, migrations, and superuser"
 	@echo "   make runserver    # Start development environment"
+
+setup-frontend:
+	@echo "Installing frontend dependencies..."
+	@if command -v npm >/dev/null 2>&1; then \
+		npm install; \
+		echo "✅ Frontend dependencies installed"; \
+	else \
+		echo "❌ npm not found. Please install Node.js and npm first."; \
+		echo "   Visit: https://nodejs.org/"; \
+		exit 1; \
+	fi
+
+lint-css: setup-frontend
+	@echo "Running CSS linting with automatic fixes..."
+	@npm run lint:css
+	@echo "✅ CSS linting complete"
+
+lint-css-check: setup-frontend
+	@echo "Checking CSS without fixing..."
+	@npm run lint:css-check
+	@echo "✅ CSS check complete"

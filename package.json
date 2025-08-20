@@ -1,0 +1,33 @@
+{
+  "name": "gma-frontend-tools",
+  "version": "1.0.0",
+  "description": "Frontend development tools for Game Master Application",
+  "private": true,
+  "scripts": {
+    "lint:css": "stylelint 'static/**/*.css' --fix",
+    "lint:css-check": "stylelint 'static/**/*.css'",
+    "lint:css-report": "stylelint 'static/**/*.css' --formatter json --output-file stylelint-report.json",
+    "format:css": "stylelint 'static/**/*.css' --fix"
+  },
+  "devDependencies": {
+    "stylelint": "^15.11.0",
+    "stylelint-config-standard": "^34.0.0",
+    "stylelint-config-prettier": "^9.0.5",
+    "stylelint-scss": "^5.3.1",
+    "stylelint-order": "^6.0.3",
+    "stylelint-declaration-block-no-ignored-properties": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "css",
+    "linting",
+    "frontend",
+    "django",
+    "rpg"
+  ],
+  "author": "GMA Development Team",
+  "license": "MIT"
+}

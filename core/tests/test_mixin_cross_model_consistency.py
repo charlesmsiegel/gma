@@ -800,7 +800,7 @@ class CrossModelAPIConsistencyTest(TestCase):
     def test_queryset_api_consistency_readiness(self):
         """Test that QuerySet APIs will be consistent after mixin application."""
         # Create test data
-        character = Character.objects.create(
+        Character.objects.create(
             name="QuerySet Test Character",
             description="Character for QuerySet testing",
             campaign=self.campaign,
@@ -808,14 +808,14 @@ class CrossModelAPIConsistencyTest(TestCase):
             game_system="mage",
         )
 
-        item = Item.objects.create(
+        Item.objects.create(
             name="QuerySet Test Item",
             description="Item for QuerySet testing",
             campaign=self.campaign,
             created_by=self.player1,
         )
 
-        location = Location.objects.create(
+        Location.objects.create(
             name="QuerySet Test Location",
             description="Location for QuerySet testing",
             campaign=self.campaign,

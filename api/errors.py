@@ -22,22 +22,24 @@ from django.db.models import Model, QuerySet
 from rest_framework import status
 from rest_framework.response import Response
 
+from api.messages import ErrorMessages
+
 User = get_user_model()
 
 
 class APIError:
     """Standard API error response builder."""
 
-    # Standard error messages - generic to prevent information leakage
-    RESOURCE_NOT_FOUND = "Resource not found."
-    PERMISSION_DENIED = "Permission denied."
-    VALIDATION_ERROR = "Validation error."
-    BAD_REQUEST = "Bad request."
-    UNAUTHORIZED = "Authentication required."
+    # Standard error messages - use centralized ErrorMessages
+    RESOURCE_NOT_FOUND = ErrorMessages.RESOURCE_NOT_FOUND
+    PERMISSION_DENIED = ErrorMessages.PERMISSION_DENIED
+    VALIDATION_ERROR = ErrorMessages.VALIDATION_ERROR
+    BAD_REQUEST = ErrorMessages.BAD_REQUEST
+    UNAUTHORIZED = ErrorMessages.UNAUTHORIZED
 
-    # Field validation messages
-    FIELD_REQUIRED = "This field is required."
-    FIELD_INVALID = "This field is invalid."
+    # Field validation messages - use centralized ErrorMessages
+    FIELD_REQUIRED = ErrorMessages.FIELD_REQUIRED
+    FIELD_INVALID = ErrorMessages.FIELD_INVALID
 
     @staticmethod
     def not_found(detail: Optional[str] = None) -> Response:
@@ -56,7 +58,7 @@ class APIError:
         )
 
     @staticmethod
-    def permission_denied(detail: Optional[str] = None) -> Response:
+    def create_permission_denied_response(detail: Optional[str] = None) -> Response:
         """
         Return a standard 403 Permission Denied response.
 
@@ -93,7 +95,7 @@ class APIError:
         )
 
     @staticmethod
-    def bad_request(detail: Optional[str] = None) -> Response:
+    def create_bad_request_response(detail: Optional[str] = None) -> Response:
         """
         Return a standard 400 Bad Request response.
 
@@ -109,7 +111,7 @@ class APIError:
         )
 
     @staticmethod
-    def validation_error(
+    def create_validation_error_response(
         errors: Union[Dict[str, List[str]], str, DjangoValidationError],
     ) -> Response:
         """
@@ -158,7 +160,7 @@ class APIError:
             )
 
     @staticmethod
-    def unauthorized(detail: Optional[str] = None) -> Response:
+    def create_unauthorized_response(detail: Optional[str] = None) -> Response:
         """
         Return a standard 401 Unauthorized response.
 
@@ -172,6 +174,60 @@ class APIError:
             {"detail": detail or APIError.UNAUTHORIZED},
             status=status.HTTP_401_UNAUTHORIZED,
         )
+
+    # Deprecated aliases for backward compatibility
+    # TODO: Remove these in a future version after updating all references
+    @staticmethod
+    def permission_denied(detail: Optional[str] = None) -> Response:
+        """Deprecated: Use create_permission_denied_response() instead."""
+        import warnings
+
+        warnings.warn(
+            "permission_denied() is deprecated. "
+            "Use create_permission_denied_response() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return APIError.create_permission_denied_response(detail)
+
+    @staticmethod
+    def bad_request(detail: Optional[str] = None) -> Response:
+        """Deprecated: Use create_bad_request_response() instead."""
+        import warnings
+
+        warnings.warn(
+            "bad_request() is deprecated. "
+            "Use create_bad_request_response() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return APIError.create_bad_request_response(detail)
+
+    @staticmethod
+    def validation_error(
+        errors: Union[Dict[str, List[str]], str, DjangoValidationError],
+    ) -> Response:
+        """Deprecated: Use create_validation_error_response() instead."""
+        import warnings
+
+        warnings.warn(
+            "validation_error() is deprecated. Use create_validation_error_response() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return APIError.create_validation_error_response(errors)
+
+    @staticmethod
+    def unauthorized(detail: Optional[str] = None) -> Response:
+        """Deprecated: Use create_unauthorized_response() instead."""
+        import warnings
+
+        warnings.warn(
+            "unauthorized() is deprecated. Use create_unauthorized_response() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return APIError.create_unauthorized_response(detail)
 
 
 class FieldValidator:
@@ -190,7 +246,7 @@ class FieldValidator:
             None if valid, or error dict if field is missing/empty.
         """
         if not value:
-            return {field_name: [APIError.FIELD_REQUIRED]}
+            return {field_name: [ErrorMessages.FIELD_REQUIRED]}
         return None
 
     @staticmethod
@@ -310,7 +366,7 @@ def handle_django_validation_error(e: DjangoValidationError) -> Response:
     Returns:
         Standardized API error response.
     """
-    return APIError.validation_error(e)
+    return APIError.create_validation_error_response(e)
 
 
 def handle_common_api_exceptions(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -335,6 +391,8 @@ def handle_common_api_exceptions(func: Callable[..., Any]) -> Callable[..., Any]
         except Exception:
             # Log unexpected errors but don't leak details
             # TODO: Add proper logging here
-            return APIError.bad_request("An error occurred processing your request.")
+            return APIError.create_bad_request_response(
+                "An error occurred processing your request."
+            )
 
     return wrapper

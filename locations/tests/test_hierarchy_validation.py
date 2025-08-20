@@ -12,7 +12,7 @@ Tests cover:
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
@@ -394,7 +394,7 @@ class LocationHierarchyValidationTest(TestCase):
             try:
                 # Delete the object to prevent constraint violations during teardown
                 Location.objects.filter(pk=location_to_cleanup.pk).delete()
-            except Exception:
+            except (Location.DoesNotExist, IntegrityError, DatabaseError):
                 pass  # Ignore cleanup errors
 
         self.assertTrue(

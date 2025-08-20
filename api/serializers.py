@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from rest_framework import serializers
 
+from api.messages import ErrorMessages
 from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
 from characters.models import Character
 
@@ -659,7 +660,7 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
 
                 if existing_qs.exists():
                     raise serializers.ValidationError(
-                        "A character with this name already exists in this campaign."
+                        ErrorMessages.CHARACTER_NAME_EXISTS_IN_CAMPAIGN
                     )
 
         return name
@@ -690,7 +691,7 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
             # Get the user from context
             request = self.context.get("request")
             if not request or not request.user.is_authenticated:
-                raise serializers.ValidationError("Authentication required.")
+                raise serializers.ValidationError(ErrorMessages.UNAUTHORIZED)
 
             user = request.user
 
@@ -740,128 +741,149 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
         from django.core.exceptions import ValidationError
         from django.db import IntegrityError
 
-        from characters.models import MageCharacter, WoDCharacter
-
         request = self.context.get("request")
         campaign = validated_data["campaign"]
 
+        # Step 1: Prepare data
+        prepared_data = self._prepare_character_data(validated_data, request, campaign)
+
+        # Step 2: Create character
+        try:
+            character = self._create_character_instance(prepared_data)
+            character.save(audit_user=request.user)
+            return character
+        except (IntegrityError, ValidationError) as e:
+            raise self._handle_creation_error(e)
+
+    def _prepare_character_data(self, validated_data, request, campaign):
+        """Extract and prepare character data for creation."""
         # Set player_owner and game_system
         validated_data["player_owner"] = request.user
         validated_data["game_system"] = campaign.game_system
 
         # Extract character type and polymorphic fields
         character_type = validated_data.pop("character_type", "Character")
+        polymorphic_fields = self._extract_polymorphic_fields(
+            validated_data, character_type
+        )
+
+        return {
+            "base_data": validated_data,
+            "character_type": character_type,
+            "polymorphic_fields": polymorphic_fields,
+        }
+
+    def _extract_polymorphic_fields(self, validated_data, character_type):
+        """Extract type-specific fields based on character type."""
         polymorphic_fields = {}
 
-        # Extract type-specific fields
         if character_type == "MageCharacter":
-            for field in ["willpower", "arete", "quintessence", "paradox"]:
-                if field in validated_data:
-                    polymorphic_fields[field] = validated_data.pop(field)
+            fields_to_extract = ["willpower", "arete", "quintessence", "paradox"]
         elif character_type == "WoDCharacter":
-            for field in ["willpower"]:
-                if field in validated_data:
-                    polymorphic_fields[field] = validated_data.pop(field)
+            fields_to_extract = ["willpower"]
+        else:
+            fields_to_extract = []
 
-        # Create character with audit user
-        try:
-            # Choose the right model class based on character_type
-            if character_type == "MageCharacter":
-                character = MageCharacter(**validated_data, **polymorphic_fields)
-            elif character_type == "WoDCharacter":
-                character = WoDCharacter(**validated_data, **polymorphic_fields)
-            else:
-                character = Character(**validated_data)
+        for field in fields_to_extract:
+            if field in validated_data:
+                polymorphic_fields[field] = validated_data.pop(field)
 
-            character.save(audit_user=request.user)
-            return character
-        except IntegrityError as e:
-            error_message = str(e)
-            if (
-                "unique_character_name_per_campaign" in error_message
-                or "duplicate key value violates unique constraint"
-                in error_message.lower()
-                or "campaign_id" in error_message.lower()
-                and "name" in error_message.lower()
-            ):
+        return polymorphic_fields
+
+    def _create_character_instance(self, prepared_data):
+        """Create the appropriate character model instance."""
+        from characters.models import MageCharacter, WoDCharacter
+
+        character_type = prepared_data["character_type"]
+        base_data = prepared_data["base_data"]
+        polymorphic_fields = prepared_data["polymorphic_fields"]
+
+        if character_type == "MageCharacter":
+            return MageCharacter(**base_data, **polymorphic_fields)
+        elif character_type == "WoDCharacter":
+            return WoDCharacter(**base_data, **polymorphic_fields)
+        else:
+            return Character(**base_data)
+
+    def _handle_creation_error(self, error):
+        """Handle and transform creation errors into appropriate validation errors."""
+        from django.core.exceptions import ValidationError
+        from django.db import IntegrityError
+
+        if isinstance(error, IntegrityError):
+            return self._handle_integrity_error(error)
+        elif isinstance(error, ValidationError):
+            return self._handle_validation_error(error)
+        else:
+            raise error
+
+    def _handle_integrity_error(self, error):
+        """Handle database integrity constraint violations."""
+        error_message = str(error)
+        if self._is_name_uniqueness_error(error_message):
+            raise serializers.ValidationError(
+                {"name": [ErrorMessages.CHARACTER_NAME_EXISTS_IN_CAMPAIGN]}
+            )
+        raise error
+
+    def _handle_validation_error(self, error):
+        """Handle Django model validation errors."""
+        if hasattr(error, "error_dict"):
+            return self._handle_error_dict(error.error_dict)
+
+        # Handle single error messages
+        if hasattr(error, "message"):
+            error_msg = str(error.message)
+            if self._is_name_uniqueness_message(error_msg):
                 raise serializers.ValidationError(
-                    {
-                        "name": [
-                            "A character with this name already exists in this "
-                            "campaign."
-                        ]
-                    }
+                    {"name": [ErrorMessages.CHARACTER_NAME_EXISTS_IN_CAMPAIGN]}
                 )
-            raise
-        except ValidationError as e:
-            # Handle Django model validation errors
-            if hasattr(e, "error_dict"):
-                # Check for name-specific errors first
-                if "name" in e.error_dict:
-                    raise serializers.ValidationError(
-                        {"name": [str(error) for error in e.error_dict["name"]]}
-                    )
-                # Check for constraint violations in non_field_errors
-                elif "__all__" in e.error_dict:
-                    for error in e.error_dict["__all__"]:
-                        error_msg = str(error)
-                        if (
-                            (
-                                "Campaign and Name" in error_msg
-                                and "unique" in error_msg.lower()
-                            )
-                            or (
-                                "fields campaign, name must make a unique set"
-                                in error_msg
-                            )
-                            or ("campaign, name must make a unique set" in error_msg)
-                            or (
-                                "The fields campaign, name must make a unique set"
-                                in error_msg
-                            )
-                        ):
-                            raise serializers.ValidationError(
-                                {
-                                    "name": [
-                                        "A character with this name already exists "
-                                        "in this campaign."
-                                    ]
-                                }
-                            )
-            # Check for single error messages as well
-            if hasattr(e, "message"):
-                error_msg = str(e.message)
-                if "Campaign and Name" in error_msg and "unique" in error_msg.lower():
-                    raise serializers.ValidationError(
-                        {
-                            "name": [
-                                "A character with this name already exists "
-                                "in this campaign."
-                            ]
-                        }
-                    )
-            # Handle error message lists for model constraint violations
-            error_messages = []
-            if hasattr(e, "messages"):
-                error_messages = e.messages
-            elif hasattr(e, "message"):
-                error_messages = [e.message]
 
-            # Check each error message for uniqueness constraint violations
-            for msg in error_messages:
-                if "fields campaign, name must make a unique set" in str(
-                    msg
-                ) or "The fields campaign, name must make a unique set" in str(msg):
+        # Handle error message lists
+        error_messages = getattr(error, "messages", [getattr(error, "message", None)])
+        for msg in error_messages:
+            if msg and self._is_name_uniqueness_message(str(msg)):
+                raise serializers.ValidationError(
+                    {"name": [ErrorMessages.CHARACTER_NAME_EXISTS_IN_CAMPAIGN]}
+                )
+
+        # Re-raise the original error if we can't handle it
+        raise error
+
+    def _handle_error_dict(self, error_dict):
+        """Handle error dictionaries from Django validation errors."""
+        # Check for name-specific errors first
+        if "name" in error_dict:
+            raise serializers.ValidationError(
+                {"name": [str(error) for error in error_dict["name"]]}
+            )
+
+        # Check for constraint violations in non_field_errors
+        if "__all__" in error_dict:
+            for error in error_dict["__all__"]:
+                error_msg = str(error)
+                if self._is_name_uniqueness_message(error_msg):
                     raise serializers.ValidationError(
-                        {
-                            "name": [
-                                "A character with this name already exists "
-                                "in this campaign."
-                            ]
-                        }
+                        {"name": [ErrorMessages.CHARACTER_NAME_EXISTS_IN_CAMPAIGN]}
                     )
-            # Re-raise the original error if we can't handle it
-            raise
+
+    def _is_name_uniqueness_error(self, error_message):
+        """Check if error message indicates a name uniqueness constraint violation."""
+        error_lower = error_message.lower()
+        return (
+            "unique_character_name_per_campaign" in error_message
+            or "duplicate key value violates unique constraint" in error_lower
+            or ("campaign_id" in error_lower and "name" in error_lower)
+        )
+
+    def _is_name_uniqueness_message(self, error_msg):
+        """Check if error message indicates name uniqueness violation."""
+        return (
+            ("Campaign and Name" in error_msg and "unique" in error_msg.lower())
+            or "fields campaign, name must make a unique set" in error_msg
+            or "campaign, name must make a unique set" in error_msg
+            or "The fields campaign, name must make a unique set" in error_msg
+        )
 
     def update(self, instance, validated_data):
         """Update character with audit trail."""

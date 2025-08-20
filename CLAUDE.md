@@ -9,6 +9,7 @@ Game Master Application (GMA) - A web-based tabletop RPG campaign management sys
 ## Technology Stack
 
 ### Backend
+
 - **Django 5.2.4+** with Django REST Framework for API development
 - **Django Channels** for WebSocket support (real-time chat)
 - **PostgreSQL 16** as primary database
@@ -17,17 +18,20 @@ Game Master Application (GMA) - A web-based tabletop RPG campaign management sys
 - **django-fsm-2** for state machine management
 
 ### Frontend
+
 - **Django Templates** with Bootstrap 5 for responsive UI
 - **Vanilla JavaScript** for interactive features
 - **WebSocket integration** for real-time features
 
 ### Development Environment
+
 - **Conda** for environment management
 - **Python 3.11**
 
 ## Development Commands
 
 ### Environment Setup
+
 ```bash
 # Create and activate conda environment
 conda env create -f environment.yml
@@ -36,6 +40,7 @@ conda activate gma
 ```
 
 ### Django Commands
+
 ```bash
 # Create migration files (ensures PostgreSQL is running)
 make makemigrations
@@ -94,6 +99,12 @@ djlint --check templates/                     # Django template linting
 djlint --reformat templates/                  # Format Django templates
 bandit -r . -f json                          # Security scanning
 
+# CSS linting and formatting
+make setup-frontend                           # Install Node.js dependencies (one-time setup)
+make lint-css                                # Run CSS linting with automatic fixes
+make lint-css-check                          # Check CSS without making changes
+npm run lint:css-report                      # Generate JSON report for CI/CD
+
 # Create new Django app
 python manage.py startapp <app_name>
 
@@ -137,8 +148,8 @@ python manage.py createsuperuser           # Create admin user (if not exists)
 make stop-all                              # Stop PostgreSQL and Redis
 ```
 
-
 ### Database Commands
+
 ```bash
 # Start PostgreSQL (if not running as service)
 pg_ctl start -D $CONDA_PREFIX/var/postgres
@@ -153,6 +164,7 @@ psql -U postgres
 ## Architecture Overview
 
 ### Service Layer Architecture
+
 The project uses a **Service Layer Pattern** to separate business logic from views and forms:
 
 - **Services** (`campaigns/services.py`): Business logic for complex operations
@@ -166,12 +178,17 @@ The project uses a **Service Layer Pattern** to separate business logic from vie
   - Services provide a consistent interface for both web views and API endpoints
 
 ### API Architecture
+
 The API has been refactored for modularity and standardization:
 
 - **Error Handling** (`api/errors.py`): Standardized error responses with security focus
   - `APIError`: Consistent error response builders (not_found, validation_error, etc.)
   - `FieldValidator`: Field validation helpers with standardized messages
   - `SecurityResponseHelper`: Security-focused responses that prevent information leakage
+- **Centralized Messages** (`api/messages.py`): Single source of truth for error messages
+  - `ErrorMessages`: Centralized error messages for consistent API responses
+  - `FieldErrorMessages`: Field-specific error message builders
+  - Prevents duplicate error strings and ensures consistency across all API endpoints
 - **Modular View Structure** (`api/views/`):
   - `campaigns/`: Campaign-related API views (list, search, invitations)
   - `memberships/`: Membership management views (bulk operations, member management)
@@ -182,6 +199,7 @@ The API has been refactored for modularity and standardization:
   - Bulk operation response formats with success/error tracking
 
 ### Permission System Simplification
+
 Consolidated permission checking with consistent patterns:
 
 - **CampaignManagementMixin**: Template view permission checking
@@ -190,6 +208,7 @@ Consolidated permission checking with consistent patterns:
 - **Consistent Access Control**: `campaign.get_user_role(user)` for role checking
 
 ### Django App Structure
+
 The project follows a domain-driven monolithic architecture with these Django apps:
 
 - **users**: Authentication, profiles, campaign role management
@@ -202,10 +221,13 @@ The project follows a domain-driven monolithic architecture with these Django ap
 - **core**: Front page, utilities, base templates, management commands, source references (Book model)
 
 #### Internal Structure
+
 The models, views, urls, and tests modules in every app should be managed as python modules rather than individual files.
 
 ### Character Model Hierarchy
+
 Uses django-polymorphic for game system inheritance:
+
 ```
 Character (base)
 └── WoDCharacter
@@ -213,12 +235,14 @@ Character (base)
 ```
 
 ### Real-Time Architecture
+
 - Character-based scene architecture
 - Single WebSocket connection per player
 - Dynamic subscriptions to multiple scene channels
 - Django Channels for WebSocket message routing
 
 ### API Design
+
 - Flat URL patterns with query parameter filtering
 - Example: `/api/scenes/?campaign_id={id}`
 - WebSocket messages mirror REST API data structures
@@ -228,6 +252,7 @@ Character (base)
 ## Test-Driven Development Workflow
 
 ### Testing Philosophy
+
 The project follows strict **Test-Driven Development (TDD)** principles:
 
 1. **Write Tests First**: All features start with comprehensive test coverage
@@ -236,6 +261,7 @@ The project follows strict **Test-Driven Development (TDD)** principles:
 4. **Comprehensive Coverage**: Aim for 80%+ test coverage with quality over quantity
 
 ### Test Structure
+
 Tests are organized by functionality and complexity:
 
 - **Unit Tests**: Individual model methods, service functions, utility functions
@@ -244,12 +270,14 @@ Tests are organized by functionality and complexity:
 - **Security Tests**: Authentication, authorization, data leakage prevention
 
 ### Test Categories by App
+
 - **campaigns/tests/**: Campaign models, membership, invitations, permissions
 - **api/tests/**: API endpoints, error handling, security, serializers
 - **users/tests/**: Authentication, user management, profile operations
 - **core/tests/**: Management commands, health checks, WebSocket connections, django-fsm-2 integration, Book model tests
 
 ### Running Tests
+
 ```bash
 make test                   # Run all tests
 make test-coverage          # Run with coverage report
@@ -260,6 +288,7 @@ python -m coverage html     # Generate detailed HTML report
 ALWAYS use `make test` it will check all tests to avoid regressions and you will always have permission
 
 ### Test Patterns
+
 - **Service Testing**: Test business logic separately from HTTP layer
 - **API Testing**: Use DRF test client for endpoint validation
 - **Permission Testing**: Verify role-based access controls
@@ -268,21 +297,25 @@ ALWAYS use `make test` it will check all tests to avoid regressions and you will
 ## Development Phases
 
 ### Phase 1: Generic Campaign Infrastructure
+
 - Basic campaign creation and management
 - Scene creation with chat (no dice)
 - Base Character model setup
 
 ### Phase 2: World of Darkness Foundation
+
 - WoD character base class
 - WoD dice rolling system
 - Game system selection
 
 ### Phase 3: Mage Implementation
+
 - Full Mage: the Ascension character sheets
 - Sphere magic mechanics
 - Character advancement workflow
 
 ### Phase 4: Polish & Production
+
 - Scene closure workflows
 - Performance optimization
 - Production deployment
@@ -298,17 +331,21 @@ ALWAYS use `make test` it will check all tests to avoid regressions and you will
 ## Security Considerations
 
 ### Authentication Security
+
 - Authentication views implement secure error messages that don't reveal user existence
 - Case-insensitive email validation prevents duplicate accounts
 - Password reset tokens expire in 3 days (Django default)
 
 ### Rate Limiting (Production Recommendation)
+
 For production deployment, implement rate limiting to prevent brute force attacks:
+
 - **django-ratelimit**: Decorator-based rate limiting for views
 - **django-axes**: Comprehensive login attempt tracking and blocking
 - **Infrastructure**: Cloudflare, nginx, or load balancer rate limiting
 
 Example django-ratelimit implementation:
+
 ```python
 from django_ratelimit.decorators import ratelimit
 
@@ -322,18 +359,70 @@ def login_view(request):
 The project uses Django templates with Bootstrap 5 and vanilla JavaScript for interactive features:
 
 ### Architecture
+
 - **Template-based**: Django templates with Bootstrap 5 for responsive UI
 - **Progressive enhancement**: JavaScript enhances forms and provides AJAX functionality
 - **API integration**: JavaScript uses Django REST API endpoints for dynamic features
 - **CSRF protection**: Manual CSRF token handling for secure AJAX requests
 
 ### JavaScript Structure
+
 - **Base JavaScript**: `static/js/base.js` for common functionality (theme switching, AJAX helpers)
+- **Enhanced JavaScript**: `static/js/enhanced-base.js` with modern standards and improved error handling
 - **Page-specific scripts**: Additional JavaScript files for complex interactions
 - **Fetch API**: Modern JavaScript for API communication instead of jQuery
 - **Bootstrap 5**: For responsive components and interactions
 
+### JavaScript Quality Standards
+
+- **Modern ES6+ Features**: Comprehensive use of const/let, arrow functions, async/await, and template literals
+- **Error Handling**: Robust try-catch blocks, timeout handling, and graceful degradation
+- **Performance Optimization**: Debouncing, throttling, and efficient DOM manipulation
+- **Security Implementation**: XSS prevention, input sanitization, and CSRF token handling
+- **Accessibility Integration**: Screen reader announcements, keyboard navigation, and ARIA state management
+- **Code Organization**: Class-based architecture, module patterns, and centralized configuration
+- **Standards Documentation**: Complete guide in `docs/javascript-standards.md` with examples and anti-patterns
+
+### CSS Quality and Linting
+
+- **Stylelint Configuration**: Comprehensive CSS linting with `.stylelintrc.json`
+  - Modern CSS standards (short hex colors, percentage alpha values, context media queries)
+  - Property ordering and consistency rules
+  - BEM naming convention support with flexible patterns
+  - SCSS and modern CSS features support
+  - Automatic fixing of common issues
+- **Node.js Dependencies**: Frontend tooling managed via `package.json`
+  - Stylelint plugins for enhanced checking
+  - JSON reporting for CI/CD integration
+  - Makefile integration for easy usage
+
+### Accessibility Implementation
+
+- **WCAG 2.1 AA Compliance**: Comprehensive accessibility features
+  - Skip navigation links for keyboard users
+  - Proper semantic HTML structure with landmarks (`role="banner"`, `role="contentinfo"`, `<main>`)
+  - Enhanced focus indicators with high contrast and clear visibility
+  - ARIA live regions for dynamic content announcements
+  - Screen reader optimizations with proper labeling and descriptions
+- **Accessibility CSS** (`static/css/accessibility.css`): Focused styling for accessibility
+  - High contrast focus indicators
+  - Reduced motion support for users with vestibular disorders
+  - Screen reader only content helpers
+  - Enhanced form validation visual feedback
+- **Accessibility JavaScript** (`static/js/accessibility.js`): Dynamic accessibility features
+  - ARIA live region management for announcements
+  - Form validation error announcements
+  - Modal focus trapping and management
+  - Keyboard navigation enhancements
+  - Loading state announcements
+- **Guidelines Documentation** (`docs/accessibility-guidelines.md`): Complete implementation guide
+  - Template patterns for accessible HTML
+  - Testing procedures and checklists
+  - Screen reader testing instructions
+  - Common issues and solutions
+
 ### Development Workflow
+
 1. **Start development**: `make runserver` - Starts PostgreSQL, Redis, and Django (port 8080)
 2. **Access application**: Visit `http://localhost:8080` for the complete application
 3. **Stop services**: `make stop-all` - Stops PostgreSQL and Redis

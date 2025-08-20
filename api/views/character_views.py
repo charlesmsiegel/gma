@@ -21,6 +21,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from api.errors import APIError
+from api.messages import ErrorMessages
 from api.serializers import CharacterCreateUpdateSerializer, CharacterSerializer
 from campaigns.models import Campaign
 from characters.models import Character
@@ -235,7 +236,7 @@ class CharacterViewSet(viewsets.ModelViewSet):
         except Character.DoesNotExist:
             from rest_framework.exceptions import NotFound
 
-            raise NotFound("Character not found.")
+            raise NotFound(ErrorMessages.CHARACTER_NOT_FOUND)
 
         # May raise a permission denied
         self.check_object_permissions(self.request, obj)
@@ -252,13 +253,59 @@ class CharacterViewSet(viewsets.ModelViewSet):
             # Non-members cannot access characters
             from rest_framework.exceptions import NotFound
 
-            raise NotFound("Character not found.")
+            raise NotFound(ErrorMessages.CHARACTER_NOT_FOUND)
 
-        # All campaign members can view characters, but only character owners can edit
-        # This allows players to see each other's characters in the same campaign
-        # Access control for editing happens in the permission methods
+        # Apply role-based character access control
+        if user_role == "PLAYER":
+            # Players can only view their own characters
+            if obj.player_owner != user:
+                from rest_framework.exceptions import NotFound
+
+                raise NotFound(ErrorMessages.CHARACTER_NOT_FOUND)
+        elif user_role in ["GM", "OWNER", "OBSERVER"]:
+            # GMs, owners, and observers can view all characters in the campaign
+            pass
+
+        # For soft-deleted characters, only owners and those with edit
+        # permissions can see them
+        if obj.is_deleted:
+            if obj.player_owner != user and user_role not in ["GM", "OWNER"]:
+                from rest_framework.exceptions import NotFound
+
+                raise NotFound(ErrorMessages.CHARACTER_NOT_FOUND)
 
         return obj
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Soft delete a character with proper status code handling.
+
+        Returns 404 if character is already soft-deleted, otherwise performs
+        soft delete.
+        """
+        instance = self.get_object()
+
+        # Check if character is already soft-deleted
+        if instance.is_deleted:
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound(ErrorMessages.CHARACTER_NOT_FOUND)
+
+        # Check if user can delete this character
+        # Return 404 instead of 403 for security (hide resource existence)
+        if not instance.can_be_deleted_by(request.user):
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound(ErrorMessages.CHARACTER_NOT_FOUND)
+
+        # Perform soft delete
+        try:
+            instance.soft_delete(request.user)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError(f"Failed to delete character: {str(e)}")
 
     def create(self, request, *args, **kwargs):
         """Create character with early permission check."""
@@ -310,20 +357,18 @@ class CharacterViewSet(viewsets.ModelViewSet):
         # For update operations, check edit permissions
         if request.method in ["PUT", "PATCH"]:
             if not obj.can_be_edited_by(request.user):
-                from rest_framework.exceptions import PermissionDenied
+                # Return 404 instead of 403 for security (hide resource existence)
+                from rest_framework.exceptions import NotFound
 
-                raise PermissionDenied(
-                    "You don't have permission to edit this character."
-                )
+                raise NotFound(ErrorMessages.CHARACTER_NOT_FOUND)
 
         # For delete operations, check delete permissions
         elif request.method == "DELETE":
             if not obj.can_be_deleted_by(request.user):
-                from rest_framework.exceptions import PermissionDenied
+                # Return 404 instead of 403 for security (hide resource existence)
+                from rest_framework.exceptions import NotFound
 
-                raise PermissionDenied(
-                    "You don't have permission to delete this character."
-                )
+                raise NotFound(ErrorMessages.CHARACTER_NOT_FOUND)
 
     def perform_destroy(self, instance):
         """Soft delete character with permission checks."""
@@ -360,7 +405,7 @@ class CharacterViewSet(viewsets.ModelViewSet):
             character.hard_delete(request.user)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except PermissionError as e:
-            return APIError.permission_denied(str(e))
+            return APIError.create_permission_denied_response(str(e))
 
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
@@ -380,6 +425,6 @@ class CharacterViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(character)
             return Response(serializer.data)
         except (PermissionError, ValueError) as e:
-            return APIError.bad_request(str(e))
+            return APIError.create_bad_request_response(str(e))
 
     # Remove the custom override methods - let DRF handle errors naturally

@@ -2,7 +2,7 @@
 [data-theme="cyberpunk"] {
   /* Primary Colors - Electric blues and neon */
   --theme-primary: #00ffff;
-  --theme-primary-dark: #00cccc;
+  --theme-primary-dark: #0cc;
   --theme-primary-light: #66ffff;
   --theme-primary-rgb: 0, 255, 255;
   --theme-secondary: #ff00ff;
@@ -10,14 +10,14 @@
   --theme-secondary-light: #ff66ff;
   --theme-success: #00ff00;
   --theme-info: #0099ff;
-  --theme-warning: #ffff00;
+  --theme-warning: #ff0;
   --theme-danger: #ff0066;
   --theme-light: #e0e0e0;
   --theme-dark: #000;
 
   /* Background Colors - Dark tech */
-  --theme-bg-body: #000011;
-  --theme-bg-surface: #001122;
+  --theme-bg-body: #001;
+  --theme-bg-surface: #012;
   --theme-bg-card: #002233;
   --theme-bg-modal: #002233;
   --theme-bg-navbar: #000;
@@ -68,7 +68,7 @@
 [data-theme="cyberpunk"] body {
   font-family: 'Orbitron', 'Courier New', monospace;
   background:
-    linear-gradient(135deg, #000011 0%, #000022 50%, #000033 100%),
+    linear-gradient(135deg, #001 0%, #000022 50%, #000033 100%),
     repeating-linear-gradient(
       0deg,
       transparent,
@@ -103,7 +103,7 @@
 }
 
 [data-theme="cyberpunk"] .navbar {
-  background: linear-gradient(135deg, #000 0%, #001122 100%);
+  background: linear-gradient(135deg, #000 0%, #012 100%);
   border-bottom: 2px solid #00ffff;
   box-shadow: 0 0 20px rgb(0 255 255  / 80%);
   position: relative;
@@ -133,14 +133,14 @@
   font-weight: 700;
   font-family: 'Orbitron', monospace;
   font-size: 1.8rem;
-  text-shadow: 0 0 20px rgb(0 255 255 / 1);
+  text-shadow: 0 0 20px rgb(0 255 255 / 100%);
   letter-spacing: 3px;
   animation: cyberpunk-flicker 2s ease-in-out infinite alternate;
 }
 
 @keyframes cyberpunk-flicker {
   0%, 100% {
-    text-shadow: 0 0 20px rgb(0 255 255 / 1), 0 0 40px rgb(0 255 255  / 80%);
+    text-shadow: 0 0 20px rgb(0 255 255 / 100%), 0 0 40px rgb(0 255 255  / 80%);
   }
   50% {
     text-shadow: 0 0 10px rgb(0 255 255  / 80%), 0 0 20px rgb(0 255 255  / 60%);
@@ -198,9 +198,9 @@
 }
 
 [data-theme="cyberpunk"] .btn-primary {
-  background: linear-gradient(135deg, #00ffff 0%, #0099cc 100%);
-  border-color: #00ffff;
-  color: #000011;
+  background: linear-gradient(135deg, #0ff 0%, #0099cc 100%);
+  border-color: #0ff;
+  color: #001;
   box-shadow: 0 0 20px rgb(0 255 255  / 60%);
   text-shadow: 0 0 5px rgb(0 255 255  / 80%);
 }
@@ -229,8 +229,8 @@
 }
 
 [data-theme="cyberpunk"] .btn-secondary {
-  background: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
-  border-color: #ff00ff;
+  background: linear-gradient(135deg, #f0f 0%, #cc00cc 100%);
+  border-color: #f0f;
   color: #fff;
   box-shadow: 0 0 20px rgb(255 0 255  / 60%);
   text-shadow: 0 0 5px rgb(255 0 255  / 80%);
@@ -252,7 +252,7 @@
 
 [data-theme="cyberpunk"] .form-control:focus {
   background: linear-gradient(135deg, #002233 0%, #001122 100%);
-  border-color: #00ffff;
+  border-color: #0ff;
   color: #00ffff;
   box-shadow: 0 0 20px rgb(0 255 255  / 80%);
   text-shadow: 0 0 5px rgb(0 255 255  / 50%);
@@ -348,8 +348,8 @@
 
 [data-theme="cyberpunk"] .badge.bg-primary {
   background: linear-gradient(135deg, #00ffff 0%, #0099cc 100%) !important;
-  border-color: #00ffff;
-  color: #000011;
+  border-color: #0ff;
+  color: #001;
   box-shadow: 0 0 10px rgb(0 255 255  / 80%);
   text-shadow: 0 0 5px rgb(0 255 255  / 50%);
 }
@@ -382,7 +382,7 @@
 
 [data-theme="cyberpunk"] .table th {
   background: linear-gradient(135deg, #001122 0%, #000011 100%);
-  border-color: #00ffff;
+  border-color: #0ff;
   color: #ff00ff;
   font-weight: 700;
   text-transform: uppercase;
@@ -454,7 +454,7 @@
   box-shadow:
     0 0 50px rgb(0 255 255 / 1),
     0 0 100px rgb(255 0 255  / 50%);
-  border-color: #ff00ff;
+  border-color: #f0f;
 }
 
 [data-theme="cyberpunk"] .character-sheet {

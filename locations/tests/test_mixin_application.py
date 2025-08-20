@@ -153,7 +153,7 @@ class LocationMixinApplicationTest(TestCase):
 
     def test_field_deduplication_compatibility(self):
         """Test that existing fields are compatible with mixin field deduplication."""
-        location = Location.objects.create(
+        _location = Location.objects.create(
             name="Dedup Test Location",
             description="Test description for deduplication",
             campaign=self.campaign,
@@ -242,7 +242,7 @@ class LocationMixinApplicationTest(TestCase):
     def test_field_constraint_compatibility(self):
         """Test that existing field constraints work with mixin integration."""
         # Create location to test constraints
-        location = Location.objects.create(
+        _location = Location.objects.create(
             name="Constraint Test Location",
             description="Testing constraints",
             campaign=self.campaign,
@@ -296,7 +296,7 @@ class LocationMixinApplicationTest(TestCase):
 
     def test_migration_simulation_field_compatibility(self):
         """Test field compatibility for migration planning."""
-        location = Location.objects.create(
+        _location = Location.objects.create(
             name="Migration Test Location",
             description="Testing migration compatibility",
             campaign=self.campaign,
@@ -426,7 +426,7 @@ class LocationMixinEnhancementTest(TestCase):
         # TimestampedMixin adds db_index=True to timestamp fields
         # This will improve query performance for date-based filtering
 
-        location = Location.objects.create(
+        _location = Location.objects.create(
             name="Index Test Location",
             description="Testing index enhancements",
             campaign=self.campaign,
@@ -434,7 +434,7 @@ class LocationMixinEnhancementTest(TestCase):
         )
 
         # Current fields might not have indexes
-        fields = {f.name: f for f in Location._meta.get_fields()}
+        _fields = {f.name: f for f in Location._meta.get_fields()}
 
         # After mixin application, these should have indexes
         mixin_fields = {f.name: f for f in TimestampedMixin._meta.get_fields()}

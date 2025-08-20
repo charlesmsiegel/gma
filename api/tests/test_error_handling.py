@@ -40,7 +40,7 @@ class APIErrorTests(TestCase):
 
     def test_permission_denied_response(self):
         """Test standard 403 response."""
-        response = APIError.permission_denied()
+        response = APIError.create_permission_denied_response()
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data["detail"], "Permission denied.")
 
@@ -52,34 +52,34 @@ class APIErrorTests(TestCase):
 
     def test_bad_request_response(self):
         """Test standard 400 response."""
-        response = APIError.bad_request()
+        response = APIError.create_bad_request_response()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "Bad request.")
 
     def test_validation_error_with_dict(self):
         """Test validation error with field-specific errors."""
         errors = {"username": ["This field is required."]}
-        response = APIError.validation_error(errors)
+        response = APIError.create_validation_error_response(errors)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, errors)
 
     def test_validation_error_with_string(self):
         """Test validation error with general message."""
         error_message = "General validation error."
-        response = APIError.validation_error(error_message)
+        response = APIError.create_validation_error_response(error_message)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], error_message)
 
     def test_validation_error_with_django_exception(self):
         """Test validation error with Django ValidationError."""
         django_error = DjangoValidationError("Django validation failed.")
-        response = APIError.validation_error(django_error)
+        response = APIError.create_validation_error_response(django_error)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "Django validation failed.")
 
     def test_unauthorized_response(self):
         """Test standard 401 response."""
-        response = APIError.unauthorized()
+        response = APIError.create_unauthorized_response()
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data["detail"], "Authentication required.")
 

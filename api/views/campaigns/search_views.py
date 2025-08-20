@@ -48,7 +48,9 @@ def campaign_user_search(request, campaign_id):
     # Get search query
     query = request.GET.get("q", "").strip()
     if not query:
-        return APIError.bad_request("Search query parameter 'q' is required.")
+        return APIError.create_bad_request_response(
+            "Search query parameter 'q' is required."
+        )
 
     # Check minimum query length
     if len(query) < 2:

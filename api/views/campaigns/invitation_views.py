@@ -17,6 +17,7 @@ from api.errors import (
     SecurityResponseHelper,
     handle_django_validation_error,
 )
+from api.messages import ErrorMessages
 from api.serializers import (
     CampaignInvitationSerializer,
     InvitationAcceptResponseSerializer,
@@ -73,13 +74,15 @@ def send_campaign_invitation(request, campaign_id):
         errors.update(role_error)
 
     if errors:
-        return APIError.validation_error(errors)
+        return APIError.create_validation_error_response(errors)
 
     # Get invited user
     invited_user = FieldValidator.validate_user_exists(invited_user_id)
     if not invited_user:
-        return APIError.validation_error(
-            FieldValidator.build_field_errors(invited_user_id="User not found.")
+        return APIError.create_validation_error_response(
+            FieldValidator.build_field_errors(
+                invited_user_id=ErrorMessages.USER_NOT_FOUND
+            )
         )
 
     # Create invitation using service
