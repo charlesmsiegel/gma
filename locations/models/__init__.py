@@ -64,6 +64,19 @@ class Location(
 
     objects = PolymorphicManager()
 
+    @property
+    def sub_locations(self) -> QuerySet["Location"]:
+        """
+        Alias for children relationship.
+
+        Provides the `sub_locations` related name as requested in acceptance criteria
+        while maintaining backward compatibility with existing `children` usage.
+
+        Returns:
+            QuerySet of child locations
+        """
+        return self.children.all()
+
     # Tree traversal methods
     def get_descendants(self) -> QuerySet["Location"]:
         """
@@ -249,6 +262,17 @@ class Location(
             current = current.parent
 
         return depth
+
+    def get_full_path(self, separator: str = " > ") -> str:
+        """Get full path from root to this location as breadcrumb string."""
+        # Handle unsaved locations
+        if not self.pk:
+            return self.name
+
+        # Use existing optimized method but keep implementation simple
+        path_locations = self.get_path_from_root()
+        location_names = [location.name for location in path_locations]
+        return separator.join(location_names)
 
     # Validation methods
     def clean(self) -> None:

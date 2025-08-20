@@ -1045,6 +1045,179 @@ class CharacterService:
             self._validate_character_limit(user, campaign)
 ```
 
+### Location Domain Models
+
+#### Location Model Architecture
+Location: `locations/models/__init__.py:26-479`
+
+The Location model provides hierarchical location management for campaigns with comprehensive tree traversal capabilities and validation frameworks:
+
+```python
+class Location(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, PolymorphicModel):
+    # Core campaign relationship
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name="locations")
+
+    # Hierarchy support
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="children",
+        help_text="Parent location in the hierarchy"
+    )
+```
+
+#### Hierarchy Features
+
+**Tree Structure Support:**
+**Self-Referential Hierarchy**: Unlimited nesting depth with safety limits
+- **Orphan Management**: Intelligent child location handling on parent deletion
+- **Circular Reference Prevention**: Validation framework prevents invalid hierarchies
+- **Performance Optimization**: Efficient tree traversal with query optimization
+
+**New Enhanced Methods (Issue #185):**
+```python
+# Breadcrumb path generation
+def get_full_path(self, separator: str = " > ") -> str:
+    """Get full path from root to this location as breadcrumb string."""
+    # Returns: "World > Continent > Country > City"
+
+# Alias for backward compatibility
+@property
+def sub_locations(self) -> QuerySet["Location"]:
+    """Alias for children relationship."""
+    return self.children.all()
+```
+
+#### Tree Traversal Methods
+
+**Descendant and Ancestor Navigation:**
+```python
+# Comprehensive tree navigation
+descendants = location.get_descendants()  # All children recursively
+ancestors = location.get_ancestors()      # Path to root
+siblings = location.get_siblings()        # Same-level locations
+root = location.get_root()               # Top-level ancestor
+path = location.get_path_from_root()     # Root-to-current path
+depth = location.get_depth()             # Hierarchy level (0-based)
+```
+
+**Relationship Queries:**
+```python
+# Check hierarchical relationships
+is_child = location.is_descendant_of(parent_location)
+
+# Generate breadcrumbs for navigation
+breadcrumb = location.get_full_path(" > ")
+# Result: "Azeroth > Stormwind > Stormwind City"
+```
+
+#### Validation Framework
+
+**Business Rules Enforced:**
+**Maximum Depth**: 10-level hierarchy limit (0-9)
+- **Campaign Scoping**: Parent must be in same campaign
+- **Circular Reference Prevention**: Comprehensive validation against cycles
+- **Self-Parent Prevention**: Location cannot be its own parent
+
+**Validation Implementation:**
+```python
+def clean(self) -> None:
+    """Comprehensive location validation."""
+    # Prevent self as parent
+    if self.parent_id and self.parent_id == self.pk:
+        raise ValidationError("A location cannot be its own parent.")
+
+    # Prevent circular references
+    if self.parent and self.pk:
+        descendants = self.get_descendants()
+        if self.parent in descendants:
+            raise ValidationError("Circular reference detected...")
+
+    # Enforce maximum depth
+    if self.parent:
+        future_depth = self.parent.get_depth() + 1
+        if future_depth >= 10:
+            raise ValidationError("Maximum depth of 10 levels exceeded...")
+```
+
+#### Permission Integration
+
+**Role-Based Access Control:**
+The Location model integrates with GMA's campaign permission system:
+
+```python
+# Permission checking methods
+def can_view(self, user) -> bool:
+    """Campaign members and public campaigns only."""
+
+def can_edit(self, user) -> bool:
+    """Owners/GMs edit all, Players edit their own."""
+
+def can_delete(self, user) -> bool:
+    """Owners/GMs delete all, Players delete their own."""
+
+@classmethod
+def can_create(cls, user, campaign) -> bool:
+    """All campaign members can create locations."""
+```
+
+**Permission Rules:**
+**View**: All campaign members + anonymous users for public campaigns
+- **Create**: All campaign members (Owner, GM, Player, Observer)
+- **Edit/Delete**: Owner/GM for all locations, Players for their own creations
+
+#### Database Design
+
+**Adjacency List Model:**
+```sql
+-- Core hierarchy implementation
+ALTER TABLE locations_location ADD COLUMN parent_id INTEGER
+    REFERENCES locations_location(id) ON DELETE SET NULL;
+
+-- Performance indexes
+CREATE INDEX locations_location_parent_id_idx ON locations_location(parent_id);
+CREATE INDEX locations_location_campaign_id_idx ON locations_location(campaign_id);
+```
+
+**Performance Characteristics:**
+**Descendant Queries**: O(n) where n is number of descendants
+- **Ancestor Queries**: O(d) where d is depth
+- **Root Finding**: O(d) where d is depth
+- **Safety Limits**: Built-in protection against infinite loops
+
+#### Use Cases
+
+**Campaign World Building:**
+```python
+# Create hierarchical world structure
+continent = Location.objects.create(name="Azeroth", campaign=campaign)
+kingdom = Location.objects.create(name="Stormwind", parent=continent, campaign=campaign)
+city = Location.objects.create(name="Stormwind City", parent=kingdom, campaign=campaign)
+
+# Generate navigation breadcrumb
+breadcrumb = city.get_full_path()
+# Result: "Azeroth > Stormwind > Stormwind City"
+```
+
+**Tree Operations:**
+```python
+# Move entire location sub-trees
+old_parent = Location.objects.get(name="Old Region")
+new_parent = Location.objects.get(name="New Region")
+location_to_move = Location.objects.get(name="City")
+
+location_to_move.parent = new_parent
+location_to_move.save()  # All children move automatically
+```
+
+#### Migration and Backward Compatibility
+
+**Database Migration**: Single migration (`0005_location_parent.py`) adds hierarchy support
+**Backward Compatibility**: All existing locations remain functional (parent=None)
+**Zero Downtime**: Migration is additive with no data loss
+
 ### Database Optimization
 
 #### Indexes
