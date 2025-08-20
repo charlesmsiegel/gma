@@ -264,37 +264,14 @@ class Location(
         return depth
 
     def get_full_path(self, separator: str = " > ") -> str:
-        """
-        Get the full path from root to this location as a breadcrumb string.
-
-        This method provides a human-readable breadcrumb navigation string
-        showing the complete hierarchy from root to the current location.
-
-        Args:
-            separator: String to use between location names (default: " > ")
-
-        Returns:
-            String representation of the path from root to this location
-
-        Examples:
-            Root location: "Tavern"
-            Child location: "World > Continent > City"
-            Custom separator: "World / Continent / City"
-        """
+        """Get full path from root to this location as breadcrumb string."""
         # Handle unsaved locations
         if not self.pk:
             return self.name
 
-        # Use existing optimized method to get path
+        # Use existing optimized method but keep implementation simple
         path_locations = self.get_path_from_root()
-
-        # Extract names and join with separator
         location_names = [location.name for location in path_locations]
-
-        # Return single name if no path (shouldn't happen, but safety check)
-        if not location_names:
-            return self.name
-
         return separator.join(location_names)
 
     # Validation methods
