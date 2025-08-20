@@ -6,6 +6,8 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models
 from django.db.models import Q, QuerySet
+from polymorphic.managers import PolymorphicManager  # type: ignore[import-untyped]
+from polymorphic.models import PolymorphicModel  # type: ignore[import-untyped]
 
 from campaigns.models import Campaign
 from core.models import (
@@ -22,7 +24,11 @@ if TYPE_CHECKING:
 
 
 class Location(
-    TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, models.Model
+    TimestampedMixin,
+    NamedModelMixin,
+    DescribedModelMixin,
+    AuditableMixin,
+    PolymorphicModel,
 ):
     """
     Location model for campaign management with hierarchy support.
@@ -55,6 +61,8 @@ class Location(
         related_name="children",
         help_text="Parent location in the hierarchy",
     )
+
+    objects = PolymorphicManager()
 
     # Tree traversal methods
     def get_descendants(self) -> QuerySet["Location"]:
@@ -269,12 +277,13 @@ class Location(
                 # Prevent circular references (only for existing objects)
                 if self.pk and parent:
                     # Check if the new parent would create a circle
-                    # by seeing if the new parent is already a descendant of this location
+                    # by seeing if the new parent is already a descendant
+                    # of this location
                     descendants = self.get_descendants()
                     if parent in descendants:
                         raise ValidationError(
-                            "Circular reference detected: this location cannot be a parent "
-                            "of its ancestor or descendant."
+                            "Circular reference detected: this location cannot "
+                            "be a parent of its ancestor or descendant."
                         )
 
                 # Check cross-campaign parent
