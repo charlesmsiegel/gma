@@ -81,65 +81,72 @@ jobs:
         conda run -n gma python manage.py check --deploy
       shell: bash -l {0}
 
-    - name: Generate migrations
+    - name: Test PostgreSQL integration with polymorphic models
       run: |
+        # Set up environment variables for PostgreSQL integration test
+        export DB_HOST=localhost
+        export DB_PORT=5432
+        export DB_NAME=gm_app_db
+        export DB_USER=postgres
+        export DB_PASSWORD=postgres
+        export REDIS_URL=redis://localhost:6379/0
+        export SECRET_KEY=test-secret-key-for-github-actions-only
+        export DEBUG=False
+        export DJANGO_SETTINGS_MODULE=gm_app.settings
+
+        # Generate migrations (should show no changes since polymorphic is in migrations)
         conda run -n gma python manage.py makemigrations --verbosity=2
-      shell: bash -l {0}
 
-    - name: Run migrations
-      run: |
+        # Run migrations against PostgreSQL
         conda run -n gma python manage.py migrate --verbosity=0
-      shell: bash -l {0}
 
-    - name: Run health check
-      run: |
+        # Run health check to verify PostgreSQL and Redis work
         conda run -n gma python manage.py health_check
+
+        # Test that polymorphic Location works in PostgreSQL
+        conda run -n gma python -c "
+        import os, django;
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gm_app.settings');
+        django.setup();
+        from locations.models import Location;
+        from django.contrib.auth import get_user_model;
+        from campaigns.models import Campaign;
+        User = get_user_model();
+        user = User.objects.create_user('test_user', 'test@example.com', 'password123');
+        campaign = Campaign.objects.create(name='Test Campaign', owner=user, game_system='test');
+        location = Location.objects.create(name='Test Location', campaign=campaign, created_by=user);
+        print('Polymorphic Location created:', location.name);
+        print('Has polymorphic_ctype:', hasattr(location, 'polymorphic_ctype'));
+        print('Polymorphic ctype:', location.polymorphic_ctype);
+        print('PostgreSQL polymorphic integration test passed!')
+        "
       shell: bash -l {0}
 
-    - name: Run tests with coverage
+    - name: Run test-coverage workflow
       id: test_run
       run: |
+        # Set up environment variables for test settings
+        # Note: test_settings.py uses SQLite in-memory, not PostgreSQL
+        export SECRET_KEY=test-secret-key-for-github-actions-only
+        export DEBUG=False
+
         set +e  # Don't exit on error
-        conda run -n gma coverage run --source='.' manage.py test --verbosity=2
+
+        # Run the complete test-coverage workflow using same commands as Makefile
+        # This matches exactly what "make test-coverage" does locally
+        conda run -n gma coverage run manage.py test --settings=gm_app.test_settings
         TEST_EXIT_CODE=$?
         echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_OUTPUT
-        # Ensure coverage data exists even if tests failed
-        conda run -n gma coverage combine || true
+
+        # Generate coverage reports (following Makefile pattern)
+        conda run -n gma coverage xml
+        conda run -n gma coverage report --precision=2 --show-missing --skip-covered
+        conda run -n gma coverage html
+        conda run -n gma coverage report --fail-under=80
+
         exit 0  # Always exit successfully from this step
       shell: bash -l {0}
       continue-on-error: false
-
-    - name: Generate coverage XML
-      run: |
-        if [ -f .coverage ]; then
-          conda run -n gma coverage xml
-        else
-          echo "No coverage data found - creating empty coverage file"
-          conda run -n gma coverage run --source='.' -m py_compile manage.py || true
-          conda run -n gma coverage xml || echo "Failed to generate coverage XML"
-        fi
-      shell: bash -l {0}
-      if: always()
-
-    - name: Generate coverage report
-      run: |
-        if [ -f .coverage ]; then
-          conda run -n gma coverage report --show-missing --skip-covered
-        else
-          echo "No coverage data to report"
-        fi
-      shell: bash -l {0}
-      if: always()
-
-    - name: Check coverage threshold
-      run: |
-        if [ -f .coverage ]; then
-          conda run -n gma coverage report --fail-under=80
-        else
-          echo "No coverage data to check threshold"
-        fi
-      shell: bash -l {0}
-      if: always()
 
     - name: Check if tests passed
       run: |
@@ -241,17 +248,23 @@ jobs:
         PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE gm_app_db;"
       shell: bash -l {0}
 
-    - name: Generate migrations
+    - name: Setup integration test environment
       run: |
+        # Set up environment variables for integration tests
+        export DB_HOST=localhost
+        export DB_PORT=5432
+        export DB_NAME=gm_app_db
+        export DB_USER=postgres
+        export DB_PASSWORD=postgres
+        export REDIS_URL=redis://localhost:6379/0
+        export SECRET_KEY=test-secret-key-for-integration-tests
+        export DEBUG=False
+        export DJANGO_SETTINGS_MODULE=gm_app.settings
+
+        # Generate migrations and run them
         conda run -n gma python manage.py makemigrations --verbosity=2
-      shell: bash -l {0}
-
-    - name: Run migrations
-      run: |
         conda run -n gma python manage.py migrate --verbosity=0
-      shell: bash -l {0}
 
-    - name: Run integration tests
-      run: |
+        # Run integration tests
         conda run -n gma python manage.py test tests.test_project_setup --verbosity=2
       shell: bash -l {0}
