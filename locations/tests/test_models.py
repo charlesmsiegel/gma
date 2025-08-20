@@ -227,6 +227,39 @@ class LocationHierarchyTest(TestCase):
                 "Location model should have a 'parent' field for hierarchy support"
             )
 
+    def test_sub_locations_property(self):
+        """Test sub_locations property as alias for children."""
+        # Create a parent with multiple children
+        parent_location = Location.objects.create(
+            name="Parent Location",
+            campaign=self.campaign,
+            created_by=self.owner,
+        )
+
+        Location.objects.create(
+            name="Child 1",
+            campaign=self.campaign,
+            parent=parent_location,
+            created_by=self.owner,
+        )
+        Location.objects.create(
+            name="Child 2",
+            campaign=self.campaign,
+            parent=parent_location,
+            created_by=self.owner,
+        )
+
+        # Test sub_locations property returns same as children
+        sub_locations = parent_location.sub_locations
+        children = parent_location.children.all()
+
+        # Should have same count
+        self.assertEqual(sub_locations.count(), children.count())
+        self.assertEqual(sub_locations.count(), 2)  # child1 + child2
+
+        # Should contain the same locations
+        self.assertQuerysetEqual(sub_locations, children, ordered=False)
+
     def test_create_parent_child_relationship(self):
         """Test creating parent-child location relationships."""
         parent = Location.objects.create(

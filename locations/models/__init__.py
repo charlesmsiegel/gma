@@ -64,6 +64,19 @@ class Location(
 
     objects = PolymorphicManager()
 
+    @property
+    def sub_locations(self) -> QuerySet["Location"]:
+        """
+        Alias for children relationship.
+
+        Provides the `sub_locations` related name as requested in acceptance criteria
+        while maintaining backward compatibility with existing `children` usage.
+
+        Returns:
+            QuerySet of child locations
+        """
+        return self.children.all()
+
     # Tree traversal methods
     def get_descendants(self) -> QuerySet["Location"]:
         """
