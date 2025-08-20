@@ -14,6 +14,7 @@ Key Features:
 """
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
@@ -224,8 +225,6 @@ class CharacterViewSet(viewsets.ModelViewSet):
         # Perform the lookup filtering based on pk or slug
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         if lookup_url_kwarg not in self.kwargs:
-            from django.core.exceptions import ImproperlyConfigured
-
             raise ImproperlyConfigured(
                 "Expected view %s to be called with a URL keyword argument "
                 'named "%s". Fix your URL conf, or set the `.lookup_field` '
