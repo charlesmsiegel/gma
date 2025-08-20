@@ -1147,3 +1147,356 @@ class LocationEdgeCaseTest(TestCase):
         self.assertEqual(location.name, max_name)
         self.assertEqual(location.description, max_description)
         self.assertEqual(len(location.name), 100)
+
+
+class LocationFullPathTest(TestCase):
+    """Test Location get_full_path() method for breadcrumb functionality."""
+
+    def setUp(self):
+        """Set up test hierarchy for get_full_path() tests."""
+        self.owner = User.objects.create_user(
+            username="owner", email="owner@test.com", password="testpass123"
+        )
+
+        self.campaign = Campaign.objects.create(
+            name="Full Path Test Campaign",
+            owner=self.owner,
+            game_system="mage",
+        )
+
+        # Create test hierarchy:
+        # World
+        #   ├── Continent
+        #   │   ├── Country
+        #   │   │   ├── Region
+        #   │   │   │   └── City
+        #   │   │   └── District
+        #   │   └── Nation
+        #   └── Realm
+
+        self.world = Location.objects.create(
+            name="World",
+            campaign=self.campaign,
+            created_by=self.owner,
+        )
+
+        self.continent = Location.objects.create(
+            name="Continent",
+            campaign=self.campaign,
+            parent=self.world,
+            created_by=self.owner,
+        )
+
+        self.realm = Location.objects.create(
+            name="Realm",
+            campaign=self.campaign,
+            parent=self.world,
+            created_by=self.owner,
+        )
+
+        self.country = Location.objects.create(
+            name="Country",
+            campaign=self.campaign,
+            parent=self.continent,
+            created_by=self.owner,
+        )
+
+        self.nation = Location.objects.create(
+            name="Nation",
+            campaign=self.campaign,
+            parent=self.continent,
+            created_by=self.owner,
+        )
+
+        self.region = Location.objects.create(
+            name="Region",
+            campaign=self.campaign,
+            parent=self.country,
+            created_by=self.owner,
+        )
+
+        self.district = Location.objects.create(
+            name="District",
+            campaign=self.campaign,
+            parent=self.country,
+            created_by=self.owner,
+        )
+
+        self.city = Location.objects.create(
+            name="City",
+            campaign=self.campaign,
+            parent=self.region,
+            created_by=self.owner,
+        )
+
+    def test_get_full_path_method_exists(self):
+        """Test that get_full_path() method exists on Location model."""
+        # This test will fail initially until the method is implemented
+        self.assertTrue(
+            hasattr(Location, "get_full_path"),
+            "Location model should have a get_full_path() method",
+        )
+
+    def test_get_full_path_root_location(self):
+        """Test get_full_path() for root location (no parent)."""
+        # Root location should return just its own name
+        path = self.world.get_full_path()
+        self.assertEqual(path, "World")
+
+    def test_get_full_path_single_level_child(self):
+        """Test get_full_path() for location with one parent."""
+        # Single level child should show parent > child
+        path = self.continent.get_full_path()
+        self.assertEqual(path, "World > Continent")
+
+        path = self.realm.get_full_path()
+        self.assertEqual(path, "World > Realm")
+
+    def test_get_full_path_multi_level_hierarchy(self):
+        """Test get_full_path() for deeply nested locations."""
+        # Multi-level hierarchy should show full path from root
+        path = self.country.get_full_path()
+        self.assertEqual(path, "World > Continent > Country")
+
+        path = self.region.get_full_path()
+        self.assertEqual(path, "World > Continent > Country > Region")
+
+        path = self.city.get_full_path()
+        self.assertEqual(path, "World > Continent > Country > Region > City")
+
+    def test_get_full_path_sibling_locations(self):
+        """Test get_full_path() for sibling locations at same level."""
+        # Siblings should have same path up to parent, different final name
+        nation_path = self.nation.get_full_path()
+        country_path = self.country.get_full_path()
+
+        self.assertEqual(nation_path, "World > Continent > Nation")
+        self.assertEqual(country_path, "World > Continent > Country")
+
+        # Both should start with same parent path
+        self.assertTrue(nation_path.startswith("World > Continent > "))
+        self.assertTrue(country_path.startswith("World > Continent > "))
+
+        # Verify siblings at deeper level
+        region_path = self.region.get_full_path()
+        district_path = self.district.get_full_path()
+
+        self.assertEqual(region_path, "World > Continent > Country > Region")
+        self.assertEqual(district_path, "World > Continent > Country > District")
+
+    def test_get_full_path_custom_separator(self):
+        """Test get_full_path() with custom separator parameter."""
+        # Test with different separators
+        path_slash = self.city.get_full_path(separator=" / ")
+        expected_slash = "World / Continent / Country / Region / City"
+        self.assertEqual(path_slash, expected_slash)
+
+        path_arrow = self.city.get_full_path(separator=" → ")
+        expected_arrow = "World → Continent → Country → Region → City"
+        self.assertEqual(path_arrow, expected_arrow)
+
+        path_pipe = self.city.get_full_path(separator=" | ")
+        expected_pipe = "World | Continent | Country | Region | City"
+        self.assertEqual(path_pipe, expected_pipe)
+
+        # Test with no spaces
+        path_compact = self.city.get_full_path(separator=">")
+        expected_compact = "World>Continent>Country>Region>City"
+        self.assertEqual(path_compact, expected_compact)
+
+    def test_get_full_path_default_separator(self):
+        """Test that get_full_path() uses ' > ' as default separator."""
+        # Without separator parameter, should use default ' > '
+        path = self.city.get_full_path()
+        self.assertEqual(path, "World > Continent > Country > Region > City")
+
+        # Verify it's the same as explicitly passing default separator
+        path_explicit = self.city.get_full_path(separator=" > ")
+        self.assertEqual(path, path_explicit)
+
+    def test_get_full_path_empty_separator(self):
+        """Test get_full_path() with empty separator."""
+        path = self.country.get_full_path(separator="")
+        expected = "WorldContinentCountry"
+        self.assertEqual(path, expected)
+
+    def test_get_full_path_special_characters_in_names(self):
+        """Test get_full_path() with special characters in location names."""
+        # Create locations with special characters
+        special_parent = Location.objects.create(
+            name="Café & Restaurant",
+            campaign=self.campaign,
+            created_by=self.owner,
+        )
+
+        special_child = Location.objects.create(
+            name="Room #42 (VIP)",
+            campaign=self.campaign,
+            parent=special_parent,
+            created_by=self.owner,
+        )
+
+        path = special_child.get_full_path()
+        expected = "Café & Restaurant > Room #42 (VIP)"
+        self.assertEqual(path, expected)
+
+    def test_get_full_path_unicode_characters(self):
+        """Test get_full_path() with unicode characters in location names."""
+        # Create locations with unicode characters
+        unicode_parent = Location.objects.create(
+            name="東京",
+            campaign=self.campaign,
+            created_by=self.owner,
+        )
+
+        unicode_child = Location.objects.create(
+            name="渋谷区",
+            campaign=self.campaign,
+            parent=unicode_parent,
+            created_by=self.owner,
+        )
+
+        path = unicode_child.get_full_path()
+        expected = "東京 > 渋谷区"
+        self.assertEqual(path, expected)
+
+    def test_get_full_path_long_names(self):
+        """Test get_full_path() with long location names."""
+        # Create locations with long names
+        long_parent = Location.objects.create(
+            name="A" * 50,  # 50 character name
+            campaign=self.campaign,
+            created_by=self.owner,
+        )
+
+        long_child = Location.objects.create(
+            name="B" * 50,  # 50 character name
+            campaign=self.campaign,
+            parent=long_parent,
+            created_by=self.owner,
+        )
+
+        path = long_child.get_full_path()
+        expected = ("A" * 50) + " > " + ("B" * 50)
+        self.assertEqual(path, expected)
+
+    def test_get_full_path_maximum_depth(self):
+        """Test get_full_path() at maximum allowed hierarchy depth."""
+        # Create a chain up to maximum depth (10 levels, depth 0-9)
+        locations = [self.world]  # Start with existing root
+
+        for i in range(9):  # Create 9 more levels
+            location = Location.objects.create(
+                name=f"Level{i+1}",
+                campaign=self.campaign,
+                parent=locations[-1],
+                created_by=self.owner,
+            )
+            locations.append(location)
+
+        # Test path for deepest location
+        deepest_path = locations[-1].get_full_path()
+        expected_names = [loc.name for loc in locations]
+        expected_path = " > ".join(expected_names)
+
+        self.assertEqual(deepest_path, expected_path)
+        self.assertEqual(len(locations), 10)  # Verify we have 10 levels
+
+        # Verify path contains all levels
+        for location in locations:
+            self.assertIn(location.name, deepest_path)
+
+    def test_get_full_path_performance_with_prefetching(self):
+        """Test that get_full_path() is efficient and doesn't cause N+1 queries."""
+        # This test verifies that the method uses the existing optimized
+        # get_path_from_root() method or implements similar optimization
+
+        with self.assertNumQueries(1):  # Should be 1 optimized query
+            path = self.city.get_full_path()
+
+        # Verify the path is correct
+        expected = "World > Continent > Country > Region > City"
+        self.assertEqual(path, expected)
+
+    def test_get_full_path_with_unsaved_location(self):
+        """Test get_full_path() behavior with unsaved location instance."""
+        # Create unsaved location
+        unsaved_location = Location(
+            name="Unsaved Location",
+            campaign=self.campaign,
+            created_by=self.owner,
+        )
+
+        # Should handle unsaved instance gracefully
+        path = unsaved_location.get_full_path()
+        self.assertEqual(path, "Unsaved Location")
+
+    def test_get_full_path_with_none_parent(self):
+        """Test get_full_path() explicitly handles None parent."""
+        # Create location with explicitly None parent
+        root_location = Location.objects.create(
+            name="Explicit Root",
+            campaign=self.campaign,
+            parent=None,
+            created_by=self.owner,
+        )
+
+        path = root_location.get_full_path()
+        self.assertEqual(path, "Explicit Root")
+
+    def test_get_full_path_return_type(self):
+        """Test that get_full_path() returns a string."""
+        path = self.city.get_full_path()
+        self.assertIsInstance(path, str)
+
+        # Test with custom separator also returns string
+        path_custom = self.city.get_full_path(separator=" / ")
+        self.assertIsInstance(path_custom, str)
+
+    def test_get_full_path_breadcrumb_usage(self):
+        """Test get_full_path() for typical breadcrumb usage scenarios."""
+        # Test multiple locations for breadcrumb display
+        locations_and_expected = [
+            (self.world, "World"),
+            (self.continent, "World > Continent"),
+            (self.country, "World > Continent > Country"),
+            (self.region, "World > Continent > Country > Region"),
+            (self.city, "World > Continent > Country > Region > City"),
+            (self.district, "World > Continent > Country > District"),
+            (self.nation, "World > Continent > Nation"),
+            (self.realm, "World > Realm"),
+        ]
+
+        for location, expected_path in locations_and_expected:
+            with self.subTest(location=location.name):
+                path = location.get_full_path()
+                self.assertEqual(path, expected_path)
+
+    def test_get_full_path_comparison_with_path_from_root(self):
+        """Test that get_full_path() is consistent with get_path_from_root()."""
+        # get_full_path() should produce the same order as get_path_from_root()
+        path_queryset = self.city.get_path_from_root()
+        path_names = [loc.name for loc in path_queryset]
+        expected_string_path = " > ".join(path_names)
+
+        actual_string_path = self.city.get_full_path()
+
+        self.assertEqual(actual_string_path, expected_string_path)
+
+    def test_get_full_path_with_circular_reference_protection(self):
+        """Test get_full_path() handles potential circular references gracefully."""
+        # Even though validation prevents circular references,
+        # the method should have safety limits like other traversal methods
+
+        # This test verifies the method has similar safety as other traversal methods
+        # by checking it works correctly with valid hierarchies
+        path = self.city.get_full_path()
+
+        # Should not hang or cause infinite loops
+        self.assertIsInstance(path, str)
+        self.assertGreater(len(path), 0)
+
+        # Should contain all expected location names
+        expected_names = ["World", "Continent", "Country", "Region", "City"]
+        for name in expected_names:
+            self.assertIn(name, path)
