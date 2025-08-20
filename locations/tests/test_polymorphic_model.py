@@ -374,26 +374,26 @@ class LocationSubclassingTest(TestCase):
 
     def test_location_can_be_subclassed(self):
         """Test that Location can be subclassed properly."""
-        # This will create a mock subclass for testing
-        # In practice, this would be done in models.py files
-
-        class SpecialLocation(Location):
-            """A test subclass of Location."""
-
-            special_property = "special_value"
-
-            class Meta:
-                proxy = False  # Not a proxy model
+        # Test that Location can be subclassed by checking the inheritance chain
+        # We don't need to create an actual subclass for this test
 
         # This will FAIL until Location inherits from PolymorphicModel
         self.assertTrue(
-            issubclass(SpecialLocation, Location),
-            "SpecialLocation should inherit from Location",
+            issubclass(Location, PolymorphicModel),
+            "Location should inherit from PolymorphicModel",
         )
-        self.assertTrue(
-            issubclass(SpecialLocation, PolymorphicModel),
-            "SpecialLocation should inherit from PolymorphicModel through Location",
+
+        # Test that the inheritance chain is correct
+        location = Location.objects.create(
+            name="Inheritance Test",
+            campaign=self.campaign,
+            created_by=self.user,
         )
+
+        self.assertIsInstance(location, PolymorphicModel)
+        self.assertTrue(hasattr(location, "polymorphic_ctype"))
+        self.assertTrue(hasattr(location, "get_real_instance"))
+        self.assertTrue(hasattr(location, "get_real_instance_class"))
 
     def test_subclass_instances_returned_correctly(self):
         """Test that subclass instances are returned with correct types."""
