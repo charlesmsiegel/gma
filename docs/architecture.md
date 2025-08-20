@@ -1071,7 +1071,7 @@ class Location(TimestampedMixin, NamedModelMixin, DescribedModelMixin, Auditable
 #### Hierarchy Features
 
 **Tree Structure Support:**
-- **Self-Referential Hierarchy**: Unlimited nesting depth with safety limits
+**Self-Referential Hierarchy**: Unlimited nesting depth with safety limits
 - **Orphan Management**: Intelligent child location handling on parent deletion
 - **Circular Reference Prevention**: Validation framework prevents invalid hierarchies
 - **Performance Optimization**: Efficient tree traversal with query optimization
@@ -1116,7 +1116,7 @@ breadcrumb = location.get_full_path(" > ")
 #### Validation Framework
 
 **Business Rules Enforced:**
-- **Maximum Depth**: 10-level hierarchy limit (0-9)
+**Maximum Depth**: 10-level hierarchy limit (0-9)
 - **Campaign Scoping**: Parent must be in same campaign
 - **Circular Reference Prevention**: Comprehensive validation against cycles
 - **Self-Parent Prevention**: Location cannot be its own parent
@@ -1164,7 +1164,7 @@ def can_create(cls, user, campaign) -> bool:
 ```
 
 **Permission Rules:**
-- **View**: All campaign members + anonymous users for public campaigns
+**View**: All campaign members + anonymous users for public campaigns
 - **Create**: All campaign members (Owner, GM, Player, Observer)
 - **Edit/Delete**: Owner/GM for all locations, Players for their own creations
 
@@ -1182,7 +1182,7 @@ CREATE INDEX locations_location_campaign_id_idx ON locations_location(campaign_i
 ```
 
 **Performance Characteristics:**
-- **Descendant Queries**: O(n) where n is number of descendants
+**Descendant Queries**: O(n) where n is number of descendants
 - **Ancestor Queries**: O(d) where d is depth
 - **Root Finding**: O(d) where d is depth
 - **Safety Limits**: Built-in protection against infinite loops

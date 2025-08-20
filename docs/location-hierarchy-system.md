@@ -1337,7 +1337,7 @@ def validate_hierarchy_integrity(campaign):
 ---
 
 **Document Information**
-- **Version**: 1.1
+**Version**: 1.1
 - **Last Updated**: August 20, 2025
 - **Related Issues**: GitHub Issue #50 (Initial Implementation), GitHub Issue #185 (Enhancements)
 - **Implementation Files**: `/home/janothar/gma/locations/models/__init__.py`, `/home/janothar/gma/locations/admin.py`
