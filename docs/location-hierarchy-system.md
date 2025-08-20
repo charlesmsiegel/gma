@@ -244,6 +244,7 @@ def delete(self, using=None, keep_parents=False) -> tuple:
 | `get_root()` | `Location` | Root ancestor of this location |
 | `get_path_from_root()` | `QuerySet[Location]` | Path from root to this location |
 | `get_depth()` | `int` | Depth level in hierarchy (0-based) |
+| `get_full_path(separator)` | `str` | **NEW**: Breadcrumb string from root to location |
 
 #### Relationship Queries
 
@@ -251,6 +252,7 @@ def delete(self, using=None, keep_parents=False) -> tuple:
 |--------|-------------|-------------|
 | `is_descendant_of(location)` | `bool` | Check if descendant of given location |
 | `children` | `RelatedManager` | Direct child locations |
+| `sub_locations` | `QuerySet[Location]` | **NEW**: Alias for children relationship |
 | `parent` | `Location` | Direct parent location |
 
 #### Permission Methods
@@ -305,6 +307,65 @@ city = Location.objects.create(
     parent=kingdom,
     created_by=request.user
 )
+```
+
+#### New Enhancements (Issue #185)
+
+**Breadcrumb Path Generation:**
+```python
+# Generate user-friendly breadcrumb strings
+location = Location.objects.get(name="Stormwind City")
+breadcrumb = location.get_full_path()
+# Returns: "Azeroth > Stormwind > Stormwind City"
+
+# Custom separator support
+breadcrumb_custom = location.get_full_path(" | ")
+# Returns: "Azeroth | Stormwind | Stormwind City"
+
+# Usage in templates and UI
+@property
+def breadcrumb_display(self):
+    return self.get_full_path(" › ")
+```
+
+**Sub-locations Property:**
+```python
+# Alternative access to child locations
+continent = Location.objects.get(name="Azeroth")
+
+# Both methods are equivalent
+kingdoms_via_children = continent.children.all()
+kingdoms_via_sub_locations = continent.sub_locations
+
+# Provides requested sub_locations related name while maintaining backward compatibility
+for kingdom in continent.sub_locations:
+    print(f"Kingdom: {kingdom.name}")
+```
+
+**Enhanced Usage Examples:**
+```python
+# Navigation breadcrumb generation for UI
+def build_location_navigation(location):
+    """Build navigation structure for templates."""
+    path_locations = location.get_path_from_root()
+    return [
+        {
+            'name': loc.name,
+            'url': reverse('location_detail', kwargs={'id': loc.id}),
+            'is_current': loc == location
+        }
+        for loc in path_locations
+    ]
+
+# Breadcrumb string for API responses
+location_data = {
+    'id': location.id,
+    'name': location.name,
+    'full_path': location.get_full_path(),
+    'depth': location.get_depth(),
+    'parent_id': location.parent_id,
+    'children_count': location.sub_locations.count()
+}
 ```
 
 #### Tree Traversal
@@ -1276,9 +1337,10 @@ def validate_hierarchy_integrity(campaign):
 ---
 
 **Document Information**
-- **Version**: 1.0
-- **Last Updated**: August 19, 2025
-- **Related Issues**: GitHub Issue #50
+- **Version**: 1.1
+- **Last Updated**: August 20, 2025
+- **Related Issues**: GitHub Issue #50 (Initial Implementation), GitHub Issue #185 (Enhancements)
 - **Implementation Files**: `/home/janothar/gma/locations/models/__init__.py`, `/home/janothar/gma/locations/admin.py`
-- **Test Coverage**: 65+ tests across 5 test modules
+- **Test Coverage**: 181 tests including comprehensive coverage for new functionality
 - **Migration**: `0005_location_parent.py`
+- **Recent Enhancements**: `get_full_path()` method for breadcrumb generation, `sub_locations` property alias
