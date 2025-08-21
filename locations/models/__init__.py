@@ -443,10 +443,11 @@ class Location(
 
         # Players can edit their own locations or character-owned locations
         if user_role == "PLAYER":
-            if self.created_by == user:
-                return True
-            # Check if any of the user's characters own this location
-            if self.owned_by and self.owned_by.player_owner == user:
+            # If location is owned by a character, only the character's owner can edit
+            if self.owned_by:
+                return self.owned_by.player_owner == user
+            # If location is unowned, creator can edit
+            elif self.created_by == user:
                 return True
 
         return False

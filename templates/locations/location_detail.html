@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.location-detail-card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb-location {
+    font-size: 0.9rem;
+}
+
+.sub-location-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e9ecef;
+}
+
+.sub-location-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.owner-info {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.location-metadata {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.action-buttons .btn {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.hierarchy-path {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.hierarchy-path .breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb breadcrumb-location">
+            <li class="breadcrumb-item">
+                <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'locations:campaign_locations' campaign_slug=campaign.slug %}">Locations</a>
+            </li>
+            {% for ancestor in breadcrumb_path %}
+                {% if not forloop.last %}
+                <li class="breadcrumb-item">
+                    <a href="{% url 'locations:location_detail' campaign_slug=campaign.slug location_id=ancestor.id %}">
+                        {{ ancestor.name }}
+                    </a>
+                </li>
+                {% else %}
+                <li class="breadcrumb-item active" aria-current="page">{{ ancestor.name }}</li>
+                {% endif %}
+            {% endfor %}
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div class="flex-grow-1">
+            <h1 class="h2 mb-1">{{ location.name }}</h1>
+            {% if full_path %}
+            <div class="hierarchy-path">
+                <nav aria-label="Location hierarchy">
+                    <ol class="breadcrumb breadcrumb-sm mb-2">
+                        {% for part in full_path|split:" > " %}
+                        <li class="breadcrumb-item{% if forloop.last %} active{% endif %}">
+                            {{ part }}
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </nav>
+            {% endif %}
+            {% if location.description %}
+            <p class="text-muted mb-0">{{ location.description }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            {% if can_edit %}
+            <a href="{% url 'locations:location_edit' campaign_slug=campaign.slug location_id=location.id %}"
+               class="btn btn-primary">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            {% endif %}
+
+            {% if can_create_location %}
+            <a href="{% url 'locations:location_create' campaign_slug=campaign.slug %}?parent={{ location.id }}"
+               class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add Sub-location
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Location Details -->
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Location Information -->
+            <div class="card location-detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Location Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if location.description %}
+                    <div class="mb-4">
+                        <h6>Description</h6>
+                        <p class="mb-0">{{ location.description|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="location-metadata">
+                                <h6 class="mb-3">Details</h6>
+                                <dl class="row mb-0">
+                                    <dt class="col-sm-4">Created by:</dt>
+                                    <dd class="col-sm-8">{{ location.created_by.username }}</dd>
+
+                                    <dt class="col-sm-4">Created:</dt>
+                                    <dd class="col-sm-8">{{ location.created_at|date:"M d, Y" }}</dd>
+
+                                    {% if location.modified_at != location.created_at %}
+                                    <dt class="col-sm-4">Last updated:</dt>
+                                    <dd class="col-sm-8">{{ location.modified_at|date:"M d, Y" }}</dd>
+                                    {% endif %}
+
+                                    <dt class="col-sm-4">Hierarchy level:</dt>
+                                    <dd class="col-sm-8">Level {{ location.get_depth }}</dd>
+
+                                    {% if location.parent %}
+                                    <dt class="col-sm-4">Parent location:</dt>
+                                    <dd class="col-sm-8">
+                                        <a href="{% url 'locations:location_detail' campaign_slug=campaign.slug location_id=location.parent.id %}">
+                                            {{ location.parent.name }}
+                                        </a>
+                                    </dd>
+                                    {% endif %}
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="owner-info">
+                                <h6 class="mb-3">Ownership</h6>
+                                {% if location.owned_by %}
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person-check text-success me-2"></i>
+                                    <div>
+                                        <strong>{{ location.owned_by.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ location.owned_by.player_owner.username }}
+                                            ({{ location.owned_by.npc|yesno:"NPC,PC" }})
+                                        </small>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="bi bi-person-x me-2"></i>
+                                    <span>No owner assigned</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-locations -->
+            {% if sub_locations %}
+            <div class="card location-detail-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-geo-alt"></i> Sub-locations
+                    </h5>
+                    <span class="badge bg-primary">{{ sub_locations|length }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for sub_location in sub_locations %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card sub-location-card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title mb-0">
+                                            <a href="{% url 'locations:location_detail' campaign_slug=campaign.slug location_id=sub_location.id %}"
+                                               class="text-decoration-none">
+                                                {{ sub_location.name }}
+                                            </a>
+                                        </h6>
+                                        {% if sub_location.owned_by %}
+                                        <span class="badge bg-success">
+                                            {{ sub_location.owner_display }}
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Unowned</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if sub_location.description %}
+                                    <p class="card-text text-muted small mb-2">
+                                        {{ sub_location.description|truncatewords:15 }}
+                                    </p>
+                                    {% endif %}
+
+                                    <div class="small text-muted">
+                                        {% if sub_location.sub_locations.count > 0 %}
+                                        <span class="me-3">
+                                            <i class="bi bi-geo-alt"></i>
+                                            {{ sub_location.sub_locations.count }} sub-location{{ sub_location.sub_locations.count|pluralize }}
+                                        </span>
+                                        {% endif %}
+                                        <span>
+                                            <i class="bi bi-person"></i>
+                                            {{ sub_location.created_by.username }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card location-detail-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-geo-alt"></i> Sub-locations
+                    </h5>
+                </div>
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-geo text-muted" style="font-size: 2rem;"></i>
+                    <h6 class="text-muted mt-2">No sub-locations</h6>
+                    <p class="text-muted mb-3">This location doesn't have any child locations yet.</p>
+                    {% if can_create_location %}
+                    <a href="{% url 'locations:location_create' campaign_slug=campaign.slug %}?parent={{ location.id }}"
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-plus-circle"></i> Add First Sub-location
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'locations:campaign_locations' campaign_slug=campaign.slug %}"
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-list"></i> View All Locations
+                        </a>
+
+                        {% if location.parent %}
+                        <a href="{% url 'locations:location_detail' campaign_slug=campaign.slug location_id=location.parent.id %}"
+                           class="btn btn-outline-info">
+                            <i class="bi bi-arrow-up"></i> Go to Parent Location
+                        </a>
+                        {% endif %}
+
+                        {% if can_create_location %}
+                        <a href="{% url 'locations:location_create' campaign_slug=campaign.slug %}?parent={{ location.id }}"
+                           class="btn btn-outline-success">
+                            <i class="bi bi-plus-circle"></i> Add Sub-location
+                        </a>
+                        {% endif %}
+
+                        {% if can_edit %}
+                        <a href="{% url 'locations:location_edit' campaign_slug=campaign.slug location_id=location.id %}"
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Edit Location
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hierarchy Navigation -->
+            {% if breadcrumb_path|length > 1 %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Location Hierarchy</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        {% for ancestor in breadcrumb_path %}
+                        <li class="{% if not forloop.last %}mb-2{% endif %}">
+                            <div class="d-flex align-items-center">
+                                {% if forloop.counter0 > 0 %}
+                                <span class="text-muted me-2">
+                                    {% for i in "x"|make_list:forloop.counter0 %}
+                                        {% if forloop.first %}└{% else %}─{% endif %}
+                                    {% endfor %}
+                                </span>
+                                {% endif %}
+
+                                {% if ancestor.id == location.id %}
+                                <strong class="text-primary">{{ ancestor.name }}</strong>
+                                {% else %}
+                                <a href="{% url 'locations:location_detail' campaign_slug=campaign.slug location_id=ancestor.id %}"
+                                   class="text-decoration-none">
+                                    {{ ancestor.name }}
+                                </a>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
