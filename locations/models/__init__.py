@@ -346,22 +346,14 @@ class Location(
                 pass
 
         # Validate ownership cross-campaign constraint
-        if self.owned_by_id and self.campaign_id:
-            try:
-                # Import here to avoid circular import
-                from characters.models import Character
-
-                owner = Character.all_objects.get(pk=self.owned_by_id)
-                if owner.campaign_id != self.campaign_id:
-                    raise ValidationError(
-                        "Location owner must be a character in the same campaign."
-                    )
-            except Character.DoesNotExist:
-                # Owner doesn't exist - let database foreign key constraint handle this
-                pass
-            except (AttributeError, ValueError, IntegrityError):
-                # Other access errors - let database handle the constraint
-                pass
+        if (
+            self.owned_by
+            and self.campaign_id
+            and self.owned_by.campaign_id != self.campaign_id
+        ):
+            raise ValidationError(
+                "Location owner must be a character in the same campaign."
+            )
 
     def save(self, *args, **kwargs) -> None:
         """
@@ -506,69 +498,9 @@ class Location(
         # All campaign members can create locations
         return user_role in ["OWNER", "GM", "PLAYER", "OBSERVER"]
 
-    # Ownership management methods
-    def can_change_ownership(self, user: Optional["AbstractUser"]) -> bool:
-        """
-        Check if user can change the ownership of this location.
-
-        Args:
-            user: User to check permissions for
-
-        Returns:
-            True if user can change ownership, False otherwise
-        """
-        if not user or not user.is_authenticated:
-            return False
-
-        user_role = self.campaign.get_user_role(user)
-
-        if not user_role:
-            return False
-
-        # Campaign owners and GMs can always change ownership
-        if user_role in ["OWNER", "GM"]:
-            return True
-
-        # Players can change ownership if they created it or own via character
-        if user_role == "PLAYER":
-            if self.created_by == user:
-                return True
-            if self.owned_by and self.owned_by.player_owner == user:
-                return True
-
-        return False
-
-    def transfer_ownership(self, new_owner: Any, user: "AbstractUser") -> bool:
-        """
-        Transfer ownership of this location to a new character.
-
-        Args:
-            new_owner: The character to transfer ownership to (None to remove ownership)
-            user: The user performing the transfer
-
-        Returns:
-            True if transfer was successful, False if no permission
-
-        Raises:
-            ValidationError: If new_owner is not in the same campaign
-        """
-        if not self.can_change_ownership(user):
-            return False
-
-        # Validate new owner is in same campaign (if provided)
-        if new_owner is not None:
-            if new_owner.campaign_id != self.campaign_id:
-                raise ValidationError(
-                    "New owner must be a character in the same campaign."
-                )
-
-        # Perform the transfer
-        self.owned_by = new_owner
-        self.save()
-
-        return True
-
-    def get_owner_display(self) -> str:
+    # Ownership display property
+    @property
+    def owner_display(self) -> str:
         """
         Get a display string for the location's owner.
 

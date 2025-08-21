@@ -54,38 +54,26 @@ class LocationAdminForm(ModelForm):
             # For new instances without campaign context, show all locations
             self.fields["parent"].queryset = Location.objects.all()
 
-        # Filter owned_by choices based on campaign and provide NPC hint
+        # Filter owned_by choices based on campaign
         self._setup_owner_field()
 
     def _setup_owner_field(self):
-        """Set up owned_by field with campaign filtering and NPC prioritization."""
+        """Set up owned_by field with campaign filtering."""
         from characters.models import Character
 
         if "owned_by" not in self.fields:
             return
 
-        # Get campaign context
-        campaign_id = None
-        if "campaign" in self.data:
-            try:
-                campaign_id = int(self.data.get("campaign"))
-            except (ValueError, TypeError):
-                pass
-        elif self.instance.pk and self.instance.campaign_id:
-            campaign_id = self.instance.campaign_id
-
-        if campaign_id:
-            # Filter characters to same campaign
-            characters_qs = Character.objects.filter(campaign_id=campaign_id)
-            self.fields["owned_by"].queryset = characters_qs
-
-            # Add help text suggesting NPCs
+        # Filter characters to same campaign if we have campaign context
+        if self.instance.pk and self.instance.campaign_id:
+            self.fields["owned_by"].queryset = Character.objects.filter(
+                campaign_id=self.instance.campaign_id
+            )
             self.fields["owned_by"].help_text = (
                 "The character who owns this location (can be PC or NPC). "
                 "NPCs are typically used for location ownership."
             )
         else:
-            # For new instances without campaign context, show no characters
             self.fields["owned_by"].queryset = Character.objects.none()
 
     def clean_parent(self):
@@ -159,7 +147,7 @@ class LocationAdmin(admin.ModelAdmin):
         "campaign",
         "parent",
         "owned_by",
-        "get_owner_display",
+        "owner_display",
         "created_by",
         "created_at",
     ]
