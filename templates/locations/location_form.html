@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/locations.css' %}">
+{% endblock %}
+{% block content %}
+  <div class="container">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'locations:campaign_locations' campaign_slug=campaign.slug %}">Locations</a>
+        </li>
+        {% if object %}
+          <li class="breadcrumb-item">
+            <a href="{% url 'locations:location_detail' campaign_slug=campaign.slug location_id=object.id %}">
+              {{ object.name }}
+            </a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">Edit</li>
+        {% else %}
+          <li class="breadcrumb-item active" aria-current="page">Create</li>
+        {% endif %}
+      </ol>
+    </nav>
+    <!-- Form Container -->
+    <div class="form-container">
+      <!-- Page Header -->
+      <div class="text-center mb-4">
+        <h1 class="h2 mb-1">{{ form_title }}</h1>
+        <p class="text-muted">
+          {% if object %}
+            Update the location details and hierarchy placement.
+          {% else %}
+            Create a new location in {{ campaign.name }}.
+          {% endif %}
+        </p>
+      </div>
+      <!-- Help Text -->
+      <div class="form-help">
+        <h6 class="mb-2">
+          <i class="bi bi-info-circle"></i> Location Guidelines
+        </h6>
+        <ul class="mb-0">
+          <li>Choose a descriptive name that fits your campaign world</li>
+          <li>Use the parent location to build hierarchical relationships</li>
+          <li>Descriptions help players understand the location's purpose</li>
+          {% if not object %}<li>You can always edit these details later</li>{% endif %}
+        </ul>
+      </div>
+      <!-- Form Card -->
+      <div class="card form-card">
+        <div class="card-body p-4">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <!-- Form Errors -->
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger" role="alert">
+                <h6 class="alert-heading">Please correct the following errors:</h6>
+                {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
+            <!-- Location Name -->
+            <div class="mb-4">
+              <label for="{{ form.name.id_for_label }}" class="form-label required-field">
+                Location Name
+              </label>
+              {{ form.name }}
+              {% if form.name.help_text %}
+                <div class="form-text">{{ form.name.help_text }}</div>
+              {% endif %}
+              {% if form.name.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.name.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <!-- Description -->
+            <div class="mb-4">
+              <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+              {{ form.description }}
+              {% if form.description.help_text %}
+                <div class="form-text">{{ form.description.help_text }}</div>
+              {% endif %}
+              {% if form.description.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.description.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <!-- Parent Location -->
+            <div class="mb-4">
+              <label for="{{ form.parent.id_for_label }}" class="form-label">Parent Location</label>
+              {{ form.parent }}
+              {% if form.parent.help_text %}
+                <div class="form-text">{{ form.parent.help_text }}</div>
+              {% endif %}
+              {% if form.parent.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.parent.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+              <!-- Hierarchy Preview -->
+              <div id="hierarchy-preview"
+                   class="hierarchy-preview"
+                   style="display: none">
+                <strong>Hierarchy Preview:</strong>
+                <span id="hierarchy-path"></span>
+              </div>
+            </div>
+            <!-- Campaign (Hidden/Disabled for Edit) -->
+            {% if form.campaign %}
+              <div class="mb-4"
+                   {% if form.campaign.field.disabled %}style="display: none;"{% endif %}>
+                <label for="{{ form.campaign.id_for_label }}"
+                       class="form-label required-field">Campaign</label>
+                {{ form.campaign }}
+                {% if form.campaign.field.disabled %}
+                  <div class="parent-info">
+                    <i class="bi bi-lock"></i>
+                    <strong>{{ object.campaign.name }}</strong>
+                    <div class="form-text">Campaign cannot be changed after creation.</div>
+                  </div>
+                {% endif %}
+                {% if form.campaign.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.campaign.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            {% endif %}
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <a href="{% if object %}{% url 'locations:location_detail' campaign_slug=campaign.slug location_id=object.id %}{% else %}{% url 'locations:campaign_locations' campaign_slug=campaign.slug %}{% endif %}"
+                     class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                  </a>
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> {{ submit_text }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% block extra_js %}
+    <script>
+      // Pass hierarchy data to locations.js
+      window.locationHierarchy = {
+        {% for location in form.parent.field.queryset %}
+        '{{ location.id }}': '{{ location.get_full_path|escapejs }}',
+        {% endfor %}
+      };
+    </script>
+    <script src="{% static 'js/locations.js' %}"></script>
+  {% endblock %}
+{% endblock %}
