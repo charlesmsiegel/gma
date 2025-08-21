@@ -3680,7 +3680,7 @@ class NPCPCManagerTest(TestCase):
 
         npcs = Character.npcs.all()
         self.assertEqual(npcs.count(), 0)
-        self.assertQuerysetEqual(npcs, [])
+        self.assertEqual(list(npcs), [])
 
         # PCs should still exist
         pcs = Character.pcs.all()

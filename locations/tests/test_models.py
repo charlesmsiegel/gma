@@ -258,7 +258,7 @@ class LocationHierarchyTest(TestCase):
         self.assertEqual(sub_locations.count(), 2)  # child1 + child2
 
         # Should contain the same locations
-        self.assertQuerysetEqual(sub_locations, children, ordered=False)
+        self.assertCountEqual(list(sub_locations), list(children))
 
     def test_create_parent_child_relationship(self):
         """Test creating parent-child location relationships."""
