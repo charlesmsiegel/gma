@@ -1,0 +1,43 @@
+---
+engines:
+  bandit:
+    exclude_paths:
+      - "*/tests/**"
+      - "*/test_*.py"
+      - "**/test_settings.py"
+    rules:
+      B105:  # hardcoded_password_string
+        exclude:
+          - "*/tests/**"
+          - "*/test_*.py"
+          - "**/test_settings.py"
+      B106:  # hardcoded_password_funcarg
+        exclude:
+          - "*/tests/**"
+          - "*/test_*.py"
+          - "**/test_settings.py"
+      B107:  # hardcoded_password_default
+        exclude:
+          - "*/tests/**"
+          - "*/test_*.py"
+          - "**/test_settings.py"
+
+  flake8:
+    exclude_paths:
+      - "migrations/"
+      - "venv/"
+      - "__pycache__/"
+
+  pylint:
+    exclude_paths:
+      - "migrations/"
+      - "venv/"
+      - "__pycache__/"
+
+exclude_paths:
+  - "migrations/"
+  - "venv/"
+  - "__pycache__/"
+  - "node_modules/"
+  - "*.min.js"
+  - "*.min.css"

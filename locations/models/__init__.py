@@ -293,59 +293,68 @@ class Location(
         """
         super().clean()
 
-        # Prevent self as parent
-        if self.parent_id and self.parent_id == self.pk:
-            raise ValidationError("A location cannot be its own parent.")
+        self._validate_self_parent()
 
-        # Skip validation if campaign is None (will fail at database level)
+        # Skip remaining validation if campaign is None (will fail at database level)
         if not self.campaign_id:
             return
 
-        # Perform hierarchy validation when we have parent_id
-        if self.parent_id:
-            try:
-                # Try to access parent - this works for valid parent_id
-                parent = self.parent
+        self._validate_parent_hierarchy()
+        self._validate_character_ownership()
 
-                # Prevent circular references (only for existing objects)
-                if self.pk and parent:
-                    # Check if the new parent would create a circle
-                    # by seeing if the new parent is already a descendant
-                    # of this location
-                    descendants = self.get_descendants()
-                    if parent in descendants:
-                        raise ValidationError(
-                            "Circular reference detected: this location cannot "
-                            "be a parent of its ancestor or descendant."
-                        )
+    def _validate_self_parent(self) -> None:
+        """Prevent location from being its own parent."""
+        if self.parent_id and self.parent_id == self.pk:
+            raise ValidationError("A location cannot be its own parent.")
 
-                # Check cross-campaign parent
-                if (
-                    parent
-                    and self.campaign_id
-                    and self.campaign_id != parent.campaign_id
-                ):
-                    raise ValidationError(
-                        "Parent location must be in the same campaign."
-                    )
+    def _validate_parent_hierarchy(self) -> None:
+        """Validate parent-child relationship constraints."""
+        if not self.parent_id:
+            return
 
-                # Check maximum depth
-                if parent:
-                    future_depth = parent.get_depth() + 1
-                    if future_depth >= 10:  # Maximum depth of 10 levels (0-9)
-                        raise ValidationError(
-                            f"Maximum depth of 10 levels exceeded. "
-                            f"This location would be at depth {future_depth}."
-                        )
+        try:
+            parent = self.parent
+            self._validate_circular_reference(parent)
+            self._validate_same_campaign(parent)
+            self._validate_maximum_depth(parent)
+        except Location.DoesNotExist:
+            # Parent doesn't exist - let database foreign key constraint handle this
+            pass
+        except (AttributeError, ValueError, IntegrityError):
+            # Other access errors - let database handle the constraint
+            pass
 
-            except Location.DoesNotExist:
-                # Parent doesn't exist - let database foreign key constraint handle this
-                pass
-            except (AttributeError, ValueError, IntegrityError):
-                # Other access errors - let database handle the constraint
-                pass
+    def _validate_circular_reference(self, parent: Optional["Location"]) -> None:
+        """Prevent circular references in hierarchy."""
+        if not (self.pk and parent):
+            return
 
-        # Validate ownership cross-campaign constraint
+        descendants = self.get_descendants()
+        if parent in descendants:
+            raise ValidationError(
+                "Circular reference detected: this location cannot "
+                "be a parent of its ancestor or descendant."
+            )
+
+    def _validate_same_campaign(self, parent: Optional["Location"]) -> None:
+        """Ensure parent is in the same campaign."""
+        if parent and self.campaign_id and self.campaign_id != parent.campaign_id:
+            raise ValidationError("Parent location must be in the same campaign.")
+
+    def _validate_maximum_depth(self, parent: Optional["Location"]) -> None:
+        """Ensure hierarchy doesn't exceed maximum depth."""
+        if not parent:
+            return
+
+        future_depth = parent.get_depth() + 1
+        if future_depth >= 10:  # Maximum depth of 10 levels (0-9)
+            raise ValidationError(
+                f"Maximum depth of 10 levels exceeded. "
+                f"This location would be at depth {future_depth}."
+            )
+
+    def _validate_character_ownership(self) -> None:
+        """Validate character ownership is within same campaign."""
         if (
             self.owned_by
             and self.campaign_id
@@ -355,7 +364,7 @@ class Location(
                 "Location owner must be a character in the same campaign."
             )
 
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """
         Save the location with validation.
 
@@ -366,7 +375,9 @@ class Location(
         self.clean()
         super().save(*args, **kwargs)
 
-    def delete(self, using=None, keep_parents=False) -> tuple:
+    def delete(
+        self, using: Optional[str] = None, keep_parents: bool = False
+    ) -> tuple[int, dict[str, int]]:
         """
         Delete the location and handle orphaned children.
 

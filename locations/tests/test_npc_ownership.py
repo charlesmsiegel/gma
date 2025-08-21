@@ -1124,9 +1124,7 @@ class LocationOwnershipEdgeCaseTest(TestCase):
             Character.objects.get(id=character_id)
 
     def test_ownership_with_duplicate_character_names(self):
-        """
-        Test ownership assignment with characters having duplicate names.
-        """
+        """Test ownership assignment with characters having duplicate names."""
         # Create second campaign for testing duplicate names across campaigns
         campaign2 = Campaign.objects.create(
             name="Second Campaign",
