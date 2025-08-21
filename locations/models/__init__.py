@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -60,6 +60,15 @@ class Location(
         blank=True,
         related_name="children",
         help_text="Parent location in the hierarchy",
+    )
+
+    owned_by: models.ForeignKey = models.ForeignKey(
+        "characters.Character",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="owned_locations",
+        help_text="The character who owns this location (can be PC or NPC)",
     )
 
     objects = PolymorphicManager()
@@ -284,59 +293,79 @@ class Location(
         """
         super().clean()
 
-        # Prevent self as parent
-        if self.parent_id and self.parent_id == self.pk:
-            raise ValidationError("A location cannot be its own parent.")
+        self._validate_self_parent()
 
-        # Skip validation if campaign is None (will fail at database level)
+        # Skip remaining validation if campaign is None (will fail at database level)
         if not self.campaign_id:
             return
 
-        # Perform hierarchy validation when we have parent_id
-        if self.parent_id:
-            try:
-                # Try to access parent - this works for valid parent_id
-                parent = self.parent
+        self._validate_parent_hierarchy()
+        self._validate_character_ownership()
 
-                # Prevent circular references (only for existing objects)
-                if self.pk and parent:
-                    # Check if the new parent would create a circle
-                    # by seeing if the new parent is already a descendant
-                    # of this location
-                    descendants = self.get_descendants()
-                    if parent in descendants:
-                        raise ValidationError(
-                            "Circular reference detected: this location cannot "
-                            "be a parent of its ancestor or descendant."
-                        )
+    def _validate_self_parent(self) -> None:
+        """Prevent location from being its own parent."""
+        if self.parent_id and self.parent_id == self.pk:
+            raise ValidationError("A location cannot be its own parent.")
 
-                # Check cross-campaign parent
-                if (
-                    parent
-                    and self.campaign_id
-                    and self.campaign_id != parent.campaign_id
-                ):
-                    raise ValidationError(
-                        "Parent location must be in the same campaign."
-                    )
+    def _validate_parent_hierarchy(self) -> None:
+        """Validate parent-child relationship constraints."""
+        if not self.parent_id:
+            return
 
-                # Check maximum depth
-                if parent:
-                    future_depth = parent.get_depth() + 1
-                    if future_depth >= 10:  # Maximum depth of 10 levels (0-9)
-                        raise ValidationError(
-                            f"Maximum depth of 10 levels exceeded. "
-                            f"This location would be at depth {future_depth}."
-                        )
+        try:
+            parent = self.parent
+            self._validate_circular_reference(parent)
+            self._validate_same_campaign(parent)
+            self._validate_maximum_depth(parent)
+        except Location.DoesNotExist:
+            # Parent doesn't exist - let database foreign key constraint handle this
+            pass
+        except (AttributeError, ValueError, IntegrityError):
+            # Other access errors - let database handle the constraint
+            pass
 
-            except Location.DoesNotExist:
-                # Parent doesn't exist - let database foreign key constraint handle this
-                pass
-            except (AttributeError, ValueError, IntegrityError):
-                # Other access errors - let database handle the constraint
-                pass
+    def _validate_circular_reference(self, parent: Optional["Location"]) -> None:
+        """Prevent circular references in hierarchy."""
+        if not (self.pk and parent):
+            return
 
-    def save(self, *args, **kwargs) -> None:
+        descendants = self.get_descendants()
+        if parent in descendants:
+            raise ValidationError(
+                "Circular reference detected: this location cannot "
+                "be a parent of its ancestor or descendant."
+            )
+
+    def _validate_same_campaign(self, parent: Optional["Location"]) -> None:
+        """Ensure parent is in the same campaign."""
+        if parent and self.campaign_id and self.campaign_id != parent.campaign_id:
+            raise ValidationError("Parent location must be in the same campaign.")
+
+    @staticmethod
+    def _validate_maximum_depth(parent: Optional["Location"]) -> None:
+        """Ensure hierarchy doesn't exceed maximum depth."""
+        if not parent:
+            return
+
+        future_depth = parent.get_depth() + 1
+        if future_depth >= 10:  # Maximum depth of 10 levels (0-9)
+            raise ValidationError(
+                f"Maximum depth of 10 levels exceeded. "
+                f"This location would be at depth {future_depth}."
+            )
+
+    def _validate_character_ownership(self) -> None:
+        """Validate character ownership is within same campaign."""
+        if (
+            self.owned_by
+            and self.campaign_id
+            and self.owned_by.campaign_id != self.campaign_id
+        ):
+            raise ValidationError(
+                "Location owner must be a character in the same campaign."
+            )
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """
         Save the location with validation.
 
@@ -347,7 +376,9 @@ class Location(
         self.clean()
         super().save(*args, **kwargs)
 
-    def delete(self, using=None, keep_parents=False) -> tuple:
+    def delete(
+        self, using: Optional[str] = None, keep_parents: bool = False
+    ) -> tuple[int, dict[str, int]]:
         """
         Delete the location and handle orphaned children.
 
@@ -410,9 +441,13 @@ class Location(
         if user_role in ["OWNER", "GM"]:
             return True
 
-        # Players can edit their own locations
-        if user_role == "PLAYER" and self.created_by == user:
-            return True
+        # Players can edit their own locations or character-owned locations
+        if user_role == "PLAYER":
+            if self.created_by == user:
+                return True
+            # Check if any of the user's characters own this location
+            if self.owned_by and self.owned_by.player_owner == user:
+                return True
 
         return False
 
@@ -442,9 +477,13 @@ class Location(
         if user_role == "GM":
             return True  # Default: GMs can delete locations
 
-        # Players can delete their own locations
-        if user_role == "PLAYER" and self.created_by == user:
-            return True
+        # Players can delete their own locations or locations owned by their characters
+        if user_role == "PLAYER":
+            if self.created_by == user:
+                return True
+            # Check if any of the user's characters own this location
+            if self.owned_by and self.owned_by.player_owner == user:
+                return True
 
         return False
 
@@ -470,6 +509,21 @@ class Location(
 
         # All campaign members can create locations
         return user_role in ["OWNER", "GM", "PLAYER", "OBSERVER"]
+
+    # Ownership display property
+    @property
+    def owner_display(self) -> str:
+        """
+        Get a display string for the location's owner.
+
+        Returns:
+            String describing the owner or "Unowned" if no owner
+        """
+        if not self.owned_by:
+            return "Unowned"
+
+        owner_type = "NPC" if self.owned_by.npc else "PC"
+        return f"{self.owned_by.name} ({owner_type})"
 
     class Meta:
         db_table = "locations_location"

@@ -54,6 +54,28 @@ class LocationAdminForm(ModelForm):
             # For new instances without campaign context, show all locations
             self.fields["parent"].queryset = Location.objects.all()
 
+        # Filter owned_by choices based on campaign
+        self._setup_owner_field()
+
+    def _setup_owner_field(self):
+        """Set up owned_by field with campaign filtering."""
+        from characters.models import Character
+
+        if "owned_by" not in self.fields:
+            return
+
+        # Filter characters to same campaign if we have campaign context
+        if self.instance.pk and self.instance.campaign_id:
+            self.fields["owned_by"].queryset = Character.objects.filter(
+                campaign_id=self.instance.campaign_id
+            )
+            self.fields["owned_by"].help_text = (
+                "The character who owns this location (can be PC or NPC). "
+                "NPCs are typically used for location ownership."
+            )
+        else:
+            self.fields["owned_by"].queryset = Character.objects.none()
+
     def clean_parent(self):
         """Validate parent field to prevent circular references and cross-campaign
         assignments."""
@@ -77,6 +99,18 @@ class LocationAdminForm(ModelForm):
                     )
 
         return parent
+
+    def clean_owned_by(self):
+        """Validate owned_by field to prevent cross-campaign ownership."""
+        owned_by = self.cleaned_data.get("owned_by")
+        campaign = self.cleaned_data.get("campaign")
+
+        if owned_by and campaign:
+            # Check same campaign
+            if owned_by.campaign != campaign:
+                raise ValidationError("Owner must be a character in the same campaign.")
+
+        return owned_by
 
     def clean(self):
         """Override clean to catch model validation errors and assign to proper
@@ -108,9 +142,17 @@ class LocationAdmin(admin.ModelAdmin):
     """Admin interface for Location model with hierarchy support."""
 
     form = LocationAdminForm
-    list_display = ["name", "campaign", "parent", "created_by", "created_at"]
-    list_filter = ["campaign", "parent", "created_by", "created_at"]
-    search_fields = ["name", "description", "campaign__name"]
+    list_display = [
+        "name",
+        "campaign",
+        "parent",
+        "owned_by",
+        "owner_display",
+        "created_by",
+        "created_at",
+    ]
+    list_filter = ["campaign", "parent", "owned_by", "created_by", "created_at"]
+    search_fields = ["name", "description", "campaign__name", "owned_by__name"]
     ordering = ["campaign", "parent", "name"]
     readonly_fields = ["created_at", "updated_at"]
     inlines = [LocationChildrenInline]
@@ -118,6 +160,7 @@ class LocationAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Basic Information", {"fields": ("name", "description")}),
         ("Campaign & Hierarchy", {"fields": ("campaign", "parent")}),
+        ("Ownership", {"fields": ("owned_by",)}),
         (
             "Audit Information",
             {
@@ -130,9 +173,9 @@ class LocationAdmin(admin.ModelAdmin):
     def get_queryset(self, request: HttpRequest) -> QuerySet[Location]:
         """Optimize queryset with select_related and prefetch_related."""
         qs = super().get_queryset(request)
-        return qs.select_related("campaign", "parent", "created_by").prefetch_related(
-            "children"
-        )
+        return qs.select_related(
+            "campaign", "parent", "created_by", "owned_by"
+        ).prefetch_related("children")
 
     def get_hierarchy_display(self, obj: Location) -> str:
         """Display location name with indentation based on hierarchy depth."""
@@ -275,7 +318,7 @@ class LocationAdmin(admin.ModelAdmin):
                 return
         else:
             # No parent selected, show selection form
-            # Get all possible parent locations (from same campaigns as selected locations)
+            # Get possible parent locations from same campaigns
             campaign_ids = list(
                 queryset.values_list("campaign_id", flat=True).distinct()
             )
@@ -348,7 +391,7 @@ class LocationAdmin(admin.ModelAdmin):
         if error_count > 0:
             self.message_user(
                 request,
-                f"{error_count} location(s) could not be moved due to validation errors.",
+                f"{error_count} location(s) could not be moved due to errors.",
                 messages.WARNING,
             )
 

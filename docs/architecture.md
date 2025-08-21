@@ -1048,9 +1048,9 @@ class CharacterService:
 ### Location Domain Models
 
 #### Location Model Architecture
-Location: `locations/models/__init__.py:26-479`
+Location: `locations/models/__init__.py:26-521`
 
-The Location model provides hierarchical location management for campaigns with comprehensive tree traversal capabilities and validation frameworks:
+The Location model provides hierarchical location management for campaigns with comprehensive tree traversal capabilities, validation frameworks, and character ownership support:
 
 ```python
 class Location(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, PolymorphicModel):
@@ -1065,6 +1065,16 @@ class Location(TimestampedMixin, NamedModelMixin, DescribedModelMixin, Auditable
         blank=True,
         related_name="children",
         help_text="Parent location in the hierarchy"
+    )
+
+    # Character ownership support (Issue #186)
+    owned_by = models.ForeignKey(
+        "characters.Character",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="owned_locations",
+        help_text="The character who owns this location (can be PC or NPC)"
     )
 ```
 
@@ -1140,6 +1150,107 @@ def clean(self) -> None:
         future_depth = self.parent.get_depth() + 1
         if future_depth >= 10:
             raise ValidationError("Maximum depth of 10 levels exceeded...")
+
+    # Validate ownership cross-campaign constraint
+    if (
+        self.owned_by
+        and self.campaign_id
+        and self.owned_by.campaign_id != self.campaign_id
+    ):
+        raise ValidationError(
+            "Location owner must be a character in the same campaign."
+        )
+```
+
+#### Character Ownership Feature (Issue #186)
+
+The location ownership feature enables characters (both PCs and NPCs) to own locations within their campaign, supporting typical RPG scenarios like tavern keepers owning taverns or players owning strongholds.
+
+**Key Architectural Decisions:**
+
+1. **Universal Character Support**: Both Player Characters (PCs) and Non-Player Characters (NPCs) can own locations
+2. **Optional Ownership**: Locations can exist without an owner (owned_by = NULL)
+3. **Campaign Scoping**: Validation ensures characters can only own locations within their own campaign
+4. **Simplified Approach**: Direct field assignment with existing permission checks rather than complex transfer methods
+5. **Admin Interface Enhancement**: Campaign-based filtering suggests NPCs for location ownership
+
+**Business Logic Implementation:**
+
+```python
+# Character ownership validation
+def clean(self) -> None:
+    # ... existing validation ...
+
+    # Validate ownership cross-campaign constraint
+    if (
+        self.owned_by
+        and self.campaign_id
+        and self.owned_by.campaign_id != self.campaign_id
+    ):
+        raise ValidationError(
+            "Location owner must be a character in the same campaign."
+        )
+
+# Permission system integration
+def can_edit(self, user) -> bool:
+    # ... existing permission checks ...
+
+    # Players can edit their character-owned locations
+    if user_role == "PLAYER":
+        if self.created_by == user:
+            return True
+        # Check if any of the user's characters own this location
+        if self.owned_by and self.owned_by.player_owner == user:
+            return True
+
+    return False
+```
+
+**Reverse Relationship on Character:**
+
+The `owned_by` field automatically creates a reverse relationship on the Character model:
+
+```python
+# Automatic reverse relationship usage
+character.owned_locations.all()  # All locations owned by character
+character.owned_locations.filter(name__icontains='tavern')  # Filter owned locations
+character.owned_locations.count()  # Count of owned properties
+
+# Typical usage scenarios
+tavern_keeper = Character.objects.get(name="Innkeeper Bob")
+tavern_properties = tavern_keeper.owned_locations.all()
+
+# Property transfer
+old_owner.owned_locations.update(owned_by=new_owner)
+```
+
+**Admin Interface Enhancements:**
+
+```python
+# Enhanced admin form with campaign-based filtering
+def _setup_owner_field(self):
+    if self.instance.pk and self.instance.campaign_id:
+        self.fields["owned_by"].queryset = Character.objects.filter(
+            campaign_id=self.instance.campaign_id
+        )
+        self.fields["owned_by"].help_text = (
+            "The character who owns this location (can be PC or NPC). "
+            "NPCs are typically used for location ownership."
+        )
+```
+
+**Cross-Campaign Validation:**
+
+```python
+def clean_owned_by(self):
+    owned_by = self.cleaned_data.get("owned_by")
+    campaign = self.cleaned_data.get("campaign")
+
+    if owned_by and campaign:
+        if owned_by.campaign != campaign:
+            raise ValidationError("Owner must be a character in the same campaign.")
+
+    return owned_by
 ```
 
 #### Permission Integration
@@ -1153,20 +1264,56 @@ def can_view(self, user) -> bool:
     """Campaign members and public campaigns only."""
 
 def can_edit(self, user) -> bool:
-    """Owners/GMs edit all, Players edit their own."""
+    """Owners/GMs edit all, Players edit their own + character-owned."""
+    user_role = self.campaign.get_user_role(user)
+
+    if user_role in ["OWNER", "GM"]:
+        return True
+
+    if user_role == "PLAYER":
+        if self.created_by == user:
+            return True
+        # NEW: Check if any of the user's characters own this location
+        if self.owned_by and self.owned_by.player_owner == user:
+            return True
+
+    return False
 
 def can_delete(self, user) -> bool:
-    """Owners/GMs delete all, Players delete their own."""
+    """Owners/GMs delete all, Players delete their own + character-owned."""
+    user_role = self.campaign.get_user_role(user)
+
+    if user_role in ["OWNER", "GM"]:
+        return True
+
+    if user_role == "PLAYER":
+        if self.created_by == user:
+            return True
+        # NEW: Check if any of the user's characters own this location
+        if self.owned_by and self.owned_by.player_owner == user:
+            return True
+
+    return False
 
 @classmethod
 def can_create(cls, user, campaign) -> bool:
     """All campaign members can create locations."""
+
+# NEW: Character ownership display property
+@property
+def owner_display(self) -> str:
+    """Get a display string for the location's owner."""
+    if not self.owned_by:
+        return "Unowned"
+
+    owner_type = "NPC" if self.owned_by.npc else "PC"
+    return f"{self.owned_by.name} ({owner_type})"
 ```
 
 **Permission Rules:**
 **View**: All campaign members + anonymous users for public campaigns
 - **Create**: All campaign members (Owner, GM, Player, Observer)
-- **Edit/Delete**: Owner/GM for all locations, Players for their own creations
+- **Edit/Delete**: Owner/GM for all locations, Players for their own creations + character-owned locations
 
 #### Database Design
 

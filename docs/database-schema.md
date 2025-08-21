@@ -1204,6 +1204,228 @@ GROUP BY npc;
 - **Existing Data**: All existing characters treated as PCs (npc=false)
 - **Backward Compatibility**: Existing `Character.objects` methods preserved
 
+### Location Domain Models
+
+#### Location Model with Character Ownership
+
+**Table**: `locations_location`
+
+The Location model provides hierarchical location management for campaigns with comprehensive tree traversal capabilities, validation frameworks, and character ownership support:
+
+```sql
+CREATE TABLE locations_location (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT DEFAULT '' NOT NULL,
+
+    -- Core campaign relationship
+    campaign_id INTEGER NOT NULL REFERENCES campaigns_campaign(id) ON DELETE CASCADE,
+
+    -- Hierarchy support
+    parent_id INTEGER REFERENCES locations_location(id) ON DELETE SET_NULL,
+
+    -- Character ownership support (Issue #186)
+    owned_by_id INTEGER REFERENCES characters_character(id) ON DELETE SET_NULL,
+
+    -- Audit fields (via AuditableMixin)
+    created_by_id INTEGER REFERENCES users_user(id) ON DELETE SET_NULL,
+    modified_by_id INTEGER REFERENCES users_user(id) ON DELETE SET_NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+
+    -- Polymorphic support
+    polymorphic_ctype_id INTEGER NOT NULL REFERENCES django_content_type(id)
+);
+
+-- Performance indexes
+CREATE INDEX locations_location_campaign_idx ON locations_location(campaign_id);
+CREATE INDEX locations_location_parent_idx ON locations_location(parent_id);
+CREATE INDEX locations_location_owned_by_idx ON locations_location(owned_by_id);
+CREATE INDEX locations_location_created_at_idx ON locations_location(created_at);
+CREATE INDEX locations_location_updated_at_idx ON locations_location(updated_at);
+```
+
+#### Character Ownership Feature (Issue #186)
+
+**Location Ownership Architecture:**
+
+The location ownership feature enables characters (both PCs and NPCs) to own locations within their campaign, supporting typical RPG scenarios like tavern keepers owning taverns or players owning strongholds.
+
+**Key Features:**
+
+- **Universal Character Ownership**: Both Player Characters (PCs) and Non-Player Characters (NPCs) can own locations
+- **Optional Ownership**: Locations can be unowned (owned_by = NULL)
+- **Cross-Campaign Validation**: Characters can only own locations within their own campaign
+- **Permission Integration**: Character ownership affects location edit/delete permissions
+- **Admin Interface**: Enhanced admin interface with campaign-based filtering
+
+**Field Specifications:**
+
+- `owned_by_id`: Foreign key to Character model (SET_NULL on character deletion)
+- **Null Allowed**: Locations can exist without an owner
+- **Campaign Scoped**: Validation ensures owner and location are in the same campaign
+- **Performance Optimized**: Database index for efficient ownership queries
+
+**Business Rules:**
+
+```sql
+-- Cross-campaign ownership prevention
+ALTER TABLE locations_location
+ADD CONSTRAINT locations_owner_same_campaign_check
+CHECK (
+    owned_by_id IS NULL OR
+    (SELECT campaign_id FROM characters_character WHERE id = owned_by_id) = campaign_id
+);
+```
+
+**Relationship Patterns:**
+
+```python
+# Character → Locations (One-to-Many)
+character.owned_locations.all()  # All locations owned by character
+
+# Location → Character (Many-to-One)
+location.owned_by  # Character who owns this location (or None)
+
+# Typical usage patterns
+tavern_keeper = Character.objects.get(name="Innkeeper Bob")
+tavern = Location.objects.get(name="The Prancing Pony")
+tavern.owned_by = tavern_keeper
+tavern.save()
+
+# Query all properties of a character
+merchant_properties = merchant_character.owned_locations.filter(
+    name__icontains="shop"
+)
+```
+
+#### Location Ownership Query Patterns
+
+**Find All Character-Owned Locations in Campaign:**
+
+```sql
+-- Get all owned locations in a campaign
+SELECT l.name, c.name as owner_name, c.npc
+FROM locations_location l
+JOIN characters_character c ON l.owned_by_id = c.id
+WHERE l.campaign_id = :campaign_id
+ORDER BY c.npc, c.name, l.name;
+```
+
+**Character Property Portfolio Analysis:**
+
+```sql
+-- Character property counts
+SELECT
+    c.name as character_name,
+    c.npc,
+    COUNT(l.id) as owned_locations_count,
+    STRING_AGG(l.name, ', ' ORDER BY l.name) as owned_locations
+FROM characters_character c
+LEFT JOIN locations_location l ON c.id = l.owned_by_id
+WHERE c.campaign_id = :campaign_id
+GROUP BY c.id, c.name, c.npc
+HAVING COUNT(l.id) > 0
+ORDER BY c.npc, owned_locations_count DESC;
+```
+
+**Unowned Locations (Available for Acquisition):**
+
+```sql
+-- Find locations without owners
+SELECT l.name, l.description
+FROM locations_location l
+WHERE l.campaign_id = :campaign_id
+  AND l.owned_by_id IS NULL
+ORDER BY l.name;
+```
+
+**Permission-Based Location Queries:**
+
+```sql
+-- Locations a character can edit (owned + campaign role permissions)
+SELECT l.name,
+       CASE
+           WHEN l.owned_by_id = :character_id THEN 'owner'
+           WHEN :user_role IN ('OWNER', 'GM') THEN 'campaign_role'
+           WHEN l.created_by_id = :user_id THEN 'creator'
+           ELSE 'none'
+       END as edit_reason
+FROM locations_location l
+WHERE l.campaign_id = :campaign_id
+  AND (l.owned_by_id = :character_id
+       OR l.created_by_id = :user_id
+       OR :user_role IN ('OWNER', 'GM'))
+ORDER BY l.name;
+```
+
+#### Character.owned_locations Relationship
+
+**Reverse Relationship Implementation:**
+
+The `owned_by` field on Location automatically creates a reverse relationship on Character:
+
+```python
+# Automatic reverse relationship
+class Character(models.Model):
+    # ... other fields ...
+
+    # This relationship is automatically created by the owned_by ForeignKey
+    # owned_locations = reverse ForeignKey relationship
+
+    @property
+    def owned_locations(self):
+        """Access to locations owned by this character."""
+        return self.owned_locations.all()  # Auto-generated by Django
+```
+
+**Performance Optimizations:**
+
+```python
+# Efficient ownership queries
+character.owned_locations.select_related('campaign', 'parent')
+character.owned_locations.count()  # Uses COUNT(*) query
+character.owned_locations.filter(name__icontains='tavern')
+
+# Bulk operations
+Character.objects.prefetch_related('owned_locations')
+```
+
+**Common Usage Scenarios:**
+
+```python
+# NPC business owner scenario
+tavern_keeper = Character.objects.get(name="Barliman Butterbur")
+tavern_properties = tavern_keeper.owned_locations.filter(
+    name__icontains='prancing pony'
+)
+
+# Player character real estate
+player_char = Character.objects.get(name="Aragorn")
+strongholds = player_char.owned_locations.exclude(
+    owned_by__npc=True
+)
+
+# Property transfer scenarios
+old_owner.owned_locations.update(owned_by=new_owner)
+```
+
+#### Migration History
+
+**Implementation Timeline:**
+
+- **Migration 0003_add_location_ownership.py**: Added `owned_by` field to Location model
+- **Database Schema**: Added foreign key with SET_NULL on character deletion
+- **Admin Interface**: Enhanced with character filtering and ownership suggestions
+- **Validation**: Cross-campaign ownership validation implemented
+- **Testing**: Comprehensive test suite covering all ownership scenarios
+
+**Migration Safety:**
+
+- **Backward Compatible**: All existing locations remain functional (owned_by = NULL)
+- **Zero Downtime**: Additive migration with no data loss
+- **Performance Impact**: Minimal - adds single indexed foreign key column
+
 ### Permission System
 
 The campaign permission system uses a hierarchical role model:
