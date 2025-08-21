@@ -10,9 +10,10 @@
 6. [Invitation API](#invitation-api)
 7. [User API](#user-api)
 8. [Character API](#character-api)
-9. [Source Reference API](#source-reference-api)
-10. [Data Models](#data-models)
-11. [Testing the API](#testing-the-api)
+9. [Location API](#location-api)
+10. [Source Reference API](#source-reference-api)
+11. [Data Models](#data-models)
+12. [Testing the API](#testing-the-api)
 
 ## Overview
 
@@ -785,7 +786,19 @@ Characters now include a comprehensive status workflow:
       "arete": 2,
       "quintessence": 5,
       "paradox": 1,
-      "willpower": 4
+      "willpower": 4,
+      "owned_locations": [
+        {
+          "id": 15,
+          "name": "Aria's Sanctum",
+          "description": "Hidden magical workspace"
+        },
+        {
+          "id": 23,
+          "name": "The Mystic Eye Bookshop",
+          "description": "Occult bookstore and meeting place"
+        }
+      ]
     },
     {
       "id": 2,
@@ -854,7 +867,25 @@ Get detailed information about a specific character.
   "arete": 2,
   "quintessence": 5,
   "paradox": 1,
-  "willpower": 4
+  "willpower": 4,
+  "owned_locations": [
+    {
+      "id": 15,
+      "name": "Aria's Sanctum",
+      "description": "Hidden magical workspace",
+      "campaign": 1,
+      "parent": null,
+      "owner_display": "Aria Nightwhisper (PC)"
+    },
+    {
+      "id": 23,
+      "name": "The Mystic Eye Bookshop",
+      "description": "Occult bookstore and meeting place",
+      "campaign": 1,
+      "parent": null,
+      "owner_display": "Aria Nightwhisper (PC)"
+    }
+  ]
 }
 ```
 
@@ -1103,6 +1134,136 @@ Character.objects.filter(npc=True)               # Manual filtering still works
 - Full polymorphic inheritance support
 - Reduced application-level filtering logic
 
+## Location API
+
+### Character-Location Ownership Relationship (Issue #186)
+
+The Location model supports character ownership, enabling typical RPG scenarios like NPCs owning taverns or players owning strongholds.
+
+**Key Features:**
+- Both Player Characters (PCs) and Non-Player Characters (NPCs) can own locations
+- Locations can be unowned (owned_by = null)
+- Cross-campaign validation ensures characters can only own locations in their own campaign
+- Permission system integration for location editing rights
+
+**API Access Patterns:**
+
+**Character's Owned Locations (via Character API):**
+```bash
+# Get character with owned locations included
+GET /api/characters/{id}/
+
+# Example response includes owned_locations field:
+{
+  "id": 1,
+  "name": "Aria Nightwhisper",
+  "owned_locations": [
+    {
+      "id": 15,
+      "name": "Aria's Sanctum",
+      "description": "Hidden magical workspace",
+      "campaign": 1,
+      "parent": null,
+      "owner_display": "Aria Nightwhisper (PC)"
+    }
+  ]
+}
+```
+
+**Future Location Endpoints (Not Yet Implemented):**
+```bash
+# List all locations in a campaign
+GET /api/locations/?campaign_id=1
+
+# Get locations by ownership
+GET /api/locations/?campaign_id=1&owned_by=character_id
+
+# Get unowned locations (available for acquisition)
+GET /api/locations/?campaign_id=1&owned_by__isnull=true
+
+# Get locations owned by NPCs
+GET /api/locations/?campaign_id=1&owned_by__npc=true
+
+# Get locations owned by PCs
+GET /api/locations/?campaign_id=1&owned_by__npc=false
+```
+
+**Location Model Structure:**
+```json
+{
+  "id": 15,
+  "name": "The Prancing Pony",
+  "description": "Famous inn in Bree",
+  "campaign": {
+    "id": 1,
+    "name": "Lord of the Rings Campaign"
+  },
+  "parent": null,
+  "children": [
+    {
+      "id": 16,
+      "name": "Common Room"
+    },
+    {
+      "id": 17,
+      "name": "Private Dining Room"
+    }
+  ],
+  "owned_by": {
+    "id": 42,
+    "name": "Barliman Butterbur",
+    "npc": true,
+    "campaign": 1
+  },
+  "owner_display": "Barliman Butterbur (NPC)",
+  "created_by": {
+    "id": 1,
+    "username": "gamemaster"
+  },
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-20T14:45:00Z"
+}
+```
+
+**Ownership Business Rules:**
+- Characters can only own locations within their own campaign
+- Location ownership affects edit/delete permissions for players
+- Players can edit locations owned by their characters
+- GMs and campaign owners can edit all locations regardless of ownership
+- Ownership transfers are performed by updating the `owned_by` field
+
+**Common Usage Scenarios:**
+
+**NPC Business Ownership:**
+```python
+# Tavern keeper owns multiple properties
+tavern_keeper = Character.objects.get(name="Innkeeper Bob")
+properties = tavern_keeper.owned_locations.all()
+# Returns: ["The Red Dragon Inn", "Inn Stables", "Private Quarters"]
+```
+
+**Player Character Real Estate:**
+```python
+# Player character acquires stronghold
+player_char = Character.objects.get(name="Lord Aragorn")
+stronghold = Location.objects.get(name="Minas Tirith")
+stronghold.owned_by = player_char
+stronghold.save()
+```
+
+**Property Portfolio Analysis:**
+```python
+# Get all character-owned locations in campaign
+owned_locations = Location.objects.filter(
+    campaign=campaign,
+    owned_by__isnull=False
+).select_related('owned_by')
+
+# Group by character type
+npc_properties = owned_locations.filter(owned_by__npc=True)
+pc_properties = owned_locations.filter(owned_by__npc=False)
+```
+
 ## Source Reference API
 
 ### Book and SourceReference Models
@@ -1308,6 +1469,10 @@ ROLE_CHOICES = [
 - `player_owner`: Foreign key to User model (character controller)
 - `created_by`: Foreign key to User model (audit trail)
 - `modified_by`: Foreign key to User model (audit trail)
+- `owned_locations`: Reverse relationship to Location model (Issue #186)
+  - Returns all locations owned by this character
+  - Supports both PC and NPC ownership
+  - Automatically filters to same campaign as character
 
 **Polymorphic Fields (game-system specific):**
 - `character_type`: String, polymorphic type identifier
@@ -1386,6 +1551,58 @@ STATUS_CHOICES = [
 4. **INACTIVE** - Character temporarily unavailable
 5. **RETIRED** - Character permanently retired from campaign
 6. **DECEASED** - Character marked as deceased
+
+### Location Model (Issue #186)
+
+**Core Fields:**
+- `id`: Integer, primary key
+- `name`: String (max 100 chars), location name
+- `description`: Text, optional location description
+- `created_at`: Timestamp, location creation time
+- `updated_at`: Timestamp, last modification time
+
+**Relationships:**
+- `campaign`: Foreign key to Campaign model
+- `parent`: Foreign key to self (for hierarchy support)
+- `children`: Reverse relationship to child locations (related_name: "children")
+- `owned_by`: Foreign key to Character model (Issue #186)
+- `created_by`: Foreign key to User model (audit trail)
+- `modified_by`: Foreign key to User model (audit trail)
+
+**Character Ownership Features:**
+- `owned_by`: Foreign key to Character model, optional
+  - `null=True`: Locations can be unowned
+  - `on_delete=SET_NULL`: Ownership cleared when character deleted
+  - `related_name="owned_locations"`: Reverse relationship on Character
+- `owner_display`: Property returning formatted ownership string
+  - Format: "Character Name (PC|NPC)" or "Unowned"
+
+**Hierarchy Support:**
+- `parent`: Self-referential foreign key for location hierarchy
+- `sub_locations`: Alias property for `children` relationship
+- Maximum depth validation (10 levels)
+- Circular reference prevention
+- Orphan handling on parent deletion
+
+**Business Rules:**
+- Location names must be unique within a campaign
+- Characters can only own locations within their own campaign
+- Location hierarchy limited to 10 levels deep
+- Parent location must be in same campaign
+- Ownership affects permission system (edit/delete rights)
+
+**Permission Integration:**
+- All campaign members can view locations
+- Campaign members can create locations
+- Owners/GMs can edit all locations
+- Players can edit their own created locations + character-owned locations
+- Same rules apply for deletion permissions
+
+**Validation Rules:**
+- Cross-campaign ownership validation
+- Circular reference prevention in hierarchy
+- Maximum depth enforcement
+- Self-parent prevention
 
 ### Book Model
 
