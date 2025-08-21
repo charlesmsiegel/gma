@@ -341,7 +341,8 @@ class Location(
         if parent and self.campaign_id and self.campaign_id != parent.campaign_id:
             raise ValidationError("Parent location must be in the same campaign.")
 
-    def _validate_maximum_depth(self, parent: Optional["Location"]) -> None:
+    @staticmethod
+    def _validate_maximum_depth(parent: Optional["Location"]) -> None:
         """Ensure hierarchy doesn't exceed maximum depth."""
         if not parent:
             return

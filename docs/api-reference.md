@@ -1141,6 +1141,7 @@ Character.objects.filter(npc=True)               # Manual filtering still works
 The Location model supports character ownership, enabling typical RPG scenarios like NPCs owning taverns or players owning strongholds.
 
 **Key Features:**
+
 - Both Player Characters (PCs) and Non-Player Characters (NPCs) can own locations
 - Locations can be unowned (owned_by = null)
 - Cross-campaign validation ensures characters can only own locations in their own campaign
@@ -1226,6 +1227,7 @@ GET /api/locations/?campaign_id=1&owned_by__npc=false
 ```
 
 **Ownership Business Rules:**
+
 - Characters can only own locations within their own campaign
 - Location ownership affects edit/delete permissions for players
 - Players can edit locations owned by their characters
@@ -1570,6 +1572,7 @@ STATUS_CHOICES = [
 - `modified_by`: Foreign key to User model (audit trail)
 
 **Character Ownership Features:**
+
 - `owned_by`: Foreign key to Character model, optional
   - `null=True`: Locations can be unowned
   - `on_delete=SET_NULL`: Ownership cleared when character deleted
@@ -1578,6 +1581,7 @@ STATUS_CHOICES = [
   - Format: "Character Name (PC|NPC)" or "Unowned"
 
 **Hierarchy Support:**
+
 - `parent`: Self-referential foreign key for location hierarchy
 - `sub_locations`: Alias property for `children` relationship
 - Maximum depth validation (10 levels)
@@ -1585,6 +1589,7 @@ STATUS_CHOICES = [
 - Orphan handling on parent deletion
 
 **Business Rules:**
+
 - Location names must be unique within a campaign
 - Characters can only own locations within their own campaign
 - Location hierarchy limited to 10 levels deep
@@ -1592,6 +1597,7 @@ STATUS_CHOICES = [
 - Ownership affects permission system (edit/delete rights)
 
 **Permission Integration:**
+
 - All campaign members can view locations
 - Campaign members can create locations
 - Owners/GMs can edit all locations
@@ -1599,6 +1605,7 @@ STATUS_CHOICES = [
 - Same rules apply for deletion permissions
 
 **Validation Rules:**
+
 - Cross-campaign ownership validation
 - Circular reference prevention in hierarchy
 - Maximum depth enforcement
