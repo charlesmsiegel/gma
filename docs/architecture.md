@@ -8,6 +8,8 @@
 4. [API Architecture](#api-architecture)
 5. [Permission System](#permission-system)
 6. [Data Model Architecture](#data-model-architecture)
+   - [Location Domain Models](#location-domain-models)
+   - [Location Management Interface Architecture](#location-management-interface-architecture)
 7. [Frontend Integration](#frontend-integration)
 8. [Real-Time Architecture](#real-time-architecture)
 9. [Security Architecture](#security-architecture)
@@ -25,6 +27,8 @@ The Game Master Application (GMA) is a web-based tabletop RPG campaign managemen
 - **Security-First Approach**: Information leakage prevention and role-based access control
 - **Test-Driven Development**: Comprehensive test coverage with TDD workflow
 - **Hybrid Frontend**: React components enhance Django templates for progressive enhancement
+- **Hierarchical Content Management**: Tree-structured data models for locations with character ownership
+- **Performance-Optimized Queries**: Strategic database indexing and query optimization patterns
 
 ## System Overview
 
@@ -55,6 +59,7 @@ The GMA system manages:
 - **Real-Time Communication**: Chat, notifications via WebSocket
 - **Game System Support**: Flexible character models for different RPG systems
 - **Content Organization**: Scenes, locations, items, characters
+- **Location Management**: Hierarchical location trees with character ownership
 - **State Management**: Workflow transitions for campaigns, scenes, and characters
 
 ## Service Layer Architecture
@@ -1365,6 +1370,168 @@ location_to_move.save()  # All children move automatically
 **Backward Compatibility**: All existing locations remain functional (parent=None)
 **Zero Downtime**: Migration is additive with no data loss
 
+#### Location Management Interface Architecture
+
+The location management system provides a complete web-based interface for campaign location management following Django's class-based view pattern and responsive Bootstrap 5 design.
+
+**Location**: `locations/views/__init__.py`, `locations/urls/__init__.py`, `templates/locations/`, `static/css/locations.css`, `static/js/locations.js`
+
+**View Architecture:**
+
+The system uses Django Class-Based Views with a custom campaign filtering mixin system:
+
+```python
+# Campaign parameter mapping for URL consistency
+class CampaignSlugMappingMixin:
+    """Maps campaign_slug URL parameter to slug for CampaignFilterMixin compatibility."""
+    def dispatch(self, request, *args, **kwargs):
+        if "campaign_slug" in kwargs:
+            kwargs["slug"] = kwargs["campaign_slug"]
+        return super().dispatch(request, *args, **kwargs)
+```
+
+**Core Views:**
+
+1. **CampaignLocationsView** - Hierarchical location listing with search and filtering
+2. **LocationDetailView** - Location detail with sub-locations and breadcrumbs
+3. **LocationCreateView** - Location creation with parent selection and validation
+4. **LocationEditView** - Location editing with hierarchy validation and permissions
+
+**URL Patterns:**
+```python
+urlpatterns = [
+    path("campaigns/<slug:campaign_slug>/", CampaignLocationsView.as_view(), name="campaign_locations"),
+    path("campaigns/<slug:campaign_slug>/create/", LocationCreateView.as_view(), name="location_create"),
+    path("campaigns/<slug:campaign_slug>/<int:location_id>/", LocationDetailView.as_view(), name="location_detail"),
+    path("campaigns/<slug:campaign_slug>/<int:location_id>/edit/", LocationEditView.as_view(), name="location_edit"),
+]
+```
+
+**Permission System Integration:**
+
+The interface integrates with GMA's role-based permission system with performance-optimized permission checking:
+
+```python
+# Optimized permission checking to avoid N+1 queries
+for location in locations:
+    if user_role in ["OWNER", "GM"]:
+        location.user_can_edit = True
+    elif user_role == "PLAYER":
+        # Check character ownership using prefetched data
+        if location.owned_by:
+            location.user_can_edit = (
+                hasattr(location.owned_by, "player_owner")
+                and location.owned_by.player_owner == user
+            )
+        else:
+            location.user_can_edit = location.created_by == user
+```
+
+**Key Features:**
+
+1. **Hierarchical Tree Display**: Visual tree structure with depth-based indentation and connection lines
+2. **Search and Filtering**: Real-time search by name, ownership filtering by character, unowned location filtering
+3. **Character Ownership Integration**: Display and management of character-owned locations
+4. **Breadcrumb Navigation**: Full path navigation from campaign → location hierarchy → current location
+5. **Role-Based Actions**: Context-sensitive action menus based on user permissions
+6. **Responsive Design**: Mobile-friendly Bootstrap 5 interface with progressive enhancement
+
+**Frontend Implementation:**
+
+**Template Structure:**
+- `campaign_locations.html` - Main location listing with hierarchical tree
+- `location_detail.html` - Detailed location view with sub-locations and metadata
+- `location_form.html` - Unified create/edit form with hierarchy preview
+
+**CSS Architecture** (`static/css/locations.css`):
+```css
+/* Visual hierarchy with depth-based indentation */
+.location-tree .location-item.depth-1 { padding-left: 1.5rem; border-left: 2px solid #e9ecef; }
+.location-tree .location-item.depth-2 { padding-left: 3rem; border-left: 2px solid #e9ecef; }
+.location-tree .location-item.depth-3 { padding-left: 4.5rem; border-left: 2px solid #e9ecef; }
+
+/* Interactive elements */
+.location-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+```
+
+**JavaScript Enhancements** (`static/js/locations.js`):
+- Auto-submit filter forms on selection change
+- Mutual exclusion between owner and unowned filters
+- Real-time hierarchy preview during location creation/editing
+- Client-side form validation with error feedback
+- URL parameter handling for pre-selecting parent locations
+
+**Form Architecture:**
+
+**Location Form Hierarchy** (`locations/forms.py`):
+
+```python
+LocationForm (Base)
+├── LocationCreateForm - Sets created_by, campaign filtering
+├── LocationEditForm - Disables campaign field, prevents modification
+└── BulkLocationMoveForm - Bulk operations with validation
+```
+
+**Key Form Features:**
+
+1. **Dynamic Parent Filtering**: Parent dropdown populated based on campaign selection
+2. **Hierarchy Validation**: Prevents circular references and enforces depth limits
+3. **Campaign Scoping**: Ensures all parent options belong to the same campaign
+4. **Real-time Preview**: JavaScript shows full path preview as user selects parent
+5. **Bulk Operations**: Form supports moving multiple locations simultaneously
+
+**Performance Optimizations:**
+
+1. **Query Optimization**:
+   - `select_related()` for foreign keys (parent, owned_by, created_by, campaign)
+   - `prefetch_related()` for reverse relationships (children)
+   - Strategic use of `only()` for field-limited queries
+
+2. **Database Indexes**: Leverages existing indexes on campaign_id, parent_id, and created_by
+
+3. **Template Efficiency**: Minimal database queries in templates through prefetched data
+
+4. **JavaScript Performance**: Debounced form submissions and efficient DOM manipulation
+
+**Security Implementation:**
+
+1. **Campaign Isolation**: All operations scoped to user's accessible campaigns
+2. **Permission Validation**: Multi-layer permission checking (URL, view, model)
+3. **CSRF Protection**: All forms include Django CSRF tokens
+4. **Input Sanitization**: XSS prevention through Django's template auto-escaping
+5. **Information Hiding**: 404 responses for unauthorized access instead of 403
+
+**Testing Coverage:**
+
+**Comprehensive Test Suite** (`locations/tests/test_location_interface.py`):
+
+- **1,624 lines** of comprehensive test coverage
+- **16 test classes** covering all interface components
+- **Integration tests** for complete user workflows
+- **Permission matrix testing** for all role combinations
+- **Template rendering verification** with context validation
+- **URL routing and navigation testing**
+- **Search and filtering functionality validation**
+- **Error handling and edge case coverage**
+
+**Test Categories:**
+- Location list view with hierarchical display
+- Location detail view with sub-locations and breadcrumbs
+- Location create view with parent selection and validation
+- Location edit view with hierarchy validation and permissions
+- Search and filtering maintaining tree structure
+- URL routing and navigation patterns
+- Template rendering with proper context
+- Complete integration workflows
+
+**Accessibility Features:**
+
+1. **Semantic HTML**: Proper heading hierarchy and landmark roles
+2. **ARIA Support**: Screen reader announcements for dynamic content
+3. **Keyboard Navigation**: All interactive elements keyboard accessible
+4. **Focus Management**: Proper focus indicators and tab order
+5. **Alternative Text**: Descriptive text for all visual elements
+
 ### Database Optimization
 
 #### Indexes
@@ -1419,6 +1586,90 @@ Provides CSRF-protected API access:
 - Automatic CSRF token handling
 - Consistent error handling
 - TypeScript interface definitions
+
+### Location Management Frontend Integration
+
+The location management system demonstrates the hybrid frontend architecture through its comprehensive web interface implementation:
+
+#### Template-Based Foundation
+
+**Base Templates**: Django templates provide the structural HTML and server-side rendering for location management:
+
+```html
+<!-- campaign_locations.html - Hierarchical location listing -->
+<ul class="location-tree list-unstyled">
+  {% for location in locations %}
+    <li class="location-item depth-{{ location.get_depth }}">
+      <!-- Location card with role-based actions -->
+    </li>
+  {% endfor %}
+</ul>
+```
+
+#### Progressive Enhancement with JavaScript
+
+**JavaScript Enhancement** (`static/js/locations.js`): Adds interactive features without breaking functionality if JavaScript fails:
+
+- **Auto-submit filters**: Form submissions without page refresh
+- **Real-time preview**: Dynamic hierarchy path generation
+- **Mutual filter exclusion**: Smart filter interaction logic
+- **Client-side validation**: Enhanced form validation feedback
+
+```javascript
+// Progressive enhancement example
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhance filter forms for better UX
+    const ownerSelect = document.getElementById('owner');
+    if (ownerSelect) {
+        ownerSelect.addEventListener('change', function() {
+            filterForm.submit(); // Enhanced: auto-submit
+        });
+    }
+
+    // Fallback: forms still work without JavaScript
+});
+```
+
+#### CSS-Based Visual Hierarchy
+
+**Responsive CSS** (`static/css/locations.css`): Creates visual tree structure using pure CSS:
+
+```css
+/* Depth-based visual hierarchy */
+.location-item.depth-1 { padding-left: 1.5rem; border-left: 2px solid #e9ecef; }
+.location-item.depth-2 { padding-left: 3rem; border-left: 2px solid #e9ecef; }
+
+/* Interactive enhancements */
+.location-card:hover { transform: translateY(-2px); }
+```
+
+#### Accessibility Integration
+
+Following GMA's accessibility-first approach:
+
+- **Semantic HTML**: Proper breadcrumb navigation with `nav` and `ol` elements
+- **ARIA Labels**: Screen reader support for hierarchical relationships
+- **Keyboard Navigation**: All actions accessible via keyboard
+- **Focus Management**: Clear focus indicators for interactive elements
+
+#### Performance Patterns
+
+**Template Optimization**: Minimizes database queries through strategic prefetching:
+
+```python
+# View-level optimization
+queryset = Location.objects.filter(campaign=campaign).select_related(
+    'parent', 'owned_by', 'created_by', 'campaign', 'owned_by__player_owner'
+).prefetch_related('children')
+
+# Template efficiency through prefetched data
+# No additional queries for related data access
+```
+
+**Frontend Asset Optimization**:
+- **CSS**: Single location-specific stylesheet loaded only when needed
+- **JavaScript**: Progressive enhancement with graceful degradation
+- **Images**: Bootstrap icons via CDN for performance
 
 ## Real-Time Architecture
 
@@ -1483,6 +1734,43 @@ def login_view(request):
 2. **Prefetch Related**: Optimize N+1 query problems
 3. **Database Indexes**: Strategic indexing on query patterns
 4. **Connection Pooling**: Efficient database connection management
+
+#### Location-Specific Optimizations
+
+**Hierarchical Query Optimization**:
+
+The location management system implements several performance optimizations for hierarchical data:
+
+```python
+# Optimized location list query
+queryset = Location.objects.filter(campaign=campaign).select_related(
+    'parent', 'owned_by', 'created_by', 'campaign', 'owned_by__player_owner'
+).prefetch_related('children')
+
+# Tree traversal with safety limits
+def get_descendants(self):
+    # Breadth-first search with cycle detection
+    queue = list(self.children.select_related("campaign"))
+    visited = set()
+
+    while queue and len(visited) < 1000:  # Safety limit
+        current = queue.pop(0)
+        if current.pk not in visited:
+            visited.add(current.pk)
+            queue.extend(current.children.all())
+```
+
+**Database Index Strategy**:
+
+- **Primary Indexes**: `campaign_id`, `parent_id` for hierarchy navigation
+- **Composite Indexes**: `(campaign_id, parent_id)` for tree operations
+- **Character Ownership Index**: `owned_by_id` for ownership filtering
+
+**Query Complexity Management**:
+
+- **Safety Limits**: Maximum depth (10 levels) and traversal limits (1000 nodes)
+- **Lazy Loading**: Tree methods return QuerySets for efficient filtering
+- **Cycle Prevention**: Validation prevents infinite loops in traversal
 
 ### Caching Strategy
 

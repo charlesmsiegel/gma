@@ -4,79 +4,36 @@ Views for location management.
 Provides campaign-scoped location management views with proper permission checking.
 """
 
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from campaigns.models import Campaign
 from core.mixins import CampaignFilterMixin
 from locations.forms import LocationCreateForm, LocationEditForm
 from locations.models import Location
 
 
-class LocationCampaignMixin(LoginRequiredMixin):
+class CampaignSlugMappingMixin:
     """
-    Mixin for location views that need campaign context with campaign_slug parameter.
+    Mixin to map campaign_slug parameter to slug for CampaignFilterMixin compatibility.
 
-    This handles the URL parameter mismatch between the locations app (campaign_slug)
-    and the core mixins (slug).
+    This handles the URL parameter mismatch between location URLs (campaign_slug)
+    and the core mixins (slug). Also ensures proper authentication flow.
     """
-
-    campaign = None
 
     def dispatch(self, request, *args, **kwargs):
-        """Get campaign from campaign_slug and check permissions."""
-        # Check authentication first - if not authenticated, redirect to login
-        if not request.user.is_authenticated:
-            return super().dispatch(
-                request, *args, **kwargs
-            )  # LoginRequiredMixin will handle redirect
+        """Map campaign_slug to slug parameter and ensure authentication."""
+        # Map parameter for CampaignFilterMixin
+        if "campaign_slug" in kwargs:
+            kwargs["slug"] = kwargs["campaign_slug"]
 
-        campaign_slug = kwargs.get("campaign_slug")
-        if not campaign_slug:
-            raise Http404("Campaign slug is required")
-
-        # Get campaign with related data for performance
-        self.campaign = get_object_or_404(
-            Campaign.objects.select_related("owner").prefetch_related(
-                "memberships__user"
-            ),
-            slug=campaign_slug,
-            is_active=True,
-        )
-
-        # Check permissions
-        user_role = self.campaign.get_user_role(request.user)
-        if not self._has_permission(user_role):
-            raise Http404(
-                "Campaign not found"
-            )  # Hide existence from unauthorized users
-
-        # Cache role for use in other methods
-        self._cached_user_role = user_role
-
+        # Let authentication happen first if needed
         return super().dispatch(request, *args, **kwargs)
 
-    def _has_permission(self, user_role):
-        """Check if user has permission to access this view."""
-        return user_role in ["OWNER", "GM", "PLAYER", "OBSERVER"]
 
-    def get_context_data(self, **kwargs):
-        """Add campaign context."""
-        context = super().get_context_data(**kwargs)
-        context.update(
-            {
-                "campaign": self.campaign,
-                "user_role": getattr(self, "_cached_user_role", None),
-            }
-        )
-        return context
-
-
-class CampaignLocationsView(LocationCampaignMixin, ListView):
+class CampaignLocationsView(CampaignSlugMappingMixin, CampaignFilterMixin, ListView):
     """
     List locations in a campaign with hierarchical tree display.
 
@@ -133,7 +90,7 @@ class CampaignLocationsView(LocationCampaignMixin, ListView):
         """Add location-specific context."""
         context = super().get_context_data(**kwargs)
 
-        user_role = getattr(self, "_cached_user_role", None)
+        user_role = self.get_user_role()
 
         # Add permission checking for each location (optimized to avoid N+1 queries)
         locations = list(context.get("locations", []))
@@ -177,7 +134,7 @@ class CampaignLocationsView(LocationCampaignMixin, ListView):
         return context
 
 
-class LocationDetailView(LocationCampaignMixin, DetailView):
+class LocationDetailView(CampaignSlugMappingMixin, CampaignFilterMixin, DetailView):
     """
     Location detail view with sub-locations and breadcrumbs.
 
@@ -224,7 +181,7 @@ class LocationDetailView(LocationCampaignMixin, DetailView):
         return context
 
 
-class LocationCreateView(LocationCampaignMixin, CreateView):
+class LocationCreateView(CampaignSlugMappingMixin, CampaignFilterMixin, CreateView):
     """
     Location create view with parent selection and validation.
 
@@ -268,7 +225,7 @@ class LocationCreateView(LocationCampaignMixin, CreateView):
         )
 
 
-class LocationEditView(LocationCampaignMixin, UpdateView):
+class LocationEditView(CampaignSlugMappingMixin, CampaignFilterMixin, UpdateView):
     """
     Location edit view with hierarchy validation and permission checks.
 

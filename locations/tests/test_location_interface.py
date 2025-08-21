@@ -174,11 +174,10 @@ class LocationListViewTest(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
-        # Anonymous users should be redirected to login
+        # Anonymous users should get 404 (CampaignFilterMixin hides campaign existence)
         self.client.logout()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/users/login/", response.url)
+        self.assertEqual(response.status_code, 404)
 
     def test_location_list_view_context_data(self):
         """Test that location list view provides correct context data."""
