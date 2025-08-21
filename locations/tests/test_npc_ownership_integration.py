@@ -53,6 +53,7 @@ class LocationOwnershipIntegrationTest(TestCase):
             name="Integration Test Campaign",
             owner=self.campaign_owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Create memberships
@@ -251,6 +252,7 @@ class LocationOwnershipIntegrationTest(TestCase):
             name="Other Campaign",
             owner=self.campaign_owner,
             game_system="generic",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         other_character = Character.objects.create(
@@ -351,6 +353,7 @@ class LocationOwnershipPerformanceTest(TestCase):
             name="Performance Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
     def test_ownership_query_performance(self):
@@ -510,6 +513,7 @@ class LocationOwnershipScenarioTest(TestCase):
             name="Scenario Test Campaign",
             owner=self.gm,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         CampaignMembership.objects.create(
@@ -829,6 +833,7 @@ class LocationOwnershipDataConsistencyTest(TransactionTestCase):
             name="Consistency Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
     def test_ownership_transaction_integrity(self):

@@ -16,6 +16,7 @@ Test Structure:
 """
 
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.test import TestCase
 
 from campaigns.models import Campaign, CampaignMembership
@@ -43,6 +44,7 @@ class CharacterOwnedLocationsBasicTest(TestCase):
             name="Owned Locations Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         CampaignMembership.objects.create(
@@ -213,6 +215,7 @@ class CharacterOwnedLocationsQueryTest(TestCase):
             name="Query Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Create multiple characters
@@ -411,6 +414,7 @@ class CharacterOwnedLocationsPerformanceTest(TestCase):
             name="Performance Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Create character for performance testing
@@ -535,6 +539,7 @@ class CharacterOwnedLocationsScenarioTest(TestCase):
             name="Scenario Test Campaign",
             owner=self.gm,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         CampaignMembership.objects.create(
@@ -643,8 +648,8 @@ class CharacterOwnedLocationsScenarioTest(TestCase):
 
         # Test querying by property type
         magical_properties = player_char.owned_locations.filter(
-            name__icontains="Sanctum"
-        ).union(player_char.owned_locations.filter(name__icontains="Tower"))
+            models.Q(name__icontains="Sanctum") | models.Q(name__icontains="Tower")
+        )
         self.assertEqual(magical_properties.count(), 2)
 
     def test_noble_family_estate_scenario(self):
@@ -837,6 +842,6 @@ class CharacterOwnedLocationsScenarioTest(TestCase):
         self.assertEqual(management_properties.count(), 4)
 
         storage_properties = warehouse_keeper.owned_locations.filter(
-            name__icontains="Warehouse"
-        ).union(warehouse_keeper.owned_locations.filter(name__icontains="Storage"))
+            models.Q(name__icontains="Warehouse") | models.Q(name__icontains="Storage")
+        )
         self.assertEqual(storage_properties.count(), 2)

@@ -49,6 +49,7 @@ class LocationOwnershipModelTest(TestCase):
             name="Ownership Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Add player membership
@@ -212,6 +213,7 @@ class LocationOwnershipAssignmentTest(TestCase):
             name="Assignment Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Add memberships
@@ -507,6 +509,7 @@ class LocationOwnershipTransferTest(TestCase):
             name="Transfer Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Add memberships
@@ -717,6 +720,7 @@ class LocationOwnershipPermissionTest(TestCase):
             name="Permission Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Add memberships
@@ -857,6 +861,7 @@ class LocationOwnershipPermissionTest(TestCase):
             name="Other Campaign",
             owner=self.owner,
             game_system="generic",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         other_character = Character.objects.create(
@@ -891,6 +896,7 @@ class LocationOwnershipAdminTest(TestCase):
             name="Admin Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Add membership
@@ -1042,6 +1048,7 @@ class LocationOwnershipEdgeCaseTest(TestCase):
             name="Edge Case Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         CampaignMembership.objects.create(
@@ -1117,8 +1124,18 @@ class LocationOwnershipEdgeCaseTest(TestCase):
             Character.objects.get(id=character_id)
 
     def test_ownership_with_duplicate_character_names(self):
-        """Test ownership assignment with characters having duplicate names."""
-        # Create characters with same name in same campaign
+        """
+        Test ownership assignment with characters having duplicate names.
+        """
+        # Create second campaign for testing duplicate names across campaigns
+        campaign2 = Campaign.objects.create(
+            name="Second Campaign",
+            owner=self.owner,
+            game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
+        )
+
+        # Create characters with same name in different campaigns
         char1 = Character.objects.create(
             name="Duplicate Name",
             campaign=self.campaign,
@@ -1129,13 +1146,13 @@ class LocationOwnershipEdgeCaseTest(TestCase):
 
         char2 = Character.objects.create(
             name="Duplicate Name",
-            campaign=self.campaign,
+            campaign=campaign2,
             player_owner=self.owner,
             game_system="mage",
             npc=True,
         )
 
-        # Create locations owned by each
+        # Create locations owned by each (in their respective campaigns)
         location1 = Location.objects.create(
             name="Location 1",
             campaign=self.campaign,
@@ -1145,7 +1162,7 @@ class LocationOwnershipEdgeCaseTest(TestCase):
 
         location2 = Location.objects.create(
             name="Location 2",
-            campaign=self.campaign,
+            campaign=campaign2,
             owned_by=char2,
             created_by=self.owner,
         )
@@ -1286,12 +1303,14 @@ class LocationOwnershipValidationTest(TestCase):
             name="Campaign 1",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         self.campaign2 = Campaign.objects.create(
             name="Campaign 2",
             owner=self.owner,
             game_system="generic",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Create characters in different campaigns

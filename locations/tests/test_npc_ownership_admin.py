@@ -56,6 +56,7 @@ class LocationOwnershipAdminFormTest(TestCase):
             name="Admin Form Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         CampaignMembership.objects.create(
@@ -170,12 +171,14 @@ class LocationOwnershipAdminQuerysetTest(TestCase):
             name="Queryset Test Campaign 1",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         self.campaign2 = Campaign.objects.create(
             name="Queryset Test Campaign 2",
             owner=self.owner,
             game_system="generic",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Create characters in both campaigns
@@ -302,12 +305,14 @@ class LocationOwnershipAdminValidationTest(TestCase):
             name="Validation Campaign 1",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         self.campaign2 = Campaign.objects.create(
             name="Validation Campaign 2",
             owner=self.owner,
             game_system="generic",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         self.char1 = Character.objects.create(
@@ -405,6 +410,7 @@ class LocationOwnershipAdminDisplayTest(TestCase):
             name="Display Test Campaign",
             owner=self.owner,
             game_system="mage",
+            max_characters_per_player=0,  # Allow unlimited characters for testing
         )
 
         # Create characters with distinctive names
