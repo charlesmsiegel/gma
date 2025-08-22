@@ -204,7 +204,7 @@ class LocationBulkUpdateTest(BaseLocationAPITestCase):
 
         bulk_data = {
             "action": "update",
-            "updates": [
+            "locations": [
                 {
                     "id": self.location1.pk,
                     "name": "Updated Test City",
@@ -236,7 +236,7 @@ class LocationBulkUpdateTest(BaseLocationAPITestCase):
 
         bulk_data = {
             "action": "update",
-            "updates": [
+            "locations": [
                 {
                     "id": self.location1.pk,
                     "owned_by": self.npc_character.pk,
@@ -266,7 +266,7 @@ class LocationBulkUpdateTest(BaseLocationAPITestCase):
 
         bulk_data = {
             "action": "update",
-            "updates": [
+            "locations": [
                 {
                     "id": self.grandchild_location.pk,
                     "parent": self.location2.pk,  # Move to different parent
@@ -296,7 +296,7 @@ class LocationBulkUpdateTest(BaseLocationAPITestCase):
 
         bulk_data = {
             "action": "update",
-            "updates": [
+            "locations": [
                 {
                     "id": self.location2.pk,  # Player1 owns this via character
                     "name": "Player1 Updated House",
@@ -327,7 +327,7 @@ class LocationBulkUpdateTest(BaseLocationAPITestCase):
 
         bulk_data = {
             "action": "update",
-            "updates": [
+            "locations": [
                 {
                     "id": self.location1.pk,
                     "parent": self.grandchild_location.pk,  # Would create circular ref
@@ -341,7 +341,7 @@ class LocationBulkUpdateTest(BaseLocationAPITestCase):
         data = response.json()
         self.assertEqual(len(data["updated"]), 0)
         self.assertEqual(len(data["failed"]), 1)
-        self.assertIn("parent", data["failed"][0]["errors"])
+        self.assertIn("parent", data["failed"][0]["error"])
 
     def test_bulk_update_nonexistent_locations(self):
         """Test bulk update handles non-existent locations gracefully."""
@@ -349,7 +349,7 @@ class LocationBulkUpdateTest(BaseLocationAPITestCase):
 
         bulk_data = {
             "action": "update",
-            "updates": [
+            "locations": [
                 {
                     "id": 99999,  # Non-existent
                     "name": "Does Not Exist",
@@ -641,7 +641,7 @@ class LocationBulkMixedOperationsTest(BaseLocationAPITestCase):
         # Test bulk update
         bulk_data = {
             "action": "update",
-            "updates": [
+            "locations": [
                 {"id": loc.pk, "description": f"Updated description {i}"}
                 for i, loc in enumerate(locations)
             ],
@@ -698,7 +698,7 @@ class LocationBulkResponseFormatTest(BaseLocationAPITestCase):
 
         bulk_data = {
             "action": "update",
-            "updates": [{"id": self.location1.pk, "name": "Updated Name"}],
+            "locations": [{"id": self.location1.pk, "name": "Updated Name"}],
         }
 
         response = self.client.post(self.bulk_url, data=bulk_data, format="json")
@@ -760,7 +760,7 @@ class LocationBulkResponseFormatTest(BaseLocationAPITestCase):
 
         bulk_data = {
             "action": "update",
-            "updates": [
+            "locations": [
                 {"id": self.location1.pk, "name": "Updated 1"},
                 {"id": 99999, "name": "Invalid ID"},  # Will fail
             ],
