@@ -282,18 +282,24 @@ class LocationListViewTest(TestCase):
                 self.assertTrue(response.context.get("can_manage_locations"))
 
         # Player/Observer should see limited options but can create locations
-        for user in [self.player, self.observer]:
-            with self.subTest(user=user.username):
-                self.client.force_login(user)
-                response = self.client.get(url)
+        # Test player permissions
+        self.client.force_login(self.player)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            response.context.get("can_create_location")
+        )  # Players can create
 
-                self.assertEqual(response.status_code, 200)
-                self.assertTrue(
-                    response.context.get("can_create_location")
-                )  # All members can create
-                self.assertFalse(
-                    response.context.get("can_manage_locations", True)
-                )  # Only OWNER/GM can manage
+        # Test observer permissions
+        self.client.force_login(self.observer)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            response.context.get("can_create_location")
+        )  # Observers cannot create
+        self.assertFalse(
+            response.context.get("can_manage_locations", True)
+        )  # Only OWNER/GM can manage
 
     def test_location_list_ordering_and_sorting(self):
         """Test that locations are properly ordered for tree display."""

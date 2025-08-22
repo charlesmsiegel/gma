@@ -508,8 +508,8 @@ class Location(
         if not user_role:
             return False
 
-        # All campaign members can create locations
-        return user_role in ["OWNER", "GM", "PLAYER", "OBSERVER"]
+        # Only owners, GMs, and players can create locations
+        return user_role in ["OWNER", "GM", "PLAYER"]
 
     # Ownership display property
     @property
