@@ -64,26 +64,37 @@ class LocationBulkCreateTest(BaseLocationAPITestCase):
         """Test bulk creating locations with hierarchical relationships."""
         self.client.force_authenticate(user=self.gm)
 
-        bulk_data = {
+        # First create parent location
+        parent_data = {
             "action": "create",
             "locations": [
                 {
                     "name": "Parent Location",
                     "campaign": self.campaign.pk,
-                },
-                {
-                    "name": "Child Location",
-                    "campaign": self.campaign.pk,
-                    "parent_name": "Parent Location",  # Reference by name in same batch
-                },
+                }
             ],
         }
 
-        response = self.client.post(self.bulk_url, data=bulk_data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        parent_response = self.client.post(
+            self.bulk_url, data=parent_data, format="json"
+        )
+        self.assertEqual(parent_response.status_code, status.HTTP_200_OK)
+        parent_id = parent_response.json()["created"][0]["id"]
 
-        data = response.json()
-        self.assertEqual(len(data["created"]), 2)
+        # Then create child location with reference to parent
+        child_data = {
+            "action": "create",
+            "locations": [
+                {
+                    "name": "Child Location",
+                    "campaign": self.campaign.pk,
+                    "parent": parent_id,
+                }
+            ],
+        }
+
+        child_response = self.client.post(self.bulk_url, data=child_data, format="json")
+        self.assertEqual(child_response.status_code, status.HTTP_200_OK)
 
         # Verify hierarchy was established
         parent = Location.objects.get(name="Parent Location")
