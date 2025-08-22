@@ -349,7 +349,7 @@ class LocationHierarchyTreeOperationsTest(BaseLocationAPITestCase):
 
         # Try to move a location not owned by player2
         move_url = f"{self.detail_url1}move/"
-        move_data = {"new_parent": None}  # Move to root
+        move_data = {}  # Move to root (omit new_parent)
 
         response = self.client.post(move_url, data=move_data)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
