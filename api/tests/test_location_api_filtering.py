@@ -626,6 +626,19 @@ class LocationPaginationTest(BaseLocationAPITestCase):
     """Test location list pagination functionality."""
 
     def setUp(self):
+        """
+        Set up additional test data for pagination testing.
+
+        Extends the base test setup by creating 15 additional locations
+        specifically for testing pagination functionality. This ensures
+        we have enough data to test page boundaries, page size limits,
+        and pagination with filters applied.
+
+        Total locations after setup:
+        - Base locations from BaseLocationAPITestCase (6 locations)
+        - Additional pagination test locations (15 locations)
+        - Total: 21 locations for comprehensive pagination testing
+        """
         super().setUp()
 
         # Create additional locations for pagination testing

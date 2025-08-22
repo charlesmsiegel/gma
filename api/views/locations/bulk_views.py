@@ -101,11 +101,11 @@ class LocationBulkAPIView(APIView):
         # Route to appropriate handler
         if action == "create":
             return self._handle_bulk_create(request, locations_data)
-        elif action == "update":
+        if action == "update":
             return self._handle_bulk_update(request, locations_data)
-        elif action == "delete":
+        if action == "delete":
             return self._handle_bulk_delete(request, locations_data)
-        elif action == "move":
+        if action == "move":
             return self._handle_bulk_move(request, locations_data)
 
         return APIError.validation_error({"action": ["Invalid action type."]})
