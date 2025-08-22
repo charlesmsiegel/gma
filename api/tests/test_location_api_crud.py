@@ -36,10 +36,11 @@ class LocationListAPITest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertGreater(len(data), 0)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertGreater(len(results), 0)
 
         # Verify all locations belong to the requested campaign
-        for location_data in data:
+        for location_data in results:
             self.assertEqual(location_data["campaign"]["id"], self.campaign.pk)
 
     def test_list_anonymous_public_campaign(self):
@@ -48,8 +49,9 @@ class LocationListAPITest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)  # Only public_location
-        self.assertEqual(data[0]["name"], "Public Location")
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)  # Only public_location
+        self.assertEqual(results[0]["name"], "Public Location")
 
     def test_list_anonymous_private_campaign_denied(self):
         """Test that anonymous users cannot view locations in private campaigns."""
@@ -71,9 +73,12 @@ class LocationListAPITest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
+        results = data.get("results", data)  # Handle both paginated and non-paginated
 
         # Find root location
-        root_location = next((loc for loc in data if loc["name"] == "Test City"), None)
+        root_location = next(
+            (loc for loc in results if loc["name"] == "Test City"), None
+        )
         self.assertIsNotNone(root_location)
 
         # Should have parent info (null for root)
@@ -91,10 +96,11 @@ class LocationListAPITest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
+        results = data.get("results", data)  # Handle both paginated and non-paginated
 
         # Find owned location
         owned_location = next(
-            (loc for loc in data if loc["name"] == "Player's House"), None
+            (loc for loc in results if loc["name"] == "Player's House"), None
         )
         self.assertIsNotNone(owned_location)
         self.assertLocationOwnership(owned_location, self.character1.pk)

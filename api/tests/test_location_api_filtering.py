@@ -35,11 +35,12 @@ class LocationCampaignFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
+        results = data.get("results", data)  # Handle both paginated and non-paginated
         # Should return all locations in the campaign
-        self.assertGreater(len(data), 0)
+        self.assertGreater(len(results), 0)
 
         # Verify all locations belong to the requested campaign
-        for location in data:
+        for location in results:
             self.assertEqual(location["campaign"]["id"], self.campaign.pk)
 
     def test_filter_by_campaign_empty_result(self):
@@ -53,7 +54,8 @@ class LocationCampaignFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 0)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 0)
 
     def test_filter_by_nonexistent_campaign(self):
         """Test filtering by non-existent campaign."""
@@ -101,9 +103,10 @@ class LocationParentFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)  # Only child_location1
-        self.assertEqual(data[0]["name"], "City Center")
-        self.assertEqual(data[0]["parent"]["id"], self.location1.pk)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)  # Only child_location1
+        self.assertEqual(results[0]["name"], "City Center")
+        self.assertEqual(results[0]["parent"]["id"], self.location1.pk)
 
     def test_filter_by_parent_null(self):
         """Test filtering for root locations (parent=null)."""
@@ -138,7 +141,8 @@ class LocationParentFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 0)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 0)
 
     def test_filter_by_parent_cross_campaign_denied(self):
         """Test that parent filter respects campaign boundaries."""
@@ -492,7 +496,10 @@ class LocationFilteringQueryOptimizationTest(BaseLocationAPITestCase):
 
             # Access all filtered data
             data = response.json()
-            for location in data:
+            results = data.get(
+                "results", data
+            )  # Handle both paginated and non-paginated
+            for location in results:
                 _ = location["campaign"]
                 _ = location.get("parent")
                 _ = location.get("owned_by")
