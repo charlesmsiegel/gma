@@ -80,7 +80,35 @@ class LocationListCreateAPIView(APIView, LocationPermissionMixin):
         - owner: Character owner ID to filter by
         - search: Search in name and description
         """
-        # Campaign filter is required
+        # Validate and get campaign
+        campaign_result = self._validate_campaign_access(request)
+        if isinstance(campaign_result, Response):
+            return campaign_result
+
+        campaign, campaign_id = campaign_result
+
+        # Build base queryset
+        queryset = self._build_base_queryset(campaign)
+
+        # Apply filters
+        filter_result = self._apply_location_filters(request, queryset, campaign_id)
+        if isinstance(filter_result, Response):
+            return filter_result
+
+        queryset = filter_result
+
+        # Apply ordering
+        order_result = self._apply_ordering(request, queryset)
+        if isinstance(order_result, Response):
+            return order_result
+
+        queryset = order_result
+
+        # Return paginated response
+        return self._create_paginated_response(request, queryset)
+
+    def _validate_campaign_access(self, request):
+        """Validate campaign ID and check user access permissions."""
         campaign_id = request.GET.get("campaign")
         if not campaign_id:
             return APIError.validation_error({"campaign": ["Campaign ID is required."]})
@@ -90,24 +118,25 @@ class LocationListCreateAPIView(APIView, LocationPermissionMixin):
         except ValueError:
             return APIError.validation_error({"campaign": ["Invalid campaign ID."]})
 
-        # Get campaign and check permissions
         try:
             campaign = Campaign.objects.get(pk=campaign_id)
         except Campaign.DoesNotExist:
             return SecurityResponseHelper.resource_access_denied()
 
-        # Check if user can view locations in this campaign
+        # Check access permissions
         if not request.user.is_authenticated:
             if not campaign.is_public:
                 return SecurityResponseHelper.resource_access_denied()
         else:
-            # For authenticated users, check campaign membership or public status
             user_role = campaign.get_user_role(request.user)
             if not user_role and not campaign.is_public:
                 return SecurityResponseHelper.resource_access_denied()
 
-        # Build queryset with optimizations and annotations
-        queryset = (
+        return campaign, campaign_id
+
+    def _build_base_queryset(self, campaign):
+        """Build the base queryset with optimizations and annotations."""
+        return (
             Location.objects.filter(campaign=campaign)
             .select_related("campaign", "parent", "owned_by", "created_by")
             .annotate(
@@ -116,106 +145,119 @@ class LocationListCreateAPIView(APIView, LocationPermissionMixin):
             )
         )
 
-        # Apply additional filters
-        parent_id = request.GET.get("parent")
-        if parent_id is not None:
-            if parent_id == "null":
-                # Filter for root locations (no parent)
-                queryset = queryset.filter(parent__isnull=True)
-            else:
-                try:
-                    parent_id = int(parent_id)
+    def _apply_location_filters(self, request, queryset, campaign_id):
+        """Apply parent, owner, and search filters to the queryset."""
+        # Apply parent filter
+        parent_result = self._apply_parent_filter(request, queryset, campaign_id)
+        if isinstance(parent_result, Response):
+            return parent_result
+        queryset = parent_result
 
-                    # Validate parent exists and is in same campaign
-                    try:
-                        parent_location = Location.objects.get(pk=parent_id)
-                        if parent_location.campaign_id != campaign_id:
-                            return APIError.validation_error(
-                                {
-                                    "parent": [
-                                        "Parent location must be in the same campaign."
-                                    ]
-                                }
-                            )
-                    except Location.DoesNotExist:
-                        return SecurityResponseHelper.resource_access_denied()
+        # Apply owner filter
+        owner_result = self._apply_owner_filter(request, queryset, campaign_id)
+        if isinstance(owner_result, Response):
+            return owner_result
+        queryset = owner_result
 
-                    queryset = queryset.filter(parent_id=parent_id)
-                except ValueError:
-                    return APIError.validation_error({"parent": ["Invalid parent ID."]})
-
-        owner_id = request.GET.get("owner")
-        if owner_id is not None:
-            if owner_id == "null":
-                # Filter for unowned locations
-                queryset = queryset.filter(owned_by__isnull=True)
-            else:
-                try:
-                    owner_id = int(owner_id)
-
-                    # Validate owner exists and is in same campaign
-                    try:
-                        from characters.models import Character
-
-                        owner_character = Character.objects.get(pk=owner_id)
-                        if owner_character.campaign_id != campaign_id:
-                            return APIError.validation_error(
-                                {
-                                    "owner": [
-                                        "Owner character must be in the same campaign."
-                                    ]
-                                }
-                            )
-                    except Character.DoesNotExist:
-                        return SecurityResponseHelper.resource_access_denied()
-
-                    queryset = queryset.filter(owned_by_id=owner_id)
-                except ValueError:
-                    return APIError.validation_error({"owner": ["Invalid owner ID."]})
-
-        # Search filter
+        # Apply search filter
         search = request.GET.get("search")
         if search:
             queryset = queryset.filter(
                 Q(name__icontains=search) | Q(description__icontains=search)
             )
 
-        # Ordering
-        ordering = request.GET.get("ordering")
-        if ordering:
-            # Validate ordering field to prevent invalid field errors
-            valid_fields = [
-                "name",
-                "-name",
-                "created_at",
-                "-created_at",
-                "updated_at",
-                "-updated_at",
-                "id",
-                "-id",
-            ]
-            # Note: depth is computed in serializer, so we can't order by it in DB
-            if ordering in valid_fields:
-                queryset = queryset.order_by(ordering)
-            else:
-                # Invalid field - return error
-                return APIError.validation_error(
-                    {"ordering": [f"Invalid ordering field: {ordering}"]}
-                )
-        else:
-            # Default ordering by name (as expected by tests)
-            queryset = queryset.order_by("name")
+        return queryset
 
-        # Apply pagination
+    def _apply_parent_filter(self, request, queryset, campaign_id):
+        """Apply parent location filter to the queryset."""
+        parent_id = request.GET.get("parent")
+        if parent_id is None:
+            return queryset
+
+        if parent_id == "null":
+            return queryset.filter(parent__isnull=True)
+
+        try:
+            parent_id = int(parent_id)
+            # Validate parent exists and is in same campaign
+            try:
+                parent_location = Location.objects.get(pk=parent_id)
+                if parent_location.campaign_id != campaign_id:
+                    return APIError.validation_error(
+                        {"parent": ["Parent location must be in the same campaign."]}
+                    )
+            except Location.DoesNotExist:
+                return SecurityResponseHelper.resource_access_denied()
+
+            return queryset.filter(parent_id=parent_id)
+
+        except ValueError:
+            return APIError.validation_error({"parent": ["Invalid parent ID."]})
+
+    def _apply_owner_filter(self, request, queryset, campaign_id):
+        """Apply character owner filter to the queryset."""
+        owner_id = request.GET.get("owner")
+        if owner_id is None:
+            return queryset
+
+        if owner_id == "null":
+            return queryset.filter(owned_by__isnull=True)
+
+        try:
+            owner_id = int(owner_id)
+            # Validate owner exists and is in same campaign
+            try:
+                from characters.models import Character
+
+                owner_character = Character.objects.get(pk=owner_id)
+                if owner_character.campaign_id != campaign_id:
+                    return APIError.validation_error(
+                        {"owner": ["Owner character must be in the same campaign."]}
+                    )
+            except Character.DoesNotExist:
+                return SecurityResponseHelper.resource_access_denied()
+
+            return queryset.filter(owned_by_id=owner_id)
+
+        except ValueError:
+            return APIError.validation_error({"owner": ["Invalid owner ID."]})
+
+    def _apply_ordering(self, request, queryset):
+        """Apply ordering to the queryset."""
+        ordering = request.GET.get("ordering")
+        if not ordering:
+            return queryset.order_by("name")
+
+        valid_fields = [
+            "name",
+            "-name",
+            "created_at",
+            "-created_at",
+            "updated_at",
+            "-updated_at",
+            "id",
+            "-id",
+        ]
+
+        if ordering in valid_fields:
+            return queryset.order_by(ordering)
+        else:
+            return APIError.validation_error(
+                {"ordering": [f"Invalid ordering field: {ordering}"]}
+            )
+
+    def _create_paginated_response(self, request, queryset):
+        """Create the final paginated response."""
         paginator = LocationPagination()
         page = paginator.paginate_queryset(queryset, request)
+
         if page is not None:
             serializer = LocationSerializer(
                 page, many=True, context={"request": request}
             )
             return paginator.get_paginated_response(serializer.data)
 
-        # Fallback without pagination (shouldn't happen but for safety)
+        # Fallback without pagination
         serializer = LocationSerializer(
             queryset, many=True, context={"request": request}
         )
