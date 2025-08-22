@@ -216,7 +216,7 @@ The project follows a domain-driven monolithic architecture with these Django ap
 - **scenes**: Scene lifecycle, character participation, real-time chat, dice rolling
 - **characters**: Polymorphic character models, game system logic, character sheets
 - **locations**: Hierarchical campaign locations
-- **items**: Equipment and treasure management
+- **items**: Equipment and treasure management with soft delete functionality, character ownership, and comprehensive admin interface
 - **api**: Modular DRF views, serializers, standardized error handling
 - **core**: Front page, utilities, base templates, management commands, source references (Book model)
 
@@ -233,6 +233,42 @@ Character (base)
 └── WoDCharacter
     └── MageCharacter
 ```
+
+### Item Model Architecture
+
+The Item model provides comprehensive equipment and treasure management with the following key features:
+
+#### Core Features
+- **Basic Information**: Name, description, campaign association
+- **Quantity Tracking**: Positive integer validation with minimum value of 1
+- **Character Ownership**: Many-to-many relationship with Character model
+- **Audit Tracking**: created_by field for user accountability
+- **Soft Delete Pattern**: is_deleted, deleted_at, deleted_by fields for safe data management
+
+#### Custom Managers and QuerySets
+- **ItemManager**: Default manager that excludes soft-deleted items
+- **AllItemManager**: Manager that includes all items (for restoration operations)
+- **ItemQuerySet**: Custom queryset with filtering methods (active, deleted, for_campaign, owned_by_character)
+
+#### Permission System
+- **Role-based Access**: Uses campaign role hierarchy (OWNER → GM → PLAYER → OBSERVER)
+- **Creator Rights**: Item creators can always delete their items
+- **Superuser Access**: Superusers have full item management permissions
+- **can_be_deleted_by()**: Centralized permission checking method
+
+#### Admin Interface Capabilities
+- **6 Bulk Operations**: Soft delete, restore, quantity update, ownership assignment/clearing, campaign transfer
+- **Comprehensive Filtering**: By campaign, creator, quantity, creation date, deletion status
+- **Organized Layout**: Fieldsets for basic info, ownership, audit trail, and deletion status
+- **Permission Checking**: Staff-only access with proper error handling
+
+#### Testing Coverage
+- **102 comprehensive tests** across 3 test files covering:
+  - Model validation and business logic
+  - Soft delete functionality and restoration
+  - Permission system edge cases
+  - Admin interface bulk operations
+  - Mixin application and database field compatibility
 
 ### Real-Time Architecture
 

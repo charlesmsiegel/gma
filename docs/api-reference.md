@@ -11,9 +11,10 @@
 7. [User API](#user-api)
 8. [Character API](#character-api)
 9. [Location API](#location-api)
-10. [Source Reference API](#source-reference-api)
-11. [Data Models](#data-models)
-12. [Testing the API](#testing-the-api)
+10. [Item API](#item-api)
+11. [Source Reference API](#source-reference-api)
+12. [Data Models](#data-models)
+13. [Testing the API](#testing-the-api)
 
 ## Overview
 
@@ -1265,6 +1266,105 @@ owned_locations = Location.objects.filter(
 npc_properties = owned_locations.filter(owned_by__npc=True)
 pc_properties = owned_locations.filter(owned_by__npc=False)
 ```
+
+## Item API
+
+### Item Management System
+
+The Item API provides comprehensive equipment and treasure management capabilities for campaigns, featuring soft delete functionality, character ownership, and administrative controls.
+
+#### Model Implementation Status
+
+**Database & Models:**
+- ✅ **Item Model**: Fully implemented with comprehensive features
+- ✅ **Soft Delete Pattern**: Complete implementation with audit trails
+- ✅ **Character Ownership**: Many-to-many relationship support
+- ✅ **Permission System**: Role-based access control integration
+- ✅ **Admin Interface**: 6 bulk operations with comprehensive management
+
+**Testing Coverage:**
+- ✅ **102 Comprehensive Tests**: Model validation, permissions, admin operations
+- ✅ **Soft Delete Testing**: Creation, deletion, restoration workflows
+- ✅ **Permission Testing**: Role-based access control validation
+- ✅ **Bulk Operations**: Transaction safety and error handling
+
+**API Endpoints Status:**
+- 🔄 **REST Endpoints**: Not yet implemented
+- 🔄 **Serializers**: Pending implementation
+- 🔄 **URL Configuration**: Pending implementation
+
+#### Planned API Endpoints
+
+The following endpoints will be implemented in future iterations:
+
+**Item CRUD Operations:**
+```
+GET    /api/items/                    # List campaign items (filtered)
+POST   /api/items/                    # Create new item
+GET    /api/items/{id}/               # Retrieve specific item
+PUT    /api/items/{id}/               # Update item (full)
+PATCH  /api/items/{id}/               # Update item (partial)
+DELETE /api/items/{id}/               # Soft delete item
+```
+
+**Item Management:**
+```
+POST   /api/items/{id}/restore/       # Restore soft-deleted item
+PATCH  /api/items/{id}/ownership/     # Manage character ownership
+GET    /api/items/deleted/            # List deleted items (restore view)
+```
+
+**Bulk Operations:**
+```
+POST   /api/items/bulk-delete/        # Bulk soft delete
+POST   /api/items/bulk-restore/       # Bulk restore
+POST   /api/items/bulk-update/        # Bulk quantity/ownership updates
+POST   /api/items/bulk-transfer/      # Bulk campaign transfer
+```
+
+#### Planned Data Models
+
+**Item Response Structure:**
+```json
+{
+  "id": 1,
+  "name": "Longsword +1",
+  "description": "A finely crafted magical longsword",
+  "campaign": {
+    "id": 1,
+    "name": "Adventures in Mystara"
+  },
+  "quantity": 1,
+  "owners": [
+    {
+      "id": 1,
+      "name": "Sir Gareth",
+      "type": "PlayerCharacter"
+    }
+  ],
+  "created_by": {
+    "id": 1,
+    "username": "gamemaster"
+  },
+  "created_at": "2024-01-01T12:00:00Z",
+  "updated_at": "2024-01-01T12:00:00Z",
+  "is_deleted": false,
+  "deleted_at": null,
+  "deleted_by": null
+}
+```
+
+**Permission Integration:**
+- Items inherit campaign permission structure
+- Role-based access: OWNER > GM > PLAYER > OBSERVER
+- Creator privileges maintained across role changes
+- Soft delete permissions prevent data loss
+
+**Future Implementation Notes:**
+- API endpoints will follow existing patterns from Location and Character APIs
+- Bulk operations will use transaction safety with detailed error reporting
+- Character ownership API will support adding/removing multiple characters
+- Campaign transfer will validate target campaign permissions
 
 ## Source Reference API
 

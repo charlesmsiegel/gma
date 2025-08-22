@@ -10,6 +10,7 @@
 6. [Data Model Architecture](#data-model-architecture)
    - [Location Domain Models](#location-domain-models)
    - [Location Management Interface Architecture](#location-management-interface-architecture)
+   - [Item Domain Models](#item-domain-models)
 7. [Frontend Integration](#frontend-integration)
 8. [Real-Time Architecture](#real-time-architecture)
 9. [Security Architecture](#security-architecture)
@@ -1545,6 +1546,119 @@ LocationForm (Base)
 - `select_related()` for single foreign keys
 - `prefetch_related()` for reverse foreign keys and many-to-many
 - Custom managers for common query patterns
+
+### Item Domain Models
+
+#### Item Model Architecture
+
+**Location**: `items/models/__init__.py:22-235`
+
+The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, character ownership, and advanced admin capabilities:
+
+```python
+class Item(TimestampedMixin, DescribedModelMixin, models.Model):
+    # Core item information
+    name = CharField(max_length=200, help_text="Name of the item")
+    campaign = ForeignKey(Campaign, on_delete=models.CASCADE, related_name="items")
+    quantity = PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+
+    # User audit tracking
+    created_by = ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="created_items")
+
+    # Character ownership (many-to-many)
+    owners = ManyToManyField("characters.Character", blank=True, related_name="owned_items")
+
+    # Soft delete functionality
+    is_deleted = BooleanField(default=False)
+    deleted_at = DateTimeField(null=True, blank=True)
+    deleted_by = ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_items")
+```
+
+**Key Architectural Features:**
+
+1. **Soft Delete Pattern Implementation**
+   - Items are marked as deleted rather than physically removed
+   - Maintains data integrity for campaign history
+   - Allows for restoration of accidentally deleted items
+   - Tracks who deleted items and when
+
+2. **Custom Manager Architecture**
+   ```python
+   class ItemManager(models.Manager):
+       def get_queryset(self):
+           return ItemQuerySet(self.model, using=self._db).filter(is_deleted=False)
+
+   class AllItemManager(models.Manager):
+       def get_queryset(self):
+           return ItemQuerySet(self.model, using=self._db)  # Includes deleted items
+   ```
+
+3. **Custom QuerySet Methods**
+   - `active()`: Filter to non-deleted items
+   - `deleted()`: Filter to soft-deleted items
+   - `for_campaign()`: Campaign-specific filtering
+   - `owned_by_character()`: Character ownership filtering
+
+4. **Permission System Integration**
+   - Role-based access control using campaign hierarchy
+   - Creator privileges for item management
+   - Superuser override capabilities
+   - `can_be_deleted_by(user)` method for centralized permission checking
+
+5. **Business Logic Methods**
+   - `soft_delete(user)`: Performs soft deletion with permission validation
+   - `restore(user)`: Restores soft-deleted items with permission validation
+   - `clean()`: Model-level validation for name and quantity
+
+**Admin Interface Architecture:**
+
+The ItemAdmin class provides comprehensive management capabilities:
+
+```python
+@admin.register(Item)
+class ItemAdmin(admin.ModelAdmin):
+    # 6 bulk operations
+    actions = [
+        "soft_delete_selected",
+        "restore_selected",
+        "update_quantity",
+        "assign_ownership",
+        "clear_ownership",
+        "transfer_campaign",
+    ]
+
+    # Organized fieldsets
+    fieldsets = [
+        ("Basic Information", {"fields": ("name", "description", "campaign", "quantity")}),
+        ("Ownership", {"fields": ("owners",), "classes": ("collapse",)}),
+        ("Audit Information", {"fields": ("created_by", "created_at", "updated_at"), "classes": ("collapse",)}),
+        ("Deletion Status", {"fields": ("is_deleted", "deleted_at", "deleted_by"), "classes": ("collapse",)}),
+    ]
+```
+
+**Bulk Operations:**
+- Soft delete with permission checking and transaction safety
+- Bulk restoration of deleted items
+- Quantity updates across multiple items
+- Ownership assignment/clearing for multiple items
+- Campaign transfer capabilities
+- Comprehensive error handling and user feedback
+
+**Testing Architecture:**
+
+The Item model includes 102 comprehensive tests across 3 test files:
+
+1. **Model Tests** (`test_models.py`): Core validation, soft delete functionality, permission system
+2. **Admin Tests** (`test_admin.py`): Admin interface capabilities, bulk operations, permission checks
+3. **Bulk Operations Tests** (`test_bulk_operations.py`): Transaction safety, error handling, edge cases
+4. **Mixin Application Tests** (`test_mixin_application.py`): Inheritance validation, field compatibility
+
+**Database Performance Considerations:**
+
+- Indexes on `campaign` foreign key for filtering
+- Index on `is_deleted` for manager query optimization
+- Many-to-many relationship optimized for character ownership queries
+- Soft delete pattern maintains referential integrity
 
 ## Frontend Integration
 

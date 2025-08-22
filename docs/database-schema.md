@@ -5,6 +5,7 @@
 1. [Schema Overview](#schema-overview)
 2. [Core Models](#core-models)
 3. [Campaign Domain](#campaign-domain)
+   - [Item Model](#item-model)
 4. [User Domain](#user-domain)
 5. [Authentication and Sessions](#authentication-and-sessions)
 6. [Real-time Features](#real-time-features)
@@ -1499,6 +1500,139 @@ LEFT JOIN campaigns_campaignmembership m
     ON c.id = m.campaign_id AND m.user_id = :user_id
 WHERE c.id = :campaign_id;
 ```
+
+### Item Model
+
+**Table**: `items_item`
+
+The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, character ownership, and audit tracking.
+
+```sql
+CREATE TABLE items_item (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    campaign_id INTEGER NOT NULL REFERENCES campaigns_campaign(id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+
+    -- User audit tracking
+    created_by_id INTEGER REFERENCES auth_user(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+
+    -- Soft delete functionality
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    deleted_by_id INTEGER REFERENCES auth_user(id) ON DELETE SET NULL,
+
+    -- Constraints
+    CONSTRAINT items_item_quantity_check CHECK (quantity >= 1),
+    CONSTRAINT items_item_delete_consistency_check
+        CHECK ((is_deleted = FALSE AND deleted_at IS NULL AND deleted_by_id IS NULL) OR
+               (is_deleted = TRUE AND deleted_at IS NOT NULL AND deleted_by_id IS NOT NULL))
+);
+
+-- Character ownership (many-to-many relationship)
+CREATE TABLE items_item_owners (
+    id SERIAL PRIMARY KEY,
+    item_id INTEGER NOT NULL REFERENCES items_item(id) ON DELETE CASCADE,
+    character_id INTEGER NOT NULL REFERENCES characters_character(id) ON DELETE CASCADE,
+    UNIQUE(item_id, character_id)
+);
+
+-- Performance indexes
+CREATE INDEX items_item_campaign_id_idx ON items_item (campaign_id);
+CREATE INDEX items_item_is_deleted_idx ON items_item (is_deleted);
+CREATE INDEX items_item_created_by_id_idx ON items_item (created_by_id);
+CREATE INDEX items_item_deleted_by_id_idx ON items_item (deleted_by_id);
+CREATE INDEX items_item_name_idx ON items_item (name);
+CREATE INDEX items_item_created_at_idx ON items_item (created_at);
+CREATE INDEX items_item_owners_item_id_idx ON items_item_owners (item_id);
+CREATE INDEX items_item_owners_character_id_idx ON items_item_owners (character_id);
+```
+
+**Field Specifications:**
+
+**Core Fields:**
+- `name`: Item name (VARCHAR 200, required) - The primary identifier for the item
+- `description`: Extended item description (TEXT, optional) - Inherited from DescribedModelMixin
+- `campaign_id`: Foreign key to campaigns_campaign (INTEGER, required) - Campaign association
+- `quantity`: Item quantity (INTEGER, default 1, min 1) - Positive integer with validation
+
+**Audit Tracking:**
+- `created_by_id`: Foreign key to auth_user (INTEGER, nullable) - Creator tracking
+- `created_at`: Creation timestamp (TIMESTAMP, required) - From TimestampedMixin
+- `updated_at`: Last update timestamp (TIMESTAMP, required) - From TimestampedMixin
+
+**Soft Delete Implementation:**
+- `is_deleted`: Deletion flag (BOOLEAN, default FALSE) - Marks item as deleted
+- `deleted_at`: Deletion timestamp (TIMESTAMP, nullable) - When item was deleted
+- `deleted_by_id`: Foreign key to auth_user (INTEGER, nullable) - Who deleted the item
+
+**Character Ownership:**
+- Many-to-many relationship through `items_item_owners` table
+- Supports multiple characters owning the same item
+- Cascade deletion when item or character is deleted
+
+**Business Rules:**
+
+1. **Quantity Validation**: Quantity must be at least 1
+2. **Soft Delete Consistency**: Deleted items must have deleted_at and deleted_by_id set
+3. **Campaign Isolation**: Items belong to specific campaigns and inherit campaign permissions
+4. **Audit Trail**: Creator information preserved even if user account is deleted (SET NULL)
+5. **Character Ownership**: Multiple characters can own items, useful for shared equipment
+
+**Query Patterns:**
+
+```sql
+-- Active items for a campaign (default manager behavior)
+SELECT * FROM items_item
+WHERE campaign_id = :campaign_id AND is_deleted = FALSE
+ORDER BY name;
+
+-- Items owned by a specific character
+SELECT i.* FROM items_item i
+JOIN items_item_owners io ON i.id = io.item_id
+WHERE io.character_id = :character_id AND i.is_deleted = FALSE
+ORDER BY i.name;
+
+-- Soft-deleted items (for restoration)
+SELECT * FROM items_item
+WHERE campaign_id = :campaign_id AND is_deleted = TRUE
+ORDER BY deleted_at DESC;
+
+-- Item ownership with character details
+SELECT i.name, i.quantity, c.name as character_name
+FROM items_item i
+JOIN items_item_owners io ON i.id = io.item_id
+JOIN characters_character c ON io.character_id = c.id
+WHERE i.campaign_id = :campaign_id AND i.is_deleted = FALSE
+ORDER BY i.name, c.name;
+```
+
+**Custom Manager Behavior:**
+
+The Item model implements custom managers for different query patterns:
+
+- **ItemManager (default)**: Excludes soft-deleted items automatically
+- **AllItemManager**: Includes all items, including soft-deleted ones
+- **ItemQuerySet**: Provides filtering methods (active, deleted, for_campaign, owned_by_character)
+
+**Permission Integration:**
+
+Items integrate with the campaign permission system:
+- Campaign owners and GMs can manage all campaign items
+- Item creators can always delete their own items (if they still exist)
+- Superusers have full access to all items
+- Permission checking centralized in `can_be_deleted_by()` method
+
+**Soft Delete Pattern Benefits:**
+
+1. **Data Preservation**: Campaign history maintained even when items are "deleted"
+2. **Audit Compliance**: Full deletion audit trail with timestamps and user tracking
+3. **Recovery**: Accidentally deleted items can be restored
+4. **Performance**: Active/deleted filtering optimized with database indexes
+5. **Referential Integrity**: Related data (ownership, campaign history) preserved
 
 ## User Domain
 

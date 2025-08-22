@@ -234,9 +234,11 @@ make test
 
 # Run specific app tests
 python manage.py test campaigns
+python manage.py test items
 
 # Run specific test class
 python manage.py test campaigns.tests.test_services.TestMembershipService
+python manage.py test items.tests.test_admin.ItemAdminTest
 
 # Run migration safety tests
 python manage.py test core.tests.test_migration_strategy
@@ -2306,9 +2308,11 @@ python manage.py showmigrations
 ```bash
 # Run single failing test with verbose output
 python manage.py test campaigns.tests.test_api.TestCampaignAPI.test_create_campaign -v 2
+python manage.py test items.tests.test_models.ItemModelTest.test_soft_delete_functionality -v 2
 
 # Run with pdb debugging
 python manage.py test --debug-mode campaigns.tests.test_api
+python manage.py test --debug-mode items.tests.test_admin
 
 # Check test database
 python manage.py dbshell --settings=gm_app.test_settings
