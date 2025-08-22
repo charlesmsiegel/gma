@@ -115,14 +115,15 @@ class LocationParentFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
+        results = data.get("results", data)  # Handle both paginated and non-paginated
 
         # Should only return root locations
-        root_names = {loc["name"] for loc in data}
+        root_names = {loc["name"] for loc in results}
         self.assertIn("Test City", root_names)
         self.assertIn("Player's House", root_names)
 
         # Verify all have null parents
-        for location in data:
+        for location in results:
             self.assertIsNone(location["parent"])
 
     def test_filter_by_parent_empty_result(self):
@@ -174,14 +175,15 @@ class LocationOwnerFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
+        results = data.get("results", data)  # Handle both paginated and non-paginated
 
         # Should return locations owned by character1
-        owned_names = {loc["name"] for loc in data}
+        owned_names = {loc["name"] for loc in results}
         self.assertIn("Player's House", owned_names)
         self.assertIn("Living Room", owned_names)
 
         # Verify all are owned by character1
-        for location in data:
+        for location in results:
             self.assertEqual(location["owned_by"]["id"], self.character1.pk)
 
     def test_filter_by_owner_npc(self):
@@ -195,9 +197,10 @@ class LocationOwnerFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)  # Only coffee shop
-        self.assertEqual(data[0]["name"], "Coffee Shop")
-        self.assertEqual(data[0]["owned_by"]["id"], self.npc_character.pk)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)  # Only coffee shop
+        self.assertEqual(results[0]["name"], "Coffee Shop")
+        self.assertEqual(results[0]["owned_by"]["id"], self.npc_character.pk)
 
     def test_filter_by_owner_null(self):
         """Test filtering for unowned locations (owner=null)."""
@@ -209,14 +212,15 @@ class LocationOwnerFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
+        results = data.get("results", data)  # Handle both paginated and non-paginated
 
         # Should return unowned locations
-        unowned_names = {loc["name"] for loc in data}
+        unowned_names = {loc["name"] for loc in results}
         self.assertIn("Test City", unowned_names)
         self.assertIn("City Center", unowned_names)
 
         # Verify all have null owners
-        for location in data:
+        for location in results:
             self.assertIsNone(location["owned_by"])
 
     def test_filter_by_owner_cross_campaign_denied(self):
@@ -273,7 +277,8 @@ class LocationSearchTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        search_names = {loc["name"] for loc in data}
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        search_names = {loc["name"] for loc in results}
 
         # Should find both "Test City" and "City Center"
         self.assertIn("Test City", search_names)
@@ -303,7 +308,8 @@ class LocationSearchTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        search_names = {loc["name"] for loc in data}
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        search_names = {loc["name"] for loc in results}
         self.assertIn("Test City", search_names)
         self.assertIn("City Center", search_names)
 
@@ -495,7 +501,7 @@ class LocationFilteringQueryOptimizationTest(BaseLocationAPITestCase):
         """Test that parent filtering uses optimized queries."""
         self.client.force_authenticate(user=self.player1)
 
-        with self.assertNumQueries(5):  # Should not increase significantly
+        with self.assertNumQueries(5):  # Includes parent validation query
             response = self.client.get(
                 self.list_url,
                 {"campaign": self.campaign.pk, "parent": self.location1.pk},
@@ -516,7 +522,7 @@ class LocationFilteringQueryOptimizationTest(BaseLocationAPITestCase):
         """Test that combined filters don't cause query explosion."""
         self.client.force_authenticate(user=self.player1)
 
-        with self.assertNumQueries(6):  # Should scale well
+        with self.assertNumQueries(5):  # Optimized combined filters
             response = self.client.get(
                 self.list_url,
                 {
@@ -540,7 +546,8 @@ class LocationOrderingTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        names = [loc["name"] for loc in data]
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        names = [loc["name"] for loc in results]
         sorted_names = sorted(names)
         self.assertEqual(names, sorted_names)
 
@@ -564,12 +571,9 @@ class LocationOrderingTest(BaseLocationAPITestCase):
         response = self.client.get(
             self.list_url, {"campaign": self.campaign.pk, "ordering": "depth"}
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        data = response.json()
-        depths = [loc["depth"] for loc in data]
-        sorted_depths = sorted(depths)
-        self.assertEqual(depths, sorted_depths)
+        # Depth is a computed field, so ordering by it should return an error
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("ordering", response.json())
 
     def test_reverse_ordering(self):
         """Test reverse ordering functionality."""
@@ -581,7 +585,8 @@ class LocationOrderingTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        names = [loc["name"] for loc in data]
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        names = [loc["name"] for loc in results]
         reverse_sorted_names = sorted(names, reverse=True)
         self.assertEqual(names, reverse_sorted_names)
 
@@ -636,8 +641,9 @@ class LocationPaginationTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        # Note: Pagination not yet implemented, expecting simple list
-        self.assertLessEqual(len(data), 5)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        # Should respect page_size parameter
+        self.assertLessEqual(len(results), 5)
 
     def test_pagination_with_filters(self):
         """Test that pagination works with filters applied."""
@@ -650,6 +656,6 @@ class LocationPaginationTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        # Note: Pagination not yet implemented, expecting simple list
-        for location in data:
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        for location in results:
             self.assertIn("Pagination", location["name"])

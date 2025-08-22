@@ -1063,7 +1063,21 @@ class LocationSerializer(serializers.ModelSerializer):
 
     def get_hierarchy_path(self, obj):
         """Get the full hierarchy path for this location."""
-        return obj.get_full_path()
+        # Build path efficiently without additional queries since parent is
+        # select_related
+        path_parts = []
+        current = obj
+        visited = set()  # Prevent infinite loops
+
+        # Traverse up the parent chain using the already-loaded parent relationships
+        while current and current.pk not in visited and len(visited) < 50:
+            visited.add(current.pk)
+            path_parts.append(current.name)
+            current = current.parent
+
+        # Reverse to get root-to-current order and join
+        path_parts.reverse()
+        return " > ".join(path_parts)
 
 
 class LocationDetailSerializer(LocationSerializer):
