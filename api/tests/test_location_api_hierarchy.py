@@ -218,9 +218,10 @@ class LocationHierarchySerializationTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
+        results = data.get("results", data)  # Handle both paginated and non-paginated
 
         # Find locations and check hierarchy indicators
-        locations_by_name = {loc["name"]: loc for loc in data}
+        locations_by_name = {loc["name"]: loc for loc in results}
 
         # Root location should have no parent and have children
         root_loc = locations_by_name["Test City"]
@@ -438,13 +439,16 @@ class LocationHierarchyPerformanceTest(BaseLocationAPITestCase):
         """Test that list endpoint optimizes queries for hierarchy information."""
         self.client.force_authenticate(user=self.player1)
 
-        with self.assertNumQueries(5):  # Should be optimized to minimal queries
+        with self.assertNumQueries(6):  # Includes pagination count query
             response = self.client.get(self.list_url, {"campaign": self.campaign.pk})
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             # Access hierarchy data to ensure it's properly prefetched
             data = response.json()
-            for location in data:
+            results = data.get(
+                "results", data
+            )  # Handle both paginated and non-paginated
+            for location in results:
                 # These should not trigger additional queries
                 _ = location.get("parent")
                 _ = location.get("children_count")
