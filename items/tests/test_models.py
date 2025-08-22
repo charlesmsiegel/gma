@@ -141,14 +141,18 @@ class ItemModelFieldValidationTest(TestCase):
                 # campaign is missing
             )
 
-    def test_item_created_by_required_constraint(self):
-        """Test that created_by is required."""
-        with self.assertRaises(IntegrityError):
-            Item.objects.create(
-                name="Anonymous Item",
-                campaign=self.campaign,
-                # created_by is missing
-            )
+    def test_item_created_by_can_be_null(self):
+        """Test that created_by can be null (after user deletion)."""
+        # This should work without error since created_by allows null
+        item = Item.objects.create(
+            name="Anonymous Item",
+            campaign=self.campaign,
+            created_by=None,
+        )
+
+        self.assertEqual(item.name, "Anonymous Item")
+        self.assertIsNone(item.created_by)
+        self.assertEqual(item.campaign, self.campaign)
 
     def test_item_description_blank_allowed(self):
         """Test that description can be blank."""
@@ -414,12 +418,13 @@ class ItemCampaignCascadeTest(TestCase):
             created_by=self.owner,
         )
 
+        campaign_id = self.campaign.id
         self.assertEqual(Item.objects.filter(campaign=self.campaign).count(), 2)
 
         self.campaign.delete()
 
-        self.assertEqual(Item.objects.filter(campaign=self.campaign).count(), 0)
-        self.assertEqual(Item.all_objects.filter(campaign=self.campaign).count(), 0)
+        self.assertEqual(Item.objects.filter(campaign_id=campaign_id).count(), 0)
+        self.assertEqual(Item.all_objects.filter(campaign_id=campaign_id).count(), 0)
 
 
 class ItemModelManagersTest(TestCase):
@@ -637,14 +642,14 @@ class ItemEdgeCasesTest(TestCase):
         self.assertTrue(Item.objects.filter(id=item_id).exists())
 
         # Delete the user who created the item
+        # Note: Since campaigns CASCADE on owner deletion, the campaign and its items
+        # will be deleted when the owner is deleted
         self.owner.delete()
 
-        # Refresh item from database
-        item = Item.objects.get(id=item_id)
-
-        # Item should still exist but created_by should be None or handled gracefully
-        self.assertTrue(Item.objects.filter(id=item_id).exists())
-        # The exact behavior depends on the on_delete setting in the model
+        # Item should no longer exist because its campaign was deleted
+        # when the campaign owner was deleted (CASCADE behavior)
+        self.assertFalse(Item.objects.filter(id=item_id).exists())
+        self.assertFalse(Item.all_objects.filter(id=item_id).exists())
 
     def test_item_with_very_long_description(self):
         """Test item with maximum length description."""

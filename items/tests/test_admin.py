@@ -68,7 +68,8 @@ class ItemAdminTestCase(TestCase):
         self.character1 = Character.objects.create(
             name="Character 1",
             campaign=self.campaign1,
-            player=self.player1,
+            player_owner=self.player1,
+            game_system="D&D 5e",
         )
 
         # Create items
@@ -430,11 +431,16 @@ class ItemAdminFormTest(ItemAdminTestCase):
         form = form_class(instance=self.item1)
 
         # Test that form is populated with instance data
-        self.assertEqual(
-            form.initial.get("name") or form.instance.name, self.item1.name
+        self.assertEqual(form.instance.name, self.item1.name)
+        self.assertEqual(form.instance.campaign, self.item1.campaign)
+        # Check that initial values exist or instance has the data
+        self.assertTrue(
+            form.initial.get("name") == self.item1.name
+            or form.instance.name == self.item1.name
         )
-        self.assertEqual(
-            form.initial.get("campaign") or form.instance.campaign, self.item1.campaign
+        self.assertTrue(
+            form.initial.get("campaign") == self.item1.campaign.id
+            or form.instance.campaign == self.item1.campaign
         )
 
     def test_admin_form_save(self):

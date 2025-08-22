@@ -124,7 +124,10 @@ class BulkDeleteOperationsTest(ItemBulkOperationsTestCase):
 
     def test_bulk_soft_delete_action_exists(self):
         """Test that bulk soft delete action is available."""
-        actions = self.admin.get_actions(None)
+        request = self._create_request_with_messages(
+            "/admin/items/item/", self.admin_user
+        )
+        actions = self.admin.get_actions(request)
         self.assertIn("soft_delete_selected", actions)
 
     def test_bulk_soft_delete_execution(self):
@@ -148,10 +151,12 @@ class BulkDeleteOperationsTest(ItemBulkOperationsTestCase):
 
         # Verify items were soft deleted
         for item in selected_items:
-            item.refresh_from_db()
-            self.assertTrue(item.is_deleted)
-            self.assertIsNotNone(item.deleted_at)
-            self.assertEqual(item.deleted_by, self.admin_user)
+            # Use all_objects to get the updated item since default manager
+            # excludes deleted items
+            updated_item = Item.all_objects.get(id=item.id)
+            self.assertTrue(updated_item.is_deleted)
+            self.assertIsNotNone(updated_item.deleted_at)
+            self.assertEqual(updated_item.deleted_by, self.admin_user)
 
     def test_bulk_soft_delete_preserves_unselected(self):
         """Test that bulk soft delete doesn't affect unselected items."""
@@ -246,7 +251,10 @@ class BulkRestoreOperationsTest(ItemBulkOperationsTestCase):
 
     def test_bulk_restore_action_exists(self):
         """Test that bulk restore action is available."""
-        actions = self.admin.get_actions(None)
+        request = self._create_request_with_messages(
+            "/admin/items/item/", self.admin_user
+        )
+        actions = self.admin.get_actions(request)
         self.assertIn("restore_selected", actions)
 
     def test_bulk_restore_execution(self):
@@ -270,10 +278,11 @@ class BulkRestoreOperationsTest(ItemBulkOperationsTestCase):
 
         # Verify items were restored
         for item in deleted_items:
-            item.refresh_from_db()
-            self.assertFalse(item.is_deleted)
-            self.assertIsNone(item.deleted_at)
-            self.assertIsNone(item.deleted_by)
+            # Get fresh instance from database
+            updated_item = Item.all_objects.get(id=item.id)
+            self.assertFalse(updated_item.is_deleted)
+            self.assertIsNone(updated_item.deleted_at)
+            self.assertIsNone(updated_item.deleted_by)
 
     def test_bulk_restore_non_deleted_items(self):
         """Test bulk restore handles non-deleted items gracefully."""
@@ -307,7 +316,10 @@ class BulkQuantityUpdateTest(ItemBulkOperationsTestCase):
 
     def test_bulk_update_quantity_action_exists(self):
         """Test that bulk quantity update action is available."""
-        actions = self.admin.get_actions(None)
+        request = self._create_request_with_messages(
+            "/admin/items/item/", self.admin_user
+        )
+        actions = self.admin.get_actions(request)
         self.assertIn("update_quantity", actions)
 
     def test_bulk_update_quantity_execution(self):
@@ -363,7 +375,10 @@ class BulkOwnershipOperationsTest(ItemBulkOperationsTestCase):
 
     def test_bulk_assign_ownership_action_exists(self):
         """Test that bulk ownership assignment action is available."""
-        actions = self.admin.get_actions(None)
+        request = self._create_request_with_messages(
+            "/admin/items/item/", self.admin_user
+        )
+        actions = self.admin.get_actions(request)
         self.assertIn("assign_ownership", actions)
 
     def test_bulk_assign_ownership_execution(self):
@@ -393,7 +408,10 @@ class BulkOwnershipOperationsTest(ItemBulkOperationsTestCase):
 
     def test_bulk_clear_ownership_action_exists(self):
         """Test that bulk ownership clearing action is available."""
-        actions = self.admin.get_actions(None)
+        request = self._create_request_with_messages(
+            "/admin/items/item/", self.admin_user
+        )
+        actions = self.admin.get_actions(request)
         self.assertIn("clear_ownership", actions)
 
     def test_bulk_clear_ownership_execution(self):
@@ -429,7 +447,10 @@ class BulkCampaignTransferTest(ItemBulkOperationsTestCase):
 
     def test_bulk_transfer_campaign_action_exists(self):
         """Test that bulk campaign transfer action is available."""
-        actions = self.admin.get_actions(None)
+        request = self._create_request_with_messages(
+            "/admin/items/item/", self.admin_user
+        )
+        actions = self.admin.get_actions(request)
         self.assertIn("transfer_campaign", actions)
 
     def test_bulk_transfer_campaign_execution(self):
@@ -483,7 +504,10 @@ class BulkOperationsPermissionsTest(ItemBulkOperationsTestCase):
 
     def test_bulk_operations_superuser_access(self):
         """Test that superuser can perform all bulk operations."""
-        actions = self.admin.get_actions(None)
+        request = self._create_request_with_messages(
+            "/admin/items/item/", self.admin_user
+        )
+        actions = self.admin.get_actions(request)
 
         # Superuser should have access to all bulk actions
         expected_actions = [
