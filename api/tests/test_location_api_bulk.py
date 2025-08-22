@@ -157,6 +157,9 @@ class LocationBulkCreateTest(BaseLocationAPITestCase):
         }
 
         response = self.client.post(self.bulk_url, data=bulk_data, format="json")
+        if response.status_code != status.HTTP_200_OK:
+            print(f"Debug permission test: Unexpected status {response.status_code}")
+            print(f"Debug permission test: Response data: {response.json()}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()

@@ -120,7 +120,7 @@ class LocationBulkAPIView(APIView):
                         "failed": len(failed),
                     },
                 },
-                status=status.HTTP_200_OK if created else status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_200_OK,
             )
 
         except Exception as e:
@@ -160,7 +160,7 @@ class LocationBulkAPIView(APIView):
                 # Check campaign exists and user has permission
                 try:
                     campaign = Campaign.objects.get(pk=campaign_id)
-                    if not campaign.is_member(user):
+                    if not Location.can_create(user, campaign):
                         failed.append(
                             {
                                 "item_index": i,
