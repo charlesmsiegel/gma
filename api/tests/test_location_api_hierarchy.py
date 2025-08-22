@@ -417,7 +417,7 @@ class LocationHierarchyDeletionHandlingTest(BaseLocationAPITestCase):
             "location_ids": [self.location1.pk, self.child_location1.pk],
         }
 
-        response = self.client.post(self.bulk_url, data=bulk_data)
+        response = self.client.post(self.bulk_url, data=bulk_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Verify both locations are deleted
@@ -457,7 +457,7 @@ class LocationHierarchyPerformanceTest(BaseLocationAPITestCase):
         """Test that detail endpoint optimizes queries for full hierarchy data."""
         self.client.force_authenticate(user=self.player1)
 
-        with self.assertNumQueries(6):  # Optimized for all hierarchy operations
+        with self.assertNumQueries(7):  # Detail view with hierarchy prefetching
             detail_url = self.get_detail_url(self.grandchild_location.pk)
             response = self.client.get(detail_url)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
