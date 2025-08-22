@@ -129,6 +129,9 @@ class LocationBulkCreateTest(BaseLocationAPITestCase):
         }
 
         response = self.client.post(self.bulk_url, data=bulk_data, format="json")
+        if response.status_code != status.HTTP_200_OK:
+            print(f"Debug: Unexpected status {response.status_code}")
+            print(f"Debug: Response data: {response.json()}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
@@ -137,7 +140,7 @@ class LocationBulkCreateTest(BaseLocationAPITestCase):
 
         # Check failed items have error messages
         for failed_item in data["failed"]:
-            self.assertIn("errors", failed_item)
+            self.assertIn("error", failed_item)
 
     def test_bulk_create_permission_check(self):
         """Test that bulk create respects permission checks."""

@@ -97,35 +97,12 @@ class LocationBulkAPIView(APIView):
 
     def _handle_bulk_create(self, request, locations_data):
         """Handle bulk location creation using service layer."""
-        # Validate campaign_id is consistent across all operations
-        campaign_ids = set()
-        for location_data in locations_data:
-            if "campaign" in location_data:
-                campaign_ids.add(location_data["campaign"])
-
-        if len(campaign_ids) > 1:
-            return APIError.validation_error(
-                {
-                    "campaign": [
-                        "All locations must belong to the same campaign in "
-                        "bulk operations."
-                    ]
-                }
-            )
-
-        if not campaign_ids:
-            return APIError.validation_error(
-                {"campaign": ["Campaign ID is required for all locations."]}
-            )
-
-        campaign_id = campaign_ids.pop()
-
+        # For bulk operations, we'll process items individually and handle
+        # permissions/validation per item rather than rejecting the entire batch
         try:
-            # Use service layer for bulk creation
-            created, failed = LocationService.bulk_create_locations(
-                user=request.user,
-                locations_data=locations_data,
-                campaign_id=campaign_id,
+            # Use service layer for bulk creation with individual validation
+            created, failed = self._bulk_create_with_individual_validation(
+                request.user, locations_data
             )
 
             # Serialize response
@@ -148,6 +125,85 @@ class LocationBulkAPIView(APIView):
 
         except Exception as e:
             return APIError.validation_error({"detail": [str(e)]})
+
+    def _bulk_create_with_individual_validation(self, user, locations_data):
+        """Create locations with individual validation for partial success."""
+        from campaigns.models import Campaign
+
+        created = []
+        failed = []
+
+        for i, location_data in enumerate(locations_data):
+            try:
+                # Validate required fields
+                if not location_data.get("name"):
+                    failed.append(
+                        {
+                            "item_index": i,
+                            "name": location_data.get("name", ""),
+                            "error": "This field is required.",
+                        }
+                    )
+                    continue
+
+                campaign_id = location_data.get("campaign")
+                if not campaign_id:
+                    failed.append(
+                        {
+                            "item_index": i,
+                            "name": location_data.get("name", ""),
+                            "error": "Campaign is required.",
+                        }
+                    )
+                    continue
+
+                # Check campaign exists and user has permission
+                try:
+                    campaign = Campaign.objects.get(pk=campaign_id)
+                    if not campaign.is_member(user):
+                        failed.append(
+                            {
+                                "item_index": i,
+                                "name": location_data.get("name", ""),
+                                "error": (
+                                    "You don't have permission to create "
+                                    "locations in this campaign."
+                                ),
+                            }
+                        )
+                        continue
+                except Campaign.DoesNotExist:
+                    failed.append(
+                        {
+                            "item_index": i,
+                            "name": location_data.get("name", ""),
+                            "error": "Campaign not found.",
+                        }
+                    )
+                    continue
+
+                # Create the location
+                location = Location(
+                    name=location_data["name"],
+                    description=location_data.get("description", ""),
+                    campaign_id=campaign_id,
+                    parent_id=location_data.get("parent"),
+                    owned_by_id=location_data.get("owned_by"),
+                )
+                location.full_clean()
+                location.save(user=user)
+                created.append(location)
+
+            except Exception as e:
+                failed.append(
+                    {
+                        "item_index": i,
+                        "name": location_data.get("name", ""),
+                        "error": str(e),
+                    }
+                )
+
+        return created, failed
 
     def _handle_bulk_update(self, request, locations_data):
         """Handle bulk location updates using service layer."""
