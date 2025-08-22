@@ -751,8 +751,8 @@ class LocationBulkResponseFormatTest(BaseLocationAPITestCase):
         self.assertEqual(len(data["failed"]), 1)
 
         failed_item = data["failed"][0]
-        self.assertIn("errors", failed_item)
-        self.assertIn("item", failed_item)  # Original item data
+        self.assertIn("error", failed_item)
+        self.assertIn("item_index", failed_item)  # Item index for tracking
 
     def test_bulk_summary_statistics(self):
         """Test that bulk operations include summary statistics."""

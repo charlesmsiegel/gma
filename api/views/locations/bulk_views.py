@@ -346,6 +346,46 @@ class LocationBulkAPIView(APIView):
 
     def _handle_bulk_move(self, request, locations_data):
         """Handle bulk location moves using service layer."""
+        # Validate that all locations and target parent are in the same campaign
+        # for moves using the location_ids + new_parent format
+        if request.data.get("location_ids") and request.data.get("new_parent"):
+
+            location_ids = request.data.get("location_ids", [])
+            new_parent_id = request.data.get("new_parent")
+
+            # Get all involved location campaigns
+            campaigns = set()
+            for loc_id in location_ids:
+                try:
+                    location = Location.objects.select_related("campaign").get(
+                        pk=loc_id
+                    )
+                    campaigns.add(location.campaign_id)
+                except Location.DoesNotExist:
+                    pass  # Will be handled in individual processing
+
+            # Add parent campaign if specified
+            if new_parent_id:
+                try:
+                    parent = Location.objects.select_related("campaign").get(
+                        pk=new_parent_id
+                    )
+                    campaigns.add(parent.campaign_id)
+                except Location.DoesNotExist:
+                    return APIError.validation_error(
+                        {"new_parent": ["Parent location not found."]}
+                    )
+
+            # Check if all are in the same campaign
+            if len(campaigns) > 1:
+                return APIError.validation_error(
+                    {
+                        "campaign": [
+                            "All locations must be in the same campaign for bulk moves."
+                        ]
+                    }
+                )
+
         moved = []
         failed = []
 

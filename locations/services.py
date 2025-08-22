@@ -191,7 +191,10 @@ class LocationService:
             # Check for circular reference
             ancestors = [ancestor.pk for ancestor in new_parent.get_ancestors()]
             if location.pk in ancestors:
-                raise ValidationError("Cannot move location to its own descendant")
+                raise ValidationError(
+                    "Cannot move location to its own descendant - "
+                    "creates circular reference"
+                )
 
             if new_parent.pk == location.pk:
                 raise ValidationError("Cannot move location to itself")
