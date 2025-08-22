@@ -182,13 +182,42 @@ class LocationBulkAPIView(APIView):
                     )
                     continue
 
+                # Validate character ownership if owned_by is specified
+                owned_by_id = location_data.get("owned_by")
+                if owned_by_id:
+                    try:
+                        from characters.models import Character
+
+                        owned_by_character = Character.objects.get(pk=owned_by_id)
+                        if owned_by_character.player_owner != user:
+                            failed.append(
+                                {
+                                    "item_index": i,
+                                    "name": location_data.get("name", ""),
+                                    "error": (
+                                        "You can only assign ownership to "
+                                        "characters you own."
+                                    ),
+                                }
+                            )
+                            continue
+                    except Character.DoesNotExist:
+                        failed.append(
+                            {
+                                "item_index": i,
+                                "name": location_data.get("name", ""),
+                                "error": "Specified character does not exist.",
+                            }
+                        )
+                        continue
+
                 # Create the location
                 location = Location(
                     name=location_data["name"],
                     description=location_data.get("description", ""),
                     campaign_id=campaign_id,
                     parent_id=location_data.get("parent"),
-                    owned_by_id=location_data.get("owned_by"),
+                    owned_by_id=owned_by_id,
                 )
                 location.full_clean()
                 location.save(user=user)
