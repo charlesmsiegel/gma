@@ -143,9 +143,7 @@ class LocationBulkAPIView(APIView):
                         "failed": len(failed),
                     },
                 },
-                status=(
-                    status.HTTP_201_CREATED if created else status.HTTP_400_BAD_REQUEST
-                ),
+                status=status.HTTP_200_OK if created else status.HTTP_400_BAD_REQUEST,
             )
 
         except Exception as e:
