@@ -7,13 +7,15 @@ validation.
 """
 
 from django.db import transaction
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.errors import APIError
-from api.serializers import BulkLocationOperationSerializer, LocationSerializer
+from api.serializers import LocationSerializer
 from locations.models import Location
+from locations.services import LocationService
 
 
 class LocationBulkAPIView(APIView):
@@ -24,6 +26,7 @@ class LocationBulkAPIView(APIView):
     """
 
     permission_classes = [IsAuthenticated]
+    MAX_BULK_OPERATIONS = LocationService.MAX_BULK_OPERATIONS
 
     def post(self, request):
         """
@@ -37,12 +40,48 @@ class LocationBulkAPIView(APIView):
             ]
         }
         """
-        serializer = BulkLocationOperationSerializer(data=request.data)
-        if not serializer.is_valid():
-            return APIError.validation_error(serializer.errors)
+        # Basic validation
+        action = request.data.get("action")
+        if not action:
+            return APIError.validation_error({"action": ["This field is required."]})
 
-        action = serializer.validated_data["action"]
-        locations_data = serializer.validated_data["locations"]
+        # Validate action type
+        valid_actions = ["create", "update", "delete", "move"]
+        if action not in valid_actions:
+            return APIError.validation_error(
+                {
+                    "action": [
+                        f"Invalid action. Must be one of: {', '.join(valid_actions)}"
+                    ]
+                }
+            )
+
+        # Get data based on action type
+        if action in ["create", "update", "move"]:
+            locations_data = request.data.get("locations", [])
+            data_field = "locations"
+        else:  # delete
+            locations_data = request.data.get("location_ids", [])
+            data_field = "location_ids"
+
+        if not isinstance(locations_data, list):
+            return APIError.validation_error({data_field: ["Must be a list."]})
+
+        # Check bulk operation limit
+        if len(locations_data) > self.MAX_BULK_OPERATIONS:
+            return APIError.validation_error(
+                {
+                    data_field: [
+                        f"Maximum {self.MAX_BULK_OPERATIONS} locations can be "
+                        f"processed at once."
+                    ]
+                }
+            )
+
+        if len(locations_data) == 0:
+            return APIError.validation_error(
+                {data_field: ["At least one location is required."]}
+            )
 
         # Route to appropriate handler
         if action == "create":
@@ -57,179 +96,105 @@ class LocationBulkAPIView(APIView):
         return APIError.validation_error({"action": ["Invalid action type."]})
 
     def _handle_bulk_create(self, request, locations_data):
-        """Handle bulk location creation."""
-        created = []
-        failed = []
-        parent_map = {}  # For tracking parent_name references
+        """Handle bulk location creation using service layer."""
+        # Validate campaign_id is consistent across all operations
+        campaign_ids = set()
+        for location_data in locations_data:
+            if "campaign" in location_data:
+                campaign_ids.add(location_data["campaign"])
 
-        # First pass: create locations without parent_name references
-        for i, location_data in enumerate(locations_data):
-            try:
-                # Check campaign permission
-                campaign = location_data.get("campaign")
-                if not campaign or not Location.can_create(request.user, campaign):
-                    failed.append(
-                        {
-                            "item_index": i,
-                            "name": location_data.get("name", ""),
-                            "error": "You don't have permission to create locations "
-                            "in this campaign.",
-                        }
-                    )
-                    continue
+        if len(campaign_ids) > 1:
+            return APIError.validation_error(
+                {
+                    "campaign": [
+                        "All locations must belong to the same campaign in "
+                        "bulk operations."
+                    ]
+                }
+            )
 
-                # Handle parent_name reference
-                parent_name = location_data.pop("parent_name", None)
-                if parent_name:
-                    # Skip for now, handle in second pass
-                    location_data["_parent_name"] = parent_name
-                    location_data["_index"] = i
+        if not campaign_ids:
+            return APIError.validation_error(
+                {"campaign": ["Campaign ID is required for all locations."]}
+            )
 
-                with transaction.atomic():
-                    # Create location
-                    location = Location(
-                        name=location_data["name"],
-                        description=location_data.get("description", ""),
-                        campaign=campaign,
-                        parent=location_data.get("parent"),
-                        owned_by=location_data.get("owned_by"),
-                    )
-                    location.save(user=request.user)
+        campaign_id = campaign_ids.pop()
 
-                    # Track for parent_name resolution
-                    if parent_name:
-                        parent_map[parent_name] = location
+        try:
+            # Use service layer for bulk creation
+            created, failed = LocationService.bulk_create_locations(
+                user=request.user,
+                locations_data=locations_data,
+                campaign_id=campaign_id,
+            )
 
-                    created.append(location)
+            # Serialize response
+            created_serializer = LocationSerializer(
+                created, many=True, context={"request": request}
+            )
 
-            except Exception as e:
-                failed.append(
-                    {
-                        "item_index": i,
-                        "name": location_data.get("name", ""),
-                        "error": str(e),
-                    }
-                )
+            return Response(
+                {
+                    "created": created_serializer.data,
+                    "failed": failed,
+                    "summary": {
+                        "total_requested": len(locations_data),
+                        "successful": len(created),
+                        "failed": len(failed),
+                    },
+                },
+                status=(
+                    status.HTTP_201_CREATED if created else status.HTTP_400_BAD_REQUEST
+                ),
+            )
 
-        # Second pass: handle parent_name references
-        deferred_locations = [loc for loc in locations_data if "_parent_name" in loc]
-        for location_data in deferred_locations:
-            try:
-                parent_name = location_data["_parent_name"]
-                index = location_data["_index"]
-
-                if parent_name in parent_map:
-                    parent = parent_map[parent_name]
-                    campaign = location_data.get("campaign")
-
-                    with transaction.atomic():
-                        location = Location(
-                            name=location_data["name"],
-                            description=location_data.get("description", ""),
-                            campaign=campaign,
-                            parent=parent,
-                            owned_by=location_data.get("owned_by"),
-                        )
-                        location.save(user=request.user)
-                        created.append(location)
-                else:
-                    failed.append(
-                        {
-                            "item_index": index,
-                            "name": location_data.get("name", ""),
-                            "error": f"Parent location '{parent_name}' not found "
-                            "in this batch.",
-                        }
-                    )
-
-            except Exception as e:
-                failed.append(
-                    {
-                        "item_index": location_data.get("_index", -1),
-                        "name": location_data.get("name", ""),
-                        "error": str(e),
-                    }
-                )
-
-        # Serialize response
-        created_serializer = LocationSerializer(
-            created, many=True, context={"request": request}
-        )
-
-        return Response({"created": created_serializer.data, "failed": failed})
+        except Exception as e:
+            return APIError.validation_error({"detail": [str(e)]})
 
     def _handle_bulk_update(self, request, locations_data):
-        """Handle bulk location updates."""
-        updated = []
-        failed = []
+        """Handle bulk location updates using service layer."""
+        try:
+            # Use service layer for bulk updates
+            updated, failed = LocationService.bulk_update_locations(
+                user=request.user, updates_data=locations_data
+            )
 
-        for i, location_data in enumerate(locations_data):
-            try:
-                location_id = location_data["id"]
+            # Serialize response
+            updated_serializer = LocationSerializer(
+                updated, many=True, context={"request": request}
+            )
 
-                # Get location
-                try:
-                    location = Location.objects.get(pk=location_id)
-                except Location.DoesNotExist:
-                    failed.append(
-                        {
-                            "item_index": i,
-                            "error": f"Location with ID {location_id} not found.",
-                        }
-                    )
-                    continue
+            return Response(
+                {
+                    "updated": updated_serializer.data,
+                    "failed": failed,
+                    "summary": {
+                        "total_requested": len(locations_data),
+                        "successful": len(updated),
+                        "failed": len(failed),
+                    },
+                },
+                status=status.HTTP_200_OK if updated else status.HTTP_400_BAD_REQUEST,
+            )
 
-                # Check edit permission
-                if not location.can_edit(request.user):
-                    failed.append(
-                        {
-                            "item_index": i,
-                            "error": f"You don't have permission to edit "
-                            f"location '{location.name}'.",
-                        }
-                    )
-                    continue
+        except Exception as e:
+            return APIError.validation_error({"detail": [str(e)]})
 
-                with transaction.atomic():
-                    # Update fields
-                    if "name" in location_data:
-                        location.name = location_data["name"]
-                    if "description" in location_data:
-                        location.description = location_data["description"]
-                    if "parent" in location_data:
-                        parent = location_data["parent"]
-                        if parent and parent.campaign != location.campaign:
-                            raise ValueError("Parent must be in the same campaign.")
-                        location.parent = parent
-                    if "owned_by" in location_data:
-                        owned_by = location_data["owned_by"]
-                        if owned_by and owned_by.campaign != location.campaign:
-                            raise ValueError(
-                                "Character owner must be in the same campaign."
-                            )
-                        location.owned_by = owned_by
-
-                    location.save(user=request.user)
-                    updated.append(location)
-
-            except Exception as e:
-                failed.append({"item_index": i, "error": str(e)})
-
-        # Serialize response
-        updated_serializer = LocationSerializer(
-            updated, many=True, context={"request": request}
-        )
-
-        return Response({"updated": updated_serializer.data, "failed": failed})
-
-    def _handle_bulk_delete(self, request, locations_data):
-        """Handle bulk location deletion."""
+    def _handle_bulk_delete(self, request, location_ids):
+        """Handle bulk location deletion with proper validation and limits."""
         deleted = []
         failed = []
 
-        for i, location_data in enumerate(locations_data):
+        for i, location_id in enumerate(location_ids):
             try:
-                location_id = location_data["id"]
+                if not location_id:
+                    failed.append(
+                        {
+                            "item_index": i,
+                            "error": "Location ID is required for deletion.",
+                        }
+                    )
+                    continue
 
                 # Get location
                 try:
@@ -243,13 +208,15 @@ class LocationBulkAPIView(APIView):
                     )
                     continue
 
-                # Check delete permission
-                if not location.can_delete(request.user):
+                # Check delete permission using standardized method
+                if not LocationService.check_permission(
+                    location, request.user, "delete"
+                ):
                     failed.append(
                         {
                             "item_index": i,
-                            "error": f"You don't have permission to delete "
-                            f"location '{location.name}'.",
+                            "error": f"You don't have permission to delete location "
+                            f"'{location.name}'.",
                         }
                     )
                     continue
@@ -266,17 +233,37 @@ class LocationBulkAPIView(APIView):
             except Exception as e:
                 failed.append({"item_index": i, "error": str(e)})
 
-        return Response({"deleted": deleted, "failed": failed})
+        return Response(
+            {
+                "deleted": deleted,
+                "failed": failed,
+                "summary": {
+                    "total_requested": len(location_ids),
+                    "successful": len(deleted),
+                    "failed": len(failed),
+                },
+            },
+            status=status.HTTP_200_OK if deleted else status.HTTP_400_BAD_REQUEST,
+        )
 
     def _handle_bulk_move(self, request, locations_data):
-        """Handle bulk location moves."""
+        """Handle bulk location moves using service layer."""
         moved = []
         failed = []
 
         for i, location_data in enumerate(locations_data):
             try:
-                location_id = location_data["id"]
-                new_parent = location_data.get("parent")
+                location_id = location_data.get("id")
+                new_parent_id = location_data.get("parent")
+
+                if not location_id:
+                    failed.append(
+                        {
+                            "item_index": i,
+                            "error": "Location ID is required for moving.",
+                        }
+                    )
+                    continue
 
                 # Get location
                 try:
@@ -290,43 +277,29 @@ class LocationBulkAPIView(APIView):
                     )
                     continue
 
-                # Check edit permission
-                if not location.can_edit(request.user):
-                    failed.append(
-                        {
-                            "item_index": i,
-                            "error": f"You don't have permission to move "
-                            f"location '{location.name}'.",
-                        }
+                # Get new parent if specified
+                new_parent = None
+                if new_parent_id:
+                    try:
+                        new_parent = Location.objects.get(pk=new_parent_id)
+                    except Location.DoesNotExist:
+                        failed.append(
+                            {
+                                "item_index": i,
+                                "error": f"Parent location with ID {new_parent_id} "
+                                f"not found.",
+                            }
+                        )
+                        continue
+
+                # Use service layer for move operation
+                try:
+                    LocationService.move_location(
+                        user=request.user, location=location, new_parent=new_parent
                     )
-                    continue
-
-                # Validate new parent
-                if new_parent:
-                    if new_parent.campaign != location.campaign:
-                        failed.append(
-                            {
-                                "item_index": i,
-                                "error": "New parent must be in the same campaign.",
-                            }
-                        )
-                        continue
-
-                    # Check for circular reference
-                    if new_parent == location or location.is_descendant_of(new_parent):
-                        failed.append(
-                            {
-                                "item_index": i,
-                                "error": "Cannot move location to its own descendant "
-                                "(circular reference).",
-                            }
-                        )
-                        continue
-
-                with transaction.atomic():
-                    location.parent = new_parent
-                    location.save(user=request.user)
                     moved.append(location)
+                except Exception as e:
+                    failed.append({"item_index": i, "error": str(e)})
 
             except Exception as e:
                 failed.append({"item_index": i, "error": str(e)})
@@ -336,4 +309,15 @@ class LocationBulkAPIView(APIView):
             moved, many=True, context={"request": request}
         )
 
-        return Response({"moved": moved_serializer.data, "failed": failed})
+        return Response(
+            {
+                "moved": moved_serializer.data,
+                "failed": failed,
+                "summary": {
+                    "total_requested": len(locations_data),
+                    "successful": len(moved),
+                    "failed": len(failed),
+                },
+            },
+            status=status.HTTP_200_OK if moved else status.HTTP_400_BAD_REQUEST,
+        )

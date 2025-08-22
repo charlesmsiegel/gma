@@ -6,7 +6,9 @@ list, create, detail, update, delete, and children endpoints with proper
 permission checking and hierarchy support.
 """
 
-from django.db.models import Prefetch, Q
+import logging
+
+from django.db.models import Count, Q
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,9 +22,32 @@ from api.serializers import (
 )
 from campaigns.models import Campaign
 from locations.models import Location
+from locations.services import LocationService
+
+logger = logging.getLogger(__name__)
 
 
-class LocationListCreateAPIView(APIView):
+class LocationPermissionMixin:
+    """Mixin to standardize location permission checking across views."""
+
+    def check_location_permission(self, location, user, action):
+        """
+        Standardized permission checking for location operations.
+
+        Args:
+            location: Location instance to check
+            user: User to check permissions for
+            action: Action to check ('view', 'edit', 'delete')
+
+        Returns:
+            None if permitted, Response if denied
+        """
+        if not LocationService.check_permission(location, user, action):
+            return SecurityResponseHelper.resource_access_denied()
+        return None
+
+
+class LocationListCreateAPIView(APIView, LocationPermissionMixin):
     """
     API view for listing and creating locations.
 
@@ -72,13 +97,14 @@ class LocationListCreateAPIView(APIView):
             if not user_role and not campaign.is_public:
                 return SecurityResponseHelper.resource_access_denied()
 
-        # Build queryset with optimizations
+        # Build queryset with optimizations and annotations
         queryset = (
             Location.objects.filter(campaign=campaign)
             .select_related("campaign", "parent", "owned_by", "created_by")
-            .prefetch_related(
-                "children",
-                Prefetch("owned_by__campaign"),
+            .prefetch_related("children")
+            .annotate(
+                children_count=Count("children"),
+                siblings_count=Count("parent__children") - 1,
             )
         )
 
@@ -150,6 +176,11 @@ class LocationListCreateAPIView(APIView):
 
         if serializer.is_valid():
             location = serializer.save()
+            logger.info(
+                f"User {request.user.username} (ID: {request.user.id}) created "
+                f"location '{location.name}' (ID: {location.id}) in campaign "
+                f"'{campaign.name}' (ID: {campaign.id})"
+            )
             return Response(
                 LocationSerializer(location, context={"request": request}).data,
                 status=status.HTTP_201_CREATED,
@@ -158,7 +189,7 @@ class LocationListCreateAPIView(APIView):
         return APIError.validation_error(serializer.errors)
 
 
-class LocationDetailAPIView(APIView):
+class LocationDetailAPIView(APIView, LocationPermissionMixin):
     """
     API view for location detail, update, and delete operations.
 
@@ -174,7 +205,7 @@ class LocationDetailAPIView(APIView):
         return []  # Allow anonymous for public campaigns
 
     def get_object(self, pk, user=None):
-        """Get location object with permission checking."""
+        """Get location object with permission checking and annotations."""
         try:
             location = (
                 Location.objects.select_related(
@@ -183,13 +214,18 @@ class LocationDetailAPIView(APIView):
                 .prefetch_related(
                     "children", "children__owned_by", "children__created_by"
                 )
+                .annotate(
+                    children_count=Count("children"),
+                    siblings_count=Count("parent__children") - 1,
+                )
                 .get(pk=pk)
             )
         except Location.DoesNotExist:
             return None
 
-        # Check view permission
-        if not location.can_view(user):
+        # Use standardized permission checking
+        permission_error = self.check_location_permission(location, user, "view")
+        if permission_error:
             return None
 
         return location
@@ -222,9 +258,12 @@ class LocationDetailAPIView(APIView):
         if not location:
             return SecurityResponseHelper.resource_access_denied()
 
-        # Check edit permission
-        if not location.can_edit(request.user):
-            return SecurityResponseHelper.resource_access_denied()
+        # Check edit permission using standardized method
+        permission_error = self.check_location_permission(
+            location, request.user, "edit"
+        )
+        if permission_error:
+            return permission_error
 
         serializer = LocationCreateUpdateSerializer(
             location, data=request.data, context={"request": request}, partial=True
@@ -232,6 +271,11 @@ class LocationDetailAPIView(APIView):
 
         if serializer.is_valid():
             location = serializer.save()
+            logger.info(
+                f"User {request.user.username} (ID: {request.user.id}) updated "
+                f"location '{location.name}' (ID: {location.id}) in campaign "
+                f"'{location.campaign.name}'"
+            )
             return Response(
                 LocationSerializer(location, context={"request": request}).data
             )
@@ -247,15 +291,25 @@ class LocationDetailAPIView(APIView):
         if not location:
             return SecurityResponseHelper.resource_access_denied()
 
-        # Check delete permission
-        if not location.can_delete(request.user):
-            return SecurityResponseHelper.resource_access_denied()
+        # Check delete permission using standardized method
+        permission_error = self.check_location_permission(
+            location, request.user, "delete"
+        )
+        if permission_error:
+            return permission_error
 
+        location_name = location.name
+        location_id = location.id
+        campaign_name = location.campaign.name
         location.delete()
+        logger.info(
+            f"User {request.user.username} (ID: {request.user.id}) deleted location "
+            f"'{location_name}' (ID: {location_id}) from campaign '{campaign_name}'"
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class LocationChildrenAPIView(APIView):
+class LocationChildrenAPIView(APIView, LocationPermissionMixin):
     """
     API view for retrieving location children.
 
@@ -273,8 +327,9 @@ class LocationChildrenAPIView(APIView):
         except Location.DoesNotExist:
             return None
 
-        # Check view permission
-        if not location.can_view(user):
+        # Use standardized permission checking
+        permission_error = self.check_location_permission(location, user, "view")
+        if permission_error:
             return None
 
         return location
@@ -306,7 +361,7 @@ class LocationChildrenAPIView(APIView):
         return Response(serializer.data)
 
 
-class LocationDescendantsAPIView(APIView):
+class LocationDescendantsAPIView(APIView, LocationPermissionMixin):
     """API view for getting location descendants."""
 
     def get_permissions(self):
@@ -318,9 +373,12 @@ class LocationDescendantsAPIView(APIView):
         try:
             location = Location.objects.select_related("campaign").get(pk=pk)
 
-            # Check view permission
-            if not location.can_view(request.user):
-                return SecurityResponseHelper.resource_access_denied()
+            # Use standardized permission checking
+            permission_error = self.check_location_permission(
+                location, request.user, "view"
+            )
+            if permission_error:
+                return permission_error
 
             descendants = (
                 location.get_descendants()
@@ -337,7 +395,7 @@ class LocationDescendantsAPIView(APIView):
             return SecurityResponseHelper.resource_access_denied()
 
 
-class LocationAncestorsAPIView(APIView):
+class LocationAncestorsAPIView(APIView, LocationPermissionMixin):
     """API view for getting location ancestors."""
 
     def get_permissions(self):
@@ -349,9 +407,12 @@ class LocationAncestorsAPIView(APIView):
         try:
             location = Location.objects.select_related("campaign").get(pk=pk)
 
-            # Check view permission
-            if not location.can_view(request.user):
-                return SecurityResponseHelper.resource_access_denied()
+            # Use standardized permission checking
+            permission_error = self.check_location_permission(
+                location, request.user, "view"
+            )
+            if permission_error:
+                return permission_error
 
             ancestors = location.get_ancestors()
 
@@ -364,7 +425,7 @@ class LocationAncestorsAPIView(APIView):
             return SecurityResponseHelper.resource_access_denied()
 
 
-class LocationSiblingsAPIView(APIView):
+class LocationSiblingsAPIView(APIView, LocationPermissionMixin):
     """API view for getting location siblings."""
 
     def get_permissions(self):
@@ -376,9 +437,12 @@ class LocationSiblingsAPIView(APIView):
         try:
             location = Location.objects.select_related("campaign").get(pk=pk)
 
-            # Check view permission
-            if not location.can_view(request.user):
-                return SecurityResponseHelper.resource_access_denied()
+            # Use standardized permission checking
+            permission_error = self.check_location_permission(
+                location, request.user, "view"
+            )
+            if permission_error:
+                return permission_error
 
             siblings = location.get_siblings()
 
@@ -391,7 +455,7 @@ class LocationSiblingsAPIView(APIView):
             return SecurityResponseHelper.resource_access_denied()
 
 
-class LocationPathFromRootAPIView(APIView):
+class LocationPathFromRootAPIView(APIView, LocationPermissionMixin):
     """API view for getting path from root to location."""
 
     def get_permissions(self):
@@ -403,9 +467,12 @@ class LocationPathFromRootAPIView(APIView):
         try:
             location = Location.objects.select_related("campaign").get(pk=pk)
 
-            # Check view permission
-            if not location.can_view(request.user):
-                return SecurityResponseHelper.resource_access_denied()
+            # Use standardized permission checking
+            permission_error = self.check_location_permission(
+                location, request.user, "view"
+            )
+            if permission_error:
+                return permission_error
 
             path = location.get_path_from_root()
 
@@ -418,7 +485,7 @@ class LocationPathFromRootAPIView(APIView):
             return SecurityResponseHelper.resource_access_denied()
 
 
-class LocationMoveAPIView(APIView):
+class LocationMoveAPIView(APIView, LocationPermissionMixin):
     """API view for moving a location to a different parent."""
 
     def get_permissions(self):
@@ -430,11 +497,14 @@ class LocationMoveAPIView(APIView):
         try:
             location = Location.objects.select_related("campaign").get(pk=pk)
 
-            # Check edit permission
-            if not location.can_edit(request.user):
-                return SecurityResponseHelper.resource_access_denied()
+            # Use standardized permission checking
+            permission_error = self.check_location_permission(
+                location, request.user, "edit"
+            )
+            if permission_error:
+                return permission_error
 
-            new_parent_id = request.data.get("parent")
+            new_parent_id = request.data.get("new_parent")
 
             # Validate new parent if provided
             new_parent = None
@@ -446,7 +516,7 @@ class LocationMoveAPIView(APIView):
                     if new_parent.campaign != location.campaign:
                         return APIError.validation_error(
                             {
-                                "parent": [
+                                "new_parent": [
                                     "Parent location must be in the same campaign."
                                 ]
                             }
@@ -457,7 +527,7 @@ class LocationMoveAPIView(APIView):
                     if location.pk in ancestors or new_parent.pk == location.pk:
                         return APIError.validation_error(
                             {
-                                "parent": [
+                                "new_parent": [
                                     "Circular reference detected: cannot move "
                                     "location to its own descendant or itself."
                                 ]
@@ -466,12 +536,20 @@ class LocationMoveAPIView(APIView):
 
                 except Location.DoesNotExist:
                     return APIError.validation_error(
-                        {"parent": ["Parent location does not exist."]}
+                        {"new_parent": ["Parent location does not exist."]}
                     )
 
             # Perform the move
+            old_parent_name = location.parent.name if location.parent else "root"
             location.parent = new_parent
             location.save()
+
+            logger.info(
+                f"User {request.user.username} (ID: {request.user.id}) moved "
+                f"location '{location.name}' (ID: {location.id}) from "
+                f"'{old_parent_name}' to '{new_parent.name if new_parent else 'root'}' "
+                f"in campaign '{location.campaign.name}'"
+            )
 
             # Return updated location
             serializer = LocationDetailSerializer(

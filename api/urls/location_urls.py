@@ -44,9 +44,9 @@ urlpatterns = [
         name="locations-siblings",
     ),
     path(
-        "<int:pk>/path-from-root/",
+        "<int:pk>/path/",
         LocationPathFromRootAPIView.as_view(),
-        name="locations-path-from-root",
+        name="locations-path",
     ),
     path("<int:pk>/move/", LocationMoveAPIView.as_view(), name="locations-move"),
     # Bulk operations

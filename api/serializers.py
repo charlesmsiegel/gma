@@ -1008,17 +1008,23 @@ class LocationParentSerializer(serializers.ModelSerializer):
 
 
 class LocationSerializer(serializers.ModelSerializer):
-    """Serializer for Location model with hierarchy and ownership info."""
+    """
+    Base serializer for Location model with conditional field inclusion.
+
+    Uses database annotations for performance optimization and includes
+    fields based on context to avoid circular references.
+    """
 
     campaign = LocationCampaignSerializer(read_only=True)
     owned_by = LocationCharacterSerializer(read_only=True)
     created_by = LocationCreatedBySerializer(read_only=True)
     parent = LocationParentSerializer(read_only=True)
-    children_count = serializers.SerializerMethodField()
+
+    # Use annotated fields when available, fallback to method fields
+    children_count = serializers.IntegerField(read_only=True)
+    siblings_count = serializers.IntegerField(read_only=True)
     depth = serializers.SerializerMethodField()
     hierarchy_path = serializers.SerializerMethodField()
-    ancestors = serializers.SerializerMethodField()
-    siblings_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Location
@@ -1033,10 +1039,9 @@ class LocationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "children_count",
+            "siblings_count",
             "depth",
             "hierarchy_path",
-            "ancestors",
-            "siblings_count",
         )
         read_only_fields = (
             "id",
@@ -1044,47 +1049,83 @@ class LocationSerializer(serializers.ModelSerializer):
             "updated_at",
             "created_by",
             "children_count",
+            "siblings_count",
             "depth",
             "hierarchy_path",
-            "ancestors",
-            "siblings_count",
         )
-
-    def get_children_count(self, obj):
-        """Get the number of child locations."""
-        return obj.children.count()
 
     def get_depth(self, obj):
         """Get the depth of this location in the hierarchy."""
+        # Use annotated value if available, otherwise compute
+        if hasattr(obj, "_depth"):
+            return obj._depth
         return obj.get_depth()
 
     def get_hierarchy_path(self, obj):
-        """Get the full path from root to this location."""
+        """Get the full hierarchy path for this location."""
         return obj.get_full_path()
-
-    def get_ancestors(self, obj):
-        """Get the ancestors of this location."""
-        ancestors = obj.get_ancestors()
-        return LocationParentSerializer(ancestors, many=True).data
-
-    def get_siblings_count(self, obj):
-        """Get the number of sibling locations."""
-        return obj.get_siblings().count()
 
 
 class LocationDetailSerializer(LocationSerializer):
-    """Detailed serializer for Location with children and additional info."""
+    """
+    Extended serializer for Location detail views with children and siblings.
 
-    children = LocationSerializer(many=True, read_only=True)
+    Fixes circular reference by using simple structure for nested objects.
+    """
+
+    # Use simple serializers to avoid infinite recursion
+    children = serializers.SerializerMethodField()
     siblings = serializers.SerializerMethodField()
+    ancestors = serializers.SerializerMethodField()
 
     class Meta(LocationSerializer.Meta):
-        fields = LocationSerializer.Meta.fields + ("children", "siblings")
+        fields = LocationSerializer.Meta.fields + ("children", "siblings", "ancestors")
+
+    def get_children(self, obj):
+        """Get immediate children with basic info to avoid recursion."""
+        children = obj.children.all()
+        return [
+            {
+                "id": child.id,
+                "name": child.name,
+                "description": child.description,
+                "owned_by": (
+                    LocationCharacterSerializer(child.owned_by).data
+                    if child.owned_by
+                    else None
+                ),
+                "children_count": getattr(
+                    child, "children_count", child.children.count()
+                ),
+            }
+            for child in children
+        ]
 
     def get_siblings(self, obj):
-        """Get siblings of this location."""
+        """Get siblings with basic info to avoid recursion."""
         siblings = obj.get_siblings()
-        return LocationSerializer(siblings, many=True, context=self.context).data
+        return [
+            {
+                "id": sibling.id,
+                "name": sibling.name,
+                "description": sibling.description,
+                "children_count": getattr(
+                    sibling, "children_count", sibling.children.count()
+                ),
+            }
+            for sibling in siblings
+        ]
+
+    def get_ancestors(self, obj):
+        """Get ancestor locations ordered from immediate parent to root."""
+        ancestors = obj.get_ancestors()
+        return [
+            {
+                "id": ancestor.id,
+                "name": ancestor.name,
+            }
+            for ancestor in ancestors
+        ]
 
 
 class LocationCreateUpdateSerializer(serializers.ModelSerializer):
@@ -1271,128 +1312,3 @@ class LocationCreateUpdateSerializer(serializers.ModelSerializer):
         # Use the main LocationSerializer for response
         serializer = LocationSerializer(instance, context=self.context)
         return serializer.data
-
-
-# Bulk operation serializers for locations
-class BulkLocationCreateSerializer(serializers.Serializer):
-    """Serializer for bulk location creation data."""
-
-    name = serializers.CharField(max_length=200)
-    description = serializers.CharField(required=False, allow_blank=True)
-    campaign = serializers.PrimaryKeyRelatedField(queryset=Campaign.objects.all())
-    parent = serializers.PrimaryKeyRelatedField(
-        queryset=Location.objects.all(), required=False, allow_null=True
-    )
-    parent_name = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        help_text="Reference parent by name within the same batch",
-    )
-    owned_by = serializers.PrimaryKeyRelatedField(
-        queryset=Character.objects.all(), required=False, allow_null=True
-    )
-
-
-class BulkLocationUpdateSerializer(serializers.Serializer):
-    """Serializer for bulk location update data."""
-
-    id = serializers.IntegerField()
-    name = serializers.CharField(max_length=200, required=False)
-    description = serializers.CharField(required=False, allow_blank=True)
-    parent = serializers.PrimaryKeyRelatedField(
-        queryset=Location.objects.all(), required=False, allow_null=True
-    )
-    owned_by = serializers.PrimaryKeyRelatedField(
-        queryset=Character.objects.all(), required=False, allow_null=True
-    )
-
-
-class BulkLocationDeleteSerializer(serializers.Serializer):
-    """Serializer for bulk location deletion data."""
-
-    id = serializers.IntegerField()
-
-
-class BulkLocationMoveSerializer(serializers.Serializer):
-    """Serializer for bulk location move data."""
-
-    id = serializers.IntegerField()
-    parent = serializers.PrimaryKeyRelatedField(
-        queryset=Location.objects.all(), required=False, allow_null=True
-    )
-
-
-class BulkLocationOperationSerializer(serializers.Serializer):
-    """Serializer for bulk location operations."""
-
-    action = serializers.ChoiceField(
-        choices=["create", "update", "delete", "move"],
-        help_text="The type of bulk operation to perform",
-    )
-    locations = serializers.JSONField(
-        help_text="Array of location data based on the action type"
-    )
-
-    def validate(self, data):
-        """Validate bulk operation data."""
-        action = data.get("action")
-        locations = data.get("locations", [])
-
-        if not locations:
-            raise serializers.ValidationError(
-                {"locations": ["At least one location must be provided."]}
-            )
-
-        if len(locations) > 100:  # Reasonable limit for bulk operations
-            raise serializers.ValidationError(
-                {"locations": ["Cannot process more than 100 locations at once."]}
-            )
-
-        # Validate each location item based on action
-        validated_locations = []
-        for i, location_data in enumerate(locations):
-            try:
-                if action == "create":
-                    serializer = BulkLocationCreateSerializer(data=location_data)
-                elif action == "update":
-                    serializer = BulkLocationUpdateSerializer(data=location_data)
-                elif action == "delete":
-                    serializer = BulkLocationDeleteSerializer(data=location_data)
-                elif action == "move":
-                    serializer = BulkLocationMoveSerializer(data=location_data)
-
-                if serializer.is_valid(raise_exception=True):
-                    validated_locations.append(serializer.validated_data)
-            except serializers.ValidationError as e:
-                raise serializers.ValidationError(
-                    {"locations": [f"Item {i}: {e.detail}"]}
-                )
-
-        data["locations"] = validated_locations
-        return data
-
-
-class BulkLocationSuccessSerializer(serializers.Serializer):
-    """Serializer for successful bulk location operations."""
-
-    id = serializers.IntegerField(read_only=True)
-    name = serializers.CharField(read_only=True)
-    action = serializers.CharField(read_only=True)
-
-
-class BulkLocationErrorSerializer(serializers.Serializer):
-    """Serializer for bulk location operation errors."""
-
-    item_index = serializers.IntegerField(read_only=True, required=False)
-    name = serializers.CharField(read_only=True, required=False)
-    error = serializers.CharField(read_only=True)
-
-
-class BulkLocationResponseSerializer(serializers.Serializer):
-    """Serializer for bulk location operation response."""
-
-    created = LocationSerializer(many=True, read_only=True, required=False)
-    updated = LocationSerializer(many=True, read_only=True, required=False)
-    deleted = BulkLocationSuccessSerializer(many=True, read_only=True, required=False)
-    moved = LocationSerializer(many=True, read_only=True, required=False)
-    failed = BulkLocationErrorSerializer(many=True, read_only=True, required=False)
