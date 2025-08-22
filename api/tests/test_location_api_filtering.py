@@ -299,8 +299,9 @@ class LocationSearchTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["name"], "Coffee Shop")
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["name"], "Coffee Shop")
 
     def test_search_case_insensitive(self):
         """Test that search is case-insensitive."""
@@ -327,8 +328,9 @@ class LocationSearchTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["name"], "Living Room")
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["name"], "Living Room")
 
     def test_search_empty_query(self):
         """Test search with empty query returns all locations."""
@@ -353,7 +355,8 @@ class LocationSearchTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 0)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 0)
 
     def test_search_with_special_characters(self):
         """Test search handling of special characters."""
@@ -373,8 +376,9 @@ class LocationSearchTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["id"], special_location.pk)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["id"], special_location.pk)
 
 
 class LocationCombinedFilteringTest(BaseLocationAPITestCase):
@@ -395,8 +399,9 @@ class LocationCombinedFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)  # Only Living Room matches both criteria
-        self.assertEqual(data[0]["name"], "Living Room")
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)  # Only Living Room matches both criteria
+        self.assertEqual(results[0]["name"], "Living Room")
 
     def test_filter_parent_and_search_combined(self):
         """Test combining parent filter with search."""
@@ -413,8 +418,9 @@ class LocationCombinedFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["name"], "City Center")
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["name"], "City Center")
 
     def test_filter_owner_and_search_combined(self):
         """Test combining owner filter with search."""
@@ -431,8 +437,9 @@ class LocationCombinedFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["name"], "Player's House")
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["name"], "Player's House")
 
     def test_all_filters_combined(self):
         """Test combining all filters together."""
@@ -460,8 +467,9 @@ class LocationCombinedFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["id"], test_location.pk)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["id"], test_location.pk)
 
     def test_conflicting_filters(self):
         """Test that conflicting filters return empty results."""
@@ -480,7 +488,8 @@ class LocationCombinedFilteringTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
-        self.assertEqual(len(data), 0)
+        results = data.get("results", data)  # Handle both paginated and non-paginated
+        self.assertEqual(len(results), 0)
 
 
 class LocationFilteringQueryOptimizationTest(BaseLocationAPITestCase):
@@ -490,7 +499,7 @@ class LocationFilteringQueryOptimizationTest(BaseLocationAPITestCase):
         """Test that campaign filtering uses optimized queries."""
         self.client.force_authenticate(user=self.player1)
 
-        with self.assertNumQueries(5):  # Should be minimal and consistent
+        with self.assertNumQueries(6):  # Pagination may require parent lookups
             response = self.client.get(self.list_url, {"campaign": self.campaign.pk})
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -508,7 +517,9 @@ class LocationFilteringQueryOptimizationTest(BaseLocationAPITestCase):
         """Test that parent filtering uses optimized queries."""
         self.client.force_authenticate(user=self.player1)
 
-        with self.assertNumQueries(5):  # Includes parent validation query
+        with self.assertNumQueries(
+            6
+        ):  # Includes parent validation + pagination queries
             response = self.client.get(
                 self.list_url,
                 {"campaign": self.campaign.pk, "parent": self.location1.pk},
@@ -519,7 +530,7 @@ class LocationFilteringQueryOptimizationTest(BaseLocationAPITestCase):
         """Test that search filtering uses optimized queries."""
         self.client.force_authenticate(user=self.player1)
 
-        with self.assertNumQueries(5):  # Should remain efficient
+        with self.assertNumQueries(6):  # Should remain efficient with pagination
             response = self.client.get(
                 self.list_url, {"campaign": self.campaign.pk, "search": "City"}
             )
@@ -529,7 +540,7 @@ class LocationFilteringQueryOptimizationTest(BaseLocationAPITestCase):
         """Test that combined filters don't cause query explosion."""
         self.client.force_authenticate(user=self.player1)
 
-        with self.assertNumQueries(5):  # Optimized combined filters
+        with self.assertNumQueries(6):  # Parent validation + pagination with filtering
             response = self.client.get(
                 self.list_url,
                 {
@@ -568,8 +579,9 @@ class LocationOrderingTest(BaseLocationAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.json()
+        results = data.get("results", data)  # Handle both paginated and non-paginated
         # Should be ordered by creation date (earliest first)
-        self.assertGreater(len(data), 1)  # Ensure we have multiple items to compare
+        self.assertGreater(len(results), 1)  # Ensure we have multiple items to compare
 
     def test_ordering_by_hierarchy_depth(self):
         """Test ordering by hierarchy depth."""
