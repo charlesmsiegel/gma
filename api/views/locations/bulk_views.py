@@ -57,7 +57,22 @@ class LocationBulkAPIView(APIView):
             )
 
         # Get data based on action type
-        if action in ["create", "update", "move"]:
+        if action == "move":
+            # Move operations support two formats:
+            # 1. "locations": [{"id": 1, "parent": 2}, {"id": 3, "parent": null}]
+            # 2. "location_ids": [1, 3], "new_parent": 2
+            if "location_ids" in request.data:
+                location_ids = request.data.get("location_ids", [])
+                new_parent = request.data.get("new_parent")
+                # Convert to standard format
+                locations_data = [
+                    {"id": loc_id, "parent": new_parent} for loc_id in location_ids
+                ]
+                data_field = "location_ids"
+            else:
+                locations_data = request.data.get("locations", [])
+                data_field = "locations"
+        elif action in ["create", "update"]:
             locations_data = request.data.get("locations", [])
             data_field = "locations"
         else:  # delete
@@ -257,7 +272,7 @@ class LocationBulkAPIView(APIView):
                         "failed": len(failed),
                     },
                 },
-                status=status.HTTP_200_OK if updated else status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_200_OK,
             )
 
         except Exception as e:
@@ -326,7 +341,7 @@ class LocationBulkAPIView(APIView):
                     "failed": len(failed),
                 },
             },
-            status=status.HTTP_200_OK if deleted else status.HTTP_400_BAD_REQUEST,
+            status=status.HTTP_200_OK,
         )
 
     def _handle_bulk_move(self, request, locations_data):
@@ -402,5 +417,5 @@ class LocationBulkAPIView(APIView):
                     "failed": len(failed),
                 },
             },
-            status=status.HTTP_200_OK if moved else status.HTTP_400_BAD_REQUEST,
+            status=status.HTTP_200_OK,
         )
