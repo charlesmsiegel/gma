@@ -1249,7 +1249,7 @@ class LocationCreateUpdateSerializer(serializers.ModelSerializer):
 
             # For updates, prevent circular references
             if self.instance and (
-                parent == self.instance or self.instance.is_descendant_of(parent)
+                parent == self.instance or parent.is_descendant_of(self.instance)
             ):
                 raise serializers.ValidationError(
                     {
