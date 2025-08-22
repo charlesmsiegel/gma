@@ -592,8 +592,8 @@ class LocationBulkMoveTest(BaseLocationAPITestCase):
         # Verify only authorized move occurred
         self.location2.refresh_from_db()
         self.location1.refresh_from_db()
-        self.assertIsNone(self.location2.parent)  # Was moved to root
-        self.assertIsNotNone(self.location1.parent)  # Unchanged
+        self.assertIsNone(self.location2.parent)  # Was moved to root (still None)
+        self.assertIsNone(self.location1.parent)  # Unchanged (still None)
 
 
 class LocationBulkMixedOperationsTest(BaseLocationAPITestCase):

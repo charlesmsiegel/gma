@@ -204,18 +204,39 @@ class LocationBulkAPIView(APIView):
                         from characters.models import Character
 
                         owned_by_character = Character.objects.get(pk=owned_by_id)
-                        if owned_by_character.player_owner != user:
+
+                        # Check if character is in the same campaign
+                        if owned_by_character.campaign_id != campaign_id:
                             failed.append(
                                 {
                                     "item_index": i,
                                     "name": location_data.get("name", ""),
                                     "error": (
-                                        "You can only assign ownership to "
-                                        "characters you own."
+                                        "Character must be in the same campaign "
+                                        "as the location."
                                     ),
                                 }
                             )
                             continue
+
+                        # Role-based ownership validation
+                        user_role = campaign.get_user_role(user)
+                        if user_role not in ["OWNER", "GM"]:
+                            # Players can only assign characters they own
+                            if owned_by_character.player_owner != user:
+                                failed.append(
+                                    {
+                                        "item_index": i,
+                                        "name": location_data.get("name", ""),
+                                        "error": (
+                                            "You can only assign ownership to "
+                                            "characters you own."
+                                        ),
+                                    }
+                                )
+                                continue
+                        # Owners and GMs can assign any character in the campaign
+
                     except Character.DoesNotExist:
                         failed.append(
                             {
@@ -249,12 +270,185 @@ class LocationBulkAPIView(APIView):
 
         return created, failed
 
+    def _bulk_update_with_individual_validation(self, user, locations_data):
+        """Update locations with individual validation for partial success."""
+        updated = []
+        failed = []
+
+        for i, update_data in enumerate(locations_data):
+            try:
+                location_id = update_data.get("id")
+                if not location_id:
+                    failed.append(
+                        {
+                            "item_index": i,
+                            "error": "Location ID is required for updates.",
+                        }
+                    )
+                    continue
+
+                # Get location
+                try:
+                    location = Location.objects.get(pk=location_id)
+                except Location.DoesNotExist:
+                    failed.append(
+                        {
+                            "item_index": i,
+                            "error": f"Location with ID {location_id} not found.",
+                        }
+                    )
+                    continue
+
+                # Check edit permission
+                if not location.can_edit(user):
+                    failed.append(
+                        {
+                            "item_index": i,
+                            "error": "You don't have permission to edit this location.",
+                        }
+                    )
+                    continue
+
+                # Apply updates with special handling for foreign key fields
+                validated_character = None
+                validated_parent = None
+
+                # Validate character ownership if owned_by is being changed
+                if "owned_by" in update_data:
+                    owned_by_id = update_data["owned_by"]
+                    if owned_by_id:
+                        try:
+                            from characters.models import Character
+
+                            owned_by_character = Character.objects.get(pk=owned_by_id)
+
+                            # Check if character is in the same campaign
+                            if owned_by_character.campaign != location.campaign:
+                                failed.append(
+                                    {
+                                        "item_index": i,
+                                        "error": (
+                                            "Character must be in the same campaign "
+                                            "as the location."
+                                        ),
+                                    }
+                                )
+                                continue
+
+                            # Role-based ownership validation
+                            user_role = location.campaign.get_user_role(user)
+                            if user_role not in ["OWNER", "GM"]:
+                                # Players can only assign characters they own
+                                if owned_by_character.player_owner != user:
+                                    failed.append(
+                                        {
+                                            "item_index": i,
+                                            "error": (
+                                                "You can only assign ownership to "
+                                                "characters you own."
+                                            ),
+                                        }
+                                    )
+                                    continue
+                            # Owners and GMs can assign any character in the campaign
+                            validated_character = owned_by_character
+
+                        except Character.DoesNotExist:
+                            failed.append(
+                                {
+                                    "item_index": i,
+                                    "error": "Specified character does not exist.",
+                                }
+                            )
+                            continue
+                    else:
+                        # Setting owned_by to None (unassigning ownership)
+                        validated_character = None
+
+                # Validate parent if being changed
+                if "parent" in update_data:
+                    parent_id = update_data["parent"]
+                    if parent_id:
+                        try:
+                            parent_location = Location.objects.get(pk=parent_id)
+
+                            # Check if parent is in the same campaign
+                            if parent_location.campaign != location.campaign:
+                                failed.append(
+                                    {
+                                        "item_index": i,
+                                        "error": (
+                                            "Parent must be in the same campaign "
+                                            "as the location."
+                                        ),
+                                    }
+                                )
+                                continue
+
+                            # Check for circular reference
+                            if location.pk and (
+                                parent_location.pk == location.pk
+                                or parent_location.is_descendant_of(location)
+                            ):
+                                failed.append(
+                                    {
+                                        "item_index": i,
+                                        "error": (
+                                            "Cannot set parent - would create "
+                                            "circular reference in location hierarchy."
+                                        ),
+                                    }
+                                )
+                                continue
+
+                            validated_parent = parent_location
+
+                        except Location.DoesNotExist:
+                            failed.append(
+                                {
+                                    "item_index": i,
+                                    "error": (
+                                        "Specified parent location does not exist."
+                                    ),
+                                }
+                            )
+                            continue
+                    else:
+                        # Setting parent to None (making it root level)
+                        validated_parent = None
+
+                # Apply updates
+                for field, value in update_data.items():
+                    if field != "id" and hasattr(location, field):
+                        if field == "owned_by":
+                            # Use the validated character instance
+                            setattr(location, field, validated_character)
+                        elif field == "parent":
+                            # Use the validated parent instance
+                            setattr(location, field, validated_parent)
+                        else:
+                            setattr(location, field, value)
+
+                location.full_clean()
+                location.save(user=user)
+                updated.append(location)
+
+            except Exception as e:
+                failed.append(
+                    {
+                        "item_index": i,
+                        "error": str(e),
+                    }
+                )
+
+        return updated, failed
+
     def _handle_bulk_update(self, request, locations_data):
         """Handle bulk location updates using service layer."""
         try:
-            # Use service layer for bulk updates
-            updated, failed = LocationService.bulk_update_locations(
-                user=request.user, updates_data=locations_data
+            # Use individual validation for bulk updates with ownership checking
+            updated, failed = self._bulk_update_with_individual_validation(
+                request.user, locations_data
             )
 
             # Serialize response
