@@ -9,6 +9,7 @@ from rest_framework import serializers
 from api.messages import ErrorMessages
 from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
 from characters.models import Character
+from locations.models import Location
 
 User = get_user_model()
 
@@ -971,3 +972,427 @@ class CharacterCreateUpdateSerializer(serializers.ModelSerializer):
         # Use the main CharacterSerializer for response
         serializer = CharacterSerializer(instance, context=self.context)
         return serializer.data
+
+
+# Location API serializers
+class LocationCampaignSerializer(serializers.ModelSerializer):
+    """Lightweight campaign serializer for location responses."""
+
+    class Meta:
+        model = Campaign
+        fields = ("id", "name")
+
+
+class LocationCharacterSerializer(serializers.ModelSerializer):
+    """Lightweight character serializer for location owner responses."""
+
+    class Meta:
+        model = Character
+        fields = ("id", "name", "npc")
+
+
+class LocationCreatedBySerializer(serializers.ModelSerializer):
+    """Lightweight user serializer for location creator responses."""
+
+    class Meta:
+        model = User
+        fields = ("id", "username")
+
+
+class LocationParentSerializer(serializers.ModelSerializer):
+    """Serializer for parent location reference."""
+
+    class Meta:
+        model = Location
+        fields = ("id", "name")
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    """Serializer for Location model with hierarchy and ownership info."""
+
+    campaign = LocationCampaignSerializer(read_only=True)
+    owned_by = LocationCharacterSerializer(read_only=True)
+    created_by = LocationCreatedBySerializer(read_only=True)
+    parent = LocationParentSerializer(read_only=True)
+    children_count = serializers.SerializerMethodField()
+    depth = serializers.SerializerMethodField()
+    hierarchy_path = serializers.SerializerMethodField()
+    ancestors = serializers.SerializerMethodField()
+    siblings_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Location
+        fields = (
+            "id",
+            "name",
+            "description",
+            "campaign",
+            "parent",
+            "owned_by",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "children_count",
+            "depth",
+            "hierarchy_path",
+            "ancestors",
+            "siblings_count",
+        )
+        read_only_fields = (
+            "id",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "children_count",
+            "depth",
+            "hierarchy_path",
+            "ancestors",
+            "siblings_count",
+        )
+
+    def get_children_count(self, obj):
+        """Get the number of child locations."""
+        return obj.children.count()
+
+    def get_depth(self, obj):
+        """Get the depth of this location in the hierarchy."""
+        return obj.get_depth()
+
+    def get_hierarchy_path(self, obj):
+        """Get the full path from root to this location."""
+        return obj.get_full_path()
+
+    def get_ancestors(self, obj):
+        """Get the ancestors of this location."""
+        ancestors = obj.get_ancestors()
+        return LocationParentSerializer(ancestors, many=True).data
+
+    def get_siblings_count(self, obj):
+        """Get the number of sibling locations."""
+        return obj.get_siblings().count()
+
+
+class LocationDetailSerializer(LocationSerializer):
+    """Detailed serializer for Location with children and additional info."""
+
+    children = LocationSerializer(many=True, read_only=True)
+    siblings = serializers.SerializerMethodField()
+
+    class Meta(LocationSerializer.Meta):
+        fields = LocationSerializer.Meta.fields + ("children", "siblings")
+
+    def get_siblings(self, obj):
+        """Get siblings of this location."""
+        siblings = obj.get_siblings()
+        return LocationSerializer(siblings, many=True, context=self.context).data
+
+
+class LocationCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating locations."""
+
+    campaign = serializers.PrimaryKeyRelatedField(
+        queryset=Campaign.objects.none(),  # Will be set in view
+        write_only=True,
+        required=False,  # Not required for updates
+    )
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=Location.objects.none(),  # Will be set in view
+        required=False,
+        allow_null=True,
+    )
+    owned_by = serializers.PrimaryKeyRelatedField(
+        queryset=Character.objects.none(),  # Will be set in view
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = Location
+        fields = (
+            "name",
+            "description",
+            "campaign",
+            "parent",
+            "owned_by",
+        )
+
+    def __init__(self, *args, **kwargs):
+        """Initialize with user-accessible campaigns and related objects."""
+        super().__init__(*args, **kwargs)
+
+        # Set querysets based on user in context
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            # User can create locations in campaigns they're a member of
+            user_campaigns = Campaign.objects.filter(
+                models.Q(owner=request.user) | models.Q(memberships__user=request.user)
+            ).distinct()
+            self.fields["campaign"].queryset = user_campaigns
+
+            # If we have a campaign context, limit parent and character choices
+            campaign_id = self.context.get("campaign_id")
+            if campaign_id:
+                campaign = Campaign.objects.filter(id=campaign_id).first()
+                if campaign:
+                    # Parent must be in same campaign
+                    self.fields["parent"].queryset = Location.objects.filter(
+                        campaign=campaign
+                    )
+                    # Character owner must be in same campaign
+                    self.fields["owned_by"].queryset = Character.objects.filter(
+                        campaign=campaign
+                    )
+            else:
+                # For updates, use the instance's campaign
+                if self.instance:
+                    campaign = self.instance.campaign
+                    self.fields["parent"].queryset = Location.objects.filter(
+                        campaign=campaign
+                    ).exclude(
+                        pk=self.instance.pk
+                    )  # Exclude self
+                    self.fields["owned_by"].queryset = Character.objects.filter(
+                        campaign=campaign
+                    )
+
+    def validate_name(self, value):
+        """Validate location name."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Location name cannot be empty.")
+
+        if len(value) > 200:  # Assuming max length from model
+            raise serializers.ValidationError(
+                "Location name cannot exceed 200 characters."
+            )
+
+        return value.strip()
+
+    def validate(self, data):
+        """Validate location data including hierarchy constraints."""
+        # For updates, handle campaign context differently
+        if self.instance:  # Updating existing location
+            campaign = self.instance.campaign
+            # Remove campaign from data if present (shouldn't be changed)
+            data.pop("campaign", None)
+        else:  # Creating new location
+            campaign = data.get("campaign")
+            if not campaign:
+                raise serializers.ValidationError(
+                    {"campaign": ["Campaign is required."]}
+                )
+
+            # Check if user can create locations in this campaign
+            request = self.context.get("request")
+            if not request or not request.user.is_authenticated:
+                raise serializers.ValidationError(ErrorMessages.UNAUTHORIZED)
+
+            user = request.user
+            if not Location.can_create(user, campaign):
+                raise serializers.ValidationError(
+                    {
+                        "campaign": [
+                            "You don't have permission to create locations "
+                            "in this campaign."
+                        ]
+                    }
+                )
+
+        # Validate parent location
+        parent = data.get("parent")
+        if parent:
+            # Ensure parent is in the same campaign
+            if parent.campaign != campaign:
+                raise serializers.ValidationError(
+                    {"parent": ["Parent location must be in the same campaign."]}
+                )
+
+            # For updates, prevent circular references
+            if self.instance and (
+                parent == self.instance or self.instance.is_descendant_of(parent)
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "parent": [
+                            "Circular reference detected: this location cannot "
+                            "be a parent of its ancestor or descendant."
+                        ]
+                    }
+                )
+
+            # Check maximum depth
+            future_depth = parent.get_depth() + 1
+            if future_depth >= 10:  # Maximum depth of 10 levels
+                raise serializers.ValidationError(
+                    {
+                        "parent": [
+                            f"Maximum depth of 10 levels exceeded. "
+                            f"This location would be at depth {future_depth}."
+                        ]
+                    }
+                )
+
+        # Validate character ownership
+        owned_by = data.get("owned_by")
+        if owned_by and owned_by.campaign != campaign:
+            raise serializers.ValidationError(
+                {
+                    "owned_by": [
+                        "Location owner must be a character in the same campaign."
+                    ]
+                }
+            )
+
+        return data
+
+    def create(self, validated_data):
+        """Create location with proper audit user."""
+        request = self.context.get("request")
+        location = Location(**validated_data)
+        location.save(user=request.user)
+        return location
+
+    def update(self, instance, validated_data):
+        """Update location with audit trail."""
+        request = self.context.get("request")
+
+        # Remove campaign from validated_data if present (shouldn't be changed)
+        validated_data.pop("campaign", None)
+
+        # Update fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        # Save with audit user
+        instance.save(user=request.user)
+        return instance
+
+    def to_representation(self, instance):
+        """Return full location representation."""
+        # Use the main LocationSerializer for response
+        serializer = LocationSerializer(instance, context=self.context)
+        return serializer.data
+
+
+# Bulk operation serializers for locations
+class BulkLocationCreateSerializer(serializers.Serializer):
+    """Serializer for bulk location creation data."""
+
+    name = serializers.CharField(max_length=200)
+    description = serializers.CharField(required=False, allow_blank=True)
+    campaign = serializers.PrimaryKeyRelatedField(queryset=Campaign.objects.all())
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=Location.objects.all(), required=False, allow_null=True
+    )
+    parent_name = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Reference parent by name within the same batch",
+    )
+    owned_by = serializers.PrimaryKeyRelatedField(
+        queryset=Character.objects.all(), required=False, allow_null=True
+    )
+
+
+class BulkLocationUpdateSerializer(serializers.Serializer):
+    """Serializer for bulk location update data."""
+
+    id = serializers.IntegerField()
+    name = serializers.CharField(max_length=200, required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=Location.objects.all(), required=False, allow_null=True
+    )
+    owned_by = serializers.PrimaryKeyRelatedField(
+        queryset=Character.objects.all(), required=False, allow_null=True
+    )
+
+
+class BulkLocationDeleteSerializer(serializers.Serializer):
+    """Serializer for bulk location deletion data."""
+
+    id = serializers.IntegerField()
+
+
+class BulkLocationMoveSerializer(serializers.Serializer):
+    """Serializer for bulk location move data."""
+
+    id = serializers.IntegerField()
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=Location.objects.all(), required=False, allow_null=True
+    )
+
+
+class BulkLocationOperationSerializer(serializers.Serializer):
+    """Serializer for bulk location operations."""
+
+    action = serializers.ChoiceField(
+        choices=["create", "update", "delete", "move"],
+        help_text="The type of bulk operation to perform",
+    )
+    locations = serializers.JSONField(
+        help_text="Array of location data based on the action type"
+    )
+
+    def validate(self, data):
+        """Validate bulk operation data."""
+        action = data.get("action")
+        locations = data.get("locations", [])
+
+        if not locations:
+            raise serializers.ValidationError(
+                {"locations": ["At least one location must be provided."]}
+            )
+
+        if len(locations) > 100:  # Reasonable limit for bulk operations
+            raise serializers.ValidationError(
+                {"locations": ["Cannot process more than 100 locations at once."]}
+            )
+
+        # Validate each location item based on action
+        validated_locations = []
+        for i, location_data in enumerate(locations):
+            try:
+                if action == "create":
+                    serializer = BulkLocationCreateSerializer(data=location_data)
+                elif action == "update":
+                    serializer = BulkLocationUpdateSerializer(data=location_data)
+                elif action == "delete":
+                    serializer = BulkLocationDeleteSerializer(data=location_data)
+                elif action == "move":
+                    serializer = BulkLocationMoveSerializer(data=location_data)
+
+                if serializer.is_valid(raise_exception=True):
+                    validated_locations.append(serializer.validated_data)
+            except serializers.ValidationError as e:
+                raise serializers.ValidationError(
+                    {"locations": [f"Item {i}: {e.detail}"]}
+                )
+
+        data["locations"] = validated_locations
+        return data
+
+
+class BulkLocationSuccessSerializer(serializers.Serializer):
+    """Serializer for successful bulk location operations."""
+
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    action = serializers.CharField(read_only=True)
+
+
+class BulkLocationErrorSerializer(serializers.Serializer):
+    """Serializer for bulk location operation errors."""
+
+    item_index = serializers.IntegerField(read_only=True, required=False)
+    name = serializers.CharField(read_only=True, required=False)
+    error = serializers.CharField(read_only=True)
+
+
+class BulkLocationResponseSerializer(serializers.Serializer):
+    """Serializer for bulk location operation response."""
+
+    created = LocationSerializer(many=True, read_only=True, required=False)
+    updated = LocationSerializer(many=True, read_only=True, required=False)
+    deleted = BulkLocationSuccessSerializer(many=True, read_only=True, required=False)
+    moved = LocationSerializer(many=True, read_only=True, required=False)
+    failed = BulkLocationErrorSerializer(many=True, read_only=True, required=False)

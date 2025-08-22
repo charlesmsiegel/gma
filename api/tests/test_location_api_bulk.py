@@ -148,7 +148,7 @@ class LocationBulkCreateTest(BaseLocationAPITestCase):
         data = response.json()
         self.assertEqual(len(data["created"]), 0)
         self.assertEqual(len(data["failed"]), 1)
-        self.assertIn("permission", data["failed"][0]["errors"]["detail"].lower())
+        self.assertIn("permission", data["failed"][0]["error"].lower())
 
     def test_bulk_create_validates_ownership(self):
         """Test that bulk create validates character ownership."""

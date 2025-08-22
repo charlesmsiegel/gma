@@ -237,12 +237,18 @@ class LocationCreateAPITest(BaseLocationAPITestCase):
 
     def test_create_location_validates_owner_in_same_campaign(self):
         """Test that character owner must be in the same campaign."""
+        from campaigns.models import CampaignMembership
+
         # Create character in different campaign
         other_campaign = Campaign.objects.create(
             name="Other Campaign",
             slug="other-campaign",
             owner=self.owner,
             game_system="Vampire: The Masquerade",
+        )
+        # Add player to other campaign so they can create characters there
+        CampaignMembership.objects.create(
+            campaign=other_campaign, user=self.player1, role="PLAYER"
         )
         other_character = Character.objects.create(
             name="Other Character",

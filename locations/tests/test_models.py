@@ -937,9 +937,8 @@ class LocationPermissionTest(TestCase):
         self.assertTrue(Location.can_create(self.gm, self.campaign))
         self.assertTrue(Location.can_create(self.player, self.campaign))
 
-        # Observer permissions may vary based on campaign settings
-        # For now, assume observers can create locations for character homes
-        self.assertTrue(Location.can_create(self.observer, self.campaign))
+        # Observers can view but cannot create locations
+        self.assertFalse(Location.can_create(self.observer, self.campaign))
 
         # Non-members should not be able to create locations
         self.assertFalse(Location.can_create(self.non_member, self.campaign))
