@@ -349,7 +349,7 @@ class CharacterFunctionalityPreservationTest(TestCase):
 
 
 class ItemLocationFunctionalityPreservationTest(TestCase):
-    """Test that Item and Location functionality is preserved after mixin application."""
+    """Test that Item and Location functionality is preserved after mixin."""
 
     def setUp(self):
         """Set up test data."""

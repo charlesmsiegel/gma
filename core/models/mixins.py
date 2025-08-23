@@ -177,6 +177,7 @@ class AuditableMixin(models.Model):
             if self.pk is None and not self.created_by:
                 self.created_by = user
 
+        # Always call super().save() to ensure other mixins work properly
         super().save(*args, **kwargs)
 
     class Meta:
