@@ -211,14 +211,14 @@ Consolidated permission checking with consistent patterns:
 
 The project follows a domain-driven monolithic architecture with these Django apps:
 
-- **users**: Authentication, profiles, campaign role management
-- **campaigns**: Campaign creation, game system selection, membership, invitations
-- **scenes**: Scene lifecycle, character participation, real-time chat, dice rolling
-- **characters**: Polymorphic character models, game system logic, character sheets
-- **locations**: Hierarchical campaign locations
-- **items**: Equipment and treasure management with soft delete functionality, single character ownership with transfer tracking, and comprehensive admin interface
-- **api**: Modular DRF views, serializers, standardized error handling
-- **core**: Front page, utilities, base templates, management commands, source references (Book model)
+- **users**: Authentication, profiles, theme management, campaign role management
+- **campaigns**: Campaign creation, game system selection, membership, invitations, settings
+- **scenes**: Scene lifecycle, character participation, real-time features (basic implementation)
+- **characters**: Polymorphic character models (Character → WoDCharacter → MageCharacter), game system logic
+- **locations**: Hierarchical location management with ownership, NPC control, bulk operations
+- **items**: Polymorphic item management with single character ownership, soft delete, transfer tracking
+- **api**: Modular REST API with comprehensive error handling, security features, bulk operations
+- **core**: Home page, utilities, mixins, management commands, health monitoring, source references
 
 #### Internal Structure
 
@@ -235,13 +235,20 @@ Character (base, polymorphic)
     └── MageCharacter
 ```
 
-#### Item Model Hierarchy (Issue #182)
+#### Item Model Hierarchy
 ```
-Item (base, polymorphic) - Now ready for subclassing
-├── WeaponItem (future)
-├── ArmorItem (future)
-├── ConsumableItem (future)
-└── [Other item types as needed]
+Item (base, polymorphic) - Active with full CRUD operations
+├── WeaponItem (future expansion)
+├── ArmorItem (future expansion)
+├── ConsumableItem (future expansion)
+└── [Game-specific item types]
+```
+
+#### Location Model Hierarchy
+```
+Location (base, polymorphic) - Hierarchical with ownership
+├── [Game-specific location types - future]
+└── NPC ownership and control features
 ```
 
 ### Item Model Architecture
@@ -300,6 +307,42 @@ The Item model provides comprehensive equipment and treasure management with pol
   - **Polymorphic conversion validation** (33 tests in test_polymorphic_conversion.py)
   - **Single character ownership** (33 tests in test_character_ownership.py covering transfer functionality, possessions relationship, and migration compatibility)
 
+### Location Management System
+
+The Location system provides hierarchical organization of campaign areas with comprehensive ownership and permission controls:
+
+#### Core Features
+- **Hierarchical Structure**: Tree-based parent/child relationships with unlimited nesting depth
+- **Campaign Isolation**: Locations belong to specific campaigns with cross-campaign protection
+- **Polymorphic Inheritance**: PolymorphicModel base enables future location subclasses
+- **NPC Ownership**: Characters (including NPCs) can own and control locations
+- **Permission System**: Role-based access control with campaign hierarchy integration
+- **Audit Tracking**: Full creation/modification history via AuditableMixin
+- **Soft Delete Support**: Safe deletion with restoration capabilities
+
+#### Ownership and Control
+- **Character Ownership**: Any character can own locations (owned_by field)
+- **NPC Control**: NPCs can own locations within campaigns they participate in
+- **Permission Hierarchy**: Campaign owners and GMs have management permissions
+- **Ownership Validation**: Prevents cross-campaign ownership violations
+
+#### Admin Interface
+- **Hierarchy Visualization**: Tree-like display with parent/child relationships
+- **Bulk Operations**: Move multiple locations to new parent with validation
+- **Filtering**: By campaign, owner, parent location, creation date
+- **Validation**: Prevents circular references and maintains data integrity
+
+#### Testing Coverage
+- **162 comprehensive tests** across 11 test files covering:
+  - Hierarchical model validation and constraints
+  - NPC ownership functionality and edge cases
+  - Admin interface bulk operations
+  - Permission system validation
+  - Polymorphic model inheritance
+  - Cross-campaign isolation
+  - Circular reference prevention
+  - Database integrity and performance
+
 ### Real-Time Architecture
 
 - Character-based scene architecture
@@ -337,10 +380,14 @@ Tests are organized by functionality and complexity:
 
 ### Test Categories by App
 
-- **campaigns/tests/**: Campaign models, membership, invitations, permissions
-- **api/tests/**: API endpoints, error handling, security, serializers
-- **users/tests/**: Authentication, user management, profile operations
-- **core/tests/**: Management commands, health checks, WebSocket connections, django-fsm-2 integration, Book model tests
+- **campaigns/tests/**: Campaign models, membership, invitations, permissions, settings, API integration
+- **api/tests/**: API endpoints, error handling, security, serializers, character/location APIs
+- **users/tests/**: Authentication, user management, profile operations, theme system
+- **characters/tests/**: Polymorphic character models, forms, views, ownership, FSM integration
+- **items/tests/**: Item management, single ownership, polymorphic conversion, bulk operations
+- **locations/tests/**: Hierarchical locations, NPC ownership, admin bulk operations, permissions
+- **scenes/tests/**: Basic scene models and functionality
+- **core/tests/**: Management commands, health checks, WebSocket connections, mixins, source references
 
 ### Running Tests
 
@@ -362,29 +409,41 @@ ALWAYS use `make test` it will check all tests to avoid regressions and you will
 
 ## Development Phases
 
-### Phase 1: Generic Campaign Infrastructure
+### Phase 1: ✅ Generic Campaign Infrastructure (COMPLETED)
 
-- Basic campaign creation and management
-- Scene creation with chat (no dice)
-- Base Character model setup
+- ✅ Basic campaign creation and management
+- ✅ Campaign membership and invitation system
+- ✅ User authentication and profile management
+- ✅ Theme system with 13+ themes
+- ✅ Base Character model with polymorphic inheritance
+- ✅ Item management with single character ownership
+- ✅ Location hierarchy with NPC ownership
+- ✅ Scene management (basic implementation)
+- ✅ Comprehensive admin interfaces
+- ✅ REST API with security features
+- ✅ WCAG 2.1 AA accessibility compliance
 
-### Phase 2: World of Darkness Foundation
+### Phase 2: 🚧 World of Darkness Foundation (IN PROGRESS)
 
-- WoD character base class
-- WoD dice rolling system
-- Game system selection
+- ✅ WoD character base class implementation
+- ✅ MageCharacter with arete, quintessence, and paradox
+- 🚧 WoD dice rolling system
+- 🚧 Game system selection validation
+- 🚧 Real-time scene features
 
-### Phase 3: Mage Implementation
+### Phase 3: Mage Implementation (PLANNED)
 
 - Full Mage: the Ascension character sheets
 - Sphere magic mechanics
 - Character advancement workflow
+- Rotes and spell management
 
-### Phase 4: Polish & Production
+### Phase 4: Polish & Production (PLANNED)
 
 - Scene closure workflows
 - Performance optimization
 - Production deployment
+- Advanced real-time features
 
 ## Key Development Principles
 
@@ -435,6 +494,8 @@ The project uses Django templates with Bootstrap 5 and vanilla JavaScript for in
 
 - **Base JavaScript**: `static/js/base.js` for common functionality (theme switching, AJAX helpers)
 - **Enhanced JavaScript**: `static/js/enhanced-base.js` with modern standards and improved error handling
+- **Accessibility JavaScript**: `static/js/accessibility.js` for WCAG 2.1 AA compliance features
+- **Location Management**: `static/js/locations.js` for hierarchy management and interactions
 - **Page-specific scripts**: Additional JavaScript files for complex interactions
 - **Fetch API**: Modern JavaScript for API communication instead of jQuery
 - **Bootstrap 5**: For responsive components and interactions
