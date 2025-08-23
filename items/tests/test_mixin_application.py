@@ -369,7 +369,7 @@ class ItemMixinEnhancementTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Enhancement Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="mage",
         )
 
