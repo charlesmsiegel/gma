@@ -26,7 +26,7 @@ class ItemCampaignIntegrationTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        
+
         # Create users
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
@@ -88,7 +88,7 @@ class ItemCampaignIntegrationTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Items")
-        
+
         # Check for link to items management
         items_url = reverse(
             "items:campaign_items", kwargs={"campaign_slug": self.campaign.slug}
@@ -138,7 +138,7 @@ class ItemCampaignIntegrationTest(TestCase):
         response = self.client.get(items_url)
 
         self.assertEqual(response.status_code, 200)
-        
+
         # Should have breadcrumb back to campaign
         campaign_detail_url = reverse(
             "campaigns:detail", kwargs={"slug": self.campaign.slug}
@@ -153,7 +153,7 @@ class ItemCharacterIntegrationTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        
+
         # Create users
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
@@ -221,12 +221,12 @@ class ItemCharacterIntegrationTest(TestCase):
         response = self.client.get(character_detail_url)
 
         self.assertEqual(response.status_code, 200)
-        
+
         # Should show owned items
         self.assertContains(response, "Magic Sword")
         self.assertContains(response, "Health Potion")
         self.assertContains(response, "Possessions")  # Section header
-        
+
         # Should not show unowned items
         self.assertNotContains(response, "Treasure Chest")
 
@@ -244,7 +244,7 @@ class ItemCharacterIntegrationTest(TestCase):
         response = self.client.get(character_detail_url)
 
         self.assertEqual(response.status_code, 200)
-        
+
         # Should show quantities
         self.assertContains(response, "1")  # Magic Sword quantity
         self.assertContains(response, "3")  # Health Potion quantity
@@ -263,7 +263,7 @@ class ItemCharacterIntegrationTest(TestCase):
         response = self.client.get(character_detail_url)
 
         self.assertEqual(response.status_code, 200)
-        
+
         # Should have links to item detail pages
         item_detail_url = reverse(
             "items:detail",
@@ -281,12 +281,12 @@ class ItemCharacterIntegrationTest(TestCase):
         items_url = reverse(
             "items:campaign_items", kwargs={"campaign_slug": self.campaign.slug}
         )
-        
+
         # Filter by character owner
         response = self.client.get(items_url, {"owner": self.character.id})
 
         self.assertEqual(response.status_code, 200)
-        
+
         # Should show only items owned by this character
         self.assertContains(response, "Magic Sword")
         self.assertContains(response, "Health Potion")
@@ -296,13 +296,13 @@ class ItemCharacterIntegrationTest(TestCase):
         """Test that character deletion properly handles owned items."""
         self.client.login(username="owner", password="testpass123")
 
-        # Delete the character (this should be handled by the Character model's deletion)
+        # Delete the character (this should set items.owner to NULL due to SET_NULL)
         self.character.delete()
 
         # Items should become unowned (owner=NULL due to SET_NULL)
         self.owned_item1.refresh_from_db()
         self.owned_item2.refresh_from_db()
-        
+
         self.assertIsNone(self.owned_item1.owner)
         self.assertIsNone(self.owned_item2.owner)
 
@@ -313,7 +313,7 @@ class ItemURLPatternsTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        
+
         self.user = User.objects.create_user(
             username="testuser", email="test@test.com", password="testpass123"
         )
@@ -340,10 +340,12 @@ class ItemURLPatternsTest(TestCase):
 
     def test_item_list_url_pattern(self):
         """Test that item list URL pattern works correctly."""
-        url = reverse("items:campaign_items", kwargs={"campaign_slug": self.campaign.slug})
-        
+        url = reverse(
+            "items:campaign_items", kwargs={"campaign_slug": self.campaign.slug}
+        )
+
         self.assertEqual(url, f"/items/campaigns/{self.campaign.slug}/")
-        
+
         # Test that URL is accessible
         self.client.login(username="testuser", password="testpass123")
         response = self.client.get(url)
@@ -352,7 +354,7 @@ class ItemURLPatternsTest(TestCase):
     def test_item_create_url_pattern(self):
         """Test that item create URL pattern works correctly."""
         url = reverse("items:create", kwargs={"campaign_slug": self.campaign.slug})
-        
+
         expected_url = f"/items/campaigns/{self.campaign.slug}/create/"
         self.assertEqual(url, expected_url)
 
@@ -362,7 +364,7 @@ class ItemURLPatternsTest(TestCase):
             "items:detail",
             kwargs={"campaign_slug": self.campaign.slug, "item_id": self.item.id},
         )
-        
+
         expected_url = f"/items/campaigns/{self.campaign.slug}/{self.item.id}/"
         self.assertEqual(url, expected_url)
 
@@ -372,7 +374,7 @@ class ItemURLPatternsTest(TestCase):
             "items:edit",
             kwargs={"campaign_slug": self.campaign.slug, "item_id": self.item.id},
         )
-        
+
         expected_url = f"/items/campaigns/{self.campaign.slug}/{self.item.id}/edit/"
         self.assertEqual(url, expected_url)
 
@@ -382,29 +384,31 @@ class ItemURLPatternsTest(TestCase):
             "items:delete",
             kwargs={"campaign_slug": self.campaign.slug, "item_id": self.item.id},
         )
-        
+
         expected_url = f"/items/campaigns/{self.campaign.slug}/{self.item.id}/delete/"
         self.assertEqual(url, expected_url)
 
     def test_invalid_campaign_slug_returns_404(self):
         """Test that invalid campaign slug returns 404."""
         self.client.login(username="testuser", password="testpass123")
-        
-        url = reverse("items:campaign_items", kwargs={"campaign_slug": "nonexistent-campaign"})
+
+        url = reverse(
+            "items:campaign_items", kwargs={"campaign_slug": "nonexistent-campaign"}
+        )
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 404)
 
     def test_invalid_item_id_returns_404(self):
         """Test that invalid item ID returns 404."""
         self.client.login(username="testuser", password="testpass123")
-        
+
         url = reverse(
             "items:detail",
             kwargs={"campaign_slug": self.campaign.slug, "item_id": 99999},
         )
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 404)
 
 
@@ -414,7 +418,7 @@ class ItemWorkflowIntegrationTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        
+
         # Create users
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
@@ -458,14 +462,16 @@ class ItemWorkflowIntegrationTest(TestCase):
         self.client.login(username="owner", password="testpass123")
 
         # Step 1: Create item
-        create_url = reverse("items:create", kwargs={"campaign_slug": self.campaign.slug})
+        create_url = reverse(
+            "items:create", kwargs={"campaign_slug": self.campaign.slug}
+        )
         create_data = {
             "name": "Workflow Test Item",
             "description": "Testing complete workflow",
             "quantity": 2,
             "owner": self.character1.id,
         }
-        
+
         response = self.client.post(create_url, create_data)
         self.assertEqual(response.status_code, 302)  # Redirect after creation
 
@@ -493,7 +499,7 @@ class ItemWorkflowIntegrationTest(TestCase):
             "quantity": 3,
             "owner": self.character2.id,  # Transfer to different character
         }
-        
+
         response = self.client.post(edit_url, edit_data)
         self.assertEqual(response.status_code, 302)
 
@@ -522,13 +528,15 @@ class ItemWorkflowIntegrationTest(TestCase):
         self.client.login(username="gm", password="testpass123")
 
         # GM creates item for campaign
-        create_url = reverse("items:create", kwargs={"campaign_slug": self.campaign.slug})
+        create_url = reverse(
+            "items:create", kwargs={"campaign_slug": self.campaign.slug}
+        )
         create_data = {
             "name": "GM Created Treasure",
             "description": "Treasure created by GM",
             "quantity": 1,
         }
-        
+
         response = self.client.post(create_url, create_data)
         self.assertEqual(response.status_code, 302)
 
@@ -548,7 +556,7 @@ class ItemWorkflowIntegrationTest(TestCase):
             "quantity": 1,
             "owner": self.character1.id,  # Assign to character
         }
-        
+
         response = self.client.post(edit_url, edit_data)
         self.assertEqual(response.status_code, 302)
 
@@ -572,7 +580,9 @@ class ItemWorkflowIntegrationTest(TestCase):
         self.client.login(username="player", password="testpass123")
 
         # Player can view item list
-        list_url = reverse("items:campaign_items", kwargs={"campaign_slug": self.campaign.slug})
+        list_url = reverse(
+            "items:campaign_items", kwargs={"campaign_slug": self.campaign.slug}
+        )
         response = self.client.get(list_url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Player View Test Item")
@@ -587,7 +597,9 @@ class ItemWorkflowIntegrationTest(TestCase):
         self.assertContains(response, "Player View Test Item")
 
         # Player cannot access create form
-        create_url = reverse("items:create", kwargs={"campaign_slug": self.campaign.slug})
+        create_url = reverse(
+            "items:create", kwargs={"campaign_slug": self.campaign.slug}
+        )
         response = self.client.get(create_url)
         self.assertEqual(response.status_code, 404)
 
@@ -616,12 +628,6 @@ class ItemWorkflowIntegrationTest(TestCase):
             game_system="Vampire: The Masquerade",
         )
 
-        other_character = Character.objects.create(
-            name="Other Character",
-            player_owner=self.owner,
-            campaign=other_campaign,
-        )
-
         # Create items in both campaigns
         item1 = Item.objects.create(
             name="Campaign 1 Item",
@@ -640,14 +646,18 @@ class ItemWorkflowIntegrationTest(TestCase):
         self.client.login(username="owner", password="testpass123")
 
         # Items in first campaign
-        list_url1 = reverse("items:campaign_items", kwargs={"campaign_slug": self.campaign.slug})
+        list_url1 = reverse(
+            "items:campaign_items", kwargs={"campaign_slug": self.campaign.slug}
+        )
         response = self.client.get(list_url1)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Campaign 1 Item")
         self.assertNotContains(response, "Campaign 2 Item")
 
         # Items in second campaign
-        list_url2 = reverse("items:campaign_items", kwargs={"campaign_slug": other_campaign.slug})
+        list_url2 = reverse(
+            "items:campaign_items", kwargs={"campaign_slug": other_campaign.slug}
+        )
         response = self.client.get(list_url2)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Campaign 2 Item")
@@ -659,4 +669,6 @@ class ItemWorkflowIntegrationTest(TestCase):
             kwargs={"campaign_slug": self.campaign.slug, "item_id": item2.id},
         )
         response = self.client.get(edit_url)
-        self.assertEqual(response.status_code, 404)  # Item doesn't exist in this campaign context
+        self.assertEqual(
+            response.status_code, 404
+        )  # Item doesn't exist in this campaign context

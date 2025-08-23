@@ -3,7 +3,7 @@ Tests for Item forms.
 
 Tests cover all requirements from Issue #54:
 1. Item creation form validation and behavior
-2. Item edit form validation and behavior  
+2. Item edit form validation and behavior
 3. Field requirements and constraints
 4. Character ownership handling
 5. Campaign context integration
@@ -12,7 +12,7 @@ Tests cover all requirements from Issue #54:
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from campaigns.models import Campaign, CampaignMembership
+from campaigns.models import Campaign
 from characters.models import Character
 from items.models import Item
 
@@ -274,9 +274,7 @@ class ItemFormTest(TestCase):
             "owner": self.character2.id,
         }
 
-        form = ItemForm(
-            data=form_data, instance=existing_item, campaign=self.campaign
-        )
+        form = ItemForm(data=form_data, instance=existing_item, campaign=self.campaign)
         self.assertTrue(form.is_valid())
 
         updated_item = form.save(modified_by=self.user)
@@ -310,9 +308,7 @@ class ItemFormTest(TestCase):
             "owner": self.character2.id,  # Change owner
         }
 
-        form = ItemForm(
-            data=form_data, instance=existing_item, campaign=self.campaign
-        )
+        form = ItemForm(data=form_data, instance=existing_item, campaign=self.campaign)
         self.assertTrue(form.is_valid())
 
         updated_item = form.save()
@@ -374,11 +370,9 @@ class ItemFormTest(TestCase):
         form = ItemForm(campaign=self.campaign)
 
         # Name field should be required
-        name_widget = form.fields["name"].widget
         self.assertTrue(form.fields["name"].required)
 
         # Quantity field should be required and have appropriate attributes
-        quantity_widget = form.fields["quantity"].widget
         self.assertTrue(form.fields["quantity"].required)
 
         # Description should be optional
@@ -461,8 +455,10 @@ class ItemFormTest(TestCase):
 
         # Description and quantity should come before owner
         name_index = field_names.index("name")
-        owner_index = field_names.index("owner") if "owner" in field_names else len(field_names)
-        
+        owner_index = (
+            field_names.index("owner") if "owner" in field_names else len(field_names)
+        )
+
         if "description" in field_names:
             desc_index = field_names.index("description")
             self.assertTrue(desc_index > name_index)

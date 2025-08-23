@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block extra_css %}
+<style>
+.delete-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+.delete-warning {
+    border-left: 4px solid #dc3545;
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}
+{% block content %}
+  <div class="container">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'items:campaign_items' campaign_slug=campaign.slug %}">Items</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'items:detail' campaign_slug=campaign.slug item_id=item.id %}">{{ item.name }}</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Delete</li>
+      </ol>
+    </nav>
+
+    <!-- Delete Confirmation -->
+    <div class="delete-container">
+      <div class="card">
+        <div class="card-header bg-danger text-white">
+          <h1 class="h4 mb-0">
+            <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+          </h1>
+        </div>
+        <div class="card-body">
+          <div class="delete-warning p-3 mb-4">
+            <h5 class="text-danger mb-2">
+              <i class="bi bi-exclamation-circle"></i> Are you sure you want to delete this item?
+            </h5>
+            <p class="mb-0">
+              This action cannot be undone. The item will be permanently removed from the campaign.
+            </p>
+          </div>
+
+          <!-- Item Details -->
+          <div class="mb-4">
+            <h6 class="text-muted mb-3">Item to be deleted:</h6>
+            <div class="card bg-light">
+              <div class="card-body">
+                <h5 class="card-title">{{ item.name }}</h5>
+                {% if item.description %}
+                  <p class="card-text">{{ item.description|truncatechars:150 }}</p>
+                {% endif %}
+                <div class="row text-sm">
+                  <div class="col-sm-6">
+                    <strong>Quantity:</strong> {{ item.quantity }}
+                  </div>
+                  <div class="col-sm-6">
+                    <strong>Owner:</strong>
+                    {% if item.owner %}
+                      {{ item.owner.name }}
+                    {% else %}
+                      <span class="text-muted">Unowned</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deletion Impact -->
+          <div class="mb-4">
+            <h6 class="text-muted mb-2">What happens when you delete this item:</h6>
+            <ul class="list-unstyled">
+              <li class="mb-1">
+                <i class="bi bi-check-circle text-success"></i>
+                The item will be soft-deleted (can be restored by admins)
+              </li>
+              {% if item.owner %}
+                <li class="mb-1">
+                  <i class="bi bi-info-circle text-info"></i>
+                  {{ item.owner.name }} will no longer own this item
+                </li>
+              {% endif %}
+              <li class="mb-1">
+                <i class="bi bi-clock-history text-warning"></i>
+                Deletion will be logged with timestamp and your username
+              </li>
+            </ul>
+          </div>
+
+          <!-- Confirmation Form -->
+          <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-end gap-2">
+              <a href="{% url 'items:detail' campaign_slug=campaign.slug item_id=item.id %}" 
+                 class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Cancel
+              </a>
+              <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Yes, Delete Item
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

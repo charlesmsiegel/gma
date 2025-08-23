@@ -27,7 +27,7 @@ class ItemCreateViewTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        
+
         # Create users
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
@@ -204,7 +204,10 @@ class ItemCreateViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)  # Form shows again with errors
         self.assertFormError(
-            response, "form", "quantity", "Ensure this value is greater than or equal to 1."
+            response,
+            "form",
+            "quantity",
+            "Ensure this value is greater than or equal to 1.",
         )
 
     def test_create_item_sets_campaign_context(self):
@@ -247,7 +250,7 @@ class ItemDetailViewTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        
+
         # Create users
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
@@ -323,7 +326,7 @@ class ItemDetailViewTest(TestCase):
         self.assertContains(response, "3")  # quantity
         self.assertContains(response, "Test Character")  # owner name
         self.assertContains(response, "owner")  # created by
-        
+
     def test_gm_can_view_item_detail(self):
         """Test that GMs can view item details."""
         self.client.login(username="gm", password="testpass123")
@@ -453,7 +456,7 @@ class ItemEditViewTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        
+
         # Create users
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
@@ -531,7 +534,9 @@ class ItemEditViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Edit Item")
         self.assertContains(response, 'value="Test Item"')  # Pre-populated name
-        self.assertContains(response, "A test item for editing")  # Pre-populated description
+        self.assertContains(
+            response, "A test item for editing"
+        )  # Pre-populated description
         self.assertContains(response, 'value="2"')  # Pre-populated quantity
 
     def test_gm_can_access_edit_form(self):
@@ -646,7 +651,10 @@ class ItemEditViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)  # Form shows again with errors
         self.assertFormError(
-            response, "form", "quantity", "Ensure this value is greater than or equal to 1."
+            response,
+            "form",
+            "quantity",
+            "Ensure this value is greater than or equal to 1.",
         )
 
     def test_edit_item_gm_permission(self):
@@ -674,7 +682,7 @@ class ItemListViewTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        
+
         # Create users
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
@@ -765,7 +773,9 @@ class ItemListViewTest(TestCase):
         response = self.client.get(self.list_url, {"search": "magical"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Ancient Tome")  # Contains "magical" in description
+        self.assertContains(
+            response, "Ancient Tome"
+        )  # Contains "magical" in description
         self.assertNotContains(response, "Health Potion")
 
     def test_list_view_filter_by_owner(self):
@@ -882,7 +892,7 @@ class ItemDeleteViewTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        
+
         # Create users
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
@@ -942,7 +952,7 @@ class ItemDeleteViewTest(TestCase):
         response = self.client.post(self.delete_url)
 
         self.assertEqual(response.status_code, 302)  # Redirect after deletion
-        
+
         # Check that item was soft deleted
         self.item.refresh_from_db()
         self.assertTrue(self.item.is_deleted)
@@ -956,7 +966,7 @@ class ItemDeleteViewTest(TestCase):
         response = self.client.post(self.delete_url)
 
         self.assertEqual(response.status_code, 302)
-        
+
         self.item.refresh_from_db()
         self.assertTrue(self.item.is_deleted)
         self.assertEqual(self.item.deleted_by, self.gm)
@@ -968,7 +978,7 @@ class ItemDeleteViewTest(TestCase):
         response = self.client.post(self.delete_url)
 
         self.assertEqual(response.status_code, 302)
-        
+
         self.item.refresh_from_db()
         self.assertTrue(self.item.is_deleted)
         self.assertEqual(self.item.deleted_by, self.item_creator)
@@ -980,7 +990,7 @@ class ItemDeleteViewTest(TestCase):
         response = self.client.post(self.delete_url)
 
         self.assertEqual(response.status_code, 404)  # Hide existence
-        
+
         self.item.refresh_from_db()
         self.assertFalse(self.item.is_deleted)
 
@@ -991,7 +1001,7 @@ class ItemDeleteViewTest(TestCase):
         response = self.client.post(self.delete_url)
 
         self.assertEqual(response.status_code, 404)
-        
+
         self.item.refresh_from_db()
         self.assertFalse(self.item.is_deleted)
 
@@ -1003,7 +1013,7 @@ class ItemDeleteViewTest(TestCase):
 
         # Should show confirmation form or redirect, not delete
         self.assertNotEqual(response.status_code, 302)
-        
+
         self.item.refresh_from_db()
         self.assertFalse(self.item.is_deleted)
 
