@@ -313,7 +313,7 @@ class ItemURLPatternsTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="URL Test Campaign",
-            player_owner=self.user,
+            owner=self.user,
             game_system="Mage: The Ascension",
         )
 
