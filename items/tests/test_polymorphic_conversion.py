@@ -20,7 +20,7 @@ from polymorphic.managers import PolymorphicManager
 from polymorphic.models import PolymorphicModel
 from polymorphic.query import PolymorphicQuerySet
 
-from campaigns.models import Campaign
+from campaigns.models import Campaign, CampaignMembership
 from characters.models import Character
 from core.models import (
     AuditableMixin,
@@ -239,11 +239,18 @@ class PolymorphicQuerySetTest(TestCase):
 
     def test_queryset_owned_by_character_method(self):
         """Test that owned_by_character() method works correctly."""
-        # Create second character
+        # Create second user to own the second character (to avoid character limit)
+        other_user = User.objects.create_user(
+            username="otheruser", email="other@example.com", password="testpass123"
+        )
+        # Add other user to campaign so they can have a character
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=other_user, role="PLAYER"
+        )
         other_character = Character.objects.create(
             name="Other Character",
-            campaign=self.campaign,
-            player_owner=self.user,
+            campaign=self.campaign,  # Same campaign, different owner
+            player_owner=other_user,  # Different user
             game_system="Test System",
         )
 
