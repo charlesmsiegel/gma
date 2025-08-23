@@ -42,7 +42,7 @@ class ItemSingleOwnershipBasicTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -184,7 +184,7 @@ class ItemTransferMethodTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -200,13 +200,13 @@ class ItemTransferMethodTest(TestCase):
         self.character1 = Character.objects.create(
             name="Character 1",
             campaign=self.campaign,
-            owner=self.player1,
+            player_owner=self.player1,
             game_system="Mage: The Ascension",
         )
         self.character2 = Character.objects.create(
             name="Character 2",
             campaign=self.campaign,
-            owner=self.player2,
+            player_owner=self.player2,
             game_system="Mage: The Ascension",
         )
 
@@ -349,7 +349,7 @@ class ItemQuerySetSingleOwnershipTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -470,7 +470,7 @@ class ItemCharacterRelationshipTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -483,7 +483,7 @@ class ItemCharacterRelationshipTest(TestCase):
         self.pc_character = Character.objects.create(
             name="PC Character",
             campaign=self.campaign,
-            owner=self.player1,
+            player_owner=self.player1,
             game_system="Mage: The Ascension",
             npc=False,
         )
@@ -602,7 +602,7 @@ class ItemDataMigrationCompatibilityTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Migration Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -617,13 +617,13 @@ class ItemDataMigrationCompatibilityTest(TestCase):
         self.character1 = Character.objects.create(
             name="Character 1",
             campaign=self.campaign,
-            owner=self.player1,
+            player_owner=self.player1,
             game_system="Mage: The Ascension",
         )
         self.character2 = Character.objects.create(
             name="Character 2",
             campaign=self.campaign,
-            owner=self.player2,
+            player_owner=self.player2,
             game_system="Mage: The Ascension",
         )
 
@@ -720,7 +720,7 @@ class ItemIntegrationTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Integration Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -881,7 +881,7 @@ class ItemOwnershipEdgeCasesTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Edge Case Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 

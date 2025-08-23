@@ -48,7 +48,7 @@ class ItemCreateViewTest(TestCase):
         # Create campaign
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -272,7 +272,7 @@ class ItemDetailViewTest(TestCase):
         # Create campaign
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -479,7 +479,7 @@ class ItemEditViewTest(TestCase):
         # Create campaign
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -698,7 +698,7 @@ class ItemListViewTest(TestCase):
         # Create campaign
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -919,7 +919,7 @@ class ItemDeleteViewTest(TestCase):
         # Create campaign
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
