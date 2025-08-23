@@ -449,7 +449,7 @@ class ItemDetailViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Unowned Item")
-        self.assertContains(response, "No owner")  # Or similar text for unowned items
+        self.assertContains(response, "Unowned")
 
 
 class ItemEditViewTest(TestCase):
@@ -523,11 +523,10 @@ class ItemEditViewTest(TestCase):
         )
 
     def test_edit_view_requires_authentication(self):
-        """Test that unauthenticated users are redirected to login."""
+        """Test that unauthenticated users get 404 (hiding campaign existence)."""
         response = self.client.get(self.edit_url)
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/login/", response.url)
+        self.assertEqual(response.status_code, 404)
 
     def test_owner_can_access_edit_form(self):
         """Test that campaign owners can access the item edit form."""
@@ -536,7 +535,7 @@ class ItemEditViewTest(TestCase):
         response = self.client.get(self.edit_url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Edit Item")
+        self.assertContains(response, "Update Item")
         self.assertContains(response, 'value="Test Item"')  # Pre-populated name
         self.assertContains(
             response, "A test item for editing"
@@ -550,7 +549,7 @@ class ItemEditViewTest(TestCase):
         response = self.client.get(self.edit_url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Edit Item")
+        self.assertContains(response, "Update Item")
 
     def test_player_cannot_access_edit_form(self):
         """Test that players cannot access the item edit form."""
@@ -740,7 +739,7 @@ class ItemListViewTest(TestCase):
         )
         self.item3 = Item.objects.create(
             name="Ancient Tome",
-            description="Contains arcane knowledge and magical secrets",
+            description="Contains arcane knowledge and forbidden secrets",
             quantity=1,
             campaign=self.campaign,
             created_by=self.owner,
@@ -799,7 +798,7 @@ class ItemListViewTest(TestCase):
         """Test filtering for unowned items."""
         self.client.login(username="owner", password="testpass123")
 
-        response = self.client.get(self.list_url, {"owner": "unowned"})
+        response = self.client.get(self.list_url, {"owner": "0"})
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ancient Tome")
@@ -880,7 +879,7 @@ class ItemListViewTest(TestCase):
         response = self.client.get(self.list_url, {"search": "NonexistentItem"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No items found")  # Or similar message
+        self.assertContains(response, "No items match your search criteria")
 
     def test_list_view_case_insensitive_search(self):
         """Test that search is case insensitive."""

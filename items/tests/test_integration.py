@@ -41,7 +41,7 @@ class ItemCampaignIntegrationTest(TestCase):
         # Create campaign
         self.campaign = Campaign.objects.create(
             name="Integration Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -58,6 +58,7 @@ class ItemCampaignIntegrationTest(TestCase):
             name="Test Character",
             player_owner=self.player,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
 
         self.item1 = Item.objects.create(
@@ -165,7 +166,7 @@ class ItemCharacterIntegrationTest(TestCase):
         # Create campaign
         self.campaign = Campaign.objects.create(
             name="Character Integration Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -179,6 +180,7 @@ class ItemCharacterIntegrationTest(TestCase):
             name="Equipped Character",
             player_owner=self.player,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
 
         self.owned_item1 = Item.objects.create(
@@ -328,6 +330,7 @@ class ItemURLPatternsTest(TestCase):
             name="URL Test Character",
             player_owner=self.user,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
 
         self.item = Item.objects.create(
@@ -433,7 +436,7 @@ class ItemWorkflowIntegrationTest(TestCase):
         # Create campaign
         self.campaign = Campaign.objects.create(
             name="Workflow Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -450,11 +453,13 @@ class ItemWorkflowIntegrationTest(TestCase):
             name="Character One",
             player_owner=self.player,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
         self.character2 = Character.objects.create(
             name="Character Two",
             player_owner=self.gm,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
 
     def test_complete_item_management_workflow(self):
@@ -624,7 +629,7 @@ class ItemWorkflowIntegrationTest(TestCase):
         # Create another campaign
         other_campaign = Campaign.objects.create(
             name="Other Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="Vampire: The Masquerade",
         )
 
