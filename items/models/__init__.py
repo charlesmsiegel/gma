@@ -7,6 +7,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
+from polymorphic.managers import PolymorphicManager  # type: ignore[import-untyped]
+from polymorphic.models import PolymorphicModel  # type: ignore[import-untyped]
+from polymorphic.query import PolymorphicQuerySet  # type: ignore[import-untyped]
 
 from campaigns.models import Campaign
 from core.models import (
@@ -24,7 +27,7 @@ if TYPE_CHECKING:
 User = get_user_model()
 
 
-class ItemQuerySet(models.QuerySet):
+class ItemQuerySet(PolymorphicQuerySet):
     """Custom QuerySet for Item with filtering methods."""
 
     def active(self) -> "ItemQuerySet":
@@ -48,7 +51,7 @@ class ItemQuerySet(models.QuerySet):
         return self.filter(owners=character)
 
 
-class ItemManager(models.Manager):
+class ItemManager(PolymorphicManager):
     """Custom manager for Item with query methods."""
 
     def get_queryset(self) -> ItemQuerySet:
@@ -67,8 +70,17 @@ class ItemManager(models.Manager):
             return self.none()
         return self.get_queryset().filter(owners=character)
 
+    def active(self) -> ItemQuerySet:
+        """Filter to only active (non-deleted) items."""
+        return self.get_queryset().active()
 
-class AllItemManager(models.Manager):
+    def deleted(self) -> ItemQuerySet:
+        """Filter to only soft-deleted items."""
+        # Use all_objects to include deleted items, then filter to only deleted ones
+        return ItemQuerySet(self.model, using=self._db).filter(is_deleted=True)
+
+
+class AllItemManager(PolymorphicManager):
     """Manager that includes soft-deleted items."""
 
     def get_queryset(self):
@@ -77,7 +89,11 @@ class AllItemManager(models.Manager):
 
 
 class Item(
-    TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, models.Model
+    TimestampedMixin,
+    NamedModelMixin,
+    DescribedModelMixin,
+    AuditableMixin,
+    PolymorphicModel,
 ):
     """
     Item model for campaign management with comprehensive functionality.
