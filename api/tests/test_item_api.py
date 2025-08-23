@@ -79,6 +79,9 @@ class BaseItemAPITestCase(APITestCase):
             campaign=self.campaign, user=self.observer, role="OBSERVER"
         )
 
+        # No membership needed for other_campaign - will use campaign owner
+        # for character ownership
+
         # Create test characters
         self.character1 = Character.objects.create(
             name="Player1 Character",
@@ -141,7 +144,7 @@ class BaseItemAPITestCase(APITestCase):
         self.other_campaign_character = Character.objects.create(
             name="Other Character",
             campaign=self.other_campaign,
-            player_owner=self.player1,
+            player_owner=self.owner,  # Use campaign owner instead of player1
             game_system="Vampire: The Masquerade",
         )
         self.other_campaign_item = Item.objects.create(

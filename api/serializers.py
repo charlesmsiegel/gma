@@ -9,6 +9,7 @@ from rest_framework import serializers
 from api.messages import ErrorMessages
 from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
 from characters.models import Character
+from items.models import Item
 from locations.models import Location
 
 User = get_user_model()
@@ -1325,4 +1326,293 @@ class LocationCreateUpdateSerializer(serializers.ModelSerializer):
         """Return full location representation."""
         # Use the main LocationSerializer for response
         serializer = LocationSerializer(instance, context=self.context)
+        return serializer.data
+
+
+# Item API serializers
+class ItemCampaignSerializer(serializers.ModelSerializer):
+    """Lightweight campaign serializer for item responses."""
+
+    class Meta:
+        model = Campaign
+        fields = ("id", "name")
+
+
+class ItemCharacterSerializer(serializers.ModelSerializer):
+    """Lightweight character serializer for item owner responses."""
+
+    class Meta:
+        model = Character
+        fields = ("id", "name", "npc")
+
+
+class ItemCreatedBySerializer(serializers.ModelSerializer):
+    """Lightweight user serializer for item creator responses."""
+
+    class Meta:
+        model = User
+        fields = ("id", "username")
+
+
+class ItemSerializer(serializers.ModelSerializer):
+    """
+    Base serializer for Item model with nested relationships.
+
+    Includes polymorphic_ctype field for future polymorphic subclasses
+    and all fields necessary for comprehensive item management.
+    """
+
+    campaign = ItemCampaignSerializer(read_only=True)
+    owner = ItemCharacterSerializer(read_only=True)
+    created_by = ItemCreatedBySerializer(read_only=True)
+    deleted_by = ItemCreatedBySerializer(read_only=True)
+    polymorphic_ctype = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Item
+        fields = (
+            "id",
+            "name",
+            "description",
+            "quantity",
+            "campaign",
+            "owner",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "last_transferred_at",
+            "is_deleted",
+            "deleted_at",
+            "deleted_by",
+            "polymorphic_ctype",
+        )
+        read_only_fields = (
+            "id",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "last_transferred_at",
+            "is_deleted",
+            "deleted_at",
+            "deleted_by",
+            "polymorphic_ctype",
+        )
+
+    def get_polymorphic_ctype(self, obj):
+        """Get the polymorphic content type for future subclasses."""
+        return {
+            "app_label": obj._meta.app_label,
+            "model": obj._meta.model_name,
+        }
+
+
+class ItemCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating items."""
+
+    campaign = serializers.PrimaryKeyRelatedField(
+        queryset=Campaign.objects.none(),  # Will be set in view
+        write_only=True,
+        required=False,  # Not required for updates
+    )
+    owner = serializers.PrimaryKeyRelatedField(
+        queryset=Character.objects.none(),  # Will be set in view
+        required=False,
+        allow_null=True,
+    )
+    # Include readonly fields to handle cases where they're passed in
+    created_by = serializers.PrimaryKeyRelatedField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+    is_deleted = serializers.BooleanField(read_only=True)
+    deleted_at = serializers.DateTimeField(read_only=True)
+    deleted_by = serializers.PrimaryKeyRelatedField(read_only=True)
+    last_transferred_at = serializers.DateTimeField(read_only=True)
+    polymorphic_ctype = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Item
+        fields = (
+            "name",
+            "description",
+            "quantity",
+            "campaign",
+            "owner",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "is_deleted",
+            "deleted_at",
+            "deleted_by",
+            "last_transferred_at",
+            "polymorphic_ctype",
+        )
+        read_only_fields = (
+            "created_by",
+            "created_at",
+            "updated_at",
+            "is_deleted",
+            "deleted_at",
+            "deleted_by",
+            "last_transferred_at",
+            "polymorphic_ctype",
+        )
+
+    def __init__(self, *args, **kwargs):
+        """Initialize with user-accessible campaigns and characters."""
+        super().__init__(*args, **kwargs)
+
+        # For updates, make campaign field truly ignored by removing it
+        if self.instance:
+            # This is an update - remove campaign field entirely
+            self.fields.pop("campaign", None)
+
+        # Set querysets based on user in context
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            # Only set campaign queryset for creation
+            if not self.instance:
+                # User can create items in campaigns they're a member of
+                user_campaigns = Campaign.objects.filter(
+                    models.Q(owner=request.user)
+                    | models.Q(memberships__user=request.user)
+                ).distinct()
+                if "campaign" in self.fields:
+                    self.fields["campaign"].queryset = user_campaigns
+
+            # Set character owner queryset
+            campaign = None
+            campaign_id = self.context.get("campaign_id")
+            if campaign_id:
+                campaign = Campaign.objects.filter(id=campaign_id).first()
+            elif self.instance:
+                # For updates, use the instance's campaign
+                campaign = self.instance.campaign
+
+            if campaign:
+                # Character owner must be in same campaign
+                self.fields["owner"].queryset = Character.objects.filter(
+                    campaign=campaign
+                )
+
+    def validate_name(self, value):
+        """Validate item name."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Item name cannot be empty.")
+
+        if len(value) > 100:  # Assuming max length from model
+            raise serializers.ValidationError("Item name cannot exceed 100 characters.")
+
+        return value.strip()
+
+    def get_polymorphic_ctype(self, obj):
+        """Get the polymorphic content type for future subclasses."""
+        return {
+            "app_label": obj._meta.app_label,
+            "model": obj._meta.model_name,
+        }
+
+    def validate_quantity(self, value):
+        """Validate item quantity."""
+        if value is not None and value < 1:
+            raise serializers.ValidationError("Quantity must be at least 1.")
+        return value
+
+    # Removed custom to_internal_value - let DRF handle readonly fields
+
+    def validate(self, data):
+        """Validate item data including campaign constraints."""
+        # For updates, handle campaign context differently
+        if self.instance:  # Updating existing item
+            campaign = self.instance.campaign
+            # Remove campaign from validation data since it's readonly for updates
+            data.pop("campaign", None)
+        else:  # Creating new item
+            campaign = data.get("campaign")
+            if not campaign:
+                raise serializers.ValidationError(
+                    {"campaign": ["Campaign is required."]}
+                )
+
+            # Check if user can create items in this campaign
+            request = self.context.get("request")
+            if not request or not request.user.is_authenticated:
+                raise serializers.ValidationError(ErrorMessages.UNAUTHORIZED)
+
+            user = request.user
+            user_role = campaign.get_user_role(user)
+
+            # Only campaign members with PLAYER+ role can create items
+            if user_role is None:
+                raise serializers.ValidationError(
+                    {
+                        "campaign": [
+                            "You don't have permission to create items "
+                            "in this campaign."
+                        ]
+                    }
+                )
+            elif user_role == "OBSERVER":
+                raise serializers.ValidationError(
+                    {"campaign": ["Observers cannot create items."]}
+                )
+
+        # Validate character ownership
+        owner = data.get("owner")
+        if owner and owner.campaign != campaign:
+            raise serializers.ValidationError(
+                {"owner": ["Item owner must be a character in the same campaign."]}
+            )
+
+        return data
+
+    def create(self, validated_data):
+        """Create item with proper audit user."""
+        request = self.context.get("request")
+        item = Item(**validated_data)
+        item.save(user=request.user)
+        return item
+
+    def update(self, instance, validated_data):
+        """Update item with audit trail."""
+        request = self.context.get("request")
+
+        # Remove readonly fields from validated_data if present
+        readonly_fields = [
+            "campaign",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "deleted_by",
+            "is_deleted",
+            "last_transferred_at",
+            "polymorphic_ctype",
+        ]
+        for field in readonly_fields:
+            validated_data.pop(field, None)
+
+        # Check if owner is being changed to handle transfer
+        new_owner = validated_data.get("owner")
+        owner_changed = new_owner != instance.owner
+
+        # Update fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        # Save all changes first
+        instance.save(user=request.user)
+
+        # If owner changed, update transfer timestamp
+        if owner_changed:
+            from django.utils import timezone
+
+            instance.last_transferred_at = timezone.now()
+            instance.save(update_fields=["last_transferred_at"], user=request.user)
+
+        return instance
+
+    def to_representation(self, instance):
+        """Return full item representation."""
+        # Use the main ItemSerializer for response
+        serializer = ItemSerializer(instance, context=self.context)
         return serializer.data
