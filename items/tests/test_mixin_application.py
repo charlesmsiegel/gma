@@ -40,7 +40,7 @@ class ItemMixinApplicationTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Item Test Campaign",
-            player_owner=self.owner,
+            owner=self.owner,
             game_system="mage",
         )
 
