@@ -961,10 +961,10 @@ class ItemDeleteViewTest(TestCase):
         self.assertEqual(response.status_code, 302)  # Redirect after deletion
 
         # Check that item was soft deleted
-        self.item.refresh_from_db()
-        self.assertTrue(self.item.is_deleted)
-        self.assertEqual(self.item.deleted_by, self.owner)
-        self.assertIsNotNone(self.item.deleted_at)
+        item_from_db = Item.all_objects.get(pk=self.item.pk)
+        self.assertTrue(item_from_db.is_deleted)
+        self.assertEqual(item_from_db.deleted_by, self.owner)
+        self.assertIsNotNone(item_from_db.deleted_at)
 
     def test_gm_can_delete_item(self):
         """Test that GMs can delete items."""
@@ -974,9 +974,10 @@ class ItemDeleteViewTest(TestCase):
 
         self.assertEqual(response.status_code, 302)
 
-        self.item.refresh_from_db()
-        self.assertTrue(self.item.is_deleted)
-        self.assertEqual(self.item.deleted_by, self.gm)
+        # Check that item was soft deleted
+        item_from_db = Item.all_objects.get(pk=self.item.pk)
+        self.assertTrue(item_from_db.is_deleted)
+        self.assertEqual(item_from_db.deleted_by, self.gm)
 
     def test_item_creator_can_delete_own_item(self):
         """Test that item creators can delete their own items."""
@@ -986,9 +987,10 @@ class ItemDeleteViewTest(TestCase):
 
         self.assertEqual(response.status_code, 302)
 
-        self.item.refresh_from_db()
-        self.assertTrue(self.item.is_deleted)
-        self.assertEqual(self.item.deleted_by, self.item_creator)
+        # Check that item was soft deleted
+        item_from_db = Item.all_objects.get(pk=self.item.pk)
+        self.assertTrue(item_from_db.is_deleted)
+        self.assertEqual(item_from_db.deleted_by, self.item_creator)
 
     def test_player_cannot_delete_others_item(self):
         """Test that players cannot delete items they didn't create."""
