@@ -450,7 +450,7 @@ class ItemLocationFunctionalityPreservationTest(TestCase):
         # Test reverse relationships
         self.assertIn(item, self.campaign.items.all())
         self.assertIn(location, self.campaign.locations.all())
-        self.assertIn(item, self.player1.created_items.all())
+        self.assertIn(item, self.player1.items_item_created.all())
         self.assertIn(location, self.player1.locations_location_created.all())
 
     def test_item_location_ordering_preserved(self):

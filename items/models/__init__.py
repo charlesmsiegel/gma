@@ -9,7 +9,12 @@ from django.db import models
 from django.utils import timezone
 
 from campaigns.models import Campaign
-from core.models import DescribedModelMixin, TimestampedMixin
+from core.models import (
+    AuditableMixin,
+    DescribedModelMixin,
+    NamedModelMixin,
+    TimestampedMixin,
+)
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
@@ -71,22 +76,22 @@ class AllItemManager(models.Manager):
         return ItemQuerySet(self.model, using=self._db)
 
 
-class Item(TimestampedMixin, DescribedModelMixin, models.Model):
+class Item(
+    TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, models.Model
+):
     """
     Item model for campaign management with comprehensive functionality.
 
     Provides:
-    - Basic item information (name, description)
+    - Basic item information (name via NamedModelMixin, description)
     - Campaign association
     - Quantity tracking
     - Character ownership (many-to-many)
-    - User audit tracking (created_by)
+    - User audit tracking (created_by, modified_by via AuditableMixin)
+    - Timestamps (created_at, updated_at via TimestampedMixin)
     - Soft delete functionality
     """
 
-    name: models.CharField = models.CharField(
-        max_length=200, help_text="Name of the item"
-    )
     campaign: models.ForeignKey = models.ForeignKey(
         Campaign,
         on_delete=models.CASCADE,
@@ -97,13 +102,6 @@ class Item(TimestampedMixin, DescribedModelMixin, models.Model):
         default=1,
         validators=[MinValueValidator(1)],
         help_text="Quantity of this item",
-    )
-    created_by: models.ForeignKey = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="created_items",
-        help_text="User who created this item",
     )
     owners: models.ManyToManyField = models.ManyToManyField(
         "characters.Character",
@@ -137,23 +135,16 @@ class Item(TimestampedMixin, DescribedModelMixin, models.Model):
         verbose_name = "Item"
         verbose_name_plural = "Items"
 
-    def __str__(self) -> str:
-        """Return the item name."""
-        return self.name
-
     def clean(self) -> None:
         """Validate the item data."""
         super().clean()
-
-        # Validate item name is not empty/blank
-        if not self.name or not self.name.strip():
-            raise ValidationError("Item name cannot be empty.")
 
         # Validate quantity is positive
         if self.quantity is not None and self.quantity <= 0:
             raise ValidationError("Quantity must be a positive number.")
 
         # Note: created_by can be None after user deletion, so we don't require it
+        # Note: name validation is handled by NamedModelMixin
 
     def can_be_deleted_by(self, user: Optional["AbstractUser"]) -> bool:
         """Check if a user can delete this item.
@@ -172,7 +163,7 @@ class Item(TimestampedMixin, DescribedModelMixin, models.Model):
             return True
 
         # Item creator can always delete their items (if creator still exists)
-        if self.created_by and self.created_by == user:
+        if self.created_by_id and self.created_by_id == user.id:
             return True
 
         # Get user's role in the campaign
