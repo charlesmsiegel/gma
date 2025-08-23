@@ -296,13 +296,13 @@ class ItemCharacterOwnershipTest(TestCase):
         self.character1 = Character.objects.create(
             name="Character 1",
             campaign=self.campaign,
-            owner=self.player1,
+            player_owner=self.player1,
             game_system="Mage: The Ascension",
         )
         self.character2 = Character.objects.create(
             name="Character 2",
             campaign=self.campaign,
-            owner=self.player2,
+            player_owner=self.player2,
             game_system="Mage: The Ascension",
         )
 
@@ -574,7 +574,7 @@ class ItemIntegrationTest(TestCase):
         character2 = Character.objects.create(
             name="Second Character",
             campaign=self.campaign,
-            owner=self.owner,  # Owner creates second character
+            player_owner=self.owner,  # Owner creates second character
             game_system="Mage: The Ascension",
         )
 
