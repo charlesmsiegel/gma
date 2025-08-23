@@ -216,8 +216,8 @@ The project follows a domain-driven monolithic architecture with these Django ap
 - **scenes**: Scene lifecycle, character participation, real-time features (basic implementation)
 - **characters**: Polymorphic character models (Character → WoDCharacter → MageCharacter), game system logic
 - **locations**: Hierarchical location management with ownership, NPC control, bulk operations
-- **items**: Polymorphic item management with single character ownership, soft delete, transfer tracking
-- **api**: Modular REST API with comprehensive error handling, security features, bulk operations
+- **items**: Polymorphic item management with single character ownership, soft delete, transfer tracking, complete REST API
+- **api**: Modular REST API with comprehensive error handling, security features, bulk operations, including campaigns, characters, locations, and items
 - **core**: Home page, utilities, mixins, management commands, health monitoring, source references
 
 #### Internal Structure
@@ -297,12 +297,34 @@ The Item model provides comprehensive equipment and treasure management with pol
 - **Database Efficiency**: Single table with polymorphic_ctype field for type identification
 - **Full Backward Compatibility**: All existing Item functionality preserved
 
+#### API Implementation
+- **REST Endpoints**: Complete CRUD operations implemented (Issue #55)
+  - `GET /api/items/`: List campaign items with advanced filtering, search, and pagination
+  - `POST /api/items/`: Create new items with campaign and character validation
+  - `GET /api/items/{id}/`: Retrieve item details with permission checking
+  - `PUT /api/items/{id}/`: Update items with ownership transfer support
+  - `DELETE /api/items/{id}/`: Soft delete items with audit tracking
+- **Serializers**: Two-tier architecture for comprehensive API responses
+  - `ItemSerializer`: Full response serialization with nested campaign, character, and user relationships
+  - `ItemCreateUpdateSerializer`: Request validation and model updates with campaign scoping
+- **Advanced Filtering**: Campaign-scoped filtering with multiple parameters
+  - Owner filtering (character-based or unowned items with `owner=null`)
+  - Creator filtering, quantity range validation, full-text search
+  - Soft-deleted item inclusion for restoration workflows
+- **Permission Integration**: Role-based access control with security features
+  - Campaign membership validation, creator privileges, and superuser access
+  - 404 responses instead of 403 to prevent information leakage
+  - Character ownership validation ensuring same-campaign requirements
+- **Polymorphic API Support**: Ready for future item subclasses
+  - `polymorphic_ctype` field in responses for type identification
+  - Serializer architecture supports inheritance without breaking changes
+
 #### Testing Coverage
-- **168 comprehensive tests** across 6 test files covering:
-  - Model validation and business logic
-  - Soft delete functionality and restoration
-  - Permission system edge cases
-  - Admin interface bulk operations
+- **227 comprehensive tests** across 7 test files covering:
+  - **59 API tests**: Endpoint validation, permissions, filtering, and security
+  - **168 model tests**: Model validation, soft delete, admin operations, and business logic
+  - Permission system edge cases and boundary condition testing
+  - Admin interface bulk operations with transaction safety
   - Mixin application and database field compatibility
   - **Polymorphic conversion validation** (33 tests in test_polymorphic_conversion.py)
   - **Single character ownership** (33 tests in test_character_ownership.py covering transfer functionality, possessions relationship, and migration compatibility)
@@ -416,7 +438,7 @@ ALWAYS use `make test` it will check all tests to avoid regressions and you will
 - ✅ User authentication and profile management
 - ✅ Theme system with 13+ themes
 - ✅ Base Character model with polymorphic inheritance
-- ✅ Item management with single character ownership
+- ✅ Item management with single character ownership and complete REST API
 - ✅ Location hierarchy with NPC ownership
 - ✅ Scene management (basic implementation)
 - ✅ Comprehensive admin interfaces

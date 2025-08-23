@@ -216,6 +216,13 @@ Location: `api/views/memberships/`
 - `member_views.py`: Individual member management
 - `bulk_views.py`: Bulk membership operations
 
+#### Item Views
+Location: `api/views/item_views.py`
+
+- `ItemListCreateAPIView`: Campaign-scoped item listing and creation with advanced filtering
+- `ItemDetailAPIView`: Item detail, update, and soft delete operations
+- `ItemPermissionMixin`: Standardized permission checking across item operations
+
 ### Serializer Architecture
 
 The serializer system provides consistent API responses with role-based field exposure.
@@ -1772,6 +1779,53 @@ The polymorphic conversion includes comprehensive test coverage:
 - ✅ **Test Coverage**: Comprehensive validation of polymorphic behavior
 - ✅ **Backward Compatibility**: All 135 existing tests passing unchanged
 - 🔄 **Future Development**: Ready for Item subclass implementation per game system requirements
+
+#### Item API Architecture
+
+**Location**: `api/views/item_views.py`, `api/serializers.py`, `api/urls/item_urls.py`
+
+The Item API provides comprehensive REST endpoints for equipment and treasure management with campaign-scoped access control:
+
+**API Implementation Status:**
+
+- ✅ **REST Endpoints**: Complete CRUD operations implemented
+  - `ItemListCreateAPIView`: GET /api/items/ (list + filter) and POST /api/items/ (create)
+  - `ItemDetailAPIView`: GET/PUT/DELETE /api/items/{id}/ (detail, update, soft delete)
+- ✅ **Serializers**: Two-tier serialization architecture
+  - `ItemSerializer`: Full response serialization with nested relationships
+  - `ItemCreateUpdateSerializer`: Request validation and model updates
+- ✅ **Permission Integration**: Campaign role-based access control
+  - OWNER/GM: Full access to all campaign items
+  - PLAYER: View all, create/edit/delete own items
+  - OBSERVER: View only access
+- ✅ **Advanced Filtering**: Campaign-scoped with multiple filter parameters
+  - Owner filtering (character-based or unowned items)
+  - Creator filtering (user-based)
+  - Quantity range filtering with validation
+  - Full-text search across name and description
+  - Soft-deleted item inclusion for restoration workflows
+- ✅ **Single Character Ownership**: API support for ownership transfer
+  - Transfer tracking with `last_transferred_at` timestamp
+  - Campaign validation ensuring owner belongs to same campaign
+  - Unowned item support with `owner=null` filtering
+- ✅ **Polymorphic Support**: API ready for future item subclasses
+  - `polymorphic_ctype` field in responses for type identification
+  - Serializer architecture supports inheritance
+- ✅ **Security Features**: Information leakage prevention
+  - 404 responses for non-members instead of 403
+  - Campaign membership validation on all endpoints
+  - Character ownership cross-campaign validation
+- ✅ **Soft Delete Integration**: Safe deletion with restoration capabilities
+  - Soft delete via DELETE endpoint
+  - `include_deleted` parameter for restoration workflows
+  - Permission-based visibility of deleted items
+
+**Test Coverage:**
+
+- ✅ **59 Comprehensive API Tests**: Full endpoint validation with edge cases
+- ✅ **Permission Testing**: Role-based access control validation
+- ✅ **Security Testing**: Information leakage and boundary condition testing
+- ✅ **Filter Testing**: All query parameter combinations and validation
 
 ## Frontend Integration
 
