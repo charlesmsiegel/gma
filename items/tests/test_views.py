@@ -425,7 +425,7 @@ class ItemDetailViewTest(TestCase):
         response = self.client.get(self.detail_url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Owner:")
+        self.assertContains(response, "Current Owner")
         self.assertContains(response, self.character.name)
 
     def test_detail_shows_unowned_item(self):
@@ -774,12 +774,12 @@ class ItemListViewTest(TestCase):
         """Test searching items by description."""
         self.client.login(username="owner", password="testpass123")
 
-        response = self.client.get(self.list_url, {"search": "magical"})
+        response = self.client.get(self.list_url, {"search": "forbidden"})
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response, "Ancient Tome"
-        )  # Contains "magical" in description
+        )  # Contains "forbidden" in description
         self.assertNotContains(response, "Health Potion")
 
     def test_list_view_filter_by_owner(self):
