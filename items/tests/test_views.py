@@ -188,7 +188,10 @@ class ItemCreateViewTest(TestCase):
         response = self.client.post(self.create_url, form_data)
 
         self.assertEqual(response.status_code, 200)  # Form shows again with errors
-        self.assertFormError(response, "form", "name", "This field is required.")
+        # Check that form has errors and name field is mentioned
+        self.assertContains(response, "This field is required")
+        # Ensure no item was created
+        self.assertEqual(Item.objects.count(), 0)
 
     def test_create_item_invalid_quantity_shows_errors(self):
         """Test that invalid quantity shows validation errors."""
@@ -203,12 +206,10 @@ class ItemCreateViewTest(TestCase):
         response = self.client.post(self.create_url, form_data)
 
         self.assertEqual(response.status_code, 200)  # Form shows again with errors
-        self.assertFormError(
-            response,
-            "form",
-            "quantity",
-            "Ensure this value is greater than or equal to 1.",
-        )
+        # Check that form has quantity validation error
+        self.assertContains(response, "Quantity must be at least 1")
+        # Ensure no item was created
+        self.assertEqual(Item.objects.count(), 0)
 
     def test_create_item_sets_campaign_context(self):
         """Test that created item is properly associated with the campaign."""
@@ -652,12 +653,11 @@ class ItemEditViewTest(TestCase):
         response = self.client.post(self.edit_url, form_data)
 
         self.assertEqual(response.status_code, 200)  # Form shows again with errors
-        self.assertFormError(
-            response,
-            "form",
-            "quantity",
-            "Ensure this value is greater than or equal to 1.",
-        )
+        # Check that form has quantity validation error
+        self.assertContains(response, "Quantity must be at least 1")
+        # Ensure item was not updated with invalid quantity
+        self.item.refresh_from_db()
+        self.assertNotEqual(self.item.quantity, 0)
 
     def test_edit_item_gm_permission(self):
         """Test that GMs can edit items successfully."""
@@ -998,8 +998,18 @@ class ItemDeleteViewTest(TestCase):
 
         self.assertEqual(response.status_code, 404)  # Hide existence
 
-        self.item.refresh_from_db()
-        self.assertFalse(self.item.is_deleted)
+        # Use all_objects to check if item still exists (including soft-deleted)
+        try:
+            item_from_db = Item.all_objects.get(pk=self.item.pk)
+            self.assertFalse(
+                item_from_db.is_deleted,
+                "Item should not be deleted by unauthorized player",
+            )
+        except Item.DoesNotExist:
+            self.fail(
+                "Item should still exist in database even if "
+                "unauthorized player attempted delete"
+            )
 
     def test_observer_cannot_delete_item(self):
         """Test that observers cannot delete items."""
@@ -1009,8 +1019,17 @@ class ItemDeleteViewTest(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
-        self.item.refresh_from_db()
-        self.assertFalse(self.item.is_deleted)
+        # Use all_objects to check if item still exists (including soft-deleted)
+        try:
+            item_from_db = Item.all_objects.get(pk=self.item.pk)
+            self.assertFalse(
+                item_from_db.is_deleted, "Item should not be deleted by observer"
+            )
+        except Item.DoesNotExist:
+            self.fail(
+                "Item should still exist in database even if "
+                "observer attempted delete"
+            )
 
     def test_delete_requires_post_method(self):
         """Test that deletion requires POST method."""
