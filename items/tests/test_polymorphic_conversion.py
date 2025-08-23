@@ -251,7 +251,7 @@ class PolymorphicQuerySetTest(TestCase):
         other_character = Character.objects.create(
             name="Other Character",
             campaign=self.campaign,  # Same campaign, different owner
-            owner=other_user,  # Different user
+            player_owner=other_user,  # Different user
             game_system="Test System",
         )
 
