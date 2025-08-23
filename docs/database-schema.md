@@ -1505,7 +1505,7 @@ WHERE c.id = :campaign_id;
 
 **Table**: `items_item`
 
-The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, character ownership, audit tracking, and polymorphic inheritance support for future item type extensibility.
+The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, single character ownership, audit tracking, and polymorphic inheritance support for future item type extensibility.
 
 ```sql
 CREATE TABLE items_item (
@@ -1517,6 +1517,10 @@ CREATE TABLE items_item (
 
     -- Polymorphic inheritance support
     polymorphic_ctype_id INTEGER NOT NULL REFERENCES django_content_type(id) ON DELETE CASCADE,
+
+    -- Single character ownership (Issue #183)
+    owner_id INTEGER REFERENCES characters_character(id) ON DELETE SET NULL,
+    last_transferred_at TIMESTAMP WITH TIME ZONE,
 
     -- User audit tracking
     created_by_id INTEGER REFERENCES auth_user(id) ON DELETE SET NULL,
@@ -1536,24 +1540,16 @@ CREATE TABLE items_item (
                (is_deleted = TRUE AND deleted_at IS NOT NULL AND deleted_by_id IS NOT NULL))
 );
 
--- Character ownership (many-to-many relationship)
-CREATE TABLE items_item_owners (
-    id SERIAL PRIMARY KEY,
-    item_id INTEGER NOT NULL REFERENCES items_item(id) ON DELETE CASCADE,
-    character_id INTEGER NOT NULL REFERENCES characters_character(id) ON DELETE CASCADE,
-    UNIQUE(item_id, character_id)
-);
-
 -- Performance indexes
 CREATE INDEX items_item_campaign_id_idx ON items_item (campaign_id);
 CREATE INDEX items_item_is_deleted_idx ON items_item (is_deleted);
+CREATE INDEX items_item_owner_id_idx ON items_item (owner_id);
 CREATE INDEX items_item_created_by_id_idx ON items_item (created_by_id);
 CREATE INDEX items_item_deleted_by_id_idx ON items_item (deleted_by_id);
 CREATE INDEX items_item_name_idx ON items_item (name);
 CREATE INDEX items_item_created_at_idx ON items_item (created_at);
 CREATE INDEX items_item_polymorphic_ctype_id_idx ON items_item (polymorphic_ctype_id);
-CREATE INDEX items_item_owners_item_id_idx ON items_item_owners (item_id);
-CREATE INDEX items_item_owners_character_id_idx ON items_item_owners (character_id);
+CREATE INDEX items_item_last_transferred_at_idx ON items_item (last_transferred_at);
 ```
 
 **Field Specifications:**
@@ -1567,6 +1563,12 @@ CREATE INDEX items_item_owners_character_id_idx ON items_item_owners (character_
 **Polymorphic Inheritance:**
 - `polymorphic_ctype_id`: Foreign key to django_content_type (INTEGER, required) - Identifies the actual item subclass type
 
+**Single Character Ownership (Issue #183):**
+- `owner_id`: Foreign key to characters_character (INTEGER, nullable) - Single character who owns this item (can be PC or NPC)
+- `last_transferred_at`: Transfer timestamp (TIMESTAMP, nullable) - When item ownership was last changed
+- **Related Name**: Character.possessions relationship for reverse access to owned items
+- **Deletion Behavior**: SET NULL on character deletion - item becomes unowned
+
 **Audit Tracking:**
 - `created_by_id`: Foreign key to auth_user (INTEGER, nullable) - Creator tracking (via AuditableMixin)
 - `modified_by_id`: Foreign key to auth_user (INTEGER, nullable) - Last modifier tracking (via AuditableMixin)
@@ -1578,19 +1580,16 @@ CREATE INDEX items_item_owners_character_id_idx ON items_item_owners (character_
 - `deleted_at`: Deletion timestamp (TIMESTAMP, nullable) - When item was deleted
 - `deleted_by_id`: Foreign key to auth_user (INTEGER, nullable) - Who deleted the item
 
-**Character Ownership:**
-- Many-to-many relationship through `items_item_owners` table
-- Supports multiple characters owning the same item
-- Cascade deletion when item or character is deleted
-
 **Business Rules:**
 
 1. **Quantity Validation**: Quantity must be at least 1
 2. **Soft Delete Consistency**: Deleted items must have deleted_at and deleted_by_id set
 3. **Campaign Isolation**: Items belong to specific campaigns and inherit campaign permissions
 4. **Audit Trail**: Creator and modifier information preserved via AuditableMixin even if user account is deleted (SET NULL)
-5. **Character Ownership**: Multiple characters can own items, useful for shared equipment
-6. **Polymorphic Type Tracking**: Each item has a content type reference identifying its actual subclass
+5. **Single Character Ownership**: Each item can be owned by exactly one character (PC or NPC) or remain unowned (NULL)
+6. **Transfer Tracking**: Ownership transfers are tracked with timestamps in last_transferred_at field
+7. **Safe Character Deletion**: When a character is deleted, their owned items become unowned (owner_id = NULL)
+8. **Polymorphic Type Tracking**: Each item has a content type reference identifying its actual subclass
 
 **Polymorphic Architecture:**
 
@@ -1609,11 +1608,15 @@ SELECT * FROM items_item
 WHERE campaign_id = :campaign_id AND is_deleted = FALSE
 ORDER BY name;
 
--- Items owned by a specific character
-SELECT i.* FROM items_item i
-JOIN items_item_owners io ON i.id = io.item_id
-WHERE io.character_id = :character_id AND i.is_deleted = FALSE
-ORDER BY i.name;
+-- Items owned by a specific character (single ownership)
+SELECT * FROM items_item
+WHERE owner_id = :character_id AND is_deleted = FALSE
+ORDER BY name;
+
+-- Unowned items in a campaign
+SELECT * FROM items_item
+WHERE campaign_id = :campaign_id AND owner_id IS NULL AND is_deleted = FALSE
+ORDER BY name;
 
 -- Soft-deleted items (for restoration)
 SELECT * FROM items_item
@@ -1632,13 +1635,28 @@ JOIN django_content_type ct ON i.polymorphic_ctype_id = ct.id
 WHERE i.campaign_id = :campaign_id AND i.is_deleted = FALSE
 ORDER BY ct.model, i.name;
 
--- Item ownership with character details
-SELECT i.name, i.quantity, c.name as character_name
+-- Item ownership with character details (single ownership)
+SELECT i.name, i.quantity, c.name as character_name, c.npc as is_npc,
+       i.last_transferred_at
 FROM items_item i
-JOIN items_item_owners io ON i.id = io.item_id
-JOIN characters_character c ON io.character_id = c.id
+LEFT JOIN characters_character c ON i.owner_id = c.id
 WHERE i.campaign_id = :campaign_id AND i.is_deleted = FALSE
-ORDER BY i.name, c.name;
+ORDER BY i.name;
+
+-- Items recently transferred
+SELECT i.name, c.name as new_owner, i.last_transferred_at
+FROM items_item i
+JOIN characters_character c ON i.owner_id = c.id
+WHERE i.campaign_id = :campaign_id
+  AND i.last_transferred_at IS NOT NULL
+  AND i.is_deleted = FALSE
+ORDER BY i.last_transferred_at DESC;
+
+-- Character possessions (using reverse relationship)
+SELECT i.name, i.quantity, i.last_transferred_at
+FROM items_item i
+WHERE i.owner_id = :character_id AND i.is_deleted = FALSE
+ORDER BY i.name;
 ```
 
 **Custom Manager Behavior:**
@@ -1648,6 +1666,23 @@ The Item model implements custom managers for different query patterns:
 - **ItemManager (default)**: Excludes soft-deleted items automatically
 - **AllItemManager**: Includes all items, including soft-deleted ones
 - **ItemQuerySet**: Provides filtering methods (active, deleted, for_campaign, owned_by_character)
+
+**Manager Usage Examples:**
+
+```python
+# Single character ownership queries
+character_items = Item.objects.owned_by_character(character)  # Single ownership
+unowned_items = Item.objects.filter(owner=None)  # Items without owner
+campaign_items = Item.objects.for_campaign(campaign)  # All campaign items
+
+# Transfer functionality
+item.transfer_to(new_character)  # Updates owner and last_transferred_at
+item.transfer_to(None)  # Makes item unowned
+
+# Character possessions relationship
+character.possessions.all()  # All items owned by character (replaces owned_items)
+character.possessions.count()  # Count of owned items
+```
 
 **Permission Integration:**
 

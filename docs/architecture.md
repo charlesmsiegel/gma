@@ -1551,9 +1551,9 @@ LocationForm (Base)
 
 #### Item Model Architecture
 
-**Location**: `items/models/__init__.py:22-248`
+**Location**: `items/models/__init__.py:107-284`
 
-The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, character ownership, advanced admin capabilities, and polymorphic inheritance support for future extensibility:
+The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, single character ownership, advanced admin capabilities, and polymorphic inheritance support for future extensibility:
 
 ```python
 class Item(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, PolymorphicModel):
@@ -1565,8 +1565,9 @@ class Item(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixi
     # User audit tracking
     created_by = ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="created_items")
 
-    # Character ownership (many-to-many)
-    owners = ManyToManyField("characters.Character", blank=True, related_name="owned_items")
+    # Single character ownership (Issue #183)
+    owner = ForeignKey("characters.Character", on_delete=models.SET_NULL, null=True, blank=True, related_name="possessions")
+    last_transferred_at = DateTimeField(null=True, blank=True, help_text="When this item was last transferred")
 
     # Soft delete functionality
     is_deleted = BooleanField(default=False)
@@ -1576,13 +1577,30 @@ class Item(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixi
 
 **Key Architectural Features:**
 
-1. **Soft Delete Pattern Implementation**
+1. **Single Character Ownership Architecture (Issue #183)**
+   - Converted from many-to-many `owners` field to single `owner` ForeignKey
+   - One item can be owned by exactly one character (PC or NPC) or remain unowned
+   - Transfer tracking with `last_transferred_at` timestamp field
+   - Related name changed from "owned_items" to "possessions" for semantic clarity
+   - Character relationship: `character.possessions.all()` for all items owned by character
+
+2. **Transfer Functionality**
+   ```python
+   def transfer_to(self, new_owner: Optional["Character"]) -> "Item":
+       """Transfer item to new owner with timestamp tracking."""
+       self.owner = new_owner
+       self.last_transferred_at = timezone.now()
+       self.save(update_fields=["owner", "last_transferred_at"])
+       return self  # Method chaining support
+   ```
+
+3. **Soft Delete Pattern Implementation**
    - Items are marked as deleted rather than physically removed
    - Maintains data integrity for campaign history
    - Allows for restoration of accidentally deleted items
    - Tracks who deleted items and when
 
-2. **Polymorphic Manager Architecture**
+4. **Polymorphic Manager Architecture**
    ```python
    class ItemQuerySet(PolymorphicQuerySet):
        """Custom QuerySet extending PolymorphicQuerySet with filtering methods."""
@@ -1590,6 +1608,8 @@ class Item(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixi
            return self.filter(is_deleted=False)
        def deleted(self):
            return self.filter(is_deleted=True)
+       def owned_by_character(self, character):
+           return self.filter(owner=character)
 
    class ItemManager(PolymorphicManager):
        def get_queryset(self):
@@ -1600,44 +1620,45 @@ class Item(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixi
            return ItemQuerySet(self.model, using=self._db)  # Includes deleted items
    ```
 
-3. **Custom QuerySet Methods**
+5. **Custom QuerySet Methods**
    - `active()`: Filter to non-deleted items
    - `deleted()`: Filter to soft-deleted items
    - `for_campaign()`: Campaign-specific filtering
-   - `owned_by_character()`: Character ownership filtering
+   - `owned_by_character(character)`: Single character ownership filtering
 
-4. **Permission System Integration**
+6. **Permission System Integration**
    - Role-based access control using campaign hierarchy
    - Creator privileges for item management
    - Superuser override capabilities
    - `can_be_deleted_by(user)` method for centralized permission checking
 
-5. **Business Logic Methods**
+7. **Business Logic Methods**
+   - `transfer_to(new_owner)`: Transfer item ownership with timestamp tracking and method chaining
    - `soft_delete(user)`: Performs soft deletion with permission validation
    - `restore(user)`: Restores soft-deleted items with permission validation
    - `clean()`: Model-level validation for name and quantity
 
 **Admin Interface Architecture:**
 
-The ItemAdmin class provides comprehensive management capabilities:
+The ItemAdmin class provides comprehensive management capabilities with single ownership support:
 
 ```python
 @admin.register(Item)
 class ItemAdmin(admin.ModelAdmin):
-    # 6 bulk operations
+    # 6 bulk operations adapted for single ownership
     actions = [
         "soft_delete_selected",
         "restore_selected",
         "update_quantity",
-        "assign_ownership",
-        "clear_ownership",
+        "assign_ownership",      # Now assigns single owner
+        "clear_ownership",       # Sets owner to None
         "transfer_campaign",
     ]
 
-    # Organized fieldsets
+    # Organized fieldsets for single ownership
     fieldsets = [
         ("Basic Information", {"fields": ("name", "description", "campaign", "quantity")}),
-        ("Ownership", {"fields": ("owners",), "classes": ("collapse",)}),
+        ("Ownership", {"fields": ("owner", "last_transferred_at"), "classes": ("collapse",)}),
         ("Audit Information", {"fields": ("created_by", "created_at", "updated_at"), "classes": ("collapse",)}),
         ("Deletion Status", {"fields": ("is_deleted", "deleted_at", "deleted_by"), "classes": ("collapse",)}),
     ]
@@ -1647,27 +1668,30 @@ class ItemAdmin(admin.ModelAdmin):
 - Soft delete with permission checking and transaction safety
 - Bulk restoration of deleted items
 - Quantity updates across multiple items
-- Ownership assignment/clearing for multiple items
+- Single ownership assignment/clearing for multiple items
 - Campaign transfer capabilities
 - Comprehensive error handling and user feedback
 
 **Testing Architecture:**
 
-The Item model includes 135+ comprehensive tests across 4 test files:
+The Item model includes 168 comprehensive tests across 6 test files:
 
 1. **Model Tests** (`test_models.py`): Core validation, soft delete functionality, permission system
 2. **Admin Tests** (`test_admin.py`): Admin interface capabilities, bulk operations, permission checks
 3. **Bulk Operations Tests** (`test_bulk_operations.py`): Transaction safety, error handling, edge cases
 4. **Mixin Application Tests** (`test_mixin_application.py`): Inheritance validation, field compatibility
 5. **Polymorphic Conversion Tests** (`test_polymorphic_conversion.py`): Polymorphic behavior, manager compatibility, inheritance validation
+6. **Character Ownership Tests** (`test_character_ownership.py`): Single ownership functionality, transfer methods, possessions relationship (33 tests)
 
 **Database Performance Considerations:**
 
 - Indexes on `campaign` foreign key for filtering
 - Index on `is_deleted` for manager query optimization
-- Many-to-many relationship optimized for character ownership queries
+- Single `owner` ForeignKey relationship optimized for character ownership queries
+- `last_transferred_at` field for transfer history tracking
 - Soft delete pattern maintains referential integrity
 - Polymorphic field (`polymorphic_ctype`) supports inheritance chains
+- Character.possessions reverse relationship provides efficient access to owned items
 
 #### Polymorphic Inheritance Architecture (Issue #182)
 

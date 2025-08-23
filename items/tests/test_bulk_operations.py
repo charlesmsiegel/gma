@@ -418,7 +418,8 @@ class BulkOwnershipOperationsTest(ItemBulkOperationsTestCase):
         """Test executing bulk ownership clearing."""
         # Assign ownership first
         for item in self.items[:3]:
-            item.owners.add(self.character1)
+            item.owner = self.character1
+            item.save()
 
         selected_items = self.items[:3]
         item_ids = [item.id for item in selected_items]
@@ -439,7 +440,7 @@ class BulkOwnershipOperationsTest(ItemBulkOperationsTestCase):
         # Verify ownership was cleared
         for item in selected_items:
             item.refresh_from_db()
-            self.assertEqual(item.owners.count(), 0)
+            self.assertIsNone(item.owner)
 
 
 class BulkCampaignTransferTest(ItemBulkOperationsTestCase):

@@ -1661,6 +1661,126 @@ class PolymorphicModelTests(TestCase):
 - Test migration with realistic data volumes
 - Provide rollback procedures for safety
 
+#### Item Character Ownership Patterns (Issue #183)
+
+The Item model supports single character ownership with transfer functionality and timestamp tracking. This section covers development patterns for working with the ownership system.
+
+**Ownership Architecture:**
+
+```python
+# Single character ownership (converted from many-to-many)
+class Item(PolymorphicModel):
+    owner = ForeignKey("characters.Character", on_delete=SET_NULL, null=True, blank=True, related_name="possessions")
+    last_transferred_at = DateTimeField(null=True, blank=True)
+
+    def transfer_to(self, new_owner: Optional["Character"]) -> "Item":
+        """Transfer item to new owner with timestamp tracking."""
+        self.owner = new_owner
+        self.last_transferred_at = timezone.now()
+        self.save(update_fields=["owner", "last_transferred_at"])
+        return self  # Method chaining support
+
+# Character reverse relationship
+class Character(PolymorphicModel):
+    # Automatic reverse relationship via related_name="possessions"
+    # character.possessions.all() returns all items owned by character
+```
+
+**Common Usage Patterns:**
+
+```python
+# Direct ownership assignment
+item.owner = character
+item.save()
+
+# Transfer with timestamp tracking (preferred method)
+item.transfer_to(character)  # Updates owner and last_transferred_at
+item.transfer_to(None)       # Makes item unowned
+
+# Query patterns
+character_items = Item.objects.owned_by_character(character)
+unowned_items = Item.objects.filter(owner=None)
+character_possessions = character.possessions.all()  # New relationship name
+
+# Bulk operations
+character.possessions.update(owner=new_character)  # Transfer all possessions
+Item.objects.filter(owner=old_character).update(owner=None)  # Clear ownership
+```
+
+**Testing Patterns:**
+
+```python
+class TestItemOwnership(TestCase):
+    def setUp(self):
+        self.campaign = Campaign.objects.create(name="Test", owner=self.user)
+        self.character = Character.objects.create(name="Hero", campaign=self.campaign)
+        self.item = Item.objects.create(name="Sword", campaign=self.campaign)
+
+    def test_item_transfer_functionality(self):
+        """Test transfer_to method with timestamp tracking."""
+        # Initial state
+        self.assertIsNone(self.item.owner)
+        self.assertIsNone(self.item.last_transferred_at)
+
+        # Transfer to character
+        result = self.item.transfer_to(self.character)
+
+        # Verify transfer
+        self.assertEqual(self.item.owner, self.character)
+        self.assertIsNotNone(self.item.last_transferred_at)
+        self.assertEqual(result, self.item)  # Method chaining
+
+    def test_character_possessions_relationship(self):
+        """Test character.possessions reverse relationship."""
+        self.item.transfer_to(self.character)
+
+        # Test relationship
+        possessions = self.character.possessions.all()
+        self.assertIn(self.item, possessions)
+        self.assertEqual(self.character.possessions.count(), 1)
+
+    def test_ownership_queries(self):
+        """Test manager methods for ownership filtering."""
+        self.item.transfer_to(self.character)
+
+        # Test filtering methods
+        owned_items = Item.objects.owned_by_character(self.character)
+        self.assertIn(self.item, owned_items)
+
+        unowned_items = Item.objects.filter(owner=None)
+        self.assertNotIn(self.item, unowned_items)
+```
+
+**Migration Strategy (Issue #183):**
+
+The ownership conversion used a 3-step migration process:
+
+1. **Add new fields**: Add `owner` ForeignKey and `last_transferred_at` fields
+2. **Migrate data**: Convert many-to-many ownership to single ownership
+3. **Remove old field**: Remove the `owners` many-to-many field
+
+```python
+# Migration data conversion logic
+def migrate_ownership_data(apps, schema_editor):
+    Item = apps.get_model('items', 'Item')
+
+    for item in Item.objects.prefetch_related('owners').all():
+        owners = list(item.owners.all())
+        if owners:
+            # Use first owner for single ownership
+            item.owner = owners[0]
+            item.last_transferred_at = timezone.now()
+            item.save(update_fields=['owner', 'last_transferred_at'])
+```
+
+**Best Practices:**
+
+1. **Use transfer_to() method**: Provides timestamp tracking and method chaining
+2. **Handle unowned items**: Items can be unowned (owner=None) - design for this case
+3. **Character deletion safety**: Uses SET_NULL so items become unowned when character deleted
+4. **Test ownership edge cases**: Unowned items, character deletion, bulk transfers
+5. **Use possessions relationship**: More semantic than generic "owned_items"
+
 ## Testing Practices
 
 ### Test Organization

@@ -216,7 +216,7 @@ The project follows a domain-driven monolithic architecture with these Django ap
 - **scenes**: Scene lifecycle, character participation, real-time chat, dice rolling
 - **characters**: Polymorphic character models, game system logic, character sheets
 - **locations**: Hierarchical campaign locations
-- **items**: Equipment and treasure management with soft delete functionality, character ownership, and comprehensive admin interface
+- **items**: Equipment and treasure management with soft delete functionality, single character ownership with transfer tracking, and comprehensive admin interface
 - **api**: Modular DRF views, serializers, standardized error handling
 - **core**: Front page, utilities, base templates, management commands, source references (Book model)
 
@@ -251,10 +251,19 @@ The Item model provides comprehensive equipment and treasure management with pol
 #### Core Features
 - **Basic Information**: Name (via NamedModelMixin), description, campaign association
 - **Quantity Tracking**: Positive integer validation with minimum value of 1
-- **Character Ownership**: Many-to-many relationship with Character model
+- **Single Character Ownership**: ForeignKey relationship with Character model (Issue #183)
+- **Transfer Tracking**: last_transferred_at timestamp field with transfer_to() method
+- **Character Relationship**: Character.possessions reverse relationship for owned items
 - **Audit Tracking**: created_by and modified_by via AuditableMixin for full user accountability
 - **Soft Delete Pattern**: is_deleted, deleted_at, deleted_by fields for safe data management
 - **Polymorphic Inheritance**: PolymorphicModel base enables future Item subclasses (Issue #182)
+
+#### Single Character Ownership (Issue #183)
+- **One Owner Per Item**: Each item can be owned by exactly one character (PC or NPC) or remain unowned
+- **Transfer Method**: transfer_to(new_owner) with timestamp tracking and method chaining
+- **Related Name**: Changed from "owned_items" to "possessions" for semantic clarity
+- **Safe Deletion**: Items become unowned (owner=NULL) when character is deleted
+- **Migration Strategy**: 3-step process preserving data during conversion from many-to-many
 
 #### Polymorphic Manager Architecture
 - **ItemManager (PolymorphicManager)**: Default manager excluding soft-deleted items with polymorphic support
@@ -268,10 +277,11 @@ The Item model provides comprehensive equipment and treasure management with pol
 - **can_be_deleted_by()**: Centralized permission checking method
 
 #### Admin Interface Capabilities
-- **6 Bulk Operations**: Soft delete, restore, quantity update, ownership assignment/clearing, campaign transfer
-- **Comprehensive Filtering**: By campaign, creator, quantity, creation date, deletion status
-- **Organized Layout**: Fieldsets for basic info, ownership, audit trail, and deletion status
+- **6 Bulk Operations**: Soft delete, restore, quantity update, single ownership assignment/clearing, campaign transfer
+- **Comprehensive Filtering**: By campaign, creator, quantity, creation date, deletion status, ownership
+- **Organized Layout**: Fieldsets for basic info, single ownership with transfer timestamp, audit trail, and deletion status
 - **Permission Checking**: Staff-only access with proper error handling
+- **Transfer History**: Displays last_transferred_at timestamp in ownership fieldset
 
 #### Polymorphic Inheritance (Issue #182)
 - **Future Extensibility**: Ready for game-specific item subclasses (WeaponItem, ArmorItem, ConsumableItem)
@@ -281,13 +291,14 @@ The Item model provides comprehensive equipment and treasure management with pol
 - **Full Backward Compatibility**: All existing Item functionality preserved
 
 #### Testing Coverage
-- **135+ comprehensive tests** across 4 test files covering:
+- **168 comprehensive tests** across 6 test files covering:
   - Model validation and business logic
   - Soft delete functionality and restoration
   - Permission system edge cases
   - Admin interface bulk operations
   - Mixin application and database field compatibility
   - **Polymorphic conversion validation** (33 tests in test_polymorphic_conversion.py)
+  - **Single character ownership** (33 tests in test_character_ownership.py covering transfer functionality, possessions relationship, and migration compatibility)
 
 ### Real-Time Architecture
 
