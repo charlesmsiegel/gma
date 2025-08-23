@@ -215,10 +215,7 @@ class ItemCharacterIntegrationTest(TestCase):
 
         character_detail_url = reverse(
             "characters:detail",
-            kwargs={
-                "campaign_slug": self.campaign.slug,
-                "character_id": self.character.id,
-            },
+            kwargs={"pk": self.character.id},
         )
         response = self.client.get(character_detail_url)
 
@@ -238,10 +235,7 @@ class ItemCharacterIntegrationTest(TestCase):
 
         character_detail_url = reverse(
             "characters:detail",
-            kwargs={
-                "campaign_slug": self.campaign.slug,
-                "character_id": self.character.id,
-            },
+            kwargs={"pk": self.character.id},
         )
         response = self.client.get(character_detail_url)
 
@@ -257,10 +251,7 @@ class ItemCharacterIntegrationTest(TestCase):
 
         character_detail_url = reverse(
             "characters:detail",
-            kwargs={
-                "campaign_slug": self.campaign.slug,
-                "character_id": self.character.id,
-            },
+            kwargs={"pk": self.character.id},
         )
         response = self.client.get(character_detail_url)
 

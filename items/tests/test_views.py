@@ -76,11 +76,10 @@ class ItemCreateViewTest(TestCase):
         )
 
     def test_create_view_requires_authentication(self):
-        """Test that unauthenticated users are redirected to login."""
+        """Test that unauthenticated users get 404 (hiding campaign existence)."""
         response = self.client.get(self.create_url)
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/login/", response.url)
+        self.assertEqual(response.status_code, 404)
 
     def test_owner_can_access_create_form(self):
         """Test that campaign owners can access the item creation form."""
@@ -923,6 +922,9 @@ class ItemDeleteViewTest(TestCase):
         )
 
         # Create memberships
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.owner, role="OWNER"
+        )
         CampaignMembership.objects.create(
             campaign=self.campaign, user=self.gm, role="GM"
         )
