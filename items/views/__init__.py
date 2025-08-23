@@ -305,15 +305,8 @@ class ItemDeleteView(CampaignItemsMixin, DeleteView):
     pk_url_kwarg = "item_id"
 
     def dispatch(self, request, *args, **kwargs):
-        """Check permissions before allowing access."""
-        response = super().dispatch(request, *args, **kwargs)
-
-        # Check if user can delete this specific item
-        item = self.get_object()
-        if not item.can_be_deleted_by(request.user):
-            raise Http404("Page not found")
-
-        return response
+        """Check basic campaign access before allowing access."""
+        return super().dispatch(request, *args, **kwargs)
 
     def get_object(self, queryset=None):
         """Get item ensuring it belongs to the campaign."""
@@ -337,11 +330,19 @@ class ItemDeleteView(CampaignItemsMixin, DeleteView):
             messages.success(
                 request, f"Item '{self.object.name}' deleted successfully."
             )
-        except (PermissionError, ValueError) as e:
+        except PermissionError:
+            # Hide the resource from unauthorized users
+            raise Http404("Page not found")
+        except ValueError as e:
             messages.error(request, str(e))
             return redirect(self.get_success_url())
 
         return redirect(self.get_success_url())
+
+    def form_valid(self, form):
+        """Override to prevent Django's default deletion."""
+        # Don't call super() as it would perform hard delete
+        return self.delete(self.request)
 
     def get_success_url(self):
         """Redirect to item list after deletion."""
