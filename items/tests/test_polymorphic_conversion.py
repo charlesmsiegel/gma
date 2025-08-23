@@ -79,7 +79,8 @@ class PolymorphicModelConversionTest(TestCase):
             "modified_by",  # from AuditableMixin
             "campaign",
             "quantity",
-            "owners",  # Item-specific fields
+            "owner",  # Item-specific fields (changed from owners to owner)
+            "last_transferred_at",  # Transfer tracking
             "is_deleted",
             "deleted_at",
             "deleted_by",  # soft delete fields
@@ -89,7 +90,7 @@ class PolymorphicModelConversionTest(TestCase):
         actual_fields = {
             field.name
             for field in Item._meta.get_fields()
-            if not field.many_to_many or field.name == "owners"
+            if not field.many_to_many or field.name == "owner"
         }
 
         self.assertTrue(
@@ -258,12 +259,14 @@ class PolymorphicQuerySetTest(TestCase):
         item1 = Item.objects.create(
             name="Item 1", campaign=self.campaign, created_by=self.user
         )
-        item1.owners.add(self.character)
+        item1.owner = self.character
+        item1.save()
 
         item2 = Item.objects.create(
             name="Item 2", campaign=self.campaign, created_by=self.user
         )
-        item2.owners.add(other_character)
+        item2.owner = other_character
+        item2.save()
 
         # Test character ownership filter
         character_items = Item.objects.owned_by_character(self.character)
@@ -445,13 +448,14 @@ class DataPreservationTest(TransactionTestCase):
             quantity=5,
             created_by=self.user,
         )
-        item.owners.add(self.character)
+        item.owner = self.character
+        item.save()
 
         # Verify all functionality still works
         self.assertEqual(item.name, "Existing Item")
         self.assertEqual(item.quantity, 5)
         self.assertEqual(item.campaign, self.campaign)
-        self.assertIn(self.character, item.owners.all())
+        self.assertEqual(item.owner, self.character)
         self.assertEqual(item.created_by, self.user)
 
         # Test soft delete functionality
@@ -704,12 +708,13 @@ class BackwardCompatibilityTest(TestCase):
             name="M2M Test Item", campaign=self.campaign, created_by=self.user
         )
 
-        # Test adding relationship
-        item.owners.add(character)
-        self.assertIn(character, item.owners.all())
+        # Test adding relationship (now single ownership)
+        item.owner = character
+        item.save()
+        self.assertEqual(item.owner, character)
 
-        # Test reverse relationship
-        self.assertIn(item, character.owned_items.all())
+        # Test reverse relationship (now possessions)
+        self.assertIn(item, character.possessions.all())
 
     def test_model_serialization_compatibility(self):
         """Test that model serialization still works (for fixtures, etc.)."""

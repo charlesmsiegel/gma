@@ -48,7 +48,7 @@ class ItemQuerySet(PolymorphicQuerySet):
         """Filter items owned by a specific character."""
         if character is None:
             return self.none()
-        return self.filter(owners=character)
+        return self.filter(owner=character)
 
 
 class ItemManager(PolymorphicManager):
@@ -68,7 +68,7 @@ class ItemManager(PolymorphicManager):
         """Get items owned by a specific character."""
         if character is None:
             return self.none()
-        return self.get_queryset().filter(owners=character)
+        return self.get_queryset().filter(owner=character)
 
     def active(self) -> ItemQuerySet:
         """Filter to only active (non-deleted) items."""
@@ -87,6 +87,22 @@ class AllItemManager(PolymorphicManager):
         """Return the QuerySet including all items."""
         return ItemQuerySet(self.model, using=self._db)
 
+    def active(self) -> ItemQuerySet:
+        """Filter to only active (non-deleted) items."""
+        return self.get_queryset().active()
+
+    def deleted(self) -> ItemQuerySet:
+        """Filter to only soft-deleted items."""
+        return self.get_queryset().deleted()
+
+    def for_campaign(self, campaign):
+        """Get items for a specific campaign."""
+        return self.get_queryset().for_campaign(campaign)
+
+    def owned_by_character(self, character):
+        """Get items owned by a specific character."""
+        return self.get_queryset().owned_by_character(character)
+
 
 class Item(
     TimestampedMixin,
@@ -102,9 +118,10 @@ class Item(
     - Basic item information (name via NamedModelMixin, description)
     - Campaign association
     - Quantity tracking
-    - Character ownership (many-to-many)
+    - Single character ownership
     - User audit tracking (created_by, modified_by via AuditableMixin)
     - Timestamps (created_at, updated_at via TimestampedMixin)
+    - Transfer tracking with timestamps
     - Soft delete functionality
     """
 
@@ -119,11 +136,16 @@ class Item(
         validators=[MinValueValidator(1)],
         help_text="Quantity of this item",
     )
-    owners: models.ManyToManyField = models.ManyToManyField(
+    owner: models.ForeignKey = models.ForeignKey(
         "characters.Character",
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        related_name="owned_items",
-        help_text="Characters who own this item",
+        related_name="possessions",
+        help_text="Character who owns this item",
+    )
+    last_transferred_at: models.DateTimeField = models.DateTimeField(
+        null=True, blank=True, help_text="When this item was last transferred"
     )
 
     # Soft delete fields
@@ -244,4 +266,18 @@ class Item(
         # Use proper model save to ensure signals and validation are triggered
         self.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
 
+        return self
+
+    def transfer_to(self, new_owner: Optional["Character"]) -> "Item":
+        """Transfer this item to a new owner.
+
+        Args:
+            new_owner: Character to transfer to, or None for unowned
+
+        Returns:
+            Item instance for method chaining
+        """
+        self.owner = new_owner
+        self.last_transferred_at = timezone.now()
+        self.save(update_fields=["owner", "last_transferred_at"])
         return self

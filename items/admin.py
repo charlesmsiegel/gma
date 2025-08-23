@@ -18,6 +18,7 @@ class ItemAdmin(admin.ModelAdmin):
         "name",
         "campaign",
         "quantity",
+        "owner",
         "created_by",
         "created_at",
         "is_deleted",
@@ -26,6 +27,7 @@ class ItemAdmin(admin.ModelAdmin):
     # List filtering
     list_filter = [
         "campaign",
+        "owner",
         "created_by",
         "quantity",
         "created_at",
@@ -39,7 +41,7 @@ class ItemAdmin(admin.ModelAdmin):
     ordering = ["name"]
 
     # Read-only fields
-    readonly_fields = ["created_at", "updated_at", "created_by"]
+    readonly_fields = ["created_at", "updated_at", "created_by", "last_transferred_at"]
 
     # Fieldsets for organized form layout
     fieldsets = [
@@ -47,7 +49,10 @@ class ItemAdmin(admin.ModelAdmin):
             "Basic Information",
             {"fields": ("name", "description", "campaign", "quantity")},
         ),
-        ("Ownership", {"fields": ("owners",), "classes": ("collapse",)}),
+        (
+            "Ownership",
+            {"fields": ("owner", "last_transferred_at"), "classes": ("collapse",)},
+        ),
         (
             "Audit Information",
             {
@@ -79,7 +84,7 @@ class ItemAdmin(admin.ModelAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related("campaign", "created_by", "deleted_by")
+            .select_related("campaign", "created_by", "deleted_by", "owner")
         )
 
     def save_model(self, request, obj, form, change):
@@ -307,7 +312,8 @@ class ItemAdmin(admin.ModelAdmin):
                         or user_role in ["OWNER", "GM"]
                         or item.created_by_id == request.user.id
                     ):
-                        item.owners.clear()
+                        item.owner = None
+                        item.save(update_fields=["owner"])
                         cleared_count += 1
                     else:
                         error_count += 1

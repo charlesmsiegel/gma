@@ -312,56 +312,69 @@ class ItemCharacterOwnershipTest(TestCase):
             created_by=self.owner,
         )
 
-    def test_item_no_owners_initially(self):
-        """Test that item has no owners initially."""
-        self.assertEqual(self.item.owners.count(), 0)
-        self.assertNotIn(self.character1, self.item.owners.all())
-        self.assertNotIn(self.character2, self.item.owners.all())
+    def test_item_no_owner_initially(self):
+        """Test that item has no owner initially."""
+        self.assertIsNone(self.item.owner)
+        self.assertNotIn(self.item, self.character1.possessions.all())
+        self.assertNotIn(self.item, self.character2.possessions.all())
 
     def test_add_single_owner(self):
         """Test adding a single character as owner."""
-        self.item.owners.add(self.character1)
+        self.item.owner = self.character1
+        self.item.save()
 
-        self.assertEqual(self.item.owners.count(), 1)
-        self.assertIn(self.character1, self.item.owners.all())
-        self.assertNotIn(self.character2, self.item.owners.all())
+        self.assertEqual(self.item.owner, self.character1)
+        # Verify through possessions relationship
+        self.assertIn(self.item, self.character1.possessions.all())
+        self.assertNotIn(self.item, self.character2.possessions.all())
 
-    def test_add_multiple_owners(self):
-        """Test adding multiple characters as owners."""
-        self.item.owners.add(self.character1, self.character2)
+    def test_transfer_ownership(self):
+        """Test transferring ownership between characters."""
+        # Start with character1
+        self.item.owner = self.character1
+        self.item.save()
+        self.assertEqual(self.item.owner, self.character1)
 
-        self.assertEqual(self.item.owners.count(), 2)
-        self.assertIn(self.character1, self.item.owners.all())
-        self.assertIn(self.character2, self.item.owners.all())
+        # Transfer to character2
+        self.item.owner = self.character2
+        self.item.save()
+        self.assertEqual(self.item.owner, self.character2)
+        self.assertIn(self.item, self.character2.possessions.all())
+        self.assertNotIn(self.item, self.character1.possessions.all())
 
-    def test_remove_owner(self):
-        """Test removing a character from owners."""
-        self.item.owners.add(self.character1, self.character2)
-        self.assertEqual(self.item.owners.count(), 2)
+    def test_transfer_to_method(self):
+        """Test transfer_to method functionality."""
+        self.item.owner = self.character1
+        self.item.save()
+        self.assertEqual(self.item.owner, self.character1)
 
-        self.item.owners.remove(self.character1)
+        result = self.item.transfer_to(self.character2)
 
-        self.assertEqual(self.item.owners.count(), 1)
-        self.assertNotIn(self.character1, self.item.owners.all())
-        self.assertIn(self.character2, self.item.owners.all())
+        self.assertEqual(result, self.item)  # Method chaining
+        self.assertEqual(self.item.owner, self.character2)
+        self.assertIsNotNone(self.item.last_transferred_at)
 
-    def test_clear_all_owners(self):
-        """Test clearing all owners."""
-        self.item.owners.add(self.character1, self.character2)
-        self.assertEqual(self.item.owners.count(), 2)
+    def test_clear_ownership(self):
+        """Test clearing ownership."""
+        self.item.owner = self.character1
+        self.item.save()
+        self.assertEqual(self.item.owner, self.character1)
 
-        self.item.owners.clear()
+        self.item.owner = None
+        self.item.save()
 
-        self.assertEqual(self.item.owners.count(), 0)
+        self.assertIsNone(self.item.owner)
+        self.assertNotIn(self.item, self.character1.possessions.all())
 
-    def test_character_owned_items_reverse_relation(self):
-        """Test that characters can access their owned items."""
-        self.item.owners.add(self.character1)
+    def test_character_possessions_reverse_relation(self):
+        """Test that characters can access their possessions."""
+        self.item.owner = self.character1
+        self.item.save()
 
-        # Test reverse relation
-        self.assertEqual(self.character1.owned_items.count(), 1)
-        self.assertIn(self.item, self.character1.owned_items.all())
-        self.assertEqual(self.character2.owned_items.count(), 0)
+        # Test reverse relation (possessions instead of owned_items)
+        self.assertEqual(self.character1.possessions.count(), 1)
+        self.assertIn(self.item, self.character1.possessions.all())
+        self.assertEqual(self.character2.possessions.count(), 0)
 
     def test_multiple_items_same_character(self):
         """Test that one character can own multiple items."""
@@ -371,12 +384,14 @@ class ItemCharacterOwnershipTest(TestCase):
             created_by=self.owner,
         )
 
-        self.item.owners.add(self.character1)
-        item2.owners.add(self.character1)
+        self.item.owner = self.character1
+        self.item.save()
+        item2.owner = self.character1
+        item2.save()
 
-        self.assertEqual(self.character1.owned_items.count(), 2)
-        self.assertIn(self.item, self.character1.owned_items.all())
-        self.assertIn(item2, self.character1.owned_items.all())
+        self.assertEqual(self.character1.possessions.count(), 2)
+        self.assertIn(self.item, self.character1.possessions.all())
+        self.assertIn(item2, self.character1.possessions.all())
 
 
 class ItemCampaignCascadeTest(TestCase):
@@ -542,16 +557,17 @@ class ItemIntegrationTest(TestCase):
             created_by=self.owner,
         )
 
-        item.owners.add(self.character)
+        item.owner = self.character
+        item.save()
 
         # Verify the item was created correctly
         self.assertEqual(item.name, "Character's Sword")
-        self.assertEqual(item.owners.count(), 1)
-        self.assertIn(self.character, item.owners.all())
+        self.assertEqual(item.owner, self.character)
+        self.assertIn(item, self.character.possessions.all())
 
         # Verify reverse relationship
-        self.assertEqual(self.character.owned_items.count(), 1)
-        self.assertIn(item, self.character.owned_items.all())
+        self.assertEqual(self.character.possessions.count(), 1)
+        self.assertIn(item, self.character.possessions.all())
 
     def test_transfer_item_ownership(self):
         """Test transferring item ownership between characters."""
@@ -569,19 +585,20 @@ class ItemIntegrationTest(TestCase):
         )
 
         # Initially owned by character1
-        item.owners.add(self.character)
-        self.assertIn(self.character, item.owners.all())
-        self.assertEqual(self.character.owned_items.count(), 1)
+        item.owner = self.character
+        item.save()
+        self.assertEqual(item.owner, self.character)
+        self.assertEqual(self.character.possessions.count(), 1)
 
         # Transfer to character2
-        item.owners.remove(self.character)
-        item.owners.add(character2)
+        item.owner = character2
+        item.save()
 
         # Verify transfer
-        self.assertNotIn(self.character, item.owners.all())
-        self.assertIn(character2, item.owners.all())
-        self.assertEqual(self.character.owned_items.count(), 0)
-        self.assertEqual(character2.owned_items.count(), 1)
+        self.assertEqual(item.owner, character2)
+        self.assertIn(item, character2.possessions.all())
+        self.assertEqual(self.character.possessions.count(), 0)
+        self.assertEqual(character2.possessions.count(), 1)
 
     def test_character_deletion_clears_item_ownership(self):
         """Test that deleting a character clears item ownership."""
@@ -591,8 +608,9 @@ class ItemIntegrationTest(TestCase):
             created_by=self.owner,
         )
 
-        item.owners.add(self.character)
-        self.assertEqual(item.owners.count(), 1)
+        item.owner = self.character
+        item.save()
+        self.assertEqual(item.owner, self.character)
 
         character_id = self.character.id
         self.character.delete()
@@ -600,8 +618,8 @@ class ItemIntegrationTest(TestCase):
         # Refresh item from database
         item.refresh_from_db()
 
-        # Character should no longer own the item
-        self.assertEqual(item.owners.count(), 0)
+        # Character should no longer own the item (SET_NULL behavior)
+        self.assertIsNone(item.owner)
 
         # Verify character is gone
         self.assertFalse(Character.objects.filter(id=character_id).exists())
@@ -692,8 +710,9 @@ class ItemEdgeCasesTest(TestCase):
         # This should work from a database perspective but might be
         # prevented by business logic. For now, we test that it's possible
         # at the model level
-        item.owners.add(character_in_different_campaign)
-        self.assertIn(character_in_different_campaign, item.owners.all())
+        item.owner = character_in_different_campaign
+        item.save()
+        self.assertEqual(item.owner, character_in_different_campaign)
 
         # Note: Business logic to prevent cross-campaign ownership would be
         # in forms/views

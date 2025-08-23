@@ -115,6 +115,7 @@ class ItemAdminRegistrationTest(ItemAdminTestCase):
             "name",
             "campaign",
             "quantity",
+            "owner",
             "created_by",
             "created_at",
             "is_deleted",
@@ -124,6 +125,7 @@ class ItemAdminRegistrationTest(ItemAdminTestCase):
         # Test list_filter
         expected_list_filter = [
             "campaign",
+            "owner",
             "created_by",
             "quantity",
             "created_at",
@@ -145,7 +147,10 @@ class ItemAdminRegistrationTest(ItemAdminTestCase):
                 "Basic Information",
                 {"fields": ("name", "description", "campaign", "quantity")},
             ),
-            ("Ownership", {"fields": ("owners",), "classes": ("collapse",)}),
+            (
+                "Ownership",
+                {"fields": ("owner", "last_transferred_at"), "classes": ("collapse",)},
+            ),
             (
                 "Audit Information",
                 {
@@ -165,7 +170,12 @@ class ItemAdminRegistrationTest(ItemAdminTestCase):
 
     def test_item_admin_readonly_fields(self):
         """Test readonly fields configuration."""
-        expected_readonly = ["created_at", "updated_at", "created_by"]
+        expected_readonly = [
+            "created_at",
+            "updated_at",
+            "created_by",
+            "last_transferred_at",
+        ]
         self.assertEqual(list(self.admin.readonly_fields), expected_readonly)
 
 
@@ -418,7 +428,7 @@ class ItemAdminFormTest(ItemAdminTestCase):
         form = form_class()
 
         # Test that key fields are present
-        expected_fields = ["name", "description", "campaign", "quantity", "owners"]
+        expected_fields = ["name", "description", "campaign", "quantity", "owner"]
         for field in expected_fields:
             self.assertIn(field, form.fields)
 
