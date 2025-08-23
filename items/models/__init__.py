@@ -134,17 +134,25 @@ class Item(
         ordering = ["name"]
         verbose_name = "Item"
         verbose_name_plural = "Items"
+        indexes = [
+            models.Index(
+                fields=["campaign", "is_deleted"], name="items_campaign_deleted_idx"
+            ),  # Common filter combo
+            models.Index(
+                fields=["created_by", "is_deleted"], name="items_creator_deleted_idx"
+            ),  # Admin filtering
+            models.Index(
+                fields=["is_deleted", "created_at"], name="items_deleted_created_idx"
+            ),  # Soft delete queries by date
+        ]
 
     def clean(self) -> None:
         """Validate the item data."""
         super().clean()
 
-        # Validate quantity is positive
-        if self.quantity is not None and self.quantity <= 0:
-            raise ValidationError("Quantity must be a positive number.")
-
+        # Note: Quantity validation is handled by MinValueValidator(1)
+        # Note: Name validation is handled by NamedModelMixin
         # Note: created_by can be None after user deletion, so we don't require it
-        # Note: name validation is handled by NamedModelMixin
 
     def can_be_deleted_by(self, user: Optional["AbstractUser"]) -> bool:
         """Check if a user can delete this item.
@@ -217,9 +225,7 @@ class Item(
         self.is_deleted = False
         self.deleted_at = None
         self.deleted_by = None
-        # Use direct SQL update since default manager excludes soft-deleted items
-        self.__class__.all_objects.filter(pk=self.pk).update(
-            is_deleted=False, deleted_at=None, deleted_by=None
-        )
+        # Use proper model save to ensure signals and validation are triggered
+        self.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
 
         return self
