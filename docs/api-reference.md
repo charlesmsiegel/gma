@@ -1271,100 +1271,397 @@ pc_properties = owned_locations.filter(owned_by__npc=False)
 
 ### Item Management System
 
-The Item API provides comprehensive equipment and treasure management capabilities for campaigns, featuring soft delete functionality, character ownership, and administrative controls.
+The Item API provides comprehensive equipment and treasure management capabilities for campaigns, featuring soft delete functionality, single character ownership, polymorphic type support, and role-based permissions.
 
-#### Model Implementation Status
+#### Implementation Status
 
 **Database & Models:**
-- ✅ **Item Model**: Fully implemented with comprehensive features
+- ✅ **Item Model**: Fully implemented with polymorphic inheritance support
 - ✅ **Soft Delete Pattern**: Complete implementation with audit trails
-- ✅ **Character Ownership**: Many-to-many relationship support
+- ✅ **Single Character Ownership**: Character ownership with transfer tracking
 - ✅ **Permission System**: Role-based access control integration
 - ✅ **Admin Interface**: 6 bulk operations with comprehensive management
 
+**API Implementation:**
+- ✅ **REST Endpoints**: Complete CRUD operations implemented
+- ✅ **Serializers**: ItemSerializer and ItemCreateUpdateSerializer
+- ✅ **URL Configuration**: Full URL routing configured
+- ✅ **Permission Integration**: Role-based access control enforced
+
 **Testing Coverage:**
-- ✅ **102 Comprehensive Tests**: Model validation, permissions, admin operations
-- ✅ **Soft Delete Testing**: Creation, deletion, restoration workflows
-- ✅ **Permission Testing**: Role-based access control validation
-- ✅ **Bulk Operations**: Transaction safety and error handling
+- ✅ **59 Comprehensive API Tests**: Endpoint validation, permissions, filtering
+- ✅ **Additional Model Tests**: 109+ tests for model validation, soft delete, admin operations
+- ✅ **Security Testing**: Permission boundaries and information leakage prevention
+- ✅ **Polymorphic Support**: Ready for future item type extensions
 
-**API Endpoints Status:**
-- 🔄 **REST Endpoints**: Not yet implemented
-- 🔄 **Serializers**: Pending implementation
-- 🔄 **URL Configuration**: Pending implementation
+### Authentication
 
-#### Planned API Endpoints
+All Item API endpoints require authentication. Users must be campaign members to access items.
 
-The following endpoints will be implemented in future iterations:
+### Item CRUD Operations
 
-**Item CRUD Operations:**
-```
-GET    /api/items/                    # List campaign items (filtered)
-POST   /api/items/                    # Create new item
-GET    /api/items/{id}/               # Retrieve specific item
-PUT    /api/items/{id}/               # Update item (full)
-PATCH  /api/items/{id}/               # Update item (partial)
-DELETE /api/items/{id}/               # Soft delete item
-```
+#### List Items
 
-**Item Management:**
-```
-POST   /api/items/{id}/restore/       # Restore soft-deleted item
-PATCH  /api/items/{id}/ownership/     # Manage character ownership
-GET    /api/items/deleted/            # List deleted items (restore view)
-```
+**GET** `/api/items/`
 
-**Bulk Operations:**
-```
-POST   /api/items/bulk-delete/        # Bulk soft delete
-POST   /api/items/bulk-restore/       # Bulk restore
-POST   /api/items/bulk-update/        # Bulk quantity/ownership updates
-POST   /api/items/bulk-transfer/      # Bulk campaign transfer
+List items in a campaign with advanced filtering and search capabilities.
+
+**Required Query Parameters:**
+- `campaign_id` (integer): Campaign ID to filter items by
+
+**Optional Query Parameters:**
+- `owner` (integer|"null"): Filter by character owner ID, or "null" for unowned items
+- `created_by` (integer): Filter by user creator ID
+- `quantity_min` (integer): Minimum quantity filter (≥1)
+- `quantity_max` (integer): Maximum quantity filter (≥1)
+- `q` (string): Search in item name and description
+- `include_deleted` (boolean): Include soft-deleted items (default: false)
+- `ordering` (string): Sort by `name`, `-name`, `quantity`, `-quantity`, `created_at`, `-created_at`, `updated_at`, `-updated_at`, `id`, `-id`
+- `page` (integer): Page number for pagination
+- `page_size` (integer): Items per page (max 100, default 20)
+
+**Request Example:**
+```bash
+GET /api/items/?campaign_id=1&owner=5&q=sword&quantity_min=1&ordering=name
 ```
 
-#### Planned Data Models
-
-**Item Response Structure:**
+**Success Response (200):**
 ```json
 {
-  "id": 1,
-  "name": "Longsword +1",
-  "description": "A finely crafted magical longsword",
+  "count": 25,
+  "next": "http://localhost:8080/api/items/?campaign_id=1&page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "name": "Enchanted Longsword",
+      "description": "A finely crafted magical longsword with frost enchantment",
+      "quantity": 1,
+      "campaign": {
+        "id": 1,
+        "name": "Adventures in Mystara"
+      },
+      "owner": {
+        "id": 5,
+        "name": "Sir Gareth",
+        "character_type": "PlayerCharacter"
+      },
+      "created_by": {
+        "id": 2,
+        "username": "gamemaster",
+        "display_name": "Game Master"
+      },
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z",
+      "last_transferred_at": "2024-01-15T11:45:00Z",
+      "is_deleted": false,
+      "deleted_at": null,
+      "deleted_by": null,
+      "polymorphic_ctype": {
+        "app_label": "items",
+        "model": "item"
+      }
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Missing or invalid campaign_id
+- **404 Not Found**: Campaign doesn't exist or user lacks access
+- **401 Unauthorized**: Authentication required
+
+#### Create Item
+
+**POST** `/api/items/`
+
+Create a new item in a campaign.
+
+**Request Body:**
+```json
+{
+  "name": "Health Potion",
+  "description": "Restores 2d8+2 hit points when consumed",
+  "quantity": 5,
+  "campaign": 1,
+  "owner": 3
+}
+```
+
+**Required Fields:**
+- `name` (string): Item name
+- `quantity` (integer): Quantity (≥1)
+- `campaign` (integer): Campaign ID
+
+**Optional Fields:**
+- `description` (string): Item description
+- `owner` (integer|null): Character owner ID (must be in same campaign)
+
+**Success Response (201):**
+```json
+{
+  "id": 15,
+  "name": "Health Potion",
+  "description": "Restores 2d8+2 hit points when consumed",
+  "quantity": 5,
   "campaign": {
     "id": 1,
     "name": "Adventures in Mystara"
   },
-  "quantity": 1,
-  "owners": [
-    {
-      "id": 1,
-      "name": "Sir Gareth",
-      "type": "PlayerCharacter"
-    }
-  ],
+  "owner": {
+    "id": 3,
+    "name": "Lyra the Healer",
+    "character_type": "PlayerCharacter"
+  },
   "created_by": {
     "id": 1,
-    "username": "gamemaster"
+    "username": "player1",
+    "display_name": "Alice"
   },
-  "created_at": "2024-01-01T12:00:00Z",
-  "updated_at": "2024-01-01T12:00:00Z",
+  "created_at": "2024-01-15T12:00:00Z",
+  "updated_at": "2024-01-15T12:00:00Z",
+  "last_transferred_at": null,
   "is_deleted": false,
   "deleted_at": null,
-  "deleted_by": null
+  "deleted_by": null,
+  "polymorphic_ctype": {
+    "app_label": "items",
+    "model": "item"
+  }
 }
 ```
 
-**Permission Integration:**
-- Items inherit campaign permission structure
-- Role-based access: OWNER > GM > PLAYER > OBSERVER
-- Creator privileges maintained across role changes
-- Soft delete permissions prevent data loss
+**Error Responses:**
+- **400 Bad Request**: Validation errors in request data
+- **403 Forbidden**: Observers cannot create items
+- **404 Not Found**: Campaign doesn't exist or user lacks access
+- **401 Unauthorized**: Authentication required
 
-**Future Implementation Notes:**
-- API endpoints will follow existing patterns from Location and Character APIs
-- Bulk operations will use transaction safety with detailed error reporting
-- Character ownership API will support adding/removing multiple characters
-- Campaign transfer will validate target campaign permissions
+#### Get Item Details
+
+**GET** `/api/items/{id}/`
+
+Retrieve detailed information about a specific item.
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "name": "Enchanted Longsword",
+  "description": "A finely crafted magical longsword with frost enchantment",
+  "quantity": 1,
+  "campaign": {
+    "id": 1,
+    "name": "Adventures in Mystara"
+  },
+  "owner": {
+    "id": 5,
+    "name": "Sir Gareth",
+    "character_type": "PlayerCharacter"
+  },
+  "created_by": {
+    "id": 2,
+    "username": "gamemaster",
+    "display_name": "Game Master"
+  },
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z",
+  "last_transferred_at": "2024-01-15T11:45:00Z",
+  "is_deleted": false,
+  "deleted_at": null,
+  "deleted_by": null,
+  "polymorphic_ctype": {
+    "app_label": "items",
+    "model": "item"
+  }
+}
+```
+
+**Error Responses:**
+- **404 Not Found**: Item doesn't exist or user lacks access
+- **401 Unauthorized**: Authentication required
+
+#### Update Item
+
+**PUT** `/api/items/{id}/`
+
+Update an existing item (full update).
+
+**Request Body:**
+```json
+{
+  "name": "Enchanted Longsword +2",
+  "description": "A masterwork magical longsword with enhanced frost enchantment",
+  "quantity": 1,
+  "owner": 7
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "name": "Enchanted Longsword +2",
+  "description": "A masterwork magical longsword with enhanced frost enchantment",
+  "quantity": 1,
+  "campaign": {
+    "id": 1,
+    "name": "Adventures in Mystara"
+  },
+  "owner": {
+    "id": 7,
+    "name": "Dame Victoria",
+    "character_type": "PlayerCharacter"
+  },
+  "created_by": {
+    "id": 2,
+    "username": "gamemaster",
+    "display_name": "Game Master"
+  },
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T14:20:00Z",
+  "last_transferred_at": "2024-01-15T14:20:00Z",
+  "is_deleted": false,
+  "deleted_at": null,
+  "deleted_by": null,
+  "polymorphic_ctype": {
+    "app_label": "items",
+    "model": "item"
+  }
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Validation errors in request data
+- **404 Not Found**: Item doesn't exist, is deleted, or user lacks access
+- **401 Unauthorized**: Authentication required
+
+#### Delete Item (Soft Delete)
+
+**DELETE** `/api/items/{id}/`
+
+Soft delete an item. The item is marked as deleted but remains in the database for potential restoration.
+
+**Success Response (204):**
+No content returned.
+
+**Error Responses:**
+- **404 Not Found**: Item doesn't exist, is already deleted, or user lacks access
+- **401 Unauthorized**: Authentication required
+
+### Permission System
+
+Items inherit the campaign permission structure with role-based access control:
+
+#### Permission Hierarchy
+- **OWNER**: Full access to all campaign items
+- **GM**: Full access to all campaign items
+- **PLAYER**: Can view all items, create/edit/delete own items
+- **OBSERVER**: Can view all items, cannot create/edit/delete
+
+#### Permission Rules
+- Users can only access items in campaigns they are members of
+- Item creators can always delete their own items regardless of role
+- Superusers have full access to all items
+- Soft-deleted items are only visible to users with delete permissions
+
+#### Security Features
+- Returns 404 instead of 403 to hide resource existence from non-members
+- Campaign membership validation prevents unauthorized access
+- Character ownership validation ensures owners belong to the same campaign
+
+### Single Character Ownership
+
+The Item API supports single character ownership with transfer tracking:
+
+#### Ownership Features
+- **One Owner**: Each item can be owned by exactly one character or remain unowned
+- **Transfer Tracking**: `last_transferred_at` timestamp updated when ownership changes
+- **Campaign Scoping**: Character owners must belong to the same campaign as the item
+- **Safe Deletion**: Items become unowned when their owner character is deleted
+
+#### Ownership Management
+```json
+// Transfer ownership
+{
+  "owner": 5  // Character ID in same campaign
+}
+
+// Remove ownership
+{
+  "owner": null
+}
+
+// Query unowned items
+GET /api/items/?campaign_id=1&owner=null
+```
+
+### Polymorphic Type Support
+
+The Item API is designed for extensibility with polymorphic inheritance:
+
+#### Current Implementation
+- All items use the base `Item` model
+- `polymorphic_ctype` field indicates the model type
+- Ready for future specialization into item subtypes
+
+#### Future Extensions
+The API will support specialized item types:
+- `WeaponItem`: Combat statistics and properties
+- `ArmorItem`: Protection values and restrictions
+- `ConsumableItem`: Usage limits and effects
+- `MagicItem`: Magical properties and requirements
+
+#### Polymorphic Response
+```json
+{
+  "polymorphic_ctype": {
+    "app_label": "items",
+    "model": "item"
+  }
+}
+```
+
+### Common Use Cases
+
+#### Campaign Inventory Management
+```bash
+# List all campaign items
+GET /api/items/?campaign_id=1
+
+# Search for weapons
+GET /api/items/?campaign_id=1&q=sword
+
+# Find items owned by specific character
+GET /api/items/?campaign_id=1&owner=5
+```
+
+#### Item Filtering and Search
+```bash
+# Find high-value items (quantity-based filtering)
+GET /api/items/?campaign_id=1&quantity_min=5
+
+# Search with pagination
+GET /api/items/?campaign_id=1&page=2&page_size=50
+
+# Include deleted items (for restoration)
+GET /api/items/?campaign_id=1&include_deleted=true
+```
+
+#### Character Equipment Management
+```bash
+# Transfer item to character
+PUT /api/items/15/
+{
+  "owner": 7
+}
+
+# Remove item from character
+PUT /api/items/15/
+{
+  "owner": null
+}
+```
 
 ## Source Reference API
 

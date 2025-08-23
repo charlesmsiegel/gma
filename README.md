@@ -7,7 +7,7 @@
 [![Django](https://img.shields.io/badge/django-5.2.4-green.svg)](https://djangoproject.com)
 [![Code Style](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
 
-A modern, web-based tabletop RPG campaign management system designed for World of Darkness games, with a focus on Mage: the Ascension for the MVP release.
+A modern, web-based tabletop RPG campaign management system designed for World of Darkness games. Features comprehensive character management, hierarchical locations, item tracking, and campaign organization with accessibility-first design.
 
 ## 🎯 Project Overview
 
@@ -15,14 +15,15 @@ GMA is a comprehensive campaign management platform that bridges the gap between
 
 ### Key Features
 
-- **🏛️ Campaign Management**: Create and organize multiple campaigns with hierarchical permission systems
-- **👥 Player Management**: Sophisticated invitation system with role-based access control (Owner → GM → Player → Observer)
-- **🎭 Character System**: Polymorphic character models supporting multiple game systems through inheritance
-- **💬 Real-time Communication**: WebSocket-powered scene chat for immersive gameplay sessions
-- **🎲 Dice Rolling System**: Integrated dice mechanics specific to World of Darkness systems
-- **📱 Progressive Web App**: Mobile-responsive design with offline capabilities
-- **🔒 Secure Authentication**: Enterprise-grade security with comprehensive permission systems
-- **🚀 API-First Design**: Complete REST API with WebSocket support for real-time features
+- **🏛️ Campaign Management**: Full campaign lifecycle with settings, membership, and invitation system
+- **👥 Player Management**: Role-based permissions (Owner → GM → Player → Observer) with secure invitation workflow
+- **🎭 Character System**: Polymorphic models supporting World of Darkness inheritance (Character → WoDCharacter → MageCharacter)
+- **📦 Item Management**: Single character ownership with transfer tracking and soft delete functionality
+- **🏘️ Location Hierarchy**: Tree-based campaign locations with NPC ownership and bulk admin operations
+- **🎨 Theme System**: 13+ themes including accessibility options with WCAG 2.1 AA compliance
+- **💬 Real-time Features**: WebSocket infrastructure for scene management (basic implementation)
+- **🔒 Enterprise Security**: Secure authentication, CSRF protection, permission-based API access
+- **🚀 API-First Design**: Complete REST API with modular views and comprehensive error handling
 
 ### Technology Stack
 
@@ -36,25 +37,26 @@ GMA is a comprehensive campaign management platform that bridges the gap between
 
 **Frontend:**
 
-- **React with TypeScript** for enhanced user interactions
-- **Progressive Web App** architecture for mobile and offline support
-- **WebSocket integration** for real-time collaborative features
+- **Django Templates** with Bootstrap 5 for responsive design
+- **Modern JavaScript ES6+** with accessibility features and enhanced error handling
+- **CSS Linting** with Stylelint for code quality
+- **WCAG 2.1 AA Compliance** with screen reader support and keyboard navigation
 
 **Development Environment:**
 
 - **Conda** for consistent environment management
 - **Python 3.11** with comprehensive type checking
-- **Node.js 20** for modern frontend development
+- **Node.js tooling** for CSS linting and frontend development tools
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - **Python 3.11** (managed via Conda)
-- **Node.js 20**
 - **PostgreSQL 16**
 - **Redis 7.2**
 - **Git**
+- **Node.js** (optional, for CSS linting tools)
 
 ### Installation
 
@@ -73,12 +75,11 @@ GMA is a comprehensive campaign management platform that bridges the gap between
    conda activate gma
    ```
 
-3. **Install frontend dependencies:**
+3. **Install development tooling (optional):**
 
    ```bash
-   cd frontend
+   # Install CSS linting tools
    npm install
-   cd ..
    ```
 
 4. **Initialize the database:**
@@ -100,16 +101,21 @@ GMA is a comprehensive campaign management platform that bridges the gap between
    - **Admin Interface**: <http://localhost:8080/admin/>
    - **API Documentation**: <http://localhost:8080/api/schema/swagger-ui/>
 
-### Alternative Development Setup
-
-For granular control over services:
+### Development Commands
 
 ```bash
-# Start only Django backend with services
-make runserver-django
+# Run all tests
+make test
 
-# Start only React frontend (in separate terminal)
-make start-frontend
+# Run tests with coverage
+make test-coverage
+
+# Code formatting and linting
+make lint-css              # CSS linting with automatic fixes
+isort --profile black .    # Sort imports
+black .                    # Format Python code
+flake8 .                   # Python linting
+mypy .                     # Type checking
 
 # Stop all services
 make stop-all
@@ -133,14 +139,14 @@ Comprehensive documentation is available in the `docs/` directory:
 The application follows a domain-driven monolithic architecture with clear separation of concerns:
 
 ```
-├── api/           # REST API views, serializers, WebSocket routing
-├── campaigns/     # Campaign creation, game system selection, membership
-├── scenes/        # Scene lifecycle, character participation, real-time chat
-├── characters/    # Polymorphic character models and game system logic
-├── users/         # Authentication, profiles, campaign role management
-├── locations/     # Hierarchical campaign locations
-├── items/         # Equipment and treasure management
-└── core/          # Front page, utilities, base templates
+├── api/           # Modular REST API with security features and bulk operations
+├── campaigns/     # Campaign management with settings, membership, invitations
+├── scenes/        # Scene management with basic real-time infrastructure
+├── characters/    # Polymorphic WoD character models with inheritance
+├── users/         # Authentication, profiles, theme system
+├── locations/     # Hierarchical locations with NPC ownership
+├── items/         # Item management with single character ownership
+└── core/          # Utilities, mixins, health monitoring, source references
 ```
 
 ### Service Layer Pattern
@@ -152,24 +158,49 @@ Each Django app implements a clean service layer architecture:
 - **Views**: Request handling and response formatting
 - **Serializers**: API data transformation
 
-### Character Model Hierarchy
+### Polymorphic Model Architecture
 
-The system uses django-polymorphic for flexible character inheritance:
+The system uses django-polymorphic for flexible inheritance across multiple domains:
 
+**Character Hierarchy:**
 ```python
-Character (base)
-└── WoDCharacter
-    └── MageCharacter
+Character (base, polymorphic)
+└── WoDCharacter (willpower)
+    └── MageCharacter (arete, quintessence, paradox)
+```
+
+**Item System:**
+```python
+Item (base, polymorphic) - Ready for future game-specific items
+├── WeaponItem (future)
+├── ArmorItem (future)
+└── ConsumableItem (future)
+```
+
+**Location System:**
+```python
+Location (base, polymorphic) - Hierarchical with NPC ownership
+└── [Game-specific location types - future]
 ```
 
 This design enables support for multiple game systems while maintaining type safety and query efficiency.
 
-### Real-Time Architecture
+### Current Implementation Status
 
-- **Character-based scene architecture** for organized gameplay sessions
-- **Single WebSocket connection per player** for efficient resource usage
-- **Dynamic channel subscriptions** for multiple simultaneous scenes
-- **Django Channels routing** for scalable WebSocket message handling
+**✅ Completed Core Features:**
+- Full campaign management with membership and settings
+- Polymorphic character system (Character → WoD → Mage)
+- Item management with single character ownership and transfer tracking
+- Hierarchical location system with NPC ownership
+- Theme system with 13+ themes and accessibility compliance
+- Comprehensive admin interfaces with bulk operations
+- REST API with security features and standardized error handling
+- WCAG 2.1 AA accessibility implementation
+
+**🚧 In Progress:**
+- Real-time scene features (WebSocket infrastructure ready)
+- Advanced character sheet functionality
+- Dice rolling system integration
 
 ## 🧪 Development Workflow
 
@@ -204,52 +235,67 @@ bandit -r . -f json
 
 # Template formatting
 djlint --reformat templates/
+
+# CSS linting
+make lint-css
 ```
 
 ### Development Phases
 
-- **✅ Phase 1**: Generic Campaign Infrastructure (Current)
-  - Campaign creation and management
-  - Scene creation with chat functionality
-  - Base character model setup
+- **✅ Phase 1**: Generic Campaign Infrastructure (COMPLETED)
+  - ✅ Campaign creation, management, and settings
+  - ✅ User authentication with theme system
+  - ✅ Polymorphic character model foundation
+  - ✅ Item and location management systems
+  - ✅ Admin interfaces and bulk operations
+  - ✅ Comprehensive REST API
+  - ✅ Accessibility compliance (WCAG 2.1 AA)
 
-- **🔄 Phase 2**: World of Darkness Foundation
-  - WoD character base class implementation
-  - WoD-specific dice rolling system
-  - Game system selection framework
+- **🚧 Phase 2**: World of Darkness Foundation (IN PROGRESS)
+  - ✅ WoD character base class with willpower
+  - ✅ MageCharacter with arete, quintessence, paradox
+  - 🚧 WoD-specific dice rolling system
+  - 🚧 Enhanced real-time scene features
+  - 🚧 Game system validation framework
 
-- **📋 Phase 3**: Mage Implementation
+- **📋 Phase 3**: Mage Implementation (PLANNED)
   - Complete Mage: the Ascension character sheets
-  - Sphere magic mechanics
+  - Sphere magic mechanics and rote management
   - Character advancement workflows
+  - Advanced scene management
 
-- **🚀 Phase 4**: Polish & Production
+- **🚀 Phase 4**: Polish & Production (PLANNED)
   - Scene closure workflows
   - Performance optimization
   - Production deployment automation
+  - Advanced real-time collaborative features
 
 ## 🔌 API Features
 
 ### REST API Capabilities
 
-- **Flat URL patterns** with query parameter filtering: `/api/scenes/?campaign_id={id}`
-- **Comprehensive CRUD operations** for all major entities
-- **Permission-based access control** integrated at the API level
-- **Automatic API documentation** with drf-spectacular
+- **Modular API Structure**: Organized views by domain (campaigns, characters, locations, items)
+- **Comprehensive CRUD Operations**: Full lifecycle management for all entities
+- **Bulk Operations**: Efficient batch processing for admin tasks
+- **Advanced Filtering**: Query parameter filtering with security validation
+- **Standardized Responses**: Consistent error handling and success messages
+- **Permission Integration**: Role-based access control at API level
 
-### WebSocket Support
+### Security Features
 
-- **Real-time scene chat** for collaborative gameplay
-- **Live character updates** across connected clients
-- **Dynamic room management** based on scene participation
-- **Message persistence** with full chat history
+- **Authentication Protection**: Secure login/logout with error message standardization
+- **CSRF Token Handling**: Automatic token management for all form submissions
+- **Permission Hierarchy**: Owner → GM → Player → Observer role enforcement
+- **Input Validation**: Comprehensive field validation with sanitization
+- **Error Information Control**: Security-focused error responses prevent data leakage
+- **Rate Limiting Ready**: Production-ready rate limiting infrastructure
 
-### Authentication & Security
+### WebSocket Infrastructure
 
-- **Secure user registration and login** with comprehensive error handling
-- **Role-based permissions** (Owner → GM → Player → Observer)
-- **CSRF protection** for all form submissions
-- **Rate limiting ready** for production deployment
+- **Real-time Foundation**: Django Channels routing for WebSocket connections
+- **Scene Management**: Basic infrastructure for real-time scene updates
+- **Connection Handling**: Health monitoring and connection management
+- **Future Expansion**: Ready for advanced collaborative features
 
 ## 🤝 Contributing
 
@@ -287,10 +333,12 @@ This project is currently in active development. Please contact the maintainers 
 
 ## 🙏 Acknowledgments
 
-- Built with [Django](https://djangoproject.com/) and [React](https://reactjs.org/)
+- Built with [Django](https://djangoproject.com/) and [Bootstrap](https://getbootstrap.com/)
 - WebSocket support powered by [Django Channels](https://channels.readthedocs.io/)
-- Character inheritance implemented with [django-polymorphic](https://django-polymorphic.readthedocs.io/)
-- Development tooling includes [Black](https://black.readthedocs.io/), [mypy](https://mypy.readthedocs.io/), and [pytest](https://pytest.org/)
+- Polymorphic models implemented with [django-polymorphic](https://django-polymorphic.readthedocs.io/)
+- State management with [django-fsm-2](https://github.com/viewflow/django-fsm)
+- Development tooling includes [Black](https://black.readthedocs.io/), [mypy](https://mypy.readthedocs.io/), [flake8](https://flake8.pycqa.org/), and [Stylelint](https://stylelint.io/)
+- Accessibility compliance following [WCAG 2.1 AA](https://www.w3.org/WAI/WCAG21/Understanding/) guidelines
 
 ---
 

@@ -4,18 +4,18 @@ This document provides a comprehensive list of all active project files with the
 
 ## Root Configuration Files
 
-- `.deepsource.toml` - DeepSource static analysis configuration for code quality monitoring
-- `.flake8` - Python code linting configuration with style and error checking rules
-- `.pre-commit-config.yaml` - Git pre-commit hooks configuration for automated code quality checks
 - `CLAUDE.md` - Project instructions and development guidelines for Claude Code AI assistant
+- `COMPREHENSIVE_PLAN.md` - Comprehensive project planning and feature implementation roadmap
 - `codecov.yml` - Code coverage reporting configuration for continuous integration
-- `DESIGN_DOCUMENT.md` - High-level system architecture and design decisions documentation
 - `environment.yml` - Conda environment specification with all Python dependencies
+- `FILES.md` - This comprehensive project file structure documentation
 - `Makefile` - Development automation commands for testing, building, and deployment
 - `manage.py` - Django's main command-line utility for administrative tasks
+- `package.json` - Node.js package configuration for frontend development tooling
+- `PHASE_1_ISSUES_ORDER.md` - Phase 1 development issues and implementation order
 - `pyproject.toml` - Python project metadata and build system configuration
 - `README.md` - Project overview, installation instructions, and basic usage guide
-- `TEST_ANALYSIS_CAMPAIGN_MEMBERSHIP.md` - Analysis document for campaign membership functionality testing
+- `.stylelintrc.json` - Stylelint configuration for CSS code quality and standards
 
 ## Django Project Configuration
 
@@ -50,7 +50,15 @@ This document provides a comprehensive list of all active project files with the
 - `api/tests/__init__.py` - Test package initialization for API test modules
 - `api/tests/test_auth_api.py` - Authentication API endpoint tests including login and registration
 - `api/tests/test_auth_integration.py` - Integration tests for authentication workflow and edge cases
-- `api/tests/test_character_api.py` - Character management API endpoint tests with polymorphic support
+- `api/tests/test_character_api_base.py` - Base character API functionality tests
+- `api/tests/test_character_api_crud.py` - Character CRUD operations API tests
+- `api/tests/test_character_api_list.py` - Character listing and filtering API tests
+- `api/tests/test_character_api_specialized.py` - Specialized character API tests with polymorphic support
+- `api/tests/test_location_api_base.py` - Base location API functionality tests
+- `api/tests/test_location_api_bulk.py` - Bulk location operations API tests
+- `api/tests/test_location_api_crud.py` - Location CRUD operations API tests
+- `api/tests/test_location_api_filtering.py` - Location filtering and search API tests
+- `api/tests/test_location_api_hierarchy.py` - Location hierarchy management API tests
 - `api/tests/test_error_handling.py` - Error response format and security leak prevention tests
 - `api/tests/test_frontend_integration_patterns.py` - Tests ensuring API compatibility with React frontend
 - `api/tests/test_security.py` - Security vulnerability tests including XSS and injection prevention
@@ -62,6 +70,7 @@ This document provides a comprehensive list of all active project files with the
 - `api/urls/campaign_urls.py` - Campaign management URL patterns for CRUD operations
 - `api/urls/character_urls.py` - Character management URL patterns with polymorphic support
 - `api/urls/invitation_urls.py` - Campaign invitation URL patterns for membership management
+- `api/urls/location_urls.py` - Location management URL patterns for CRUD and hierarchy operations
 - `api/urls/notification_urls.py` - Real-time notification URL patterns for user alerts
 - `api/urls/profile_urls.py` - User profile management URL patterns for account settings
 
@@ -72,6 +81,12 @@ This document provides a comprehensive list of all active project files with the
 - `api/views/character_views.py` - Character CRUD operations with polymorphic model support
 - `api/views/notification_views.py` - Real-time notification management and delivery views
 - `api/views/profile_views.py` - User profile editing and theme management views
+
+##### Location Views
+
+- `api/views/locations/__init__.py` - Location-related views package initialization
+- `api/views/locations/bulk_views.py` - Bulk location operations for hierarchy management
+- `api/views/locations/crud_views.py` - Location CRUD operations with hierarchy support
 
 ##### Campaign Views
 
@@ -163,8 +178,13 @@ This document provides a comprehensive list of all active project files with the
 #### Character Tests
 
 - `characters/tests/__init__.py` - Test package initialization for character test modules
-- `characters/tests/test_forms.py` - Character form validation and submission tests
+- `characters/tests/test_character_create_forms.py` - Character creation form validation and submission tests
+- `characters/tests/test_character_delete_forms.py` - Character deletion form and confirmation tests
+- `characters/tests/test_character_edit_forms.py` - Character editing form validation tests
+- `characters/tests/test_fsm_basic.py` - Character finite state machine functionality tests
+- `characters/tests/test_mixin_application.py` - Character model mixin application tests
 - `characters/tests/test_models.py` - Character model tests with polymorphic inheritance validation
+- `characters/tests/test_owned_locations.py` - Character location ownership functionality tests
 - `characters/tests/test_views.py` - Character view tests including CRUD operations and permissions
 
 #### Character URLs and Views
@@ -195,12 +215,27 @@ This document provides a comprehensive list of all active project files with the
 
 - `core/models/__init__.py` - Core model package initialization
 - `core/models/health_check.py` - Health check logging model for system monitoring
+- `core/models/mixins.py` - Reusable model mixins for common functionality across all apps
+- `core/models/sources.py` - Source reference models for book and supplement tracking
 
 #### Core Tests
 
 - `core/tests/__init__.py` - Test package initialization for core test modules
+- `core/tests/README_migration_strategy.md` - Documentation for migration testing strategy
+- `core/tests/test_book_model.py` - Book model functionality and validation tests
 - `core/tests/test_dev_management.py` - Development management command tests
+- `core/tests/test_django_fsm_installation.py` - Django FSM state machine integration tests
 - `core/tests/test_health_check.py` - Health check functionality and logging tests
+- `core/tests/test_migration_strategy.py` - Database migration safety and rollback tests
+- `core/tests/test_mixin_cross_model_consistency.py` - Cross-model mixin consistency tests
+- `core/tests/test_mixin_functionality_preservation.py` - Mixin functionality preservation tests
+- `core/tests/test_mixin_migration_compatibility.py` - Mixin migration compatibility tests
+- `core/tests/test_mixin_migration_simple.py` - Simple mixin migration tests
+- `core/tests/test_mixins.py` - Core mixin functionality tests
+- `core/tests/test_source_reference_database.py` - Source reference database integration tests
+- `core/tests/test_source_reference_edge_cases.py` - Source reference edge case handling tests
+- `core/tests/test_source_reference_models.py` - Source reference model validation tests
+- `core/tests/test_source_reference_relationships.py` - Source reference relationship tests
 - `core/tests/test_websocket.py` - WebSocket connection and real-time communication tests
 
 #### Core URLs and Views
@@ -218,9 +253,16 @@ This document provides a comprehensive list of all active project files with the
 - `users/utils.py` - Utility functions for user-related operations and validations
 - `users/migrations/__init__.py` - Database migrations package for user model changes
 
+#### User Management Commands
+
+- `users/management/__init__.py` - Management commands package initialization
+- `users/management/commands/__init__.py` - User management commands package initialization
+- `users/management/commands/populate_themes.py` - Command to populate theme system with default themes
+
 #### User Models
 
 - `users/models/__init__.py` - User models package initialization
+- `users/models/theme.py` - Theme model for user interface customization system
 - `users/models/user.py` - Custom user model with profile fields and theme preferences
 
 #### User Templates
@@ -248,111 +290,96 @@ This document provides a comprehensive list of all active project files with the
 - `users/views/invitation_views.py` - User invitation management views
 - `users/views/profile_views.py` - User profile editing and theme selection views
 
-### Placeholder Applications (Future Development)
+### items/ (Item Management)
 
-#### items/ (Item Management - Future)
+- `items/__init__.py` - Python package initialization for the items application
+- `items/admin.py` - Django admin interface with bulk operations for item management
+- `items/apps.py` - Django application configuration for items app settings
+- `items/forms.py` - Django forms for item creation, editing, and bulk operations
+- `items/migrations/__init__.py` - Database migrations package for item model changes with polymorphic support
 
-- `items/__init__.py` - Python package initialization for future items application
-- `items/admin.py` - Django admin interface placeholder for item models
-- `items/apps.py` - Django application configuration for items app
-- `items/migrations/__init__.py` - Database migrations package for item models
-- `items/models/__init__.py` - Item model definitions placeholder
-- `items/tests/__init__.py` - Test package placeholder for item tests
-- `items/urls/__init__.py` - URL routing placeholder for item endpoints
-- `items/views/__init__.py` - View package placeholder for item views
+#### Item Models
 
-#### locations/ (Location Management - Future)
+- `items/models/__init__.py` - Polymorphic item model definitions with soft delete and character ownership
 
-- `locations/__init__.py` - Python package initialization for future locations application
-- `locations/admin.py` - Django admin interface placeholder for location models
-- `locations/apps.py` - Django application configuration for locations app
-- `locations/migrations/__init__.py` - Database migrations package for location models
-- `locations/models/__init__.py` - Location model definitions placeholder
-- `locations/tests/__init__.py` - Test package placeholder for location tests
-- `locations/urls/__init__.py` - URL routing placeholder for location endpoints
-- `locations/views/__init__.py` - View package placeholder for location views
+#### Item Tests
 
-#### scenes/ (Scene Management - Future)
+- `items/tests/__init__.py` - Test package initialization for item test modules
+- `items/tests/README_ISSUE_54_TESTS.md` - Documentation for item management testing strategy
+- `items/tests/test_admin.py` - Item admin interface and bulk operations tests
+- `items/tests/test_bulk_operations.py` - Bulk item management operation tests
+- `items/tests/test_character_ownership.py` - Single character ownership and transfer tests
+- `items/tests/test_forms.py` - Item form validation and submission tests
+- `items/tests/test_integration.py` - Item system integration tests
+- `items/tests/test_mixin_application.py` - Item model mixin functionality tests
+- `items/tests/test_models.py` - Item model validation with polymorphic inheritance
+- `items/tests/test_polymorphic_conversion.py` - Polymorphic model conversion and inheritance tests
+- `items/tests/test_views.py` - Item CRUD views and permission tests
 
-- `scenes/__init__.py` - Python package initialization for future scenes application
-- `scenes/admin.py` - Django admin interface placeholder for scene models
-- `scenes/apps.py` - Django application configuration for scenes app
-- `scenes/migrations/__init__.py` - Database migrations package for scene models
-- `scenes/models/__init__.py` - Scene model definitions placeholder
-- `scenes/tests/__init__.py` - Test package placeholder for scene tests
-- `scenes/urls/__init__.py` - URL routing placeholder for scene endpoints
-- `scenes/views/__init__.py` - View package placeholder for scene views
+#### Item URLs and Views
 
-## Frontend (React Application)
+- `items/urls/__init__.py` - URL routing package for item-related endpoints
+- `items/views/__init__.py` - View package for item CRUD operations and management
 
-### Frontend Root
+### locations/ (Location Management)
 
-- `frontend/README.md` - React application documentation and setup instructions
-- `frontend/REACT_CHARACTER_COMPONENTS.md` - Documentation for React character management components
-- `frontend/package.json` - Node.js package dependencies and build scripts for React app
-- `frontend/package-lock.json` - Locked dependency versions for reproducible React builds
-- `frontend/tsconfig.json` - TypeScript compiler configuration for React development
+- `locations/__init__.py` - Python package initialization for the locations application
+- `locations/admin.py` - Django admin interface with hierarchy management and bulk operations
+- `locations/apps.py` - Django application configuration for locations app settings
+- `locations/forms.py` - Django forms for location creation, editing, and hierarchy management
+- `locations/services.py` - Business logic layer for location hierarchy and NPC ownership operations
+- `locations/migrations/__init__.py` - Database migrations package for location model changes
 
-### Frontend Public Assets
+#### Location Models
 
-- `frontend/public/index.html` - Main HTML template for React single-page application
-- `frontend/public/manifest.json` - Progressive Web App manifest for mobile installation
-- `frontend/public/robots.txt` - Web crawler instructions for SEO optimization
+- `locations/models/__init__.py` - Hierarchical location models with ownership and polymorphic inheritance
 
-### Frontend Source Code
+#### Location Tests
 
-- `frontend/src/App.css` - Main application styling for React components
-- `frontend/src/App.test.tsx` - Main App component unit tests
-- `frontend/src/App.tsx` - Root React component with routing and layout structure
-- `frontend/src/django-integration.ts` - JavaScript bridge for integrating React with Django templates
-- `frontend/src/index.css` - Global styling and CSS reset for React application
-- `frontend/src/index.tsx` - React application entry point and DOM rendering
-- `frontend/src/react-app-env.d.ts` - TypeScript environment declarations for React
-- `frontend/src/reportWebVitals.ts` - Performance monitoring utilities for React app
-- `frontend/src/setupTests.ts` - Jest testing framework configuration for React components
+- `locations/tests/__init__.py` - Test package initialization for location test modules
+- `locations/tests/test_admin.py` - Location admin interface tests
+- `locations/tests/test_bulk_move_admin.py` - Bulk location hierarchy movement tests
+- `locations/tests/test_forms.py` - Location form validation and hierarchy tests
+- `locations/tests/test_hierarchy_validation.py` - Location hierarchy integrity and validation tests
+- `locations/tests/test_location_interface.py` - Location interface and API tests
+- `locations/tests/test_mixin_application.py` - Location model mixin functionality tests
+- `locations/tests/test_models.py` - Location model validation and business logic tests
+- `locations/tests/test_npc_ownership.py` - NPC ownership of locations functionality tests
+- `locations/tests/test_npc_ownership_admin.py` - NPC ownership admin interface tests
+- `locations/tests/test_npc_ownership_integration.py` - NPC ownership integration tests
+- `locations/tests/test_permissions.py` - Location permission and access control tests
+- `locations/tests/test_polymorphic_model.py` - Location polymorphic model inheritance tests
 
-#### Frontend Components
+#### Location URLs and Views
 
-- `frontend/src/components/CharacterDetail.tsx` - Character detail view component with game system support
-- `frontend/src/components/CharacterEditForm.tsx` - Character editing form with validation and polymorphic support
-- `frontend/src/components/CharacterList.tsx` - Character listing component with filtering and sorting
-- `frontend/src/components/DjangoIntegration.tsx` - Utility component for embedding React in Django templates
-- `frontend/src/components/LoginForm.tsx` - Enhanced login form with client-side validation
-- `frontend/src/components/ProfileEditForm.tsx` - User profile editing form with theme selection
-- `frontend/src/components/ProfileView.tsx` - User profile display component
-- `frontend/src/components/RegisterForm.tsx` - User registration form with validation
+- `locations/urls/__init__.py` - URL routing package for location-related endpoints
+- `locations/views/__init__.py` - View package for location CRUD operations and hierarchy management
 
-#### Frontend Component Tests
+### scenes/ (Scene Management)
 
-- `frontend/src/components/__tests__/CharacterCard.test.tsx` - Character card component unit tests
-- `frontend/src/components/__tests__/CharacterComponents.test.tsx` - Character component integration tests
-- `frontend/src/components/__tests__/CharacterDetail.test.tsx` - Character detail component tests
-- `frontend/src/components/__tests__/CharacterForm.test.tsx` - Character form validation tests
-- `frontend/src/components/__tests__/CharacterList.test.tsx` - Character list component tests
-- `frontend/src/components/__tests__/LoginForm.test.tsx` - Login form component tests
-- `frontend/src/components/__tests__/RegisterForm.test.tsx` - Registration form component tests
+- `scenes/__init__.py` - Python package initialization for the scenes application
+- `scenes/admin.py` - Django admin interface configuration for scene models
+- `scenes/apps.py` - Django application configuration for scenes app settings
+- `scenes/migrations/__init__.py` - Database migrations package for scene model changes
 
-#### Frontend Contexts
+#### Scene Models
 
-- `frontend/src/contexts/AuthContext.tsx` - Authentication state management with React Context API
-- `frontend/src/contexts/__tests__/AuthContext.test.tsx` - Authentication context unit tests
+- `scenes/models/__init__.py` - Scene model definitions with campaign integration
 
-#### Frontend Services
+#### Scene Tests
 
-- `frontend/src/services/api.ts` - API client with CSRF token handling and error management
-- `frontend/src/services/characterAPI.ts` - Character-specific API service functions
-- `frontend/src/services/__tests__/api.test.ts` - API service unit tests
+- `scenes/tests/__init__.py` - Test package initialization for scene test modules
+- `scenes/tests/test_models.py` - Scene model validation and functionality tests
 
-#### Frontend Styles
+#### Scene URLs and Views
 
-- `frontend/src/styles/auth.css` - Authentication form styling
-- `frontend/src/styles/index.css` - Base styling and layout utilities
-- `frontend/src/styles/profile.css` - User profile component styling
+- `scenes/urls/__init__.py` - URL routing package for scene-related endpoints
+- `scenes/views/__init__.py` - View package for scene management operations
 
-#### Frontend Types
+## Frontend Development Tooling
 
-- `frontend/src/types/character.ts` - TypeScript interfaces for character data structures
-- `frontend/src/types/user.ts` - TypeScript interfaces for user and authentication data
+- `package.json` - Node.js package dependencies for CSS linting and frontend development tools
+- `.stylelintrc.json` - Stylelint configuration for CSS code quality and standards enforcement
 
 ## Templates (Django HTML Templates)
 
@@ -387,11 +414,26 @@ This document provides a comprehensive list of all active project files with the
 - `templates/registration/password_reset_subject.txt` - Password reset email subject template
 - `templates/registration/register.html` - User registration form template
 
-### Placeholder Templates (Future Development)
+### Item Templates
 
-- `templates/items/campaign_items.html` - Campaign item listing template placeholder
-- `templates/locations/campaign_locations.html` - Campaign location listing template placeholder
-- `templates/scenes/campaign_scenes.html` - Campaign scene listing template placeholder
+- `templates/items/campaign_items.html` - Campaign item listing template with ownership and management features
+- `templates/items/item_confirm_delete.html` - Item deletion confirmation template with soft delete support
+- `templates/items/item_detail.html` - Item detail view template with ownership and transfer history
+- `templates/items/item_form.html` - Item creation and editing form template
+
+### Location Templates
+
+- `templates/locations/campaign_locations.html` - Campaign location listing template with hierarchy display
+- `templates/locations/location_detail.html` - Location detail view template with hierarchy and ownership
+- `templates/locations/location_form.html` - Location creation and editing form template with parent selection
+
+### Scene Templates
+
+- `templates/scenes/campaign_scenes.html` - Campaign scene listing template with status and participation
+
+### Admin Templates
+
+- `templates/admin/locations/bulk_move_parent_form.html` - Admin bulk location move interface template
 
 ### User Templates
 
@@ -410,11 +452,16 @@ This document provides a comprehensive list of all active project files with the
 
 ### Global Static Files
 
+- `static/css/accessibility.css` - Accessibility-focused styling for WCAG 2.1 AA compliance
 - `static/css/base.css` - Base styling with layout, typography, and component styles
 - `static/css/email.css` - Email template styling for notifications
 - `static/css/home.css` - Home page specific styling
+- `static/css/locations.css` - Location-specific styling for hierarchy and management interfaces
 - `static/css/theme-overrides.css` - Theme-specific style overrides and customizations
+- `static/js/accessibility.js` - JavaScript for dynamic accessibility features and ARIA management
 - `static/js/base.js` - Base JavaScript functionality and Django integration
+- `static/js/enhanced-base.js` - Enhanced JavaScript with modern ES6+ features and error handling
+- `static/js/locations.js` - Location-specific JavaScript for hierarchy management and interactions
 
 ### Theme Static Files
 
@@ -441,16 +488,25 @@ This document provides a comprehensive list of all active project files with the
 
 ### Technical Documentation
 
+- `docs/accessibility-guidelines.md` - WCAG 2.1 AA compliance guidelines and implementation patterns
 - `docs/api-reference.md` - Complete API endpoint documentation with request/response examples
 - `docs/architecture.md` - System architecture overview with service layer and design patterns
 - `docs/database-schema.md` - Database models, relationships, and query optimization guide
 - `docs/deployment.md` - Production deployment guide with security and scaling considerations
 - `docs/development-guide.md` - Development workflow, TDD practices, and code standards
 - `docs/HARDCODED_VALUES.md` - Environment variables and configuration values for production
+- `docs/javascript-standards.md` - Modern JavaScript development standards and best practices
+- `docs/location-hierarchy-system.md` - Location hierarchy system design and implementation guide
+- `docs/LOCATION_MANAGEMENT_DOCUMENTATION_UPDATE.md` - Location management system documentation update
+- `docs/MIGRATION_STRATEGY.md` - Database migration strategy and rollback procedures
 
 ## Scripts and Utilities
 
-- `scripts/run-dev-servers.sh` - Development server startup script for Django and React
+- `scripts/code_quality_config.py` - Code quality configuration and validation scripts
+- `scripts/fetch_code_quality_issues.py` - Automated code quality issue detection and reporting
+- `scripts/rollback_mixin_migrations.sh` - Interactive rollback script for mixin migrations
+- `scripts/rollback_simple.sh` - Simple migration rollback script for development
+- `scripts/test_api_keys.py` - API key testing and validation utilities
 
 ## Project Tests
 

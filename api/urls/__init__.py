@@ -13,6 +13,7 @@ urlpatterns = [
     path("notifications/", include("api.urls.notification_urls")),
     path("characters/", include("api.urls.character_urls")),
     path("locations/", include("api.urls.location_urls")),
+    path("items/", include("api.urls.item_urls")),
     # Direct campaign endpoints for expected URL names
     path("campaign-list/", CampaignListAPIView.as_view(), name="campaign-list"),
     path(
