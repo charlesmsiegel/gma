@@ -224,31 +224,42 @@ The project follows a domain-driven monolithic architecture with these Django ap
 
 The models, views, urls, and tests modules in every app should be managed as python modules rather than individual files.
 
-### Character Model Hierarchy
+### Polymorphic Model Hierarchy
 
-Uses django-polymorphic for game system inheritance:
+Uses django-polymorphic for flexible game system inheritance:
 
+#### Character Model Hierarchy
 ```
-Character (base)
+Character (base, polymorphic)
 └── WoDCharacter
     └── MageCharacter
 ```
 
+#### Item Model Hierarchy (Issue #182)
+```
+Item (base, polymorphic) - Now ready for subclassing
+├── WeaponItem (future)
+├── ArmorItem (future)
+├── ConsumableItem (future)
+└── [Other item types as needed]
+```
+
 ### Item Model Architecture
 
-The Item model provides comprehensive equipment and treasure management with the following key features:
+The Item model provides comprehensive equipment and treasure management with polymorphic inheritance support for future extensibility. Key features include:
 
 #### Core Features
-- **Basic Information**: Name, description, campaign association
+- **Basic Information**: Name (via NamedModelMixin), description, campaign association
 - **Quantity Tracking**: Positive integer validation with minimum value of 1
 - **Character Ownership**: Many-to-many relationship with Character model
-- **Audit Tracking**: created_by field for user accountability
+- **Audit Tracking**: created_by and modified_by via AuditableMixin for full user accountability
 - **Soft Delete Pattern**: is_deleted, deleted_at, deleted_by fields for safe data management
+- **Polymorphic Inheritance**: PolymorphicModel base enables future Item subclasses (Issue #182)
 
-#### Custom Managers and QuerySets
-- **ItemManager**: Default manager that excludes soft-deleted items
-- **AllItemManager**: Manager that includes all items (for restoration operations)
-- **ItemQuerySet**: Custom queryset with filtering methods (active, deleted, for_campaign, owned_by_character)
+#### Polymorphic Manager Architecture
+- **ItemManager (PolymorphicManager)**: Default manager excluding soft-deleted items with polymorphic support
+- **AllItemManager (PolymorphicManager)**: Manager including all items (for restoration operations)
+- **ItemQuerySet (PolymorphicQuerySet)**: Custom queryset with filtering methods (active, deleted, for_campaign, owned_by_character)
 
 #### Permission System
 - **Role-based Access**: Uses campaign role hierarchy (OWNER → GM → PLAYER → OBSERVER)
@@ -262,13 +273,21 @@ The Item model provides comprehensive equipment and treasure management with the
 - **Organized Layout**: Fieldsets for basic info, ownership, audit trail, and deletion status
 - **Permission Checking**: Staff-only access with proper error handling
 
+#### Polymorphic Inheritance (Issue #182)
+- **Future Extensibility**: Ready for game-specific item subclasses (WeaponItem, ArmorItem, ConsumableItem)
+- **Unified API**: Same endpoints, serializers, and business logic for all item types
+- **Type-Safe Queries**: Polymorphic queries automatically return correct subclass instances
+- **Database Efficiency**: Single table with polymorphic_ctype field for type identification
+- **Full Backward Compatibility**: All existing Item functionality preserved
+
 #### Testing Coverage
-- **102 comprehensive tests** across 3 test files covering:
+- **135+ comprehensive tests** across 4 test files covering:
   - Model validation and business logic
   - Soft delete functionality and restoration
   - Permission system edge cases
   - Admin interface bulk operations
   - Mixin application and database field compatibility
+  - **Polymorphic conversion validation** (33 tests in test_polymorphic_conversion.py)
 
 ### Real-Time Architecture
 

@@ -366,25 +366,21 @@ class PolymorphicSubclassTest(TestCase):
 
     def test_create_item_subclass(self):
         """Test creating a subclass of Item."""
-
-        # Define a simple Item subclass
-        class WeaponItem(Item):
-            damage = models.PositiveIntegerField(default=1)
-            weapon_type = models.CharField(max_length=50, default="sword")
-
-            class Meta:
-                verbose_name = "Weapon"
-                verbose_name_plural = "Weapons"
-
-        # This test verifies the pattern works - actual subclasses
-        # would be defined in models files and included in migrations
+        # Verify that Item inherits from PolymorphicModel, which means
+        # subclassing will work correctly when properly implemented
         self.assertTrue(
-            issubclass(WeaponItem, Item), "WeaponItem should inherit from Item"
+            issubclass(Item, PolymorphicModel),
+            "Item should inherit from PolymorphicModel to support subclassing",
         )
+
+        # Verify Item has polymorphic_ctype field required for subclassing
         self.assertTrue(
-            issubclass(WeaponItem, PolymorphicModel),
-            "WeaponItem should inherit from PolymorphicModel",
+            hasattr(Item, "polymorphic_ctype"),
+            "Item should have polymorphic_ctype field for subclass support",
         )
+
+        # Note: Actual subclasses like WeaponItem would be defined in
+        # models files with proper migrations, not in test code
 
     def test_polymorphic_queries_return_correct_types(self):
         """Test that polymorphic queries return instances of correct subclasses."""

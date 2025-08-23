@@ -1505,7 +1505,7 @@ WHERE c.id = :campaign_id;
 
 **Table**: `items_item`
 
-The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, character ownership, and audit tracking.
+The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, character ownership, audit tracking, and polymorphic inheritance support for future item type extensibility.
 
 ```sql
 CREATE TABLE items_item (
@@ -1515,8 +1515,12 @@ CREATE TABLE items_item (
     campaign_id INTEGER NOT NULL REFERENCES campaigns_campaign(id) ON DELETE CASCADE,
     quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
 
+    -- Polymorphic inheritance support
+    polymorphic_ctype_id INTEGER NOT NULL REFERENCES django_content_type(id) ON DELETE CASCADE,
+
     -- User audit tracking
     created_by_id INTEGER REFERENCES auth_user(id) ON DELETE SET NULL,
+    modified_by_id INTEGER REFERENCES auth_user(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
 
@@ -1547,6 +1551,7 @@ CREATE INDEX items_item_created_by_id_idx ON items_item (created_by_id);
 CREATE INDEX items_item_deleted_by_id_idx ON items_item (deleted_by_id);
 CREATE INDEX items_item_name_idx ON items_item (name);
 CREATE INDEX items_item_created_at_idx ON items_item (created_at);
+CREATE INDEX items_item_polymorphic_ctype_id_idx ON items_item (polymorphic_ctype_id);
 CREATE INDEX items_item_owners_item_id_idx ON items_item_owners (item_id);
 CREATE INDEX items_item_owners_character_id_idx ON items_item_owners (character_id);
 ```
@@ -1554,13 +1559,17 @@ CREATE INDEX items_item_owners_character_id_idx ON items_item_owners (character_
 **Field Specifications:**
 
 **Core Fields:**
-- `name`: Item name (VARCHAR 200, required) - The primary identifier for the item
+- `name`: Item name (VARCHAR 200, required) - The primary identifier for the item (via NamedModelMixin)
 - `description`: Extended item description (TEXT, optional) - Inherited from DescribedModelMixin
 - `campaign_id`: Foreign key to campaigns_campaign (INTEGER, required) - Campaign association
 - `quantity`: Item quantity (INTEGER, default 1, min 1) - Positive integer with validation
 
+**Polymorphic Inheritance:**
+- `polymorphic_ctype_id`: Foreign key to django_content_type (INTEGER, required) - Identifies the actual item subclass type
+
 **Audit Tracking:**
-- `created_by_id`: Foreign key to auth_user (INTEGER, nullable) - Creator tracking
+- `created_by_id`: Foreign key to auth_user (INTEGER, nullable) - Creator tracking (via AuditableMixin)
+- `modified_by_id`: Foreign key to auth_user (INTEGER, nullable) - Last modifier tracking (via AuditableMixin)
 - `created_at`: Creation timestamp (TIMESTAMP, required) - From TimestampedMixin
 - `updated_at`: Last update timestamp (TIMESTAMP, required) - From TimestampedMixin
 
@@ -1579,8 +1588,18 @@ CREATE INDEX items_item_owners_character_id_idx ON items_item_owners (character_
 1. **Quantity Validation**: Quantity must be at least 1
 2. **Soft Delete Consistency**: Deleted items must have deleted_at and deleted_by_id set
 3. **Campaign Isolation**: Items belong to specific campaigns and inherit campaign permissions
-4. **Audit Trail**: Creator information preserved even if user account is deleted (SET NULL)
+4. **Audit Trail**: Creator and modifier information preserved via AuditableMixin even if user account is deleted (SET NULL)
 5. **Character Ownership**: Multiple characters can own items, useful for shared equipment
+6. **Polymorphic Type Tracking**: Each item has a content type reference identifying its actual subclass
+
+**Polymorphic Architecture:**
+
+The Item model uses django-polymorphic for inheritance support:
+
+- **polymorphic_ctype_id**: Links to django_content_type table to identify the actual subclass
+- **Single Table Inheritance**: All item types stored in items_item table with type differentiation
+- **Automatic Type Resolution**: Queries return appropriate subclass instances automatically
+- **Future Extensibility**: Ready for WeaponItem, ArmorItem, ConsumableItem, etc.
 
 **Query Patterns:**
 
@@ -1600,6 +1619,18 @@ ORDER BY i.name;
 SELECT * FROM items_item
 WHERE campaign_id = :campaign_id AND is_deleted = TRUE
 ORDER BY deleted_at DESC;
+
+-- Items by polymorphic type (future subclassing)
+SELECT i.* FROM items_item i
+JOIN django_content_type ct ON i.polymorphic_ctype_id = ct.id
+WHERE ct.app_label = 'items' AND ct.model = 'weaponitem'
+AND i.is_deleted = FALSE;
+
+-- All item types in a campaign with their actual types
+SELECT i.*, ct.model as item_type FROM items_item i
+JOIN django_content_type ct ON i.polymorphic_ctype_id = ct.id
+WHERE i.campaign_id = :campaign_id AND i.is_deleted = FALSE
+ORDER BY ct.model, i.name;
 
 -- Item ownership with character details
 SELECT i.name, i.quantity, c.name as character_name

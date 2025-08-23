@@ -1551,12 +1551,12 @@ LocationForm (Base)
 
 #### Item Model Architecture
 
-**Location**: `items/models/__init__.py:22-235`
+**Location**: `items/models/__init__.py:22-248`
 
-The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, character ownership, and advanced admin capabilities:
+The Item model provides comprehensive equipment and treasure management for campaigns with soft delete functionality, character ownership, advanced admin capabilities, and polymorphic inheritance support for future extensibility:
 
 ```python
-class Item(TimestampedMixin, DescribedModelMixin, models.Model):
+class Item(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, PolymorphicModel):
     # Core item information
     name = CharField(max_length=200, help_text="Name of the item")
     campaign = ForeignKey(Campaign, on_delete=models.CASCADE, related_name="items")
@@ -1582,13 +1582,20 @@ class Item(TimestampedMixin, DescribedModelMixin, models.Model):
    - Allows for restoration of accidentally deleted items
    - Tracks who deleted items and when
 
-2. **Custom Manager Architecture**
+2. **Polymorphic Manager Architecture**
    ```python
-   class ItemManager(models.Manager):
+   class ItemQuerySet(PolymorphicQuerySet):
+       """Custom QuerySet extending PolymorphicQuerySet with filtering methods."""
+       def active(self):
+           return self.filter(is_deleted=False)
+       def deleted(self):
+           return self.filter(is_deleted=True)
+
+   class ItemManager(PolymorphicManager):
        def get_queryset(self):
            return ItemQuerySet(self.model, using=self._db).filter(is_deleted=False)
 
-   class AllItemManager(models.Manager):
+   class AllItemManager(PolymorphicManager):
        def get_queryset(self):
            return ItemQuerySet(self.model, using=self._db)  # Includes deleted items
    ```
@@ -1646,12 +1653,13 @@ class ItemAdmin(admin.ModelAdmin):
 
 **Testing Architecture:**
 
-The Item model includes 102 comprehensive tests across 3 test files:
+The Item model includes 135+ comprehensive tests across 4 test files:
 
 1. **Model Tests** (`test_models.py`): Core validation, soft delete functionality, permission system
 2. **Admin Tests** (`test_admin.py`): Admin interface capabilities, bulk operations, permission checks
 3. **Bulk Operations Tests** (`test_bulk_operations.py`): Transaction safety, error handling, edge cases
 4. **Mixin Application Tests** (`test_mixin_application.py`): Inheritance validation, field compatibility
+5. **Polymorphic Conversion Tests** (`test_polymorphic_conversion.py`): Polymorphic behavior, manager compatibility, inheritance validation
 
 **Database Performance Considerations:**
 
@@ -1659,6 +1667,87 @@ The Item model includes 102 comprehensive tests across 3 test files:
 - Index on `is_deleted` for manager query optimization
 - Many-to-many relationship optimized for character ownership queries
 - Soft delete pattern maintains referential integrity
+- Polymorphic field (`polymorphic_ctype`) supports inheritance chains
+
+#### Polymorphic Inheritance Architecture (Issue #182)
+
+The Item model has been converted from Django's standard Model to PolymorphicModel, enabling future game system-specific item types while maintaining full backward compatibility.
+
+**Polymorphic Implementation:**
+
+```python
+# Base Item class (now polymorphic)
+class Item(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, PolymorphicModel):
+    # Core item functionality applies to all item types
+    campaign = ForeignKey(Campaign, on_delete=CASCADE)
+    quantity = PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    owners = ManyToManyField("characters.Character", blank=True)
+    # Soft delete pattern
+    # Audit tracking via AuditableMixin
+    # Polymorphic inheritance support
+```
+
+**Architectural Benefits:**
+
+1. **Future Extensibility**: Ready for game-specific item subclasses (WeaponItem, ArmorItem, ConsumableItem)
+2. **Type-Safe Queries**: Polymorphic queries automatically return correct subclass instances
+3. **Unified API**: Same endpoints, serializers, and business logic for all item types
+4. **Database Efficiency**: Single table with polymorphic_ctype field for type identification
+5. **Full Backward Compatibility**: All existing Item functionality preserved
+
+**Future Subclassing Pattern:**
+
+Following the same inheritance pattern as the Character model hierarchy:
+
+```python
+# Future implementation examples
+class WeaponItem(Item):
+    """Weapon-specific item properties."""
+    damage_dice = CharField(max_length=20)  # e.g., "2d6+1"
+    weapon_type = CharField(max_length=50)  # e.g., "Sword", "Bow"
+
+class ArmorItem(Item):
+    """Armor-specific item properties."""
+    armor_class = PositiveIntegerField()
+    armor_type = CharField(max_length=50)  # e.g., "Light", "Heavy"
+
+class ConsumableItem(Item):
+    """Consumable item with usage tracking."""
+    uses_remaining = PositiveIntegerField()
+    max_uses = PositiveIntegerField()
+```
+
+**Polymorphic Query Capabilities:**
+
+```python
+# Unified queries across all item types
+all_items = Item.objects.for_campaign(campaign)  # Returns all item types
+
+# Type-specific queries (future functionality)
+weapons = Item.objects.instance_of(WeaponItem)
+armor = Item.objects.instance_of(ArmorItem)
+
+# Polymorphic filtering with type safety
+magical_weapons = WeaponItem.objects.filter(magical=True)
+```
+
+**Testing Coverage:**
+
+The polymorphic conversion includes comprehensive test coverage:
+- **33 polymorphic-specific tests** in `test_polymorphic_conversion.py`
+- **Inheritance validation** ensuring proper polymorphic behavior
+- **Manager compatibility** with PolymorphicManager/PolymorphicQuerySet
+- **Database field verification** for polymorphic_ctype field
+- **Backward compatibility** ensuring existing functionality works unchanged
+
+**Implementation Status:**
+
+- ✅ **Base Item Model**: Converted to PolymorphicModel with full functionality
+- ✅ **Manager Architecture**: Updated to PolymorphicManager/PolymorphicQuerySet
+- ✅ **Database Migration**: Added polymorphic_ctype field with data population
+- ✅ **Test Coverage**: Comprehensive validation of polymorphic behavior
+- ✅ **Backward Compatibility**: All 135 existing tests passing unchanged
+- 🔄 **Future Development**: Ready for Item subclass implementation per game system requirements
 
 ## Frontend Integration
 

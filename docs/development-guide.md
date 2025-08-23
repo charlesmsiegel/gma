@@ -1474,6 +1474,193 @@ class Campaign(models.Model):
         ]
 ```
 
+### Polymorphic Model Development
+
+#### Polymorphic Inheritance Pattern
+
+The GMA system uses django-polymorphic for flexible inheritance hierarchies, enabling type-specific behavior while maintaining unified base functionality.
+
+**Current Polymorphic Models:**
+- **Character Model**: Character → WoDCharacter → MageCharacter
+- **Item Model**: Item → [Future subclasses: WeaponItem, ArmorItem, ConsumableItem] *(Issue #182)*
+- **Location Model**: Location → [Future subclasses for location types]
+
+#### Item Model Polymorphic Conversion (Issue #182)
+
+The Item model was successfully converted from Django's standard Model to PolymorphicModel, enabling future game system-specific item types.
+
+**Implementation Pattern:**
+
+```python
+# items/models/__init__.py
+from polymorphic.models import PolymorphicModel
+from polymorphic.managers import PolymorphicManager
+from polymorphic.query import PolymorphicQuerySet
+
+class ItemQuerySet(PolymorphicQuerySet):
+    """Custom QuerySet extending PolymorphicQuerySet."""
+    def active(self):
+        return self.filter(is_deleted=False)
+
+    def for_campaign(self, campaign):
+        return self.filter(campaign=campaign)
+
+class ItemManager(PolymorphicManager):
+    """Manager excluding soft-deleted items by default."""
+    def get_queryset(self):
+        return ItemQuerySet(self.model, using=self._db).filter(is_deleted=False)
+
+class Item(TimestampedMixin, NamedModelMixin, DescribedModelMixin, AuditableMixin, PolymorphicModel):
+    """Base item class with polymorphic support."""
+    campaign = ForeignKey(Campaign, on_delete=CASCADE)
+    quantity = PositiveIntegerField(default=1)
+    # ... other base fields
+
+    objects = ItemManager()
+    all_objects = AllItemManager()  # Includes soft-deleted
+```
+
+**Key Migration Steps:**
+
+```python
+# Migration 0007: Add polymorphic_ctype field
+operations = [
+    migrations.AddField(
+        model_name='item',
+        name='polymorphic_ctype',
+        field=models.ForeignKey(
+            default=None,
+            on_delete=models.CASCADE,
+            related_name='polymorphic_items',
+            to='contenttypes.contenttype'
+        ),
+    ),
+]
+
+# Migration 0008: Populate polymorphic_ctype data
+def populate_polymorphic_ctype(apps, schema_editor):
+    ContentType = apps.get_model('contenttypes', 'ContentType')
+    Item = apps.get_model('items', 'Item')
+
+    item_content_type = ContentType.objects.get_for_model(Item)
+    Item.objects.filter(polymorphic_ctype_id__isnull=True).update(
+        polymorphic_ctype_id=item_content_type.id
+    )
+```
+
+#### Creating Item Subclasses
+
+**Future Development Pattern:**
+
+```python
+# items/models/weapon.py
+class WeaponItem(Item):
+    """Weapon-specific item with combat properties."""
+    damage_dice = CharField(max_length=20)  # e.g., "2d6+1"
+    weapon_type = CharField(max_length=50, choices=WEAPON_TYPE_CHOICES)
+    range_increment = PositiveIntegerField(null=True, blank=True)
+    is_magical = BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Weapon"
+        verbose_name_plural = "Weapons"
+
+# items/models/armor.py
+class ArmorItem(Item):
+    """Armor-specific item with protection properties."""
+    armor_class = PositiveIntegerField()
+    armor_type = CharField(max_length=50, choices=ARMOR_TYPE_CHOICES)
+    max_dex_bonus = PositiveIntegerField(null=True, blank=True)
+    armor_check_penalty = IntegerField(default=0)
+```
+
+**Polymorphic Query Patterns:**
+
+```python
+# Get all items (returns appropriate subclass instances)
+all_items = Item.objects.for_campaign(campaign)
+
+# Type-specific filtering
+weapons = Item.objects.instance_of(WeaponItem)
+magical_weapons = WeaponItem.objects.filter(is_magical=True)
+
+# Mixed queries with type safety
+items_with_high_value = Item.objects.filter(
+    Q(weaponitem__is_magical=True) |
+    Q(armoritem__armor_class__gte=5)
+)
+```
+
+#### Testing Polymorphic Models
+
+**Required Test Coverage:**
+
+```python
+class PolymorphicModelTests(TestCase):
+    def test_inheritance_chain(self):
+        """Test that polymorphic inheritance works correctly."""
+        item = Item.objects.create(name="Basic Item", campaign=campaign)
+        weapon = WeaponItem.objects.create(
+            name="Magic Sword",
+            campaign=campaign,
+            damage_dice="1d8+1",
+            weapon_type="sword"
+        )
+
+        # Verify polymorphic queries return correct types
+        all_items = Item.objects.all()
+        self.assertIsInstance(all_items[0], Item)
+        self.assertIsInstance(all_items[1], WeaponItem)
+
+    def test_manager_polymorphic_support(self):
+        """Test managers work with polymorphic inheritance."""
+        # Create mixed item types
+        Item.objects.create(name="Generic", campaign=campaign)
+        WeaponItem.objects.create(name="Sword", campaign=campaign, damage_dice="1d8")
+
+        # Test polymorphic queries with managers
+        active_items = Item.objects.active()
+        self.assertEqual(active_items.count(), 2)
+
+        # Verify correct types returned
+        for item in active_items:
+            self.assertTrue(hasattr(item, 'polymorphic_ctype'))
+```
+
+**Test Categories:**
+1. **Inheritance Validation**: Verify polymorphic relationships work correctly
+2. **Manager Compatibility**: Ensure custom managers work with inheritance
+3. **Query Behavior**: Test that queries return appropriate types
+4. **Test Polymorphic Support**: Ensure managers work with inheritance chains
+5. **Migration Safety**: Test polymorphic field addition and data population
+
+#### Development Guidelines
+
+**When to Use Polymorphic Models:**
+
+✅ **Use when:**
+- Need type-specific behavior with shared base functionality
+- Future extensibility requires multiple related model types
+- Want unified API/admin interface across types
+- Complex inheritance hierarchies benefit from single table storage
+
+❌ **Don't use when:**
+- Simple models don't need inheritance
+- Performance is critical (polymorphic queries have overhead)
+- Types are fundamentally different (prefer separate models)
+
+**Performance Considerations:**
+- Polymorphic queries include JOIN with ContentType table
+- Use `select_related('polymorphic_ctype')` for optimization
+- Consider caching ContentType lookups for frequently accessed models
+- Index polymorphic_ctype_id for efficient type filtering
+
+**Migration Best Practices:**
+- Add polymorphic_ctype field with migration
+- Create data migration to populate existing records
+- Test migration with realistic data volumes
+- Provide rollback procedures for safety
+
 ## Testing Practices
 
 ### Test Organization
