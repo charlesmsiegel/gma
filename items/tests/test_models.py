@@ -37,7 +37,7 @@ class ItemModelFieldValidationTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            owner=self.owner,
+            player_owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -180,7 +180,7 @@ class ItemSoftDeleteTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            owner=self.owner,
+            player_owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -281,7 +281,7 @@ class ItemCharacterOwnershipTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            owner=self.owner,
+            player_owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -296,13 +296,13 @@ class ItemCharacterOwnershipTest(TestCase):
         self.character1 = Character.objects.create(
             name="Character 1",
             campaign=self.campaign,
-            player_owner=self.player1,
+            owner=self.player1,
             game_system="Mage: The Ascension",
         )
         self.character2 = Character.objects.create(
             name="Character 2",
             campaign=self.campaign,
-            player_owner=self.player2,
+            owner=self.player2,
             game_system="Mage: The Ascension",
         )
 
@@ -405,7 +405,7 @@ class ItemCampaignCascadeTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            owner=self.owner,
+            player_owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -453,7 +453,7 @@ class ItemModelManagersTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            owner=self.owner,
+            player_owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -532,7 +532,7 @@ class ItemIntegrationTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Integration Campaign",
-            owner=self.owner,
+            player_owner=self.owner,
             game_system="Mage: The Ascension",
         )
 
@@ -639,7 +639,7 @@ class ItemEdgeCasesTest(TestCase):
 
         self.campaign1 = Campaign.objects.create(
             name="Campaign 1",
-            owner=self.owner,
+            player_owner=self.owner,
             game_system="Mage: The Ascension",
         )
         self.campaign2 = Campaign.objects.create(

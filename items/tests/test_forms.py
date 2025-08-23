@@ -12,7 +12,7 @@ Tests cover all requirements from Issue #54:
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from campaigns.models import Campaign
+from campaigns.models import Campaign, CampaignMembership
 from characters.models import Character
 from items.models import Item
 
@@ -33,32 +33,49 @@ class ItemFormTest(TestCase):
 
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
-            player_owner=self.user,
+            owner=self.user,
             game_system="Mage: The Ascension",
         )
 
         # Create another campaign for cross-campaign testing
         self.other_campaign = Campaign.objects.create(
             name="Other Campaign",
-            player_owner=self.other_user,
+            owner=self.other_user,
             game_system="Vampire: The Masquerade",
         )
 
+        # Create campaign memberships so users can create characters
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.user, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.campaign, user=self.other_user, role="PLAYER"
+        )
+        CampaignMembership.objects.create(
+            campaign=self.other_campaign, user=self.other_user, role="PLAYER"
+        )
+
         # Create characters in different campaigns
+        # (respecting 1 character per user per campaign limit)
         self.character1 = Character.objects.create(
             name="Test Character 1",
             player_owner=self.user,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
+        # Create second character for other_user in same campaign for testing
         self.character2 = Character.objects.create(
             name="Test Character 2",
-            player_owner=self.user,
+            player_owner=self.other_user,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
+        # Create character in other campaign
         self.other_campaign_character = Character.objects.create(
             name="Other Campaign Character",
             player_owner=self.other_user,
             campaign=self.other_campaign,
+            game_system="Vampire: The Masquerade",
         )
 
     def test_item_create_form_valid_minimal_data(self):
@@ -244,7 +261,7 @@ class ItemFormTest(TestCase):
             quantity=2,
             campaign=self.campaign,
             created_by=self.user,
-            player_owner=self.character1,
+            owner=self.character1,
         )
 
         form = ItemForm(instance=existing_item, campaign=self.campaign)
@@ -297,7 +314,7 @@ class ItemFormTest(TestCase):
             quantity=1,
             campaign=self.campaign,
             created_by=self.user,
-            player_owner=self.character1,
+            owner=self.character1,
         )
 
         original_transfer_time = existing_item.last_transferred_at

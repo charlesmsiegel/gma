@@ -68,7 +68,7 @@ class ItemAdminTestCase(TestCase):
         self.character1 = Character.objects.create(
             name="Character 1",
             campaign=self.campaign1,
-            player_owner=self.player1,
+            owner=self.player1,
             game_system="D&D 5e",
         )
 

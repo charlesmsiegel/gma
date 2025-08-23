@@ -66,7 +66,7 @@ class ItemCampaignIntegrationTest(TestCase):
             quantity=1,
             campaign=self.campaign,
             created_by=self.owner,
-            player_owner=self.character,
+            owner=self.character,
         )
 
         self.item2 = Item.objects.create(
@@ -187,7 +187,7 @@ class ItemCharacterIntegrationTest(TestCase):
             quantity=1,
             campaign=self.campaign,
             created_by=self.owner,
-            player_owner=self.character,
+            owner=self.character,
         )
 
         self.owned_item2 = Item.objects.create(
@@ -196,7 +196,7 @@ class ItemCharacterIntegrationTest(TestCase):
             quantity=3,
             campaign=self.campaign,
             created_by=self.owner,
-            player_owner=self.character,
+            owner=self.character,
         )
 
         self.unowned_item = Item.objects.create(
@@ -335,7 +335,7 @@ class ItemURLPatternsTest(TestCase):
             quantity=1,
             campaign=self.campaign,
             created_by=self.user,
-            player_owner=self.character,
+            owner=self.character,
         )
 
     def test_item_list_url_pattern(self):
@@ -574,7 +574,7 @@ class ItemWorkflowIntegrationTest(TestCase):
             quantity=1,
             campaign=self.campaign,
             created_by=self.owner,
-            player_owner=self.character1,
+            owner=self.character1,
         )
 
         self.client.login(username="player", password="testpass123")
@@ -629,7 +629,7 @@ class ItemWorkflowIntegrationTest(TestCase):
         )
 
         # Create items in both campaigns
-        item1 = Item.objects.create(
+        Item.objects.create(
             name="Campaign 1 Item",
             quantity=1,
             campaign=self.campaign,

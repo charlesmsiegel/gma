@@ -68,6 +68,7 @@ class ItemCreateViewTest(TestCase):
             name="Test Character",
             player_owner=self.player,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
 
         self.create_url = reverse(
@@ -291,6 +292,7 @@ class ItemDetailViewTest(TestCase):
             name="Test Character",
             player_owner=self.player,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
 
         self.item = Item.objects.create(
@@ -299,7 +301,7 @@ class ItemDetailViewTest(TestCase):
             quantity=3,
             campaign=self.campaign,
             created_by=self.owner,
-            player_owner=self.character,
+            owner=self.character,
         )
 
         self.detail_url = reverse(
@@ -497,11 +499,13 @@ class ItemEditViewTest(TestCase):
             name="Character One",
             player_owner=self.player,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
         self.character2 = Character.objects.create(
             name="Character Two",
             player_owner=self.gm,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
 
         self.item = Item.objects.create(
@@ -510,7 +514,7 @@ class ItemEditViewTest(TestCase):
             quantity=2,
             campaign=self.campaign,
             created_by=self.owner,
-            player_owner=self.character1,
+            owner=self.character1,
         )
 
         self.edit_url = reverse(
@@ -708,11 +712,13 @@ class ItemListViewTest(TestCase):
             name="Character One",
             player_owner=self.player,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
         self.character2 = Character.objects.create(
             name="Character Two",
             player_owner=self.owner,
             campaign=self.campaign,
+            game_system="Mage: The Ascension",
         )
 
         # Create test items
@@ -722,7 +728,7 @@ class ItemListViewTest(TestCase):
             quantity=1,
             campaign=self.campaign,
             created_by=self.owner,
-            player_owner=self.character1,
+            owner=self.character1,
         )
         self.item2 = Item.objects.create(
             name="Health Potion",
@@ -730,7 +736,7 @@ class ItemListViewTest(TestCase):
             quantity=5,
             campaign=self.campaign,
             created_by=self.player,
-            player_owner=self.character2,
+            owner=self.character2,
         )
         self.item3 = Item.objects.create(
             name="Ancient Tome",

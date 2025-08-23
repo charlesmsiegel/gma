@@ -164,7 +164,7 @@ class PolymorphicQuerySetTest(TestCase):
             username="testuser", email="test@example.com", password="testpass123"
         )
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", description="Test Description", owner=self.user
+            name="Test Campaign", description="Test Description", player_owner=self.user
         )
         self.character = Character.objects.create(
             name="Test Character",
@@ -251,7 +251,7 @@ class PolymorphicQuerySetTest(TestCase):
         other_character = Character.objects.create(
             name="Other Character",
             campaign=self.campaign,  # Same campaign, different owner
-            player_owner=other_user,  # Different user
+            owner=other_user,  # Different user
             game_system="Test System",
         )
 
@@ -315,7 +315,7 @@ class PolymorphicManagerTest(TestCase):
             username="testuser", email="test@example.com", password="testpass123"
         )
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", description="Test Description", owner=self.user
+            name="Test Campaign", description="Test Description", player_owner=self.user
         )
 
     def test_manager_soft_delete_filtering(self):
@@ -364,7 +364,7 @@ class PolymorphicSubclassTest(TestCase):
             username="testuser", email="test@example.com", password="testpass123"
         )
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", description="Test Description", owner=self.user
+            name="Test Campaign", description="Test Description", player_owner=self.user
         )
 
     def test_create_item_subclass(self):
@@ -429,7 +429,7 @@ class DataPreservationTest(TransactionTestCase):
             username="testuser", email="test@example.com", password="testpass123"
         )
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", description="Test Description", owner=self.user
+            name="Test Campaign", description="Test Description", player_owner=self.user
         )
         self.character = Character.objects.create(
             name="Test Character",
@@ -525,7 +525,7 @@ class AdminPolymorphicTest(TestCase):
             is_superuser=True,
         )
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", description="Test Description", owner=self.user
+            name="Test Campaign", description="Test Description", player_owner=self.user
         )
         self.site = AdminSite()
         self.admin = ItemAdmin(Item, self.site)
@@ -604,7 +604,7 @@ class MigrationCompatibilityTest(TestCase):
             username="testuser", email="test@example.com", password="testpass123"
         )
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", description="Test Description", owner=self.user
+            name="Test Campaign", description="Test Description", player_owner=self.user
         )
 
     def test_polymorphic_ctype_automatically_set(self):
@@ -660,7 +660,7 @@ class BackwardCompatibilityTest(TestCase):
             username="testuser", email="test@example.com", password="testpass123"
         )
         self.campaign = Campaign.objects.create(
-            name="Test Campaign", description="Test Description", owner=self.user
+            name="Test Campaign", description="Test Description", player_owner=self.user
         )
 
     def test_existing_api_calls_work(self):
