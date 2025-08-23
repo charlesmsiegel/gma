@@ -9,8 +9,6 @@ Tests cover all requirements from Issue #54:
 5. End-to-end workflow testing
 """
 
-import unittest
-
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -80,10 +78,6 @@ class ItemCampaignIntegrationTest(TestCase):
             created_by=self.gm,
         )
 
-    @unittest.skip(
-        "Template integration not implemented - "
-        "campaign templates need item management links"
-    )
     def test_campaign_detail_shows_item_management_link(self):
         """Test that campaign detail page includes link to item management."""
         self.client.login(username="owner", password="testpass123")
@@ -98,7 +92,7 @@ class ItemCampaignIntegrationTest(TestCase):
 
         # Check for link to items management
         items_url = reverse(
-            "items:campaign_items", kwargs={"campaign_slug": self.campaign.slug}
+            "campaigns:campaign_items", kwargs={"slug": self.campaign.slug}
         )
         self.assertContains(response, items_url)
 
@@ -215,10 +209,6 @@ class ItemCharacterIntegrationTest(TestCase):
             created_by=self.owner,
         )
 
-    @unittest.skip(
-        "Template integration not implemented - "
-        "character templates need possessions display"
-    )
     def test_character_detail_shows_owned_items(self):
         """Test that character detail page shows character's items."""
         self.client.login(username="player", password="testpass123")
@@ -255,10 +245,6 @@ class ItemCharacterIntegrationTest(TestCase):
         self.assertContains(response, "1")  # Magic Sword quantity
         self.assertContains(response, "3")  # Health Potion quantity
 
-    @unittest.skip(
-        "Template integration not implemented - "
-        "character templates need item detail links"
-    )
     def test_character_detail_links_to_item_details(self):
         """Test that character detail has links to individual item details."""
         self.client.login(username="player", password="testpass123")

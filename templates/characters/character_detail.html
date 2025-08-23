@@ -99,6 +99,34 @@
             </div>
           </div>
         </div>
+        <!-- Possessions Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-treasure-chest me-2"></i>Possessions
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if character.possessions.all %}
+              <div class="list-group">
+                {% for item in character.possessions.all %}
+                  <a href="{% url 'items:detail' campaign_slug=character.campaign.slug item_id=item.id %}"
+                     class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                      <h6 class="mb-1">{{ item.name }}</h6>
+                      <small class="text-muted">Qty: {{ item.quantity }}</small>
+                    </div>
+                    {% if item.description %}
+                      <p class="mb-1">{{ item.description|truncatewords:20 }}</p>
+                    {% endif %}
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="text-muted mb-0">This character doesn't have any items yet.</p>
+            {% endif %}
+          </div>
+        </div>
         <!-- Scenes Section -->
         <div class="card mb-4">
           <div class="card-header">
