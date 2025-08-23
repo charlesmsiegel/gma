@@ -121,7 +121,7 @@ class ItemMixinApplicationTest(TestCase):
         self.assertFalse(name_field.null)
 
     def test_described_model_mixin_integration(self):
-        """Test that DescribedModelMixin integrates correctly with existing description field."""
+        """Test DescribedModelMixin integrates with existing description field."""
         # Test with description
         item_with_desc = Item.objects.create(
             name="Item with Description",

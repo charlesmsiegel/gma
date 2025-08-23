@@ -891,7 +891,7 @@ class CampaignCharacterListViewTest(BaseCharacterTestCase):
         # to avoid N+1 queries
         with self.assertNumQueries(
             13
-        ):  # campaign+memberships+users+session+user+count+campaign_members+characters+theme_queries
+        ):  # campaign+memberships+users+session+user+count+members+chars+theme
             response = self.client.get(self.list_url)
             # Access all character attributes that would trigger queries
             for character in response.context["characters"]:
@@ -1223,10 +1223,10 @@ class EnhancedCharacterDetailViewTest(BaseCharacterTestCase):
         """Test that character detail view uses proper database optimization."""
         self.client.login(username="player1", password="testpass123")
 
-        # Should use select_related for campaign and player_owner
+        # Should use select_related for campaign and player_owner, prefetch possessions
         with self.assertNumQueries(
-            16
-        ):  # Character detail with permission checks and theme queries
+            15
+        ):  # Character detail optimized with possessions prefetch
             response = self.client.get(self.detail_url_p1)
             # Access related objects to verify they're prefetched
             _ = response.context["character"].campaign.name

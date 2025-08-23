@@ -310,6 +310,14 @@ class CharacterDetailView(LoginRequiredMixin, DetailView):
 
     def get_object(self, queryset=None):
         """Get character with related data and permission checking."""
+        if queryset is None:
+            queryset = self.get_queryset()
+
+        # Optimize database queries by prefetching related data
+        queryset = queryset.select_related("campaign", "player_owner").prefetch_related(
+            "possessions"  # Prefetch character's items
+        )
+
         character = super().get_object(queryset)
 
         # Check if user has permission to view this character
