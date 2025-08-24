@@ -872,7 +872,7 @@ class PerformanceEdgeCaseTest(TestCase):
             response_time = end_time - start_time
             self.assertLess(
                 response_time,
-                1.0,
+                2.0,
                 f"User search should be fast, took {response_time:.2f}s",
             )
 

@@ -88,6 +88,14 @@ class User(AbstractUser):
         ordering = ["username"]
         verbose_name = "User"
         verbose_name_plural = "Users"
+        indexes = [
+            # For username search performance
+            models.Index(fields=["username"]),
+            # For email search performance
+            models.Index(fields=["email"]),
+            # For combined search operations
+            models.Index(fields=["username", "email"]),
+        ]
 
     def get_display_name(self) -> str:
         """Return display_name if set, otherwise fall back to username."""
