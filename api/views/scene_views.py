@@ -291,7 +291,7 @@ class SceneViewSet(viewsets.ModelViewSet):
 
             raise NotFound("Scene not found.")
 
-        character_id = request.data.get("character_id")
+        character_id = request.data.get("character_id") or request.data.get("character")
         if not character_id:
             from rest_framework.exceptions import ValidationError
 
@@ -341,6 +341,7 @@ class SceneViewSet(viewsets.ModelViewSet):
 
         return Response(
             {
+                "success": True,
                 "detail": f"{character.name} added to scene.",
                 "character": {
                     "id": character.pk,
