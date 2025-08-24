@@ -127,6 +127,9 @@ class ChatSystemIntegrationTestCase(TransactionTestCase):
 
     async def test_multi_user_chat_session(self):
         """Test multiple users chatting simultaneously."""
+        # Ensure async setup has been called
+        await self.asyncSetUp()
+
         # This test simulates a realistic chat session with multiple users
 
         chat_scenario = {
