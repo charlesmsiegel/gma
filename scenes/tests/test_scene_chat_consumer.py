@@ -24,8 +24,8 @@ User = get_user_model()
 class SceneChatConsumerTestCase(TransactionTestCase):
     """Test SceneChatConsumer WebSocket functionality."""
 
-    async def asyncSetUp(self):
-        """Set up test data asynchronously."""
+    async def _setup_test_data(self):
+        """Set up test data asynchronously - call this from each test method."""
         # Create users
         self.user1 = await database_sync_to_async(User.objects.create_user)(
             username="player1", email="player1@example.com", password="testpass123"
@@ -101,12 +101,16 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_websocket_connect_authenticated_user(self):
         """Test WebSocket connection with authenticated user."""
+        await self._setup_test_data()
+
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
             SceneChatConsumer.as_asgi(), f"/ws/scenes/{self.scene.id}/chat/"
         )
+        # Set up the scope properly for testing
         communicator.scope["user"] = self.user1
+        communicator.scope["url_route"] = {"kwargs": {"scene_id": str(self.scene.id)}}
 
         # Connect should succeed for scene participant
         connected, _ = await communicator.connect()
@@ -116,6 +120,8 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_websocket_connect_unauthenticated_user(self):
         """Test WebSocket connection with unauthenticated user."""
+        await self._setup_test_data()
+
         from django.contrib.auth.models import AnonymousUser
 
         from scenes.consumers import SceneChatConsumer
@@ -123,7 +129,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         communicator = WebsocketCommunicator(
             SceneChatConsumer.as_asgi(), f"/ws/scenes/{self.scene.id}/chat/"
         )
+        # Set up the scope properly for testing
         communicator.scope["user"] = AnonymousUser()
+        communicator.scope["url_route"] = {"kwargs": {"scene_id": str(self.scene.id)}}
 
         # Connect should fail for unauthenticated user
         connected, _ = await communicator.connect()
