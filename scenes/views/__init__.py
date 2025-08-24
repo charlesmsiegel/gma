@@ -192,7 +192,13 @@ class AddParticipantView(View):
         # Check if character is already participating
         if scene.participants.filter(pk=character.pk).exists():
             return JsonResponse(
-                {"error": "Character already participating"}, status=400
+                {
+                    "success": True,
+                    "message": (
+                        f"{character.name} is already participating in this scene."
+                    ),
+                },
+                status=200,
             )
 
         # Add participant
@@ -444,7 +450,7 @@ class SceneStatusChangeView(View):
                         {
                             "success": True,
                             "message": f"Scene status changed to "
-                                      f"{scene.get_status_display()}",
+                            f"{scene.get_status_display()}",
                             "new_status": scene.status,
                             "new_status_display": scene.get_status_display(),
                         }

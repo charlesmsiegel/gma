@@ -785,13 +785,15 @@ class ScenePermissionEdgeCaseTest(ScenePermissionTestCase):
 
         for url in endpoints:
             response = self.client.get(url)
+
             self.assertEqual(
                 response.status_code,
                 302,
                 f"Anonymous user should be redirected for {url}",
             )
+
             self.assertTrue(
-                response.url.startswith("/accounts/login/"),
+                response.url.startswith("/users/login/"),
                 f"Should redirect to login for {url}",
             )
 
