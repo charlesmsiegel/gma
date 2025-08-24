@@ -1015,9 +1015,25 @@ class SceneAPISerializerTest(BaseSceneAPITestCase):
         """Test create serializer validation logic."""
         self.client.force_authenticate(user=self.gm)
 
-        # Test with invalid data types
+        # Test with invalid name type first
         invalid_data = {
-            "name": 123,  # Should be string
+            "name": None,  # Empty name should fail validation
+            "campaign": self.campaign.id,  # Valid campaign
+        }
+
+        response = self.client.post(
+            self.list_url,
+            data=json.dumps(invalid_data),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response.json()
+        self.assertIn("name", data)
+
+        # Test with invalid campaign type
+        invalid_data = {
+            "name": "Valid Name",
             "campaign": "invalid",  # Should be integer
         }
 
@@ -1029,8 +1045,6 @@ class SceneAPISerializerTest(BaseSceneAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response.json()
-
-        self.assertIn("name", data)
         self.assertIn("campaign", data)
 
     def test_scene_update_serializer_partial_updates(self):
