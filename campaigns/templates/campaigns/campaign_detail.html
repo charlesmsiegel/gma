@@ -229,7 +229,12 @@
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h4 class="mb-0 d-flex align-items-center">
             <i class="bi bi-people-fill me-2 text-primary"></i>
-            Campaign Members ({{ campaign.memberships.count|add:1 }})
+            Campaign Members
+            {% if member_search %}
+              (Filtered)
+            {% else %}
+              ({{ campaign.memberships.count|add:1 }})
+            {% endif %}
           </h4>
           {% if is_owner %}
             <a href="{% url 'campaigns:manage_members' slug=campaign.slug %}"
@@ -249,7 +254,7 @@
               </span>
             </div>
             <!-- Other Members -->
-            {% for membership in campaign.memberships.all %}
+            {% for membership in filtered_memberships %}
               <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                 <div>
                   <div class="fw-semibold">{{ membership.user.username }}</div>

@@ -182,13 +182,22 @@ class SceneViewSet(viewsets.ModelViewSet):
         """Add campaign_id to serializer context for validation."""
         context = super().get_serializer_context()
 
-        # Add campaign_id if available
+        # Add campaign_id if available from query params
         campaign_id = self.request.query_params.get("campaign_id")
         if campaign_id:
             try:
                 context["campaign_id"] = int(campaign_id)
             except (ValueError, TypeError):
                 pass
+
+        # For create action, also try to get campaign from request data
+        if self.action == "create" and not context.get("campaign_id"):
+            campaign_id = self.request.data.get("campaign")
+            if campaign_id:
+                try:
+                    context["campaign_id"] = int(campaign_id)
+                except (ValueError, TypeError):
+                    pass
 
         return context
 

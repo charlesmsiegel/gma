@@ -115,3 +115,31 @@ class Scene(models.Model):
     def __str__(self) -> str:
         """Return the scene name."""
         return self.name
+
+    def log_status_change(self, user, old_status, new_status):
+        """
+        Log scene status changes for audit trail.
+
+        Args:
+            user: The user making the change
+            old_status: The previous status
+            new_status: The new status
+        """
+        # Create a simple audit log entry
+        # Only print in non-test environments to avoid cluttering test output
+        import sys
+
+        if "test" not in sys.argv:
+            print(
+                f"Scene '{self.name}' status changed from '{old_status}' "
+                f"to '{new_status}' by {user.username}"
+            )
+
+        # TODO: In a full implementation, save to audit log table:
+        # SceneStatusChangeLog.objects.create(
+        #     scene=self,
+        #     user=user,
+        #     old_status=old_status,
+        #     new_status=new_status,
+        #     timestamp=timezone.now()
+        # )

@@ -1746,7 +1746,8 @@ class SceneCreateUpdateSerializer(serializers.ModelSerializer):
         required=False,  # Not required for updates
     )
     participants = serializers.PrimaryKeyRelatedField(
-        queryset=Character.objects.none(),  # Will be set in view
+        # Use all characters, validate in validate_participants
+        queryset=Character.objects.all(),
         many=True,
         required=False,
     )
@@ -1781,23 +1782,8 @@ class SceneCreateUpdateSerializer(serializers.ModelSerializer):
                     models.Q(owner=user) | models.Q(memberships__user=user)
                 ).distinct()
 
-            # Set character participants queryset efficiently
-            campaign = self._get_target_campaign()
-            if campaign:
-                # Scope participants to campaign
-                self.fields["participants"].queryset = Character.objects.filter(
-                    campaign=campaign
-                ).select_related("player_owner")
-            else:
-                # For creation, allow all user-accessible characters
-                self.fields["participants"].queryset = (
-                    Character.objects.filter(
-                        models.Q(campaign__owner=user)
-                        | models.Q(campaign__memberships__user=user)
-                    )
-                    .select_related("player_owner")
-                    .distinct()
-                )
+            # Note: participants queryset is now set to all characters
+            # and validation is handled in validate_participants method
 
     def _get_target_campaign(self):
         """Get the target campaign for this operation."""
@@ -1858,6 +1844,30 @@ class SceneCreateUpdateSerializer(serializers.ModelSerializer):
 
         return value
 
+    def validate_participants(self, value):
+        """Validate that participants belong to the correct campaign."""
+        if not value:
+            return value
+
+        campaign = self._get_target_campaign()
+        if not campaign:
+            # For creation, get campaign from data
+            campaign_data = self.initial_data.get("campaign")
+            if campaign_data:
+                try:
+                    campaign = Campaign.objects.get(pk=int(campaign_data))
+                except (Campaign.DoesNotExist, ValueError, TypeError):
+                    raise serializers.ValidationError("Invalid campaign.")
+
+        if campaign:
+            for participant in value:
+                if participant.campaign != campaign:
+                    raise serializers.ValidationError(
+                        f"Character '{participant.name}' must be in the same campaign."
+                    )
+
+        return value
+
     def validate(self, data):
         """Validate scene data including campaign constraints."""
         # For updates, handle campaign context differently
@@ -1899,19 +1909,6 @@ class SceneCreateUpdateSerializer(serializers.ModelSerializer):
                             ]
                         }
                     )
-
-        # Validate participants
-        participants = data.get("participants", [])
-        for participant in participants:
-            if participant.campaign != campaign:
-                raise serializers.ValidationError(
-                    {
-                        "participants": [
-                            f"Character '{participant.name}' must be in the same "
-                            f"campaign."
-                        ]
-                    }
-                )
 
         return data
 

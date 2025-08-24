@@ -643,20 +643,15 @@ class CampaignMembershipUITest(TestCase):
             response = self.client.get(url, {"member_search": "alice"})
 
             if response.status_code == 200:
-                # Since member search is not implemented yet, all members still show
-                # This documents current behavior until search is implemented
+                # Member search should now filter results to show only alice
                 self.assertContains(response, "alice")
-                # TODO: Implement member search functionality
-                # When implemented, these should not contain the other members:
-                # self.assertNotContains(response, "bob")
-                # self.assertNotContains(response, "charlie")
+                # These members should not appear in the filtered results
+                self.assertNotContains(response, "bob")
+                self.assertNotContains(response, "charlie")
 
-        except Exception as e:
-            # Skip gracefully if member search doesn't exist yet
-            if "Reverse for" in str(e) or "not found" in str(e):
-                self.skipTest("Member search filter not yet implemented")
-            else:
-                raise
+        except Exception:
+            # If there's any other exception, re-raise it
+            raise
 
     def test_role_badge_display(self):
         """Test that member roles are displayed with appropriate styling."""

@@ -185,14 +185,21 @@ class SceneStatusChangeForm(forms.ModelForm):
 
         return new_status
 
-    def save(self, commit=True):
+    def save(self, commit=True, user=None):
         """Save scene and return whether status changed."""
         if self.instance and self.instance.pk:
             old_status = Scene.objects.get(pk=self.instance.pk).status
             new_status = self.cleaned_data.get("status")
 
             if old_status != new_status:
-                super().save(commit=commit)
+                scene = super().save(commit=commit)
+
+                # Log the status change for audit trail
+                if user:
+                    scene.log_status_change(
+                        user=user, old_status=old_status, new_status=new_status
+                    )
+
                 return True  # Status changed
             else:
                 return False  # No change needed

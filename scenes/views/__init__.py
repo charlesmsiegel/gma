@@ -8,7 +8,7 @@ import json
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
@@ -133,6 +133,70 @@ class SceneCreateView(CampaignFilterMixin, CreateView):
         """Handle invalid form submission."""
         messages.error(self.request, "Please correct the errors below and try again.")
         return super().form_invalid(form)
+
+
+class GetAvailableCharactersView(View):
+    """
+    AJAX endpoint to get available characters for a campaign.
+
+    Filters characters by campaign membership to provide character selection lists.
+    """
+
+    def get(self, request, *args, **kwargs):
+        """Return JSON list of characters available for the campaign."""
+        # Check authentication
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authentication required"}, status=401)
+
+        # Get campaign slug from URL
+        campaign_slug = kwargs.get("campaign_slug")
+        if not campaign_slug:
+            return JsonResponse({"error": "Campaign slug required"}, status=400)
+
+        # Get the campaign
+        from campaigns.models import Campaign
+
+        try:
+            campaign = Campaign.objects.get(slug=campaign_slug)
+        except Campaign.DoesNotExist:
+            return JsonResponse({"error": "Campaign not found"}, status=404)
+
+        # Check if user has access to this campaign
+        user_role = campaign.get_user_role(request.user)
+        if user_role not in ["OWNER", "GM", "PLAYER", "OBSERVER"]:
+            return JsonResponse({"error": "Campaign not found"}, status=404)
+
+        # Get all characters in this campaign
+        characters = (
+            Character.objects.filter(campaign=campaign)
+            .select_related("player_owner")
+            .order_by("name")
+        )
+
+        # Build character data
+        character_data = []
+        for character in characters:
+            character_data.append(
+                {
+                    "id": character.pk,
+                    "name": character.name,
+                    "owner": character.player_owner.display_name
+                    or character.player_owner.username,
+                    "npc": character.npc,
+                    "game_system": character.game_system,
+                }
+            )
+
+        return JsonResponse(
+            {
+                "characters": character_data,
+                "campaign": {
+                    "id": campaign.pk,
+                    "name": campaign.name,
+                    "slug": campaign.slug,
+                },
+            }
+        )
 
 
 class AddParticipantView(View):
@@ -278,6 +342,130 @@ class RemoveParticipantView(View):
                 "character_id": character.pk,
             }
         )
+
+
+class BulkAddParticipantsView(View):
+    """
+    View for adding multiple participants to a scene.
+
+    Supports bulk addition with permission checking for each character.
+    """
+
+    def post(self, request, *args, **kwargs):
+        """Handle bulk participant addition."""
+        # Check authentication
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+
+            return redirect_to_login(request.get_full_path())
+
+        # Get the scene
+        scene = get_object_or_404(Scene, pk=kwargs["pk"])
+
+        # Check if user has access to this scene's campaign
+        user_role = scene.campaign.get_user_role(request.user)
+        if user_role not in ["OWNER", "GM", "PLAYER", "OBSERVER"]:
+            raise Http404("Scene not found")
+
+        # Get character IDs from request
+        character_ids = request.POST.getlist("characters") or request.POST.getlist(
+            "character_ids"
+        )
+        if not character_ids:
+            if request.headers.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest":
+                return JsonResponse({"error": "No characters provided"}, status=400)
+            else:
+                messages.error(request, "No characters provided")
+                return redirect("scenes:scene_detail", pk=scene.pk)
+
+        # Validate and add characters
+        added_characters = []
+        permission_errors = []
+        not_found_errors = []
+        already_participating = []
+
+        for character_id in character_ids:
+            try:
+                character = Character.objects.get(pk=character_id)
+            except Character.DoesNotExist:
+                not_found_errors.append(f"Character ID {character_id} not found")
+                continue
+
+            # Check if character belongs to the same campaign
+            if character.campaign != scene.campaign:
+                permission_errors.append(f"{character.name} is not in this campaign")
+                continue
+
+            # Check if character is already participating
+            if scene.participants.filter(pk=character.pk).exists():
+                already_participating.append(character.name)
+                continue
+
+            # Check permissions
+            can_add = False
+            if user_role in ["OWNER", "GM"]:
+                can_add = True
+            elif (
+                user_role in ["PLAYER", "OBSERVER"]
+                and character.player_owner == request.user
+            ):
+                can_add = True
+
+            if not can_add:
+                permission_errors.append(f"No permission to add {character.name}")
+                continue
+
+            # Add participant
+            scene.participants.add(character)
+            added_characters.append(character.name)
+
+        # Prepare response
+        success_count = len(added_characters)
+        total_count = len(character_ids)
+
+        if request.headers.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest":
+            response_data = {
+                "success": True,
+                "added_count": success_count,
+                "total_count": total_count,
+                "added_characters": added_characters,
+            }
+            if permission_errors:
+                response_data["permission_errors"] = permission_errors
+            if not_found_errors:
+                response_data["not_found_errors"] = not_found_errors
+            if already_participating:
+                response_data["already_participating"] = already_participating
+
+            if success_count == 0 and (permission_errors or not_found_errors):
+                return JsonResponse(response_data, status=403)
+            else:
+                return JsonResponse(response_data)
+        else:
+            # Regular form submission - redirect with messages
+            if success_count > 0:
+                messages.success(
+                    request,
+                    f"Added {success_count} characters to the scene: "
+                    f"{', '.join(added_characters)}",
+                )
+
+            if permission_errors:
+                messages.error(
+                    request, f"Permission denied for: {'; '.join(permission_errors)}"
+                )
+            if not_found_errors:
+                messages.error(request, f"Not found: {'; '.join(not_found_errors)}")
+            if already_participating:
+                messages.warning(
+                    request,
+                    f"Already participating: {', '.join(already_participating)}",
+                )
+
+            if success_count == 0 and permission_errors:
+                return HttpResponseForbidden("Permission denied for bulk operation")
+
+            return redirect("scenes:scene_detail", pk=scene.pk)
 
 
 class SceneDetailView(DetailView):
@@ -448,7 +636,7 @@ class SceneStatusChangeView(View):
         form = SceneStatusChangeForm({"status": new_status}, instance=scene)
 
         if form.is_valid():
-            status_changed = form.save()
+            status_changed = form.save(user=request.user)
 
             # Check if this is an AJAX request
             if (

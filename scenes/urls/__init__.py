@@ -4,7 +4,9 @@ from django.urls import URLPattern, path
 
 from scenes.views import (
     AddParticipantView,
+    BulkAddParticipantsView,
     CampaignScenesView,
+    GetAvailableCharactersView,
     RemoveParticipantView,
     SceneCreateView,
     SceneDetailView,
@@ -27,6 +29,12 @@ urlpatterns: List[URLPattern] = [
         SceneCreateView.as_view(),
         name="scene_create",
     ),
+    # Character filtering for scene participant selection
+    path(
+        "campaigns/<slug:campaign_slug>/characters/",
+        GetAvailableCharactersView.as_view(),
+        name="get_available_characters",
+    ),
     # Individual scene management
     path(
         "scenes/<int:pk>/",
@@ -43,6 +51,11 @@ urlpatterns: List[URLPattern] = [
         "scenes/<int:pk>/participants/add/",
         AddParticipantView.as_view(),
         name="add_participant",
+    ),
+    path(
+        "scenes/<int:pk>/participants/bulk-add/",
+        BulkAddParticipantsView.as_view(),
+        name="bulk_add_participants",
     ),
     path(
         "scenes/<int:pk>/participants/remove/<int:character_id>/",

@@ -397,8 +397,28 @@ class SceneCreateAPITest(BaseSceneAPITestCase):
 
     def test_create_scene_with_participants(self):
         """Test scene creation with initial participants."""
-        # TODO: Fix participant validation in serializer
-        self.skipTest("Participant validation during scene creation needs fixing")
+        self.client.force_authenticate(user=self.gm)
+
+        scene_data = {
+            "name": "Scene with Participants",
+            "description": "Testing participant creation",
+            "campaign": self.campaign.pk,
+            "participants": [self.character1.pk, self.character2.pk],
+        }
+
+        response = self.client.post(self.list_url, data=scene_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        data = response.json()
+        self.assertEqual(data["name"], "Scene with Participants")
+        self.assertIn("participants", data)
+        self.assertEqual(len(data["participants"]), 2)
+
+        # Verify participants were added
+        scene = Scene.objects.get(pk=data["id"])
+        self.assertEqual(scene.participants.count(), 2)
+        self.assertIn(self.character1, scene.participants.all())
+        self.assertIn(self.character2, scene.participants.all())
 
     def test_create_scene_cross_campaign_participants_denied(self):
         """Test that characters from other campaigns cannot be added."""
