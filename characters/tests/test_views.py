@@ -651,9 +651,8 @@ class CampaignCharacterListViewTest(BaseCharacterTestCase):
     def test_view_requires_authentication(self):
         """Test that the view requires user authentication."""
         response = self.client.get(self.list_url)
-        # For security reasons, anonymous users get 404 to hide campaign existence
-        # rather than redirect that would reveal campaign exists
-        self.assertEqual(response.status_code, 404)
+        # Authentication required - redirect to login page
+        self.assertEqual(response.status_code, 302)
 
     def test_view_non_member_access_denied(self):
         """Test that non-members cannot access the character list."""

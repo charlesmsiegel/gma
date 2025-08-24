@@ -66,6 +66,7 @@ class AddParticipantForm(forms.Form):
 
     def __init__(self, scene=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.scene = scene
         if scene:
             # Only show characters from the same campaign who aren't
             # already participating
@@ -75,6 +76,7 @@ class AddParticipantForm(forms.Form):
 
     def save(self, scene=None):
         """Add the selected character to the scene."""
+        scene = scene or self.scene
         if scene and self.is_valid():
             character = self.cleaned_data["character"]
             scene.participants.add(character)
@@ -91,6 +93,7 @@ class BulkAddParticipantsForm(forms.Form):
 
     def __init__(self, scene=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.scene = scene
         if scene:
             # Only show characters from the same campaign who aren't
             # already participating
@@ -100,6 +103,7 @@ class BulkAddParticipantsForm(forms.Form):
 
     def save(self, scene=None):
         """Add selected characters to the scene."""
+        scene = scene or self.scene
         if scene and self.is_valid():
             characters = self.cleaned_data["characters"]
             scene.participants.add(*characters)
@@ -131,6 +135,26 @@ class SceneStatusChangeForm(forms.ModelForm):
 
             self.fields["status"].choices = choices
 
+            # Store original choices for custom validation
+            self._original_status_choices = Scene.STATUS_CHOICES
+            self._current_status = current_status
+
+    def clean(self):
+        """Clean form with custom error messages for invalid status choices."""
+        # Check for status field errors and replace with custom message
+        if "status" in self.errors:
+            raw_status = self.data.get("status")
+            if raw_status and hasattr(self, "_current_status"):
+                if self._current_status == "ACTIVE" and raw_status == "ARCHIVED":
+                    self.errors["status"].clear()
+                    self.add_error(
+                        "status",
+                        "Cannot transition from ACTIVE directly to ARCHIVED. "
+                        "Active scenes must be closed first.",
+                    )
+
+        return super().clean()
+
     def clean_status(self):
         """Validate status transitions."""
         new_status = self.cleaned_data.get("status")
@@ -146,11 +170,18 @@ class SceneStatusChangeForm(forms.ModelForm):
 
             if new_status != current_status:
                 if new_status not in valid_transitions.get(current_status, []):
-                    raise forms.ValidationError(
-                        f"Cannot transition from {current_status} directly to "
-                        f"{new_status}. Valid transitions from {current_status}: "
-                        f"{', '.join(valid_transitions.get(current_status, []))}"
-                    )
+                    valid_next = valid_transitions.get(current_status, [])
+                    if current_status == "ACTIVE" and new_status == "ARCHIVED":
+                        raise forms.ValidationError(
+                            "Cannot transition from ACTIVE directly to ARCHIVED. "
+                            "Active scenes must be closed first."
+                        )
+                    else:
+                        raise forms.ValidationError(
+                            f"Cannot transition from {current_status} directly to "
+                            f"{new_status}. Valid transitions from {current_status}: "
+                            f"{', '.join(valid_next)}"
+                        )
 
         return new_status
 
@@ -230,7 +261,7 @@ class SceneSearchForm(forms.Form):
         date_to = cleaned_data.get("date_to")
 
         if date_from and date_to and date_from > date_to:
-            raise forms.ValidationError("End date must be after start date.")
+            self.add_error("date_to", "End date must be after start date.")
 
         return cleaned_data
 
