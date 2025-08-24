@@ -38,6 +38,11 @@ class CampaignFilterMixin(LoginRequiredMixin):
 
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """Get campaign and check permissions before processing request."""
+        # Check authentication first - if not authenticated, 
+        # LoginRequiredMixin will redirect
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+
         campaign_slug = kwargs.get("slug")
 
         if not campaign_slug:

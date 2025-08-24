@@ -295,9 +295,11 @@ class SceneDetailView(DetailView):
         scene = get_object_or_404(Scene, pk=kwargs["pk"])
 
         # Check if user has access to this scene's campaign
-        user_role = scene.campaign.get_user_role(request.user)
-        if user_role not in ["OWNER", "GM", "PLAYER", "OBSERVER"]:
-            raise Http404("Scene not found")
+        # Superusers have access to all scenes
+        if not request.user.is_superuser:
+            user_role = scene.campaign.get_user_role(request.user)
+            if user_role not in ["OWNER", "GM", "PLAYER", "OBSERVER"]:
+                raise Http404("Scene not found")
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -306,6 +308,10 @@ class SceneDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         scene = self.get_object()
         user_role = scene.campaign.get_user_role(self.request.user)
+
+        # Superusers get OWNER-level permissions
+        if self.request.user.is_superuser and user_role is None:
+            user_role = "OWNER"
 
         context.update(
             {
@@ -437,7 +443,8 @@ class SceneStatusChangeView(View):
                     return JsonResponse(
                         {
                             "success": True,
-                            "message": f"Scene status changed to {scene.get_status_display()}",
+                            "message": f"Scene status changed to "
+                                      f"{scene.get_status_display()}",
                             "new_status": scene.status,
                             "new_status_display": scene.get_status_display(),
                         }
