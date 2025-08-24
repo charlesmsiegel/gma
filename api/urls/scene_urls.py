@@ -17,4 +17,10 @@ router.register(r"", SceneViewSet, basename="scenes")
 urlpatterns = [
     # Include all ViewSet routes
     path("", include(router.urls)),
+    # Specific URL pattern for message history API expected by tests
+    path(
+        "<int:scene_id>/messages/",
+        SceneViewSet.as_view({"get": "messages"}),
+        name="scene-messages",
+    ),
 ]

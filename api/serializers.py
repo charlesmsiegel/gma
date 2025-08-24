@@ -11,7 +11,7 @@ from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
 from characters.models import Character
 from items.models import Item
 from locations.models import Location
-from scenes.models import Scene
+from scenes.models import Message, Scene
 
 User = get_user_model()
 
@@ -1959,3 +1959,85 @@ class SceneCreateUpdateSerializer(serializers.ModelSerializer):
         # Use the main SceneSerializer for response
         serializer = SceneSerializer(instance, context=self.context)
         return serializer.data
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Message model in API responses.
+
+    Provides comprehensive message data with nested relationships
+    for scene message history display.
+    """
+
+    scene = serializers.SerializerMethodField()
+    character = serializers.SerializerMethodField()
+    sender = serializers.SerializerMethodField()
+    recipients = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = Message
+        fields = (
+            "id",
+            "scene",
+            "character",
+            "sender",
+            "content",
+            "message_type",
+            "recipients",
+            "created_at",
+        )
+        read_only_fields = (
+            "id",
+            "scene",
+            "character",
+            "sender",
+            "recipients",
+            "timestamp",
+        )
+
+    def get_scene(self, obj):
+        """Get minimal scene information."""
+        if obj.scene:
+            return {
+                "id": obj.scene.id,
+                "name": obj.scene.name,
+            }
+        return None
+
+    def get_character(self, obj):
+        """Get character information if present."""
+        if obj.character:
+            return {
+                "id": obj.character.id,
+                "name": obj.character.name,
+                "npc": obj.character.npc,
+            }
+        return None
+
+    def get_sender(self, obj):
+        """Get sender information."""
+        if obj.sender:
+            return {
+                "id": obj.sender.id,
+                "username": obj.sender.username,
+                "display_name": getattr(
+                    obj.sender, "display_name", obj.sender.username
+                ),
+            }
+        return None
+
+    def get_recipients(self, obj):
+        """Get recipients for private messages."""
+        if obj.message_type == "PRIVATE":
+            return [
+                {
+                    "id": recipient.id,
+                    "username": recipient.username,
+                    "display_name": getattr(
+                        recipient, "display_name", recipient.username
+                    ),
+                }
+                for recipient in obj.recipients.all()
+            ]
+        return []

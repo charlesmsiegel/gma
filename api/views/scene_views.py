@@ -21,13 +21,14 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from api.serializers import (
+    MessageSerializer,
     SceneCreateUpdateSerializer,
     SceneDetailSerializer,
     SceneSerializer,
 )
 from campaigns.models import Campaign
 from characters.models import Character
-from scenes.models import Scene
+from scenes.models import Message, Scene
 
 User = get_user_model()
 
@@ -494,3 +495,110 @@ class SceneViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
+
+    @action(detail=True, methods=["get"])
+    def messages(self, request, pk=None):
+        """Get message history for a scene with filtering and pagination."""
+        scene = self.get_object()
+        user = request.user
+
+        # Check if user has access to this scene
+        user_role = scene.campaign.get_user_role(user)
+        if user_role not in ["OWNER", "GM", "PLAYER", "OBSERVER"]:
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound("Scene not found.")
+
+        # Start with base queryset
+        queryset = (
+            Message.objects.filter(scene=scene)
+            .select_related("scene", "character", "sender")
+            .prefetch_related("recipients")
+            .order_by("created_at")
+        )
+
+        # Build permission-based filters first
+        from django.db.models import Q
+
+        if user_role not in ["OWNER", "GM"]:
+            # Non-GMs can only see:
+            # - Public messages
+            # - OOC messages
+            # - Private messages they are recipients of or sent by them
+            # - System messages
+            permission_filter = (
+                Q(message_type="PUBLIC")
+                | Q(message_type="OOC")
+                | Q(message_type="SYSTEM")
+                | (Q(message_type="PRIVATE") & (Q(recipients=user) | Q(sender=user)))
+            )
+            queryset = queryset.filter(permission_filter)
+
+        # Apply additional filters on top of permission filtering
+        message_type_param = request.query_params.get(
+            "message_type"
+        ) or request.query_params.get("type")
+        if message_type_param:
+            # Handle comma-separated message types
+            message_types = [t.strip() for t in message_type_param.split(",")]
+            valid_types = [t for t in message_types if t in dict(Message.TYPE_CHOICES)]
+            if valid_types:
+                if len(valid_types) == 1:
+                    queryset = queryset.filter(message_type=valid_types[0])
+                else:
+                    queryset = queryset.filter(message_type__in=valid_types)
+            else:
+                # No valid message types found, return empty queryset
+                queryset = queryset.none()
+
+        # Search functionality
+        search = request.query_params.get("search")
+        if search:
+            queryset = queryset.filter(content__icontains=search)
+
+        character_id = request.query_params.get("character_id")
+        if character_id:
+            try:
+                queryset = queryset.filter(character_id=int(character_id))
+            except (ValueError, TypeError):
+                pass
+
+        sender_id = request.query_params.get("sender_id")
+        if sender_id:
+            try:
+                queryset = queryset.filter(sender_id=int(sender_id))
+            except (ValueError, TypeError):
+                pass
+
+        # Date range filtering
+        since = request.query_params.get("since")
+        if since:
+            try:
+                from datetime import datetime
+
+                since_datetime = datetime.fromisoformat(since.replace("Z", "+00:00"))
+                queryset = queryset.filter(created_at__gte=since_datetime)
+            except (ValueError, TypeError):
+                pass
+
+        until = request.query_params.get("until")
+        if until:
+            try:
+                from datetime import datetime
+
+                until_datetime = datetime.fromisoformat(until.replace("Z", "+00:00"))
+                queryset = queryset.filter(created_at__lte=until_datetime)
+            except (ValueError, TypeError):
+                pass
+
+        # Apply distinct to avoid duplicates from joins
+        queryset = queryset.distinct()
+
+        # Paginate results
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = MessageSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = MessageSerializer(queryset, many=True)
+        return Response(serializer.data)
