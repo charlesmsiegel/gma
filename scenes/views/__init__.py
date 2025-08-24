@@ -4,10 +4,15 @@ Views for scene management.
 Provides campaign-scoped scene management views with proper permission checking.
 """
 
-from django.shortcuts import render
-from django.views.generic import ListView
+from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from core.mixins import CampaignFilterMixin, CampaignListView
+from core.mixins import CampaignFilterMixin, CampaignListView, CampaignManagementMixin
+from scenes.forms import SceneForm
 from scenes.models import Scene
 
 
@@ -22,6 +27,13 @@ class CampaignScenesView(CampaignListView):
     model = Scene
     template_name = "scenes/campaign_scenes.html"
     context_object_name = "scenes"
+
+    def dispatch(self, request, *args, **kwargs):
+        """Handle campaign_slug parameter mapping."""
+        # Map campaign_slug to slug for CampaignFilterMixin
+        if "campaign_slug" in kwargs:
+            kwargs["slug"] = kwargs["campaign_slug"]
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         """Add scene-specific context."""
@@ -38,3 +50,176 @@ class CampaignScenesView(CampaignListView):
         )
 
         return context
+
+
+class SceneCreateView(CampaignFilterMixin, CreateView):
+    """
+    View for creating new scenes.
+
+    Only OWNER and GM can create scenes.
+    """
+
+    model = Scene
+    form_class = SceneForm
+    template_name = "scenes/scene_create.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        """Handle campaign_slug parameter mapping and permission checking."""
+        # Map campaign_slug to slug for CampaignFilterMixin
+        if "campaign_slug" in kwargs:
+            kwargs["slug"] = kwargs["campaign_slug"]
+
+        # Call parent dispatch which handles authentication and campaign access
+        # This will return early if authentication is required
+        response = super().dispatch(request, *args, **kwargs)
+
+        # If we got here, the user is authenticated and has campaign access
+        # Additional permission check for scene creation
+        if hasattr(self, "campaign") and self.campaign:
+            user_role = self.campaign.get_user_role(request.user)
+            if user_role not in ["OWNER", "GM"]:
+                if user_role in ["PLAYER", "OBSERVER"]:
+                    # User is a campaign member but lacks permission
+                    raise PermissionDenied(
+                        "Only campaign owners and GMs can create scenes."
+                    )
+                # For non-members, parent dispatch already returned 404
+
+        return response
+
+    def get_context_data(self, **kwargs):
+        """Add campaign context."""
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "page_title": f"Create Scene - {self.campaign.name}",
+                "campaign": self.campaign,
+            }
+        )
+        return context
+
+    def form_valid(self, form):
+        """Handle valid form submission by setting campaign and creator."""
+        scene = form.save(campaign=self.campaign, created_by=self.request.user)
+        messages.success(
+            self.request, f'Scene "{scene.name}" was created successfully!'
+        )
+        return redirect("scenes:scene_detail", pk=scene.pk)
+
+    def form_invalid(self, form):
+        """Handle invalid form submission."""
+        messages.error(self.request, "Please correct the errors below and try again.")
+        return super().form_invalid(form)
+
+
+class SceneDetailView(DetailView):
+    """
+    View for displaying scene details.
+
+    All campaign members can view scenes.
+    """
+
+    model = Scene
+    template_name = "scenes/scene_detail.html"
+    context_object_name = "scene"
+
+    def dispatch(self, request, *args, **kwargs):
+        """Handle authentication and campaign access checking."""
+        # Check authentication first
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+
+            return redirect_to_login(request.get_full_path())
+
+        # Get the scene to check campaign access
+        scene = get_object_or_404(Scene, pk=kwargs["pk"])
+
+        # Check if user has access to this scene's campaign
+        user_role = scene.campaign.get_user_role(request.user)
+        if user_role not in ["OWNER", "GM", "PLAYER", "OBSERVER"]:
+            raise Http404("Scene not found")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        """Add scene-specific context."""
+        context = super().get_context_data(**kwargs)
+        scene = self.get_object()
+        user_role = scene.campaign.get_user_role(self.request.user)
+
+        context.update(
+            {
+                "page_title": f"{scene.name} - {scene.campaign.name}",
+                "campaign": scene.campaign,
+                "can_manage_scene": user_role in ["OWNER", "GM"],
+                "participants": scene.participants.select_related(
+                    "player_owner"
+                ).order_by("name"),
+            }
+        )
+
+        return context
+
+
+class SceneEditView(UpdateView):
+    """
+    View for editing existing scenes.
+
+    Only OWNER and GM can edit scenes.
+    """
+
+    model = Scene
+    form_class = SceneForm
+    template_name = "scenes/scene_edit.html"
+    context_object_name = "scene"
+
+    def dispatch(self, request, *args, **kwargs):
+        """Handle authentication and permission checking."""
+        # Check authentication first
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+
+            return redirect_to_login(request.get_full_path())
+
+        # Get the scene to check campaign access
+        scene = get_object_or_404(Scene, pk=kwargs["pk"])
+
+        # Check if user has access to this scene's campaign
+        user_role = scene.campaign.get_user_role(request.user)
+        if user_role not in ["OWNER", "GM"]:
+            if user_role in ["PLAYER", "OBSERVER"]:
+                raise PermissionDenied("Only campaign owners and GMs can edit scenes.")
+            else:
+                raise Http404("Scene not found")
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        """Add scene-specific context."""
+        context = super().get_context_data(**kwargs)
+        scene = self.get_object()
+
+        context.update(
+            {
+                "page_title": f"Edit {scene.name} - {scene.campaign.name}",
+                "campaign": scene.campaign,
+            }
+        )
+
+        return context
+
+    def get_success_url(self):
+        """Redirect to scene detail after successful update."""
+        return reverse("scenes:scene_detail", kwargs={"pk": self.object.pk})
+
+    def form_valid(self, form):
+        """Handle successful form submission."""
+        messages.success(
+            self.request, f'Scene "{self.object.name}" was updated successfully!'
+        )
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        """Handle invalid form submission."""
+        messages.error(self.request, "Please correct the errors below and try again.")
+        return super().form_invalid(form)

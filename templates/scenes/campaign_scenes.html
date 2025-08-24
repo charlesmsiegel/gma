@@ -19,60 +19,105 @@
         <h1 class="h2 mb-1">{{ campaign.name }} - Scenes</h1>
         <p class="text-muted mb-0">Create and manage campaign scenes and story sessions.</p>
       </div>
+      {% if can_create_scene %}
+        <a href="{% url 'scenes:scene_create' campaign_slug=campaign.slug %}"
+           class="btn btn-primary">
+          <i class="bi bi-plus-circle"></i> Create Scene
+        </a>
+      {% endif %}
     </div>
-    <!-- Coming Soon Card -->
-    <div class="row justify-content-center">
-      <div class="col-lg-8">
-        <div class="card text-center">
-          <div class="card-body p-5">
-            <div class="mb-4">
-              <h3 class="h4 text-primary">🎭 Scenes Area Coming Soon</h3>
-              <p class="text-muted">This area will allow you to:</p>
-            </div>
-            <div class="row">
-              <div class="col-md-8 mx-auto">
-                <ul class="list-unstyled text-start">
-                  {% if can_manage_scenes %}
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Create new scenes and story sessions
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Manage scene participants and NPCs
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Run real-time scenes with chat and dice
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Archive completed scenes
-                    </li>
-                  {% else %}
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> View all campaign scenes
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Participate in active scenes
-                    </li>
-                    <li class="mb-2">
-                      <i class="text-success">✓</i> Review scene history and logs
-                    </li>
-                  {% endif %}
-                </ul>
+
+    <!-- Scenes List -->
+    {% if scenes %}
+      <div class="row">
+        {% for scene in scenes %}
+          <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  <h5 class="card-title">
+                    <a href="{% url 'scenes:scene_detail' pk=scene.pk %}"
+                       class="text-decoration-none">{{ scene.name }}</a>
+                  </h5>
+                  <span class="badge {% if scene.status == 'ACTIVE' %}bg-success{% elif scene.status == 'CLOSED' %}bg-warning{% else %}bg-secondary{% endif %}">
+                    {{ scene.status }}
+                  </span>
+                </div>
+
+                {% if scene.description %}
+                  <p class="card-text text-muted">
+                    {{ scene.description|truncatewords:15 }}
+                  </p>
+                {% else %}
+                  <p class="card-text text-muted fst-italic">No description</p>
+                {% endif %}
+
+                <div class="mt-auto">
+                  <small class="text-muted d-block mb-2">
+                    Created {{ scene.created_at|date:"M d, Y" }} by {{ scene.created_by.get_full_name|default:scene.created_by.username }}
+                  </small>
+
+                  <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                      <i class="bi bi-people"></i> {{ scene.participants.count }} participant{{ scene.participants.count|pluralize }}
+                    </small>
+
+                    {% if can_manage_scenes %}
+                      <div class="btn-group btn-group-sm">
+                        <a href="{% url 'scenes:scene_detail' pk=scene.pk %}"
+                           class="btn btn-outline-primary btn-sm" title="View Details">
+                          <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{% url 'scenes:scene_edit' pk=scene.pk %}"
+                           class="btn btn-outline-secondary btn-sm" title="Edit Scene">
+                          <i class="bi bi-pencil"></i>
+                        </a>
+                      </div>
+                    {% else %}
+                      <a href="{% url 'scenes:scene_detail' pk=scene.pk %}"
+                         class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye"></i> View
+                      </a>
+                    {% endif %}
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="mt-4 d-flex gap-3 justify-content-center flex-wrap">
-              {% if can_create_scene %}
-                <button class="btn btn-primary" disabled title="Coming Soon">
-                  <i class="bi bi-plus-circle"></i> Create Scene
-                </button>
-              {% endif %}
-              <a href="{% url 'campaigns:detail' slug=campaign.slug %}"
-                 class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Campaign
-              </a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <!-- No Scenes Message -->
+      <div class="row justify-content-center">
+        <div class="col-lg-6">
+          <div class="card text-center">
+            <div class="card-body p-5">
+              <i class="bi bi-collection display-1 text-muted mb-4"></i>
+              <h3 class="h4 mb-3">No scenes found</h3>
+              <p class="text-muted mb-4">
+                {% if can_create_scene %}
+                  Get started by creating your first scene for this campaign.
+                {% else %}
+                  The campaign owner or GM can create scenes for the group.
+                {% endif %}
+              </p>
+
+              <div class="d-flex gap-3 justify-content-center flex-wrap">
+                {% if can_create_scene %}
+                  <a href="{% url 'scenes:scene_create' campaign_slug=campaign.slug %}"
+                     class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create First Scene
+                  </a>
+                {% endif %}
+                <a href="{% url 'campaigns:detail' slug=campaign.slug %}"
+                   class="btn btn-secondary">
+                  <i class="bi bi-arrow-left"></i> Back to Campaign
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    {% endif %}
   </div>
 {% endblock %}

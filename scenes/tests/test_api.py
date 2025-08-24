@@ -77,18 +77,21 @@ class BaseSceneAPITestCase(APITestCase):
             description="Character owned by player1",
             campaign=self.campaign,
             player_owner=self.player1,
+            game_system="Test System",
         )
         self.character2 = Character.objects.create(
             name="Player2 Character",
             description="Character owned by player2",
             campaign=self.campaign,
             player_owner=self.player2,
+            game_system="Test System",
         )
         self.gm_character = Character.objects.create(
             name="GM NPC",
             description="NPC managed by GM",
             campaign=self.campaign,
             player_owner=self.gm,
+            game_system="Test System",
         )
 
         # Create test scenes
@@ -420,6 +423,7 @@ class SceneCreateAPITest(BaseSceneAPITestCase):
             name="Other Character",
             campaign=other_campaign,
             player_owner=self.owner,
+            game_system="Test System",
         )
 
         self.client.force_authenticate(user=self.gm)
@@ -702,6 +706,7 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
             name="Player1 Second Character",
             campaign=self.campaign,
             player_owner=self.player1,
+            game_system="Test System",
         )
 
         self.client.force_authenticate(user=self.player1)
@@ -775,6 +780,7 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
             name="Other Character",
             campaign=other_campaign,
             player_owner=self.owner,
+            game_system="Test System",
         )
 
         self.client.force_authenticate(user=self.gm)
@@ -958,6 +964,7 @@ class SceneAPIErrorHandlingTest(BaseSceneAPITestCase):
             name="Invalid Character",
             campaign=other_campaign,
             player_owner=self.owner,
+            game_system="Test System",
         )
 
         url = reverse("api:scenes-bulk-add-participants", kwargs={"pk": self.scene1.pk})

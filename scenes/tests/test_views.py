@@ -74,16 +74,19 @@ class SceneViewTestCase(TestCase):
             name="Player1 Character",
             campaign=self.campaign,
             player_owner=self.player1,
+            game_system="Test System",
         )
         self.character2 = Character.objects.create(
             name="Player2 Character",
             campaign=self.campaign,
             player_owner=self.player2,
+            game_system="Test System",
         )
         self.gm_character = Character.objects.create(
             name="GM NPC",
             campaign=self.campaign,
             player_owner=self.gm,
+            game_system="Test System",
         )
 
         # Create test scenes
@@ -627,6 +630,7 @@ class ParticipantManagementTest(SceneViewTestCase):
             name="Player1 Second Character",
             campaign=self.campaign,
             player_owner=self.player1,
+            game_system="Test System",
         )
 
         self.client.login(username="player1", password="testpass123")
@@ -719,6 +723,7 @@ class ParticipantManagementTest(SceneViewTestCase):
             name="Other Character",
             campaign=other_campaign,
             player_owner=self.owner,
+            game_system="Test System",
         )
 
         self.client.login(username="gm", password="testpass123")

@@ -73,16 +73,19 @@ class ScenePermissionTestCase(TestCase):
             name="Player1 Character",
             campaign=self.campaign,
             player_owner=self.player1,
+            game_system="Test System",
         )
         self.character2 = Character.objects.create(
             name="Player2 Character",
             campaign=self.campaign,
             player_owner=self.player2,
+            game_system="Test System",
         )
         self.gm_character = Character.objects.create(
             name="GM NPC",
             campaign=self.campaign,
             player_owner=self.gm,
+            game_system="Test System",
         )
 
         # Create test scene
@@ -297,6 +300,7 @@ class SceneParticipantPermissionTest(ScenePermissionTestCase):
             name="Player1 Second Character",
             campaign=self.campaign,
             player_owner=self.player1,
+            game_system="Test System",
         )
 
         url = reverse("scenes:add_participant", kwargs={"pk": self.scene.pk})
@@ -537,6 +541,7 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
             name="Player1 Second Character",
             campaign=self.campaign,
             player_owner=self.player1,
+            game_system="Test System",
         )
 
         add_url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene.pk})
@@ -580,6 +585,7 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
             name="Other Character",
             campaign=other_campaign,
             player_owner=self.owner,
+            game_system="Test System",
         )
 
         self.client.force_authenticate(user=self.owner)
@@ -817,6 +823,7 @@ class ScenePermissionEdgeCaseTest(ScenePermissionTestCase):
                 name=f"Bulk Test Character {i}",
                 campaign=self.campaign,
                 player_owner=self.player1,
+                game_system="Test System",
             )
             characters.append(char)
 
@@ -835,6 +842,7 @@ class ScenePermissionEdgeCaseTest(ScenePermissionTestCase):
             name="Other Player Character",
             campaign=self.campaign,
             player_owner=self.player2,
+            game_system="Test System",
         )
 
         response = self.client.post(

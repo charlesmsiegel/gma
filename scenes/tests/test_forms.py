@@ -222,11 +222,13 @@ class SceneParticipantFormTest(TestCase):
             name="Test Character 1",
             campaign=self.campaign,
             player_owner=self.player,
+            game_system="Test System",
         )
         self.character2 = Character.objects.create(
             name="Test Character 2",
             campaign=self.campaign,
             player_owner=self.user,
+            game_system="Test System",
         )
 
         self.scene = Scene.objects.create(
@@ -271,6 +273,7 @@ class SceneParticipantFormTest(TestCase):
             name="Other Character",
             campaign=other_campaign,
             player_owner=self.user,
+            game_system="Test System",
         )
 
         form = AddParticipantForm(scene=self.scene)
@@ -555,6 +558,7 @@ class SceneSearchFormTest(TestCase):
             name="Test Character",
             campaign=self.campaign,
             player_owner=self.user,
+            game_system="Test System",
         )
 
         form_data = {
@@ -606,6 +610,7 @@ class SceneSearchFormTest(TestCase):
             name="Campaign Character",
             campaign=self.campaign,
             player_owner=self.user,
+            game_system="Test System",
         )
 
         other_campaign = Campaign.objects.create(
@@ -616,6 +621,7 @@ class SceneSearchFormTest(TestCase):
             name="Other Character",
             campaign=other_campaign,
             player_owner=self.user,
+            game_system="Test System",
         )
 
         form = SceneSearchForm(campaign=self.campaign)
@@ -636,6 +642,7 @@ class SceneSearchFormTest(TestCase):
             name="Test Character",
             campaign=self.campaign,
             player_owner=self.user,
+            game_system="Test System",
         )
 
         form_data = {
