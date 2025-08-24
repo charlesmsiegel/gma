@@ -12,9 +12,10 @@
 8. [Character API](#character-api)
 9. [Location API](#location-api)
 10. [Item API](#item-api)
-11. [Source Reference API](#source-reference-api)
-12. [Data Models](#data-models)
-13. [Testing the API](#testing-the-api)
+11. [Scene API](#scene-api)
+12. [Source Reference API](#source-reference-api)
+13. [Data Models](#data-models)
+14. [Testing the API](#testing-the-api)
 
 ## Overview
 
@@ -1663,6 +1664,509 @@ PUT /api/items/15/
 }
 ```
 
+## Scene API
+
+### Scene Management System
+
+The Scene API provides comprehensive scene management capabilities for campaigns, featuring role-based permissions, participant management, and status transition validation. Scenes represent structured gameplay sessions with defined participants and status workflows.
+
+#### Implementation Status
+
+**Database & Models:**
+- ✅ **Scene Model**: Fully implemented with status workflow and participant management
+- ✅ **Database Indexes**: Optimized for query performance with composite indexes
+- ✅ **Custom Manager**: SceneManager with QuerySet methods for efficient data access
+- ✅ **Status Validation**: ACTIVE → CLOSED → ARCHIVED workflow with transition validation
+
+**API Implementation:**
+- ✅ **REST Endpoints**: Complete CRUD operations with ViewSet architecture
+- ✅ **Serializers**: Three-tier serializer architecture (SceneSerializer, SceneDetailSerializer, SceneCreateUpdateSerializer)
+- ✅ **Permission Integration**: Role-based access control (OWNER/GM manage, all members view)
+- ✅ **Custom Actions**: add_participant, remove_participant, change_status endpoints
+
+**Testing Coverage:**
+- ✅ **Comprehensive API Tests**: Endpoint validation, permissions, filtering, and security
+- ✅ **Model Tests**: Status transitions, participant management, validation
+- ✅ **Permission Tests**: Role-based access control across all endpoints
+
+### Authentication
+
+All Scene API endpoints require authentication. Users must be campaign members to access scenes.
+
+### Scene CRUD Operations
+
+#### List Scenes
+
+**GET** `/api/scenes/`
+
+List scenes in campaigns with filtering, search, and pagination capabilities.
+
+**Query Parameters:**
+- `campaign_id` (integer): Filter scenes by campaign ID (supports both 'campaign_id' and 'campaign')
+- `status` (string): Filter by scene status (`ACTIVE`, `CLOSED`, `ARCHIVED`)
+- `participant_id` (integer): Filter scenes by participant character ID (supports both 'participant_id' and 'participant')
+- `search` (string): Search in scene name and description
+- `ordering` (string): Sort by `name`, `status`, `created_at`, `updated_at` (prefix with `-` for descending)
+- `page` (integer): Page number for pagination
+- `page_size` (integer): Items per page (max 100, default 20)
+
+**Request Example:**
+```bash
+GET /api/scenes/?campaign_id=1&status=ACTIVE&participant_id=5&ordering=-created_at
+```
+
+**Success Response (200):**
+```json
+{
+  "count": 15,
+  "next": "http://localhost:8080/api/scenes/?campaign_id=1&page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "name": "The Tavern Meeting",
+      "description": "Characters meet at the Prancing Pony to discuss their next move",
+      "status": "ACTIVE",
+      "status_display": "Active",
+      "campaign": {
+        "id": 1,
+        "name": "Lord of the Rings Campaign",
+        "slug": "lord-of-rings-campaign"
+      },
+      "participants": [
+        {
+          "id": 5,
+          "name": "Aragorn",
+          "character_type": "Character",
+          "npc": false,
+          "player_owner": {
+            "id": 2,
+            "username": "player1"
+          }
+        },
+        {
+          "id": 8,
+          "name": "Gandalf",
+          "character_type": "Character",
+          "npc": true,
+          "player_owner": {
+            "id": 1,
+            "username": "gamemaster"
+          }
+        }
+      ],
+      "participant_count": 2,
+      "created_by": {
+        "id": 1,
+        "username": "gamemaster",
+        "display_name": "Game Master"
+      },
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-16T14:20:00Z"
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- **401 Unauthorized**: Authentication required
+- **404 Not Found**: No scenes found (campaign doesn't exist or user lacks access)
+
+#### Create Scene
+
+**POST** `/api/scenes/`
+
+Create a new scene in a campaign (OWNER/GM only).
+
+**Request Body:**
+```json
+{
+  "name": "The Council of Elrond",
+  "description": "The characters attend the council to decide the fate of the Ring",
+  "campaign": 1,
+  "participants": [5, 8, 12],
+  "status": "ACTIVE"
+}
+```
+
+**Required Fields:**
+- `name` (string): Scene name (max 200 characters)
+- `campaign` (integer): Campaign ID
+
+**Optional Fields:**
+- `description` (string): Scene description
+- `participants` (array): Array of character IDs to add as participants
+- `status` (string): Scene status (defaults to "ACTIVE")
+
+**Success Response (201):**
+```json
+{
+  "id": 15,
+  "name": "The Council of Elrond",
+  "description": "The characters attend the council to decide the fate of the Ring",
+  "status": "ACTIVE",
+  "status_display": "Active",
+  "campaign": {
+    "id": 1,
+    "name": "Lord of the Rings Campaign",
+    "slug": "lord-of-rings-campaign"
+  },
+  "participants": [
+    {
+      "id": 5,
+      "name": "Aragorn",
+      "character_type": "Character",
+      "npc": false,
+      "player_owner": {
+        "id": 2,
+        "username": "player1"
+      }
+    }
+  ],
+  "participant_count": 3,
+  "created_by": {
+    "id": 1,
+    "username": "gamemaster",
+    "display_name": "Game Master"
+  },
+  "created_at": "2024-01-17T15:30:00Z",
+  "updated_at": "2024-01-17T15:30:00Z"
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Validation errors in request data
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: Only OWNER/GM can create scenes
+- **404 Not Found**: Campaign doesn't exist or user lacks access
+
+#### Get Scene Details
+
+**GET** `/api/scenes/{id}/`
+
+Retrieve detailed information about a specific scene.
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "name": "The Tavern Meeting",
+  "description": "Characters meet at the Prancing Pony to discuss their next move",
+  "status": "ACTIVE",
+  "status_display": "Active",
+  "campaign": {
+    "id": 1,
+    "name": "Lord of the Rings Campaign",
+    "slug": "lord-of-rings-campaign"
+  },
+  "participants": [
+    {
+      "id": 5,
+      "name": "Aragorn",
+      "character_type": "Character",
+      "npc": false,
+      "player_owner": {
+        "id": 2,
+        "username": "player1"
+      }
+    }
+  ],
+  "participant_count": 1,
+  "created_by": {
+    "id": 1,
+    "username": "gamemaster",
+    "display_name": "Game Master"
+  },
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-16T14:20:00Z",
+  "can_manage": true,
+  "can_participate": true
+}
+```
+
+**Additional Fields (SceneDetailSerializer):**
+- `can_manage` (boolean): Whether current user can manage this scene (OWNER/GM)
+- `can_participate` (boolean): Whether current user can participate (all members)
+
+**Error Responses:**
+- **401 Unauthorized**: Authentication required
+- **404 Not Found**: Scene doesn't exist or user lacks access
+
+#### Update Scene
+
+**PUT/PATCH** `/api/scenes/{id}/`
+
+Update an existing scene (OWNER/GM only).
+
+**Request Body:**
+```json
+{
+  "name": "Updated Scene Name",
+  "description": "Updated description",
+  "participants": [5, 8],
+  "status": "CLOSED"
+}
+```
+
+**Note:** The `campaign` field is read-only for updates.
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "name": "Updated Scene Name",
+  "description": "Updated description",
+  "status": "CLOSED",
+  "status_display": "Closed",
+  "campaign": {
+    "id": 1,
+    "name": "Lord of the Rings Campaign",
+    "slug": "lord-of-rings-campaign"
+  },
+  "participants": [
+    {
+      "id": 5,
+      "name": "Aragorn",
+      "character_type": "Character",
+      "npc": false,
+      "player_owner": {
+        "id": 2,
+        "username": "player1"
+      }
+    }
+  ],
+  "participant_count": 2,
+  "created_by": {
+    "id": 1,
+    "username": "gamemaster",
+    "display_name": "Game Master"
+  },
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-17T16:45:00Z"
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Validation errors (including invalid status transitions)
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: Only OWNER/GM can update scenes
+- **404 Not Found**: Scene doesn't exist or user lacks access
+
+#### Delete Scene
+
+**DELETE** `/api/scenes/{id}/`
+
+Delete a scene (OWNER/GM only).
+
+**Success Response (204):**
+No content returned.
+
+**Error Responses:**
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: Only OWNER/GM can delete scenes
+- **404 Not Found**: Scene doesn't exist or user lacks access
+
+### Scene Participant Management
+
+#### Add Participant
+
+**POST** `/api/scenes/{id}/add_participant/`
+
+Add a character to the scene as a participant.
+
+**Request Body:**
+```json
+{
+  "character_id": 5
+}
+```
+
+**Permission Rules:**
+- **OWNER/GM**: Can add any character from the campaign
+- **PLAYER/OBSERVER**: Can only add their own characters
+
+**Success Response (200):**
+```json
+{
+  "detail": "Aragorn added to scene.",
+  "character": {
+    "id": 5,
+    "name": "Aragorn",
+    "npc": false,
+    "player_owner": {
+      "id": 2,
+      "username": "player1"
+    }
+  }
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Character ID missing, character already participating, or validation errors
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: User lacks permission to add this character
+- **404 Not Found**: Scene or character doesn't exist, or user lacks access
+
+#### Remove Participant
+
+**DELETE** `/api/scenes/{id}/participants/{character_id}/`
+
+Remove a character from scene participation.
+
+**Permission Rules:**
+- **OWNER/GM**: Can remove any participant
+- **PLAYER/OBSERVER**: Can only remove their own characters
+
+**Success Response (200):**
+```json
+{
+  "detail": "Aragorn removed from scene.",
+  "character_id": 5
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Character not participating in scene
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: User lacks permission to remove this character
+- **404 Not Found**: Scene or character doesn't exist, or user lacks access
+
+### Scene Status Management
+
+#### Change Status
+
+**POST** `/api/scenes/{id}/change_status/`
+
+Change the scene's status with validation (OWNER/GM only).
+
+**Request Body:**
+```json
+{
+  "status": "CLOSED"
+}
+```
+
+**Status Workflow:**
+- **ACTIVE** → **CLOSED**: Close an active scene
+- **CLOSED** → **ARCHIVED**: Archive a closed scene
+- **ARCHIVED**: Terminal status, cannot be changed
+
+**Invalid Transitions:**
+- ACTIVE → ARCHIVED (must close first)
+- CLOSED → ACTIVE (cannot reactivate)
+- ARCHIVED → Any (terminal state)
+
+**Success Response (200):**
+```json
+{
+  "detail": "Scene status changed to Closed.",
+  "status": "CLOSED",
+  "status_display": "Closed"
+}
+```
+
+**Status Unchanged Response (200):**
+```json
+{
+  "detail": "Status unchanged.",
+  "status": "ACTIVE",
+  "status_display": "Active"
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Invalid status or transition
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: Only OWNER/GM can change status
+- **404 Not Found**: Scene doesn't exist or user lacks access
+
+### Permission System
+
+Scenes inherit the campaign permission structure with role-based access control:
+
+#### Permission Hierarchy
+- **OWNER**: Full access to all campaign scenes
+- **GM**: Full access to all campaign scenes
+- **PLAYER**: Can view scenes, manage own character participation
+- **OBSERVER**: Can view scenes, manage own character participation
+
+#### Permission Rules
+- Users can only access scenes in campaigns they are members of
+- Scene creation/editing/deletion restricted to OWNER/GM roles
+- All campaign members can participate in scenes and manage their own character participation
+- Status changes restricted to OWNER/GM roles
+
+#### Security Features
+- Returns 404 instead of 403 to hide resource existence from non-members
+- Campaign membership validation prevents unauthorized access
+- Character ownership validation for participant management
+- Status transition validation prevents invalid workflow states
+
+### Query Optimization
+
+The Scene API includes several performance optimizations:
+
+#### Database Optimizations
+- **Composite Indexes**: campaign + created_at, campaign + status, status + created_at
+- **Select Related**: Optimized loading of campaign and created_by relationships
+- **Prefetch Related**: Efficient loading of participants with their player_owner data
+- **Custom QuerySet**: SceneQuerySet with optimized methods for common access patterns
+
+#### API Optimizations
+- **Pagination**: Configurable page sizes with sensible defaults (20 items, max 100)
+- **Field Selection**: Different serializers for list vs detail views
+- **Query Efficiency**: Minimized database queries through strategic prefetching
+- **Participant Count**: Uses prefetched data when available to avoid additional queries
+
+### Common Use Cases
+
+#### Campaign Scene Management
+```bash
+# List all active scenes in a campaign
+GET /api/scenes/?campaign_id=1&status=ACTIVE
+
+# Find scenes with specific participant
+GET /api/scenes/?campaign_id=1&participant_id=5
+
+# Search scenes by content
+GET /api/scenes/?search=tavern
+```
+
+#### Scene Workflow Management
+```bash
+# Create new active scene
+POST /api/scenes/
+{
+  "name": "New Adventure",
+  "campaign": 1,
+  "participants": [5, 8]
+}
+
+# Close active scene
+POST /api/scenes/15/change_status/
+{
+  "status": "CLOSED"
+}
+
+# Archive closed scene
+POST /api/scenes/15/change_status/
+{
+  "status": "ARCHIVED"
+}
+```
+
+#### Participant Management
+```bash
+# Add character to scene
+POST /api/scenes/15/add_participant/
+{
+  "character_id": 12
+}
+
+# Remove character from scene
+DELETE /api/scenes/15/participants/12/
+```
+
 ## Source Reference API
 
 ### Book and SourceReference Models
@@ -2129,4 +2633,4 @@ print(campaigns.json())
 
 ---
 
-*This API reference should be updated as new endpoints are added. Last updated: 2025-08-18*
+*This API reference should be updated as new endpoints are added. Last updated: 2025-08-24*

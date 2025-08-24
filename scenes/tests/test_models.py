@@ -25,6 +25,7 @@ class SceneModelTest(TestCase):
             description="A test campaign",
             owner=self.user,
             game_system="Test System",
+            max_characters_per_player=0,  # Unlimited
         )
 
     def test_scene_creation_with_required_fields(self):
@@ -132,6 +133,7 @@ class SceneStatusFieldTest(TestCase):
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
             owner=self.user,
+            max_characters_per_player=0,  # Unlimited
         )
 
     def test_status_choices(self):
@@ -213,6 +215,7 @@ class SceneParticipantsTest(TestCase):
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
             owner=self.user1,
+            max_characters_per_player=0,  # Unlimited
         )
 
         # Add user2 as a member
@@ -300,6 +303,7 @@ class SceneParticipantsTest(TestCase):
         other_campaign = Campaign.objects.create(
             name="Other Campaign",
             owner=other_user,
+            max_characters_per_player=0,  # Unlimited
         )
         other_character = Character.objects.create(
             name="Other Character",
@@ -325,6 +329,7 @@ class SceneValidationTest(TestCase):
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
             owner=self.user,
+            max_characters_per_player=0,  # Unlimited
         )
 
     def test_name_required(self):
@@ -438,6 +443,7 @@ class SceneValidationTest(TestCase):
         other_campaign = Campaign.objects.create(
             name="Other Campaign",
             owner=other_user,
+            max_characters_per_player=0,  # Unlimited
         )
 
         # Create scenes with same name in different campaigns
@@ -467,6 +473,7 @@ class SceneCascadeDeletionTest(TestCase):
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
             owner=self.user,
+            max_characters_per_player=0,  # Unlimited
         )
         self.scene = Scene.objects.create(
             name="Test Scene",
@@ -535,6 +542,7 @@ class SceneRelatedNameTest(TestCase):
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
             owner=self.user,
+            max_characters_per_player=0,  # Unlimited
         )
 
     def test_campaign_scenes_related_name(self):
@@ -622,6 +630,7 @@ class SceneEdgeCasesTest(TestCase):
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
             owner=self.user,
+            max_characters_per_player=0,  # Unlimited
         )
 
     def test_scene_with_very_long_description(self):

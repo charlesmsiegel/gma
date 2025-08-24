@@ -133,6 +133,18 @@ class CampaignDetailView(DetailView):
             context["is_owner"] = False
             context["is_member"] = False
 
+        # Handle member search filtering
+        member_search = self.request.GET.get("member_search", "").strip()
+        memberships = campaign.memberships.select_related("user").order_by("joined_at")
+
+        if member_search:
+            # Filter memberships by username containing the search term
+            memberships = memberships.filter(user__username__icontains=member_search)
+            context["member_search"] = member_search
+
+        # Pass filtered memberships as separate context variable
+        context["filtered_memberships"] = memberships
+
         return context
 
 

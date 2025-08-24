@@ -440,7 +440,7 @@ ALWAYS use `make test` it will check all tests to avoid regressions and you will
 - ✅ Base Character model with polymorphic inheritance
 - ✅ Item management with single character ownership and complete REST API
 - ✅ Location hierarchy with NPC ownership
-- ✅ Scene management (basic implementation)
+- ✅ Scene management with complete REST API and status workflows
 - ✅ Comprehensive admin interfaces
 - ✅ REST API with security features
 - ✅ WCAG 2.1 AA accessibility compliance
@@ -449,6 +449,7 @@ ALWAYS use `make test` it will check all tests to avoid regressions and you will
 
 - ✅ WoD character base class implementation
 - ✅ MageCharacter with arete, quintessence, and paradox
+- ✅ Scene API with participant management and status workflows
 - 🚧 WoD dice rolling system
 - 🚧 Game system selection validation
 - 🚧 Real-time scene features
