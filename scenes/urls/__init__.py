@@ -9,6 +9,7 @@ from scenes.views import (
     SceneCreateView,
     SceneDetailView,
     SceneEditView,
+    SceneStatusChangeView,
 )
 
 app_name = "scenes"
@@ -47,5 +48,11 @@ urlpatterns: List[URLPattern] = [
         "scenes/<int:pk>/participants/remove/<int:character_id>/",
         RemoveParticipantView.as_view(),
         name="remove_participant",
+    ),
+    # Scene status management (Issue 40)
+    path(
+        "scenes/<int:pk>/change-status/",
+        SceneStatusChangeView.as_view(),
+        name="change_status",
     ),
 ]

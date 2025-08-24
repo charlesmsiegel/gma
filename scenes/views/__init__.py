@@ -15,7 +15,12 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView, V
 
 from characters.models import Character
 from core.mixins import CampaignFilterMixin, CampaignListView, CampaignManagementMixin
-from scenes.forms import AddParticipantForm, SceneForm
+from scenes.forms import (
+    AddParticipantForm,
+    SceneForm,
+    SceneSearchForm,
+    SceneStatusChangeForm,
+)
 from scenes.models import Scene
 
 
@@ -38,17 +43,30 @@ class CampaignScenesView(CampaignListView):
             kwargs["slug"] = kwargs["campaign_slug"]
         return super().dispatch(request, *args, **kwargs)
 
+    def get_queryset(self):
+        """Get filtered scenes queryset."""
+        queryset = super().get_queryset()
+
+        # Apply search filters if provided
+        search_form = SceneSearchForm(self.campaign, self.request.GET)
+        if search_form.is_valid():
+            queryset = search_form.apply_filters(queryset)
+
+        return queryset
+
     def get_context_data(self, **kwargs):
         """Add scene-specific context."""
         context = super().get_context_data(**kwargs)
 
         user_role = self.campaign.get_user_role(self.request.user)
+        search_form = SceneSearchForm(self.campaign, self.request.GET)
 
         context.update(
             {
                 "page_title": f"{self.campaign.name} - Scenes",
                 "can_create_scene": user_role in ["OWNER", "GM"],
                 "can_manage_scenes": user_role in ["OWNER", "GM"],
+                "search_form": search_form,
             }
         )
 
@@ -365,3 +383,98 @@ class SceneEditView(UpdateView):
         """Handle invalid form submission."""
         messages.error(self.request, "Please correct the errors below and try again.")
         return super().form_invalid(form)
+
+
+class SceneStatusChangeView(View):
+    """
+    AJAX view for changing scene status.
+
+    Only OWNER and GM can change scene status.
+    """
+
+    def post(self, request, *args, **kwargs):
+        """Handle AJAX request to change scene status."""
+        # Check authentication
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authentication required"}, status=401)
+
+        # Get the scene
+        scene = get_object_or_404(Scene, pk=kwargs["pk"])
+
+        # Check if user has access to this scene's campaign
+        user_role = scene.campaign.get_user_role(request.user)
+        if user_role not in ["OWNER", "GM"]:
+            if user_role in ["PLAYER", "OBSERVER"]:
+                return JsonResponse({"error": "Permission denied"}, status=403)
+            else:
+                return JsonResponse({"error": "Scene not found"}, status=404)
+
+        # Get new status from request (handle both JSON and form data)
+        if request.content_type == "application/json":
+            try:
+                data = json.loads(request.body)
+                new_status = data.get("status")
+            except json.JSONDecodeError:
+                return JsonResponse({"error": "Invalid JSON"}, status=400)
+        else:
+            new_status = request.POST.get("status")
+
+        if not new_status:
+            return JsonResponse({"error": "Status required"}, status=400)
+
+        # Create form with the scene instance and new status
+        form = SceneStatusChangeForm({"status": new_status}, instance=scene)
+
+        if form.is_valid():
+            status_changed = form.save()
+
+            # Check if this is an AJAX request
+            if (
+                request.headers.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest"
+                or request.content_type == "application/json"
+            ):
+                if status_changed:
+                    return JsonResponse(
+                        {
+                            "success": True,
+                            "message": f"Scene status changed to {scene.get_status_display()}",
+                            "new_status": scene.status,
+                            "new_status_display": scene.get_status_display(),
+                        }
+                    )
+                else:
+                    return JsonResponse(
+                        {
+                            "success": True,
+                            "message": "Status unchanged",
+                            "new_status": scene.status,
+                            "new_status_display": scene.get_status_display(),
+                        }
+                    )
+            else:
+                # Regular form submission - redirect to scene detail
+                if status_changed:
+                    messages.success(
+                        request, f"Scene status changed to {scene.get_status_display()}"
+                    )
+                return redirect("scenes:scene_detail", pk=scene.pk)
+        else:
+            # Check if this is an AJAX request for errors
+            if (
+                request.headers.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest"
+                or request.content_type == "application/json"
+            ):
+                errors = []
+                for field, field_errors in form.errors.items():
+                    for error in field_errors:
+                        errors.append(f"{field}: {error}")
+
+                return JsonResponse(
+                    {"error": "Validation failed", "details": errors}, status=400
+                )
+            else:
+                # Regular form submission with errors - redirect back with error message
+                for field, field_errors in form.errors.items():
+                    for error in field_errors:
+                        messages.error(request, f"{field}: {error}")
+                return redirect("scenes:scene_detail", pk=scene.pk)
