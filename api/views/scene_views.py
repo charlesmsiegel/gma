@@ -411,6 +411,7 @@ class SceneViewSet(viewsets.ModelViewSet):
 
         return Response(
             {
+                "success": True,
                 "detail": f"{character.name} removed from scene.",
                 "character_id": character.pk,
             },

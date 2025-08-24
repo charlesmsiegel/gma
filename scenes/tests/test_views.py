@@ -53,6 +53,7 @@ class SceneViewTestCase(TestCase):
             slug="test-campaign",
             owner=self.owner,
             game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited
         )
 
         # Create memberships
@@ -185,6 +186,7 @@ class SceneListViewTest(SceneViewTestCase):
             name="Empty Campaign",
             slug="empty-campaign",
             owner=self.owner,
+            max_characters_per_player=0,  # Unlimited
         )
 
         empty_url = reverse(
@@ -718,6 +720,7 @@ class ParticipantManagementTest(SceneViewTestCase):
             name="Other Campaign",
             slug="other-campaign",
             owner=self.owner,
+            max_characters_per_player=0,  # Unlimited
         )
         other_character = Character.objects.create(
             name="Other Character",
@@ -789,5 +792,5 @@ class ParticipantManagementTest(SceneViewTestCase):
         data = response.json()
         self.assertIn("success", data)
         self.assertIn("message", data)
-        self.assertIn("participant", data)
-        self.assertEqual(data["participant"]["name"], self.gm_character.name)
+        self.assertIn("character", data)
+        self.assertEqual(data["character"]["name"], self.gm_character.name)

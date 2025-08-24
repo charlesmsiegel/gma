@@ -33,6 +33,7 @@ class SceneFormTest(TestCase):
             name="Test Campaign",
             owner=self.user,
             game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited
         )
 
         CampaignMembership.objects.create(
@@ -212,6 +213,7 @@ class SceneParticipantFormTest(TestCase):
             name="Test Campaign",
             owner=self.user,
             game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited
         )
 
         CampaignMembership.objects.create(
@@ -268,6 +270,7 @@ class SceneParticipantFormTest(TestCase):
         other_campaign = Campaign.objects.create(
             name="Other Campaign",
             owner=self.user,
+            max_characters_per_player=0,  # Unlimited
         )
         other_character = Character.objects.create(
             name="Other Character",
@@ -375,6 +378,7 @@ class SceneStatusChangeFormTest(TestCase):
             name="Test Campaign",
             owner=self.user,
             game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited
         )
 
         self.scene = Scene.objects.create(
@@ -514,6 +518,7 @@ class SceneSearchFormTest(TestCase):
             name="Test Campaign",
             owner=self.user,
             game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited
         )
 
     def test_search_form_all_fields_optional(self):
@@ -616,6 +621,7 @@ class SceneSearchFormTest(TestCase):
         other_campaign = Campaign.objects.create(
             name="Other Campaign",
             owner=self.user,
+            max_characters_per_player=0,  # Unlimited
         )
         character2 = Character.objects.create(
             name="Other Character",

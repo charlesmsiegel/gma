@@ -52,6 +52,7 @@ class ScenePermissionTestCase(TestCase):
             slug="test-campaign",
             owner=self.owner,
             game_system="Mage: The Ascension",
+            max_characters_per_player=0,  # Unlimited
         )
 
         # Create memberships
@@ -580,6 +581,7 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
             name="Other Campaign",
             slug="other-campaign",
             owner=self.owner,
+            max_characters_per_player=0,  # Unlimited
         )
         other_character = Character.objects.create(
             name="Other Character",
@@ -705,6 +707,7 @@ class ScenePermissionEdgeCaseTest(ScenePermissionTestCase):
             name="Other Campaign",
             slug="other-campaign",
             owner=self.owner,
+            max_characters_per_player=0,  # Unlimited
         )
         other_scene = Scene.objects.create(
             name="Other Scene",
