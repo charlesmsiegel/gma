@@ -4,10 +4,13 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
+from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+
+from core.rate_limiting import chat_rate_limiter
 
 from .models import Message, Scene
 
@@ -93,8 +96,10 @@ class SceneChatConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
             message_type = data.get("type")
 
-            if message_type == "chat.message":
+            if message_type == "chat_message":
                 await self.handle_chat_message(data)
+            elif message_type == "heartbeat":
+                await self.handle_heartbeat()
             else:
                 await self.send_error(f"Unknown message type: {message_type}")
 
@@ -107,19 +112,36 @@ class SceneChatConsumer(AsyncWebsocketConsumer):
     async def handle_chat_message(self, data: Dict[str, Any]):
         """Handle chat message from user."""
         try:
-            # Extract message data
-            content = data.get("content", "").strip()
-            msg_type = data.get("message_type", "PUBLIC")
-            character_id = data.get("character_id")
-            recipients = data.get("recipients", [])
+            # Check rate limit first
+            is_allowed, rate_info = await self.check_rate_limit(
+                data.get("message", {}).get("message_type", "PUBLIC")
+            )
+            if not is_allowed:
+                retry_after = int(rate_info.get("retry_after", 0))
+                await self.send_error(
+                    f"Rate limit exceeded. Try again in {retry_after} seconds."
+                )
+                return
 
-            # Validate message content
+            # Extract message data from nested structure
+            message_data = data.get("message", {})
+            content = message_data.get("content", "").strip()
+            msg_type = message_data.get("message_type", "PUBLIC")
+            character_id = message_data.get("character")
+            recipients = message_data.get("recipients", [])
+
+            # Enhanced validation
             if not content:
                 await self.send_error("Message content cannot be empty")
                 return
 
-            if len(content) > 20000:
-                await self.send_error("Message too long")
+            if len(content) > 2000:  # Match frontend limit
+                await self.send_error("Message too long (max 2000 characters)")
+                return
+
+            # Content filtering
+            if await self.is_content_inappropriate(content):
+                await self.send_error("Message contains inappropriate content")
                 return
 
             # Get character if provided
@@ -187,9 +209,34 @@ class SceneChatConsumer(AsyncWebsocketConsumer):
                 )
             )
 
+    async def handle_heartbeat(self):
+        """Handle heartbeat message."""
+        await self.send(text_data=json.dumps({"type": "heartbeat_response"}))
+
     async def send_error(self, error: str):
         """Send error message to client."""
         await self.send(text_data=json.dumps({"type": "error", "error": error}))
+
+    async def check_rate_limit(self, message_type: str = "PUBLIC"):
+        """Check if user has exceeded rate limit."""
+        return await sync_to_async(chat_rate_limiter.check_message_rate_limit)(
+            self.user, message_type
+        )
+
+    async def is_content_inappropriate(self, content: str) -> bool:
+        """Check if message content is inappropriate."""
+        # Basic content filtering - can be enhanced
+        blocked_patterns = [
+            # Add patterns for inappropriate content
+            # This is a placeholder - implement according to community standards
+        ]
+
+        content_lower = content.lower()
+        for pattern in blocked_patterns:
+            if pattern in content_lower:
+                return True
+
+        return False
 
     @database_sync_to_async
     def get_scene(self):
