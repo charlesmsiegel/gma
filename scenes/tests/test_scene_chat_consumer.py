@@ -216,9 +216,11 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Send OOC message
         message_data = {
             "type": "chat_message",
-            "message_type": "OOC",
-            "character": None,
-            "content": "This is out of character",
+            "message": {
+                "message_type": "OOC",
+                "character": None,
+                "content": "This is out of character",
+            },
         }
         await communicator.send_json_to(message_data)
 
@@ -248,10 +250,12 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Send private message
         message_data = {
             "type": "chat_message",
-            "message_type": "PRIVATE",
-            "character": self.character1.id,
-            "content": "Private whisper",
-            "recipients": [self.user2.id],
+            "message": {
+                "message_type": "PRIVATE",
+                "character": self.character1.id,
+                "content": "Private whisper",
+                "recipients": [self.user2.id],
+            },
         }
         await communicator.send_json_to(message_data)
 
@@ -279,9 +283,11 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Send system message
         message_data = {
             "type": "chat_message",
-            "message_type": "SYSTEM",
-            "character": None,
-            "content": "The room grows darker",
+            "message": {
+                "message_type": "SYSTEM",
+                "character": None,
+                "content": "The room grows darker",
+            },
         }
         await communicator.send_json_to(message_data)
 
@@ -309,16 +315,18 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Try to send system message as player
         message_data = {
             "type": "chat_message",
-            "message_type": "SYSTEM",
-            "character": None,
-            "content": "Trying to send system message",
+            "message": {
+                "message_type": "SYSTEM",
+                "character": None,
+                "content": "Trying to send system message",
+            },
         }
         await communicator.send_json_to(message_data)
 
         # Should receive error response
         response = await communicator.receive_json_from()
-        self.assertEqual(response["type"], "chat.error")
-        self.assertIn("permission", response["error"].lower())
+        self.assertEqual(response["type"], "error")
+        self.assertIn("gms", response["error"].lower())
 
         await communicator.disconnect()
 
@@ -338,15 +346,17 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Try to send message as user2's character
         message_data = {
             "type": "chat_message",
-            "message_type": "PUBLIC",
-            "character": self.character2.id,  # User2's character
-            "content": "Trying to impersonate",
+            "message": {
+                "message_type": "PUBLIC",
+                "character": self.character2.id,  # User2's character
+                "content": "Trying to impersonate",
+            },
         }
         await communicator.send_json_to(message_data)
 
         # Should receive error response
         response = await communicator.receive_json_from()
-        self.assertEqual(response["type"], "chat.error")
+        self.assertEqual(response["type"], "error")
         self.assertIn("character", response["error"].lower())
 
         await communicator.disconnect()
@@ -369,7 +379,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Should receive error response
         response = await communicator.receive_json_from()
-        self.assertEqual(response["type"], "chat.error")
+        self.assertEqual(response["type"], "error")
         self.assertIn("json", response["error"].lower())
 
         await communicator.disconnect()
@@ -390,15 +400,17 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Send message with empty content
         message_data = {
             "type": "chat_message",
-            "message_type": "PUBLIC",
-            "character": self.character1.id,
-            "content": "",
+            "message": {
+                "message_type": "PUBLIC",
+                "character": self.character1.id,
+                "content": "",
+            },
         }
         await communicator.send_json_to(message_data)
 
         # Should receive error response
         response = await communicator.receive_json_from()
-        self.assertEqual(response["type"], "chat.error")
+        self.assertEqual(response["type"], "error")
         self.assertIn("content", response["error"].lower())
 
         await communicator.disconnect()
@@ -419,15 +431,17 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Send message with content that's too long
         message_data = {
             "type": "chat_message",
-            "message_type": "PUBLIC",
-            "character": self.character1.id,
-            "content": "A" * 50000,  # 50k characters
+            "message": {
+                "message_type": "PUBLIC",
+                "character": self.character1.id,
+                "content": "A" * 50000,  # 50k characters
+            },
         }
         await communicator.send_json_to(message_data)
 
         # Should receive error response
         response = await communicator.receive_json_from()
-        self.assertEqual(response["type"], "chat.error")
+        self.assertEqual(response["type"], "error")
         self.assertIn("long", response["error"].lower())
 
         await communicator.disconnect()
@@ -449,8 +463,10 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         for i in range(12):  # Send more than the limit of 10
             message_data = {
                 "type": "chat_message",
-                "message_type": "OOC",
-                "content": f"Message {i + 1}",
+                "message": {
+                    "message_type": "OOC",
+                    "content": f"Message {i + 1}",
+                },
             }
             await communicator.send_json_to(message_data)
 
@@ -462,7 +478,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
             response = await communicator.receive_json_from()
             if response["type"] == "chat.message":
                 success_count += 1
-            elif response["type"] == "chat.error":
+            elif response["type"] == "error":
                 error_count += 1
                 self.assertIn("rate", response["error"].lower())
 
@@ -496,9 +512,11 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Send message from user1
         message_data = {
             "type": "chat_message",
-            "message_type": "PUBLIC",
-            "character": self.character1.id,
-            "content": "Hello from user1!",
+            "message": {
+                "message_type": "PUBLIC",
+                "character": self.character1.id,
+                "content": "Hello from user1!",
+            },
         }
         await communicator1.send_json_to(message_data)
 
@@ -543,10 +561,12 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Send private message from user1 to user2
         message_data = {
             "type": "chat_message",
-            "message_type": "PRIVATE",
-            "character": self.character1.id,
-            "content": "Secret message",
-            "recipients": [self.user2.id],
+            "message": {
+                "message_type": "PRIVATE",
+                "character": self.character1.id,
+                "content": "Secret message",
+                "recipients": [self.user2.id],
+            },
         }
         await communicator1.send_json_to(message_data)
 
@@ -619,9 +639,11 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         message_data = {
             "type": "chat_message",
-            "message_type": "PUBLIC",
-            "character": self.character1.id,
-            "content": "Test message",
+            "message": {
+                "message_type": "PUBLIC",
+                "character": self.character1.id,
+                "content": "Test message",
+            },
         }
         await communicator.send_json_to(message_data)
 
@@ -678,8 +700,10 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Send message from first connection
         message_data = {
             "type": "chat_message",
-            "message_type": "OOC",
-            "content": "Multi-connection test",
+            "message": {
+                "message_type": "OOC",
+                "content": "Multi-connection test",
+            },
         }
         await communicator1.send_json_to(message_data)
 
