@@ -148,43 +148,53 @@ class MessageModelTestCase(TestCase):
 
     def test_message_required_fields(self):
         """Test that required fields are enforced."""
+        from django.db import transaction
+
         from scenes.models import Message
 
         # Scene is required
         with self.assertRaises((IntegrityError, ValidationError)):
-            Message.objects.create(
-                scene=None,
-                sender=self.user1,
-                content="Test message",
-                message_type="PUBLIC",
-            )
+            try:
+                with transaction.atomic():
+                    Message.objects.create(
+                        scene=None,
+                        sender=self.user1,
+                        content="Test message",
+                        message_type="PUBLIC",
+                    )
+            except Exception as e:
+                raise e
 
-        # Sender is required
-        with self.assertRaises((IntegrityError, ValidationError)):
-            Message.objects.create(
+        # Sender is required - but now it's nullable, so this won't fail at DB level
+        # Instead test that it can be created but validation fails
+        with self.assertRaises(ValidationError):
+            message = Message(
                 scene=self.scene,
                 sender=None,
                 content="Test message",
                 message_type="PUBLIC",
             )
+            message.full_clean()
 
         # Content is required
-        with self.assertRaises((IntegrityError, ValidationError)):
-            Message.objects.create(
+        with self.assertRaises(ValidationError):
+            message = Message(
                 scene=self.scene,
                 sender=self.user1,
                 content="",
                 message_type="PUBLIC",
             )
+            message.full_clean()
 
-        # Message type is required
-        with self.assertRaises((IntegrityError, ValidationError)):
-            Message.objects.create(
+        # Invalid message type should fail
+        with self.assertRaises(ValidationError):
+            message = Message(
                 scene=self.scene,
                 sender=self.user1,
                 content="Test message",
-                message_type="",
+                message_type="INVALID",
             )
+            message.full_clean()
 
     def test_message_content_validation(self):
         """Test message content validation."""
@@ -225,11 +235,17 @@ class MessageModelTestCase(TestCase):
         """Test message type choices are enforced."""
         from scenes.models import Message
 
-        valid_types = ["PUBLIC", "PRIVATE", "SYSTEM", "OOC"]
-        for message_type in valid_types:
+        # Test valid message types - use appropriate user for each type
+        user_types = [
+            ("PUBLIC", self.user1),
+            ("PRIVATE", self.user1),
+            ("SYSTEM", self.gm),  # Only GMs can send system messages
+            ("OOC", self.user1),
+        ]
+        for message_type, sender in user_types:
             message = Message(
                 scene=self.scene,
-                sender=self.user1,
+                sender=sender,
                 content=f"Test {message_type} message",
                 message_type=message_type,
             )
@@ -256,6 +272,8 @@ class MessageModelTestCase(TestCase):
             owner=self.gm,
             game_system="Vampire",
         )
+        # Add user1 as member so they can own characters in this campaign
+        other_campaign.add_member(self.user1, "PLAYER")
         other_character = Character.objects.create(
             name="Other Character",
             campaign=other_campaign,
