@@ -11,6 +11,7 @@ from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
 from characters.models import Character
 from items.models import Item
 from locations.models import Location
+from scenes.models import Scene
 
 User = get_user_model()
 
@@ -1615,4 +1616,349 @@ class ItemCreateUpdateSerializer(serializers.ModelSerializer):
         """Return full item representation."""
         # Use the main ItemSerializer for response
         serializer = ItemSerializer(instance, context=self.context)
+        return serializer.data
+
+
+# Scene API serializers
+class SceneCampaignSerializer(serializers.ModelSerializer):
+    """Lightweight campaign serializer for scene responses."""
+
+    class Meta:
+        model = Campaign
+        fields = ("id", "name")
+
+
+class SceneCharacterSerializer(serializers.ModelSerializer):
+    """Lightweight character serializer for scene participants."""
+
+    player_owner = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Character
+        fields = ("id", "name", "npc", "player_owner")
+
+
+class SceneCreatedBySerializer(serializers.ModelSerializer):
+    """Lightweight user serializer for scene creator responses."""
+
+    class Meta:
+        model = User
+        fields = ("id", "username")
+
+
+class SceneSerializer(serializers.ModelSerializer):
+    """
+    Base serializer for Scene model with nested relationships.
+
+    Includes campaign, participants, and creator information for
+    comprehensive scene management.
+    """
+
+    campaign = SceneCampaignSerializer(read_only=True)
+    participants = SceneCharacterSerializer(many=True, read_only=True)
+    created_by = SceneCreatedBySerializer(read_only=True)
+    participant_count = serializers.SerializerMethodField()
+    status_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Scene
+        fields = (
+            "id",
+            "name",
+            "description",
+            "status",
+            "status_display",
+            "campaign",
+            "participants",
+            "participant_count",
+            "created_by",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "id",
+            "status_display",
+            "campaign",
+            "participants",
+            "participant_count",
+            "created_by",
+            "created_at",
+            "updated_at",
+        )
+
+    def get_participant_count(self, obj):
+        """
+        Get the total number of participants in this scene.
+
+        Uses len() on prefetched participants to avoid additional query.
+        """
+        # Check if participants are prefetched
+        if (
+            hasattr(obj, "_prefetched_objects_cache")
+            and "participants" in obj._prefetched_objects_cache
+        ):
+            return len(obj.participants.all())
+        return obj.participants.count()
+
+    def get_status_display(self, obj):
+        """Get the human-readable status display."""
+        return obj.get_status_display()
+
+
+class SceneDetailSerializer(SceneSerializer):
+    """
+    Extended serializer for Scene detail views with additional information.
+
+    Includes full participant details and scene management context.
+    """
+
+    can_manage = serializers.SerializerMethodField()
+    can_participate = serializers.SerializerMethodField()
+
+    class Meta(SceneSerializer.Meta):
+        fields = SceneSerializer.Meta.fields + ("can_manage", "can_participate")
+
+    def get_can_manage(self, obj):
+        """Check if the current user can manage this scene."""
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+
+        user_role = obj.campaign.get_user_role(request.user)
+        return user_role in ["OWNER", "GM"]
+
+    def get_can_participate(self, obj):
+        """Check if the current user can participate in this scene."""
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+
+        user_role = obj.campaign.get_user_role(request.user)
+        return user_role in ["OWNER", "GM", "PLAYER", "OBSERVER"]
+
+
+class SceneCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating scenes."""
+
+    campaign = serializers.PrimaryKeyRelatedField(
+        queryset=Campaign.objects.none(),  # Will be set in view
+        write_only=True,
+        required=False,  # Not required for updates
+    )
+    participants = serializers.PrimaryKeyRelatedField(
+        queryset=Character.objects.none(),  # Will be set in view
+        many=True,
+        required=False,
+    )
+
+    class Meta:
+        model = Scene
+        fields = (
+            "name",
+            "description",
+            "status",
+            "campaign",
+            "participants",
+        )
+
+    def __init__(self, *args, **kwargs):
+        """Initialize with optimized queryset setting."""
+        super().__init__(*args, **kwargs)
+
+        # For updates, remove campaign field to make it read-only
+        if self.instance:
+            self.fields.pop("campaign", None)
+
+        # Set querysets based on user context with optimization
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            user = request.user
+
+            # Only set campaign queryset for creation
+            if not self.instance and "campaign" in self.fields:
+                # Optimized user campaigns query
+                self.fields["campaign"].queryset = Campaign.objects.filter(
+                    models.Q(owner=user) | models.Q(memberships__user=user)
+                ).distinct()
+
+            # Set character participants queryset efficiently
+            campaign = self._get_target_campaign()
+            if campaign:
+                # Scope participants to campaign
+                self.fields["participants"].queryset = Character.objects.filter(
+                    campaign=campaign
+                ).select_related("player_owner")
+            else:
+                # For creation, allow all user-accessible characters
+                self.fields["participants"].queryset = (
+                    Character.objects.filter(
+                        models.Q(campaign__owner=user)
+                        | models.Q(campaign__memberships__user=user)
+                    )
+                    .select_related("player_owner")
+                    .distinct()
+                )
+
+    def _get_target_campaign(self):
+        """Get the target campaign for this operation."""
+        # Check context first for explicit campaign_id
+        campaign_id = self.context.get("campaign_id")
+        if campaign_id:
+            try:
+                return Campaign.objects.get(id=campaign_id)
+            except Campaign.DoesNotExist:
+                return None
+
+        # For updates, use instance campaign
+        if self.instance:
+            return self.instance.campaign
+
+        return None
+
+    def validate_name(self, value):
+        """Validate scene name."""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Scene name cannot be empty.")
+
+        if len(value) > 200:  # Assuming max length from model
+            raise serializers.ValidationError(
+                "Scene name cannot exceed 200 characters."
+            )
+
+        return value.strip()
+
+    def validate_status(self, value):
+        """Validate status transitions."""
+        if self.instance and value != self.instance.status:
+            # Check valid status transitions
+            valid_transitions = {
+                "ACTIVE": ["CLOSED"],
+                "CLOSED": ["ARCHIVED"],
+                "ARCHIVED": [],
+            }
+
+            current_status = self.instance.status
+            if value not in valid_transitions.get(current_status, []):
+                if current_status == "ARCHIVED":
+                    raise serializers.ValidationError(
+                        "Archived scenes cannot be changed."
+                    )
+                elif current_status == "ACTIVE" and value == "ARCHIVED":
+                    raise serializers.ValidationError(
+                        "Cannot archive an active scene. Close it first."
+                    )
+                elif current_status == "CLOSED" and value == "ACTIVE":
+                    raise serializers.ValidationError(
+                        "Cannot reactivate a closed scene."
+                    )
+                else:
+                    raise serializers.ValidationError(
+                        f"Invalid status transition from {current_status} to {value}."
+                    )
+
+        return value
+
+    def validate(self, data):
+        """Validate scene data including campaign constraints."""
+        # For updates, handle campaign context differently
+        if self.instance:  # Updating existing scene
+            campaign = self.instance.campaign
+            # Remove campaign from validation data since it's readonly for updates
+            data.pop("campaign", None)
+        else:  # Creating new scene
+            campaign = data.get("campaign")
+            if not campaign:
+                raise serializers.ValidationError(
+                    {"campaign": ["Campaign is required."]}
+                )
+
+            # Check if user can create scenes in this campaign
+            request = self.context.get("request")
+            if not request or not request.user.is_authenticated:
+                raise serializers.ValidationError(ErrorMessages.UNAUTHORIZED)
+
+            user = request.user
+            user_role = campaign.get_user_role(user)
+
+            # Only OWNER and GM can create scenes
+            if user_role not in ["OWNER", "GM"]:
+                if user_role in ["PLAYER", "OBSERVER"]:
+                    raise serializers.ValidationError(
+                        {
+                            "campaign": [
+                                "Only campaign owners and GMs can create scenes."
+                            ]
+                        }
+                    )
+                else:
+                    raise serializers.ValidationError(
+                        {
+                            "campaign": [
+                                "You don't have permission to create scenes "
+                                "in this campaign."
+                            ]
+                        }
+                    )
+
+        # Validate participants
+        participants = data.get("participants", [])
+        for participant in participants:
+            if participant.campaign != campaign:
+                raise serializers.ValidationError(
+                    {
+                        "participants": [
+                            f"Character '{participant.name}' must be in the same "
+                            f"campaign."
+                        ]
+                    }
+                )
+
+        return data
+
+    def create(self, validated_data):
+        """Create scene with proper audit user and participants."""
+        request = self.context.get("request")
+        participants_data = validated_data.pop("participants", [])
+
+        scene = Scene(**validated_data)
+        scene.created_by = request.user
+        scene.save()
+
+        # Add participants
+        if participants_data:
+            scene.participants.set(participants_data)
+
+        return scene
+
+    def update(self, instance, validated_data):
+        """Update scene with audit trail and participant management."""
+        participants_data = validated_data.pop("participants", None)
+
+        # Remove readonly fields from validated_data if present
+        readonly_fields = [
+            "campaign",
+            "created_by",
+            "created_at",
+            "updated_at",
+        ]
+        for field in readonly_fields:
+            validated_data.pop(field, None)
+
+        # Update fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        # Save changes
+        instance.save()
+
+        # Update participants if provided
+        if participants_data is not None:
+            instance.participants.set(participants_data)
+
+        return instance
+
+    def to_representation(self, instance):
+        """Return full scene representation."""
+        # Use the main SceneSerializer for response
+        serializer = SceneSerializer(instance, context=self.context)
         return serializer.data

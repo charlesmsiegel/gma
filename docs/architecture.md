@@ -61,6 +61,7 @@ The GMA system manages:
 - **Game System Support**: Flexible character models for different RPG systems
 - **Content Organization**: Scenes, locations, items, characters
 - **Location Management**: Hierarchical location trees with character ownership
+- **Scene Management**: Status workflow system with participant management and role-based permissions
 - **State Management**: Workflow transitions for campaigns, scenes, and characters
 
 ## Service Layer Architecture
@@ -223,6 +224,16 @@ Location: `api/views/item_views.py`
 - `ItemDetailAPIView`: Item detail, update, and soft delete operations
 - `ItemPermissionMixin`: Standardized permission checking across item operations
 
+#### Scene Views
+Location: `api/views/scene_views.py`
+
+- `SceneViewSet`: Full ViewSet for scene CRUD operations with role-based permissions
+- `SceneAuthenticated`: Custom permission class for proper 401 authentication responses
+- `ScenePagination`: Optimized pagination (20 items default, max 100)
+- Custom actions: `add_participant`, `remove_participant`, `change_status`
+- Status transition validation and participant management
+- Campaign-scoped filtering with query optimization
+
 ### Serializer Architecture
 
 The serializer system provides consistent API responses with role-based field exposure.
@@ -246,6 +257,14 @@ The serializer system provides consistent API responses with role-based field ex
 - Structured responses for bulk operations
 - Separate success and error tracking
 - Consistent error reporting format
+
+**Scene Serializer Hierarchy**:
+
+- `SceneSerializer`: Base serializer with nested campaign, participants, and creator data
+- `SceneDetailSerializer`: Extended with `can_manage` and `can_participate` permission fields
+- `SceneCreateUpdateSerializer`: Request validation with status transition checking and participant management
+- Three-tier architecture supports different use cases (list, detail, create/update)
+- Optimized participant count using prefetched data
 
 ## Permission System
 
@@ -330,19 +349,25 @@ class Campaign(models.Model):
 
 **Scene Management:**
 ```python
-# Future implementation example
+# Current implementation - Scene Status Workflow (Issue #41)
 class Scene(models.Model):
-    status = FSMField(default='planning', max_length=50)
+    STATUS_CHOICES = [
+        ("ACTIVE", "Active"),
+        ("CLOSED", "Closed"),
+        ("ARCHIVED", "Archived"),
+    ]
 
-    @transition(field=status, source='planning', target='active')
-    def start_scene(self):
-        """Begin scene with player participation."""
-        pass
+    status = CharField(max_length=10, choices=STATUS_CHOICES, default="ACTIVE")
 
-    @transition(field=status, source='active', target='concluded')
-    def conclude_scene(self):
-        """End scene and finalize results."""
-        pass
+    # Status transitions handled via API with validation:
+    # ACTIVE → CLOSED (close scene)
+    # CLOSED → ARCHIVED (archive completed scene)
+    # ARCHIVED: Terminal state
+
+    # Validation prevents:
+    # - ACTIVE → ARCHIVED (must close first)
+    # - CLOSED → ACTIVE (cannot reactivate)
+    # - ARCHIVED → Any (terminal state)
 ```
 
 **Character Development:**
@@ -801,6 +826,98 @@ class CampaignInvitation(models.Model):
 - Automatic expiration calculation
 - Cleanup management via custom manager
 - Constraint prevents duplicate invitations
+
+### Scene Domain Models
+
+#### Scene Model Architecture
+Location: `scenes/models/__init__.py:53-118`
+
+The Scene model provides comprehensive scene management for campaigns with status workflows, participant management, and query optimization:
+
+```python
+class Scene(models.Model):
+    STATUS_CHOICES = [
+        ("ACTIVE", "Active"),
+        ("CLOSED", "Closed"),
+        ("ARCHIVED", "Archived"),
+    ]
+
+    name = CharField(max_length=200, help_text="Scene name")
+    description = TextField(blank=True, default="", help_text="Scene description")
+    campaign = ForeignKey(Campaign, on_delete=CASCADE, related_name="scenes")
+    created_by = ForeignKey(settings.AUTH_USER_MODEL, on_delete=CASCADE, related_name="created_scenes")
+    status = CharField(max_length=10, choices=STATUS_CHOICES, default="ACTIVE")
+    participants = ManyToManyField("characters.Character", related_name="participated_scenes", blank=True)
+
+    # Timestamp fields
+    created_at = DateTimeField(auto_now_add=True)
+    updated_at = DateTimeField(auto_now=True)
+```
+
+**Key Architectural Features:**
+
+1. **Status Workflow System (Issue #41)**
+   - Three-state workflow: ACTIVE → CLOSED → ARCHIVED
+   - Validation prevents invalid transitions (e.g., ACTIVE → ARCHIVED, CLOSED → ACTIVE)
+   - Terminal state: ARCHIVED scenes cannot be modified
+   - API-enforced status transitions with role-based permissions
+
+2. **Participant Management**
+   - Many-to-many relationship with Character model
+   - Supports both PC and NPC participation
+   - Campaign-scoped validation ensures participants belong to the scene's campaign
+   - Role-based permissions for adding/removing participants
+
+3. **Performance Optimizations**
+   - Composite database indexes for common query patterns
+   - Custom manager with optimized QuerySet methods
+   - Efficient prefetching of related data (campaign, participants, creator)
+
+4. **Custom Manager Architecture**
+   ```python
+   class SceneQuerySet(models.QuerySet):
+       def for_user(self, user):
+           """Get scenes accessible to a user with optimized query."""
+           return self.filter(
+               Q(campaign__owner=user) | Q(campaign__memberships__user=user)
+           ).distinct()
+
+       def with_details(self):
+           """Get scenes with related data optimized for serialization."""
+           return self.select_related('campaign', 'created_by').prefetch_related('participants')
+
+       def by_campaign(self, campaign_id):
+           """Filter scenes by campaign ID efficiently."""
+           return self.filter(campaign_id=campaign_id)
+   ```
+
+5. **Database Indexes**
+   - Composite indexes: `(campaign, -created_at)`, `(campaign, status)`, `(status, -created_at)`
+   - Single field indexes: `status`, `created_by`
+   - Optimized for common access patterns and filtering operations
+
+**Business Rules:**
+
+- Scene creation limited to OWNER and GM roles
+- All campaign members can view scenes and manage their own character participation
+- Status changes restricted to OWNER and GM roles
+- Participants must belong to the same campaign as the scene
+- Archived scenes are read-only (cannot be modified)
+
+**API Integration:**
+
+- Full REST API with ViewSet architecture
+- Three-tier serializer system (list, detail, create/update)
+- Custom actions for participant management and status changes
+- Role-based permission integration
+- Query optimization for list and detail views
+
+**Performance Considerations:**
+
+- Prefetched participant data to avoid N+1 queries
+- Optimized participant count calculation using cached data
+- Strategic use of select_related for foreign key relationships
+- Campaign-scoped filtering for security and performance
 
 ### Character Domain Models
 
@@ -2113,4 +2230,4 @@ FROM python:3.11-slim AS runtime
 
 ---
 
-*This architecture documentation should be reviewed and updated as the system evolves. Last updated: 2025-08-18*
+*This architecture documentation should be reviewed and updated as the system evolves. Last updated: 2025-08-24*
