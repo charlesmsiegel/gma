@@ -108,10 +108,9 @@ class SceneViewSet(viewsets.ModelViewSet):
 
         # Apply filters using queryset methods - support both 'campaign' and
         # 'campaign_id'
-        campaign_id = (
-            self.request.query_params.get("campaign_id")
-            or self.request.query_params.get("campaign")
-        )
+        campaign_id = self.request.query_params.get(
+            "campaign_id"
+        ) or self.request.query_params.get("campaign")
         if campaign_id:
             try:
                 queryset = queryset.filter(campaign_id=int(campaign_id))
@@ -330,10 +329,18 @@ class SceneViewSet(viewsets.ModelViewSet):
 
         # Check if character is already participating
         if scene.participants.filter(pk=character.pk).exists():
-            from rest_framework.exceptions import ValidationError
-
-            raise ValidationError(
-                {"character_id": ["Character is already participating in this scene."]}
+            return Response(
+                {
+                    "success": True,
+                    "message": (
+                        f"{character.name} is already participating in this scene."
+                    ),
+                    "character": {
+                        "id": character.id,
+                        "name": character.name,
+                    },
+                },
+                status=status.HTTP_200_OK,
             )
 
         # Add participant
@@ -387,11 +394,9 @@ class SceneViewSet(viewsets.ModelViewSet):
 
         # Check if character is actually participating
         if not scene.participants.filter(pk=character.pk).exists():
-            from rest_framework.exceptions import ValidationError
+            from rest_framework.exceptions import NotFound
 
-            raise ValidationError(
-                {"character_id": ["Character is not participating in this scene."]}
-            )
+            raise NotFound("Character is not participating in this scene.")
 
         # Check if user can remove this specific character
         can_remove = False
