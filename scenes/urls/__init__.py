@@ -3,7 +3,9 @@ from typing import List
 from django.urls import URLPattern, path
 
 from scenes.views import (
+    AddParticipantView,
     CampaignScenesView,
+    RemoveParticipantView,
     SceneCreateView,
     SceneDetailView,
     SceneEditView,
@@ -34,5 +36,16 @@ urlpatterns: List[URLPattern] = [
         "scenes/<int:pk>/edit/",
         SceneEditView.as_view(),
         name="scene_edit",
+    ),
+    # Character participation management (Issue 38)
+    path(
+        "scenes/<int:pk>/participants/add/",
+        AddParticipantView.as_view(),
+        name="add_participant",
+    ),
+    path(
+        "scenes/<int:pk>/participants/remove/<int:character_id>/",
+        RemoveParticipantView.as_view(),
+        name="remove_participant",
     ),
 ]

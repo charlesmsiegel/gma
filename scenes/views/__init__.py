@@ -4,15 +4,18 @@ Views for scene management.
 Provides campaign-scoped scene management views with proper permission checking.
 """
 
+import json
+
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
 
+from characters.models import Character
 from core.mixins import CampaignFilterMixin, CampaignListView, CampaignManagementMixin
-from scenes.forms import SceneForm
+from scenes.forms import AddParticipantForm, SceneForm
 from scenes.models import Scene
 
 
@@ -110,6 +113,145 @@ class SceneCreateView(CampaignFilterMixin, CreateView):
         """Handle invalid form submission."""
         messages.error(self.request, "Please correct the errors below and try again.")
         return super().form_invalid(form)
+
+
+class AddParticipantView(View):
+    """
+    AJAX view for adding participants to scenes.
+
+    Only OWNER, GM, and character owners can add participants.
+    """
+
+    def post(self, request, *args, **kwargs):
+        """Handle AJAX request to add participant."""
+        # Check authentication
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authentication required"}, status=401)
+
+        # Get the scene
+        scene = get_object_or_404(Scene, pk=kwargs["pk"])
+
+        # Check if user has access to this scene's campaign
+        user_role = scene.campaign.get_user_role(request.user)
+        if user_role not in ["OWNER", "GM", "PLAYER", "OBSERVER"]:
+            return JsonResponse({"error": "Scene not found"}, status=404)
+
+        # Get character ID from request (handle both JSON and form data)
+        if request.content_type == "application/json":
+            try:
+                data = json.loads(request.body)
+                character_id = data.get("character_id")
+            except json.JSONDecodeError:
+                return JsonResponse({"error": "Invalid JSON"}, status=400)
+        else:
+            character_id = request.POST.get("character_id")
+
+        if not character_id:
+            return JsonResponse({"error": "Character ID required"}, status=400)
+
+        try:
+            character = Character.objects.get(pk=character_id)
+        except Character.DoesNotExist:
+            return JsonResponse({"error": "Character not found"}, status=404)
+
+        # Check if character belongs to the same campaign
+        if character.campaign != scene.campaign:
+            return JsonResponse({"error": "Character not in this campaign"}, status=400)
+
+        # Check permissions
+        can_add = False
+        if user_role in ["OWNER", "GM"]:
+            can_add = True
+        elif (
+            user_role in ["PLAYER", "OBSERVER"]
+            and character.player_owner == request.user
+        ):
+            can_add = True
+
+        if not can_add:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        # Check if character is already participating
+        if scene.participants.filter(pk=character.pk).exists():
+            return JsonResponse(
+                {"error": "Character already participating"}, status=400
+            )
+
+        # Add participant
+        scene.participants.add(character)
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": f"{character.name} added to scene",
+                "character": {
+                    "id": character.pk,
+                    "name": character.name,
+                    "owner": character.player_owner.display_name
+                    or character.player_owner.username,
+                },
+            }
+        )
+
+
+class RemoveParticipantView(View):
+    """
+    AJAX view for removing participants from scenes.
+
+    Only OWNER, GM, and character owners can remove participants.
+    """
+
+    def delete(self, request, *args, **kwargs):
+        """Handle AJAX DELETE request to remove participant."""
+        # Check authentication
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Authentication required"}, status=401)
+
+        # Get the scene
+        scene = get_object_or_404(Scene, pk=kwargs["pk"])
+
+        # Check if user has access to this scene's campaign
+        user_role = scene.campaign.get_user_role(request.user)
+        if user_role not in ["OWNER", "GM", "PLAYER", "OBSERVER"]:
+            return JsonResponse({"error": "Scene not found"}, status=404)
+
+        # Get character ID from URL parameter
+        character_id = kwargs.get("character_id")
+
+        try:
+            character = Character.objects.get(pk=character_id)
+        except Character.DoesNotExist:
+            return JsonResponse({"error": "Character not found"}, status=404)
+
+        # Check if character is actually participating
+        if not scene.participants.filter(pk=character.pk).exists():
+            return JsonResponse(
+                {"error": "Character not participating in this scene"}, status=400
+            )
+
+        # Check permissions
+        can_remove = False
+        if user_role in ["OWNER", "GM"]:
+            can_remove = True
+        elif (
+            user_role in ["PLAYER", "OBSERVER"]
+            and character.player_owner == request.user
+        ):
+            can_remove = True
+
+        if not can_remove:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        # Remove participant
+        scene.participants.remove(character)
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": f"{character.name} removed from scene",
+                "character_id": character.pk,
+            }
+        )
 
 
 class SceneDetailView(DetailView):
