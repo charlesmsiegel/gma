@@ -1,18 +1,15 @@
 """
-Forms for scene creation and management.
+Forms for scene management.
 
-This module provides Django forms for creating and editing scenes,
-with proper validation and campaign context handling.
+Provides forms for scene creation, editing, and participant management.
 """
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.db import models
 
 from characters.models import Character
-
-from .models import Scene
+from scenes.models import Scene
 
 User = get_user_model()
 
@@ -25,46 +22,36 @@ class SceneForm(forms.ModelForm):
         fields = ["name", "description"]
         widgets = {
             "name": forms.TextInput(
-                attrs={
-                    "class": "form-control form-control-lg",
-                    "placeholder": "Enter scene name",
-                    "autocomplete": "off",
-                }
+                attrs={"class": "form-control", "placeholder": "Enter scene name"}
             ),
             "description": forms.Textarea(
                 attrs={
                     "class": "form-control",
-                    "rows": 4,
-                    "placeholder": (
-                        "Describe the scene setting, atmosphere, "
-                        "or initial situation..."
-                    ),
-                    "style": "resize: vertical;",
+                    "rows": 3,
+                    "placeholder": "Enter scene description (optional)",
                 }
             ),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Add required asterisk styling
-        self.fields["name"].widget.attrs.update({"data-required": "true"})
-
     def clean_name(self):
-        """Clean and validate the name field."""
+        """Clean and validate scene name."""
         name = self.cleaned_data.get("name")
         if name:
-            name = name.strip()
+            return name.strip()
         return name
 
     def save(self, campaign=None, created_by=None, commit=True):
-        """Save the scene with the specified campaign and creator."""
+        """Save scene with campaign and creator."""
         scene = super().save(commit=False)
+
         if campaign:
             scene.campaign = campaign
         if created_by:
             scene.created_by = created_by
+
         if commit:
             scene.save()
+
         return scene
 
 
@@ -73,67 +60,55 @@ class AddParticipantForm(forms.Form):
 
     character = forms.ModelChoiceField(
         queryset=Character.objects.none(),
+        empty_label="Select a character...",
         widget=forms.Select(attrs={"class": "form-select"}),
-        label="Character",
-        help_text="Select a character to add to this scene",
     )
 
-    def __init__(self, *args, **kwargs):
-        self.scene = kwargs.pop("scene", None)
+    def __init__(self, scene=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        if self.scene:
-            # Only show characters from campaign that aren't already participating
+        if scene:
+            # Only show characters from the same campaign who aren't
+            # already participating
             self.fields["character"].queryset = Character.objects.filter(
-                campaign=self.scene.campaign
-            ).exclude(participated_scenes=self.scene)
+                campaign=scene.campaign
+            ).exclude(participated_scenes=scene)
 
-    def save(self):
+    def save(self, scene=None):
         """Add the selected character to the scene."""
-        character = self.cleaned_data["character"]
-        self.scene.participants.add(character)
-        return character
+        if scene and self.is_valid():
+            character = self.cleaned_data["character"]
+            scene.participants.add(character)
 
 
 class BulkAddParticipantsForm(forms.Form):
-    """Form for adding multiple participants to a scene at once."""
+    """Form for adding multiple participants to a scene."""
 
     characters = forms.ModelMultipleChoiceField(
         queryset=Character.objects.none(),
-        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
-        required=True,
-        label="Characters",
-        help_text="Select one or more characters to add to this scene",
+        widget=forms.CheckboxSelectMultiple(),
+        required=False,
     )
 
-    def __init__(self, *args, **kwargs):
-        self.scene = kwargs.pop("scene", None)
+    def __init__(self, scene=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        if self.scene:
-            # Only show characters from campaign that aren't already participating
+        if scene:
+            # Only show characters from the same campaign who aren't
+            # already participating
             self.fields["characters"].queryset = Character.objects.filter(
-                campaign=self.scene.campaign
-            ).exclude(participated_scenes=self.scene)
+                campaign=scene.campaign
+            ).exclude(participated_scenes=scene)
 
-    def save(self):
-        """Add all selected characters to the scene."""
-        characters = self.cleaned_data["characters"]
-        added_count = 0
-        for character in characters:
-            self.scene.participants.add(character)
-            added_count += 1
-        return added_count
+    def save(self, scene=None):
+        """Add selected characters to the scene."""
+        if scene and self.is_valid():
+            characters = self.cleaned_data["characters"]
+            scene.participants.add(*characters)
+            return len(characters)
+        return 0
 
 
 class SceneStatusChangeForm(forms.ModelForm):
-    """Form for changing scene status with validation for proper transitions."""
-
-    STATUS_TRANSITIONS = {
-        "ACTIVE": ["CLOSED"],
-        "CLOSED": ["ARCHIVED"],
-        "ARCHIVED": [],  # Archived scenes cannot change status
-    }
+    """Form for changing scene status with transition validation."""
 
     class Meta:
         model = Scene
@@ -144,64 +119,54 @@ class SceneStatusChangeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         if self.instance and self.instance.pk:
+            # Filter status choices based on current status
             current_status = self.instance.status
-            # Filter choices based on valid transitions
-            valid_statuses = self.STATUS_TRANSITIONS.get(current_status, [])
+            if current_status == "ACTIVE":
+                choices = [("ACTIVE", "Active"), ("CLOSED", "Closed")]
+            elif current_status == "CLOSED":
+                choices = [("CLOSED", "Closed"), ("ARCHIVED", "Archived")]
+            else:  # ARCHIVED
+                choices = [("ARCHIVED", "Archived")]
 
-            # Create choices from valid transitions
-            choices = [
-                (status, dict(Scene.STATUS_CHOICES)[status])
-                for status in valid_statuses
-            ]
             self.fields["status"].choices = choices
 
     def clean_status(self):
-        """Validate that the status transition is allowed."""
+        """Validate status transitions."""
         new_status = self.cleaned_data.get("status")
+        if self.instance and self.instance.pk:
+            current_status = self.instance.status
 
-        if not self.instance or not self.instance.pk:
-            return new_status
+            # Define valid transitions
+            valid_transitions = {
+                "ACTIVE": ["CLOSED"],
+                "CLOSED": ["ARCHIVED"],
+                "ARCHIVED": [],
+            }
 
-        current_status = self.instance.status
-        valid_transitions = self.STATUS_TRANSITIONS.get(current_status, [])
-
-        if new_status not in valid_transitions:
-            status_names = dict(Scene.STATUS_CHOICES)
-            current_name = status_names.get(current_status, current_status)
-            new_name = status_names.get(new_status, new_status)
-
-            if current_status == "ACTIVE" and new_status == "ARCHIVED":
-                raise ValidationError(
-                    f"Cannot change from {current_name} to {new_name}. "
-                    "Active scenes must be Closed before they can be Archived."
-                )
-            else:
-                raise ValidationError(
-                    f"Invalid status transition from {current_name} to {new_name}."
-                )
+            if new_status != current_status:
+                if new_status not in valid_transitions.get(current_status, []):
+                    raise forms.ValidationError(
+                        f"Cannot transition from {current_status} directly to "
+                        f"{new_status}. Valid transitions from {current_status}: "
+                        f"{', '.join(valid_transitions.get(current_status, []))}"
+                    )
 
         return new_status
 
     def save(self, commit=True):
-        """Save the status change, returning True if status actually changed."""
-        if not self.instance or not self.instance.pk:
-            return super().save(commit=commit)
+        """Save scene and return whether status changed."""
+        if self.instance and self.instance.pk:
+            old_status = Scene.objects.get(pk=self.instance.pk).status
+            new_status = self.cleaned_data.get("status")
 
-        old_status = self.instance.status
-        new_status = self.cleaned_data.get("status")
+            if old_status != new_status:
+                super().save(commit=commit)
+                return True  # Status changed
+            else:
+                return False  # No change needed
 
-        # If no change, return False
-        if old_status == new_status:
-            return False
-
-        # Save the change
-        if commit:
-            super().save(commit=True)
-            return True
-        else:
-            return super().save(commit=False)
+        return super().save(commit=commit)
 
 
 class SceneSearchForm(forms.Form):
@@ -212,96 +177,89 @@ class SceneSearchForm(forms.Form):
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Search scene names and descriptions...",
+                "placeholder": "Search scenes...",
             }
         ),
-        label="Search",
-        help_text="Search in scene names and descriptions",
     )
 
     status = forms.ChoiceField(
-        required=False,
         choices=[("", "All Statuses")] + Scene.STATUS_CHOICES,
+        required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
-        label="Status",
-        help_text="Filter by scene status",
     )
 
     participant = forms.ModelChoiceField(
         queryset=Character.objects.none(),
         required=False,
+        empty_label="All Characters",
         widget=forms.Select(attrs={"class": "form-select"}),
-        label="Participant",
-        help_text="Filter by character participation",
     )
 
     date_from = forms.DateField(
         required=False,
-        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
-        label="From Date",
-        help_text="Show scenes created on or after this date",
+        widget=forms.DateInput(
+            attrs={
+                "class": "form-control",
+                "type": "date",
+            }
+        ),
     )
 
     date_to = forms.DateField(
         required=False,
-        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
-        label="To Date",
-        help_text="Show scenes created on or before this date",
+        widget=forms.DateInput(
+            attrs={
+                "class": "form-control",
+                "type": "date",
+            }
+        ),
     )
 
-    def __init__(self, *args, **kwargs):
-        self.campaign = kwargs.pop("campaign", None)
+    def __init__(self, campaign=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        if self.campaign:
+        if campaign:
             # Only show characters from this campaign
             self.fields["participant"].queryset = Character.objects.filter(
-                campaign=self.campaign
-            ).order_by("name")
-
-            # Add empty choice for participant
-            self.fields["participant"].empty_label = "All Characters"
+                campaign=campaign
+            )
 
     def clean(self):
-        """Validate that date range is logical."""
+        """Validate date range."""
         cleaned_data = super().clean()
         date_from = cleaned_data.get("date_from")
         date_to = cleaned_data.get("date_to")
 
         if date_from and date_to and date_from > date_to:
-            raise ValidationError({"date_to": "End date must be after start date."})
+            raise forms.ValidationError("End date must be after start date.")
 
         return cleaned_data
 
     def apply_filters(self, queryset):
-        """Apply search filters to the given queryset."""
+        """Apply search filters to the queryset."""
         if not self.is_valid():
             return queryset
 
-        # Text search
-        search_text = self.cleaned_data.get("search")
-        if search_text:
+        search = self.cleaned_data.get("search")
+        status = self.cleaned_data.get("status")
+        participant = self.cleaned_data.get("participant")
+        date_from = self.cleaned_data.get("date_from")
+        date_to = self.cleaned_data.get("date_to")
+
+        if search:
             queryset = queryset.filter(
-                models.Q(name__icontains=search_text)
-                | models.Q(description__icontains=search_text)
+                models.Q(name__icontains=search)
+                | models.Q(description__icontains=search)
             )
 
-        # Status filter
-        status = self.cleaned_data.get("status")
         if status:
             queryset = queryset.filter(status=status)
 
-        # Participant filter
-        participant = self.cleaned_data.get("participant")
         if participant:
             queryset = queryset.filter(participants=participant)
 
-        # Date range filters
-        date_from = self.cleaned_data.get("date_from")
         if date_from:
             queryset = queryset.filter(created_at__date__gte=date_from)
 
-        date_to = self.cleaned_data.get("date_to")
         if date_to:
             queryset = queryset.filter(created_at__date__lte=date_to)
 

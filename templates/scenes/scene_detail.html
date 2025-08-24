@@ -1,195 +1,184 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title }}{% endblock %}
+{% block title %}{{ scene.name }} - {{ campaign.name }}{% endblock %}
 
 {% block content %}
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-12">
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb" class="mb-4">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-              <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
-            </li>
-            <li class="breadcrumb-item">
-              <a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}">Scenes</a>
-            </li>
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}">Scenes</a></li>
             <li class="breadcrumb-item active" aria-current="page">{{ scene.name }}</li>
-          </ol>
-        </nav>
+        </ol>
+    </nav>
 
-        <!-- Scene Header -->
-        <div class="d-flex justify-content-between align-items-start mb-4">
-          <div>
-            <h1 class="h2 mb-1">{{ scene.name }}</h1>
-            <div class="d-flex align-items-center gap-2">
-              <span class="badge {% if scene.status == 'ACTIVE' %}bg-success{% elif scene.status == 'CLOSED' %}bg-warning{% else %}bg-secondary{% endif %}">
-                {{ scene.status }}
-              </span>
-              <span class="text-muted">Created {{ scene.created_at|date:"M d, Y" }}</span>
-              <span class="text-muted">by {{ scene.created_by.get_full_name|default:scene.created_by.username }}</span>
-            </div>
-          </div>
-          {% if can_manage_scene %}
-            <div class="btn-group">
-              <a href="{% url 'scenes:scene_edit' pk=scene.pk %}"
-                 class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-pencil"></i> Edit Scene
-              </a>
-              <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle dropdown-toggle-split"
-                      data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="visually-hidden">Toggle Dropdown</span>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="#" onclick="alert('Participant management coming soon!')">
-                  <i class="bi bi-person-plus"></i> Add Participants
-                </a></li>
-                <li><a class="dropdown-item" href="#" onclick="alert('Status management coming soon!')">
-                  <i class="bi bi-arrow-repeat"></i> Change Status
-                </a></li>
-              </ul>
-            </div>
-          {% endif %}
-        </div>
-
-        <div class="row">
-          <!-- Main Content -->
-          <div class="col-md-8">
-            <div class="card mb-4">
-              <div class="card-header">
-                <h3 class="card-title h5 mb-0">Scene Description</h3>
-              </div>
-              <div class="card-body">
-                {% if scene.description %}
-                  <p class="card-text">{{ scene.description|linebreaks }}</p>
-                {% else %}
-                  <p class="text-muted fst-italic">No description provided.</p>
-                {% endif %}
-              </div>
-            </div>
-
-            <!-- Participants Section -->
-            <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title h5 mb-0">
-                  Participants
-                  <span class="badge bg-secondary">{{ participants|length }}</span>
-                </h3>
-                {% if can_manage_scene %}
-                  <button class="btn btn-sm btn-outline-primary" onclick="alert('Add participants feature coming soon!')">
-                    <i class="bi bi-person-plus"></i> Add Participants
-                  </button>
-                {% endif %}
-              </div>
-              <div class="card-body">
-                {% if participants %}
-                  <div class="row">
-                    {% for character in participants %}
-                      <div class="col-md-6 mb-3">
-                        <div class="d-flex align-items-center">
-                          <div class="me-3">
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width: 40px; height: 40px;">
-                              {{ character.name|first|upper }}
-                            </div>
-                          </div>
-                          <div class="flex-grow-1">
-                            <h6 class="mb-1">
-                              <a href="{% url 'characters:detail' pk=character.pk %}" class="text-decoration-none">
-                                {{ character.name }}
-                              </a>
-                            </h6>
-                            <small class="text-muted">
-                              Played by {{ character.player_owner.get_full_name|default:character.player_owner.username }}
-                            </small>
-                          </div>
-                          {% if can_manage_scene %}
-                            <button class="btn btn-sm btn-outline-danger"
-                                    onclick="alert('Remove participant feature coming soon!')"
-                                    title="Remove from scene">
-                              <i class="bi bi-x"></i>
-                            </button>
-                          {% endif %}
-                        </div>
-                      </div>
-                    {% endfor %}
-                  </div>
-                {% else %}
-                  <div class="text-center text-muted">
-                    <i class="bi bi-people display-4 mb-3"></i>
-                    <p>No participants yet.</p>
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <h1 class="h2 mb-1">{{ scene.name }}</h1>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-calendar" aria-hidden="true"></i>
+                        Created {{ scene.created_at|date:"M j, Y" }} by {{ scene.created_by.display_name|default:scene.created_by.username }}
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
                     {% if can_manage_scene %}
-                      <button class="btn btn-primary" onclick="alert('Add participants feature coming soon!')">
-                        <i class="bi bi-person-plus"></i> Add First Participant
-                      </button>
+                        <a href="{% url 'scenes:scene_edit' pk=scene.pk %}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil" aria-hidden="true"></i> Edit Scene
+                        </a>
                     {% endif %}
-                  </div>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-
-          <!-- Sidebar -->
-          <div class="col-md-4">
-            <!-- Scene Info -->
-            <div class="card mb-4">
-              <div class="card-header">
-                <h3 class="card-title h6 mb-0">Scene Information</h3>
-              </div>
-              <div class="card-body">
-                <dl class="row mb-0">
-                  <dt class="col-sm-4">Status:</dt>
-                  <dd class="col-sm-8">
-                    <span class="badge {% if scene.status == 'ACTIVE' %}bg-success{% elif scene.status == 'CLOSED' %}bg-warning{% else %}bg-secondary{% endif %}">
-                      {{ scene.status }}
-                    </span>
-                  </dd>
-
-                  <dt class="col-sm-4">Created:</dt>
-                  <dd class="col-sm-8">{{ scene.created_at|date:"M d, Y g:i A" }}</dd>
-
-                  <dt class="col-sm-4">Created by:</dt>
-                  <dd class="col-sm-8">{{ scene.created_by.get_full_name|default:scene.created_by.username }}</dd>
-
-                  <dt class="col-sm-4">Campaign:</dt>
-                  <dd class="col-sm-8">
-                    <a href="{% url 'campaigns:detail' slug=campaign.slug %}" class="text-decoration-none">
-                      {{ campaign.name }}
+                    <a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Scenes
                     </a>
-                  </dd>
-
-                  <dt class="col-sm-4">Participants:</dt>
-                  <dd class="col-sm-8">{{ participants|length }} participants</dd>
-                </dl>
-              </div>
+                </div>
             </div>
 
-            <!-- Actions -->
-            {% if can_manage_scene %}
-              <div class="card">
-                <div class="card-header">
-                  <h3 class="card-title h6 mb-0">Scene Management</h3>
+            <div class="row">
+                <div class="col-md-8">
+                    <!-- Scene Description -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i> Scene Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if scene.description %}
+                                <p class="mb-0">{{ scene.description|linebreaks }}</p>
+                            {% else %}
+                                <p class="text-muted mb-0">No description provided.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Participants -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-people" aria-hidden="true"></i> Participants
+                                <span class="badge bg-primary ms-2">{{ participants.count }}</span>
+                            </h5>
+                            {% if can_manage_scene %}
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addParticipantModal">
+                                    <i class="bi bi-person-plus" aria-hidden="true"></i> Add Participants
+                                </button>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            {% if participants %}
+                                <div class="row">
+                                    {% for participant in participants %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                                                <div>
+                                                    <strong>{{ participant.name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        Player: {{ participant.player_owner.display_name|default:participant.player_owner.username }}
+                                                    </small>
+                                                </div>
+                                                {% if can_manage_scene %}
+                                                    <button class="btn btn-sm btn-outline-danger"
+                                                            onclick="removeParticipant({{ participant.pk }})"
+                                                            title="Remove participant">
+                                                        <i class="bi bi-x" aria-hidden="true"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">
+                                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                    No participants added yet.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                  <div class="d-grid gap-2">
-                    <a href="{% url 'scenes:scene_edit' pk=scene.pk %}" class="btn btn-outline-primary btn-sm">
-                      <i class="bi bi-pencil"></i> Edit Scene
-                    </a>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="alert('Participant management coming soon!')">
-                      <i class="bi bi-people"></i> Manage Participants
-                    </button>
-                    <button class="btn btn-outline-warning btn-sm" onclick="alert('Status management coming soon!')">
-                      <i class="bi bi-arrow-repeat"></i> Change Status
-                    </button>
-                  </div>
+
+                <div class="col-md-4">
+                    <!-- Scene Status & Metadata -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Scene Status</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <span class="badge {% if scene.status == 'ACTIVE' %}bg-success{% elif scene.status == 'CLOSED' %}bg-warning{% else %}bg-secondary{% endif %} fs-6">
+                                    {{ scene.get_status_display }}
+                                </span>
+                            </div>
+
+                            {% if can_manage_scene %}
+                                <button class="btn btn-sm btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#changeStatusModal">
+                                    <i class="bi bi-gear" aria-hidden="true"></i> Change Status
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">
+                                <strong>Campaign:</strong> {{ campaign.name }}<br>
+                                <strong>Created:</strong> {{ scene.created_at|date:"M j, Y g:i A" }}<br>
+                                <strong>Last Updated:</strong> {{ scene.updated_at|date:"M j, Y g:i A" }}<br>
+                                <strong>Creator:</strong> {{ scene.created_by.display_name|default:scene.created_by.username }}
+                            </small>
+                        </div>
+                    </div>
                 </div>
-              </div>
-            {% endif %}
-          </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
+</div>
+
+<!-- Add Participant Modal -->
+{% if can_manage_scene %}
+<div class="modal fade" id="addParticipantModal" tabindex="-1" aria-labelledby="addParticipantModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addParticipantModalLabel">Add Participants</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- This will be populated by AJAX when Issue 38 is implemented -->
+                <p class="text-muted">Participant management will be available when Issue 38 is implemented.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Status Modal -->
+<div class="modal fade" id="changeStatusModal" tabindex="-1" aria-labelledby="changeStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changeStatusModalLabel">Change Scene Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- This will be populated by AJAX when Issue 40 is implemented -->
+                <p class="text-muted">Status management will be available when Issue 40 is implemented.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function removeParticipant(participantId) {
+    // This will be implemented in Issue 38
+    console.log('Remove participant:', participantId);
+    alert('Participant removal will be available when Issue 38 is implemented.');
+}
+</script>
 {% endblock %}

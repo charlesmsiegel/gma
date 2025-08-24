@@ -1,89 +1,114 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title }}{% endblock %}
-
-{% block extra_css %}
-  <link rel="stylesheet" href="{% static 'campaigns/css/campaign_create.css' %}">
-{% endblock %}
+{% block title %}Create Scene - {{ campaign.name }}{% endblock %}
 
 {% block content %}
-  <div class="container-fluid">
-    <div class="row justify-content-center">
-      <div class="col-12 col-lg-8">
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb" class="mb-4">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-              <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
-            </li>
-            <li class="breadcrumb-item">
-              <a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}">Scenes</a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">Create New Scene</li>
-          </ol>
-        </nav>
+<div class="container-fluid">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}">Scenes</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Create Scene</li>
+        </ol>
+    </nav>
 
-        <div class="card">
-          <div class="card-header">
-            <h1 class="card-title h3 mb-0">Create New Scene</h1>
-            <p class="text-muted mb-0 mt-2">Create a new scene for {{ campaign.name }}</p>
-          </div>
-          <div class="card-body">
-            <form method="post" novalidate>
-              {% csrf_token %}
-
-              <div class="mb-3">
-                <label for="{{ form.name.id_for_label }}" class="form-label">
-                  Scene Name <span class="text-danger">*</span>
-                </label>
-                {{ form.name }}
-                {% if form.name.errors %}
-                  <div class="invalid-feedback d-block">
-                    {% for error in form.name.errors %}{{ error }}{% endfor %}
-                  </div>
-                {% endif %}
-                {% if form.name.help_text %}
-                  <div class="form-text">{{ form.name.help_text }}</div>
-                {% endif %}
-              </div>
-
-              <div class="mb-3">
-                <label for="{{ form.description.id_for_label }}" class="form-label">
-                  Description
-                </label>
-                {{ form.description }}
-                {% if form.description.errors %}
-                  <div class="invalid-feedback d-block">
-                    {% for error in form.description.errors %}{{ error }}{% endfor %}
-                  </div>
-                {% endif %}
-                {% if form.description.help_text %}
-                  <div class="form-text">{{ form.description.help_text }}</div>
-                {% endif %}
-              </div>
-
-              <div class="alert alert-info">
-                <h6 class="alert-heading">Scene Creation</h6>
-                <p class="mb-0">
-                  New scenes will be created with "Active" status. You can add participants
-                  and manage the scene after creation.
-                </p>
-              </div>
-
-              <div class="d-flex justify-content-between">
-                <a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}"
-                   class="btn btn-secondary">
-                  <i class="bi bi-arrow-left"></i> Cancel
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">Create New Scene</h1>
+                <a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Scenes
                 </a>
-                <button type="submit" class="btn btn-primary">
-                  <i class="bi bi-plus-circle"></i> Create Scene
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label">
+                                        Scene Name <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.name.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        A descriptive name for your scene (e.g., "The Tavern Meeting", "Boss Battle").
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.description.id_for_label }}" class="form-label">
+                                        Description
+                                    </label>
+                                    {{ form.description }}
+                                    {% if form.description.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.description.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Optional description of the scene setting, mood, or context.
+                                    </div>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle" aria-hidden="true"></i> Create Scene
+                                    </button>
+                                    <a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}" class="btn btn-outline-secondary">
+                                        Cancel
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Scene Information</h6>
+                                        <small class="text-muted">
+                                            <strong>Campaign:</strong> {{ campaign.name }}<br>
+                                            <strong>Created by:</strong> {{ user.display_name|default:user.username }}<br>
+                                            <strong>Status:</strong> Active (default)
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
+</div>
+
+<script>
+// Bootstrap form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+</script>
 {% endblock %}
