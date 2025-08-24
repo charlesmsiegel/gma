@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from campaigns.models import Campaign
+
+logger = logging.getLogger(__name__)
 
 
 class SceneQuerySet(models.QuerySet):
@@ -125,21 +130,76 @@ class Scene(models.Model):
             old_status: The previous status
             new_status: The new status
         """
-        # Create a simple audit log entry
-        # Only print in non-test environments to avoid cluttering test output
-        import sys
+        # Log using Django's logging system
+        logger.info(
+            "Scene status change: '%s' (%d) from '%s' to '%s' by user '%s' (%d)",
+            self.name,
+            self.pk,
+            old_status,
+            new_status,
+            user.username,
+            user.pk,
+        )
 
-        if "test" not in sys.argv:
-            print(
-                f"Scene '{self.name}' status changed from '{old_status}' "
-                f"to '{new_status}' by {user.username}"
-            )
+        # Create audit log entry in database
+        SceneStatusChangeLog.objects.create(
+            scene=self,
+            user=user,
+            old_status=old_status,
+            new_status=new_status,
+            timestamp=timezone.now(),
+        )
 
-        # TODO: In a full implementation, save to audit log table:
-        # SceneStatusChangeLog.objects.create(
-        #     scene=self,
-        #     user=user,
-        #     old_status=old_status,
-        #     new_status=new_status,
-        #     timestamp=timezone.now()
-        # )
+
+class SceneStatusChangeLog(models.Model):
+    """
+    Audit log for scene status changes.
+
+    Tracks all scene status transitions with user attribution and timestamps
+    for compliance and debugging purposes.
+    """
+
+    scene = models.ForeignKey(
+        Scene,
+        on_delete=models.CASCADE,
+        related_name="status_change_logs",
+        help_text="The scene that had its status changed",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="scene_status_changes",
+        help_text="The user who made the status change",
+    )
+    old_status = models.CharField(
+        max_length=10,
+        choices=Scene.STATUS_CHOICES,
+        help_text="The previous status of the scene",
+    )
+    new_status = models.CharField(
+        max_length=10,
+        choices=Scene.STATUS_CHOICES,
+        help_text="The new status of the scene",
+    )
+    timestamp = models.DateTimeField(
+        default=timezone.now,
+        help_text="When the status change occurred",
+    )
+
+    class Meta:
+        db_table = "scenes_scene_status_change_log"
+        ordering = ["-timestamp"]
+        verbose_name = "Scene Status Change Log"
+        verbose_name_plural = "Scene Status Change Logs"
+        indexes = [
+            models.Index(fields=["scene", "-timestamp"]),
+            models.Index(fields=["user", "-timestamp"]),
+            models.Index(fields=["-timestamp"]),
+        ]
+
+    def __str__(self) -> str:
+        """Return a readable representation of the status change."""
+        return (
+            f"Scene '{self.scene.name}' changed from {self.old_status} "
+            f"to {self.new_status} by {self.user.username} at {self.timestamp}"
+        )

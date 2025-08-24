@@ -17,7 +17,7 @@ from django.urls import reverse
 
 from campaigns.models import Campaign, CampaignMembership
 from characters.models import Character
-from scenes.models import Scene
+from scenes.models import Scene, SceneStatusChangeLog
 
 User = get_user_model()
 
@@ -569,6 +569,32 @@ class SceneStatusManagementTest(SceneViewTestCase):
             mock_log.assert_called_once_with(
                 user=self.gm, old_status="ACTIVE", new_status="CLOSED"
             )
+
+    def test_status_change_database_logging(self):
+        """Test that status changes are saved to audit log database."""
+        self.client.login(username="gm", password="testpass123")
+        url = reverse("scenes:change_status", kwargs={"pk": self.scene1.pk})
+
+        # Verify no log entries exist initially
+        self.assertEqual(SceneStatusChangeLog.objects.count(), 0)
+
+        # Make status change
+        response = self.client.post(url, {"status": "CLOSED"})
+        self.assertEqual(response.status_code, 302)
+
+        # Verify scene status was changed
+        self.scene1.refresh_from_db()
+        self.assertEqual(self.scene1.status, "CLOSED")
+
+        # Verify audit log entry was created
+        self.assertEqual(SceneStatusChangeLog.objects.count(), 1)
+
+        log_entry = SceneStatusChangeLog.objects.first()
+        self.assertEqual(log_entry.scene, self.scene1)
+        self.assertEqual(log_entry.user, self.gm)
+        self.assertEqual(log_entry.old_status, "ACTIVE")
+        self.assertEqual(log_entry.new_status, "CLOSED")
+        self.assertIsNotNone(log_entry.timestamp)
 
 
 class ParticipantManagementTest(SceneViewTestCase):
