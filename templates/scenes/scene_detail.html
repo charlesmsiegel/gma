@@ -1,177 +1,203 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}{{ scene.name }} - {{ campaign.name }}{% endblock %}
-
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/scene-chat.css' %}">
+  <link rel="stylesheet" href="{% static 'css/scene-chat.css' %}">
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
+  <div class="container-fluid">
     <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}">Scenes</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ scene.name }}</li>
-        </ol>
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}">Scenes</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">{{ scene.name }}</li>
+      </ol>
     </nav>
-
     <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-start mb-4">
-                <div>
-                    <h1 class="h2 mb-1">{{ scene.name }}</h1>
-                    <p class="text-muted mb-0">
-                        <i class="bi bi-calendar" aria-hidden="true"></i>
-                        Created {{ scene.created_at|date:"M j, Y" }} by {{ scene.created_by.display_name|default:scene.created_by.username }}
-                    </p>
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+          <div>
+            <h1 class="h2 mb-1">{{ scene.name }}</h1>
+            <p class="text-muted mb-0">
+              <i class="bi bi-calendar" aria-hidden="true"></i>
+              Created {{ scene.created_at|date:"M j, Y" }} by {{ scene.created_by.display_name|default:scene.created_by.username }}
+            </p>
+          </div>
+          <div class="d-flex gap-2">
+            {% if can_manage_scene %}
+              <a href="{% url 'scenes:scene_edit' pk=scene.pk %}"
+                 class="btn btn-outline-primary">
+                <i class="bi bi-pencil" aria-hidden="true"></i> Edit Scene
+              </a>
+            {% endif %}
+            <a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}"
+               class="btn btn-secondary">
+              <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Scenes
+            </a>
+          </div>
+        </div>
+        <div class="row">
+          <!-- Main Chat Interface -->
+          <div class="col-lg-8 col-xl-9">
+            <div id="scene-chat-container"></div>
+          </div>
+          <!-- Scene Info Sidebar -->
+          <div class="col-lg-4 col-xl-3">
+            <!-- Scene Information -->
+            <div class="card mb-3">
+              <div class="card-header">
+                <h6 class="card-title mb-0">
+                  <i class="bi bi-info-circle" aria-hidden="true"></i> Scene Info
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-2">
+                  <span class="badge
+                               {% if scene.status == 'ACTIVE' %}
+                                 bg-success
+                               {% elif scene.status == 'CLOSED' %}
+                                 bg-warning
+                               {% else %}
+                                 bg-secondary
+                               {% endif %}">{{ scene.get_status_display }}</span>
                 </div>
-                <div class="d-flex gap-2">
-                    {% if can_manage_scene %}
-                        <a href="{% url 'scenes:scene_edit' pk=scene.pk %}" class="btn btn-outline-primary">
-                            <i class="bi bi-pencil" aria-hidden="true"></i> Edit Scene
-                        </a>
-                    {% endif %}
-                    <a href="{% url 'scenes:campaign_scenes' campaign_slug=campaign.slug %}" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Scenes
+                {% if scene.description %}
+                  <p class="small mb-3">{{ scene.description|truncatewords:20 }}</p>
+                {% endif %}
+                <small class="text-muted">
+                  <strong>Created:</strong> {{ scene.created_at|date:"M j, Y" }}
+                  <br>
+                  <strong>Creator:</strong> {{ scene.created_by.display_name|default:scene.created_by.username }}
+                </small>
+              </div>
+            </div>
+            <!-- Participants -->
+            <div class="card mb-3">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                  <i class="bi bi-people" aria-hidden="true"></i> Participants
+                  <span class="badge bg-primary ms-1">{{ participants.count }}</span>
+                </h6>
+                {% if can_manage_scene %}
+                  <button class="btn btn-sm btn-outline-primary"
+                          data-bs-toggle="modal"
+                          data-bs-target="#addParticipantModal"
+                          title="Add Participants">
+                    <i class="bi bi-person-plus" aria-hidden="true"></i>
+                  </button>
+                {% endif %}
+              </div>
+              <div class="card-body">
+                {% if participants %}
+                  <div class="list-group list-group-flush">
+                    {% for participant in participants %}
+                      <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                        <div>
+                          <div class="fw-semibold">{{ participant.name }}</div>
+                          <small class="text-muted">{{ participant.player_owner.display_name|default:participant.player_owner.username }}</small>
+                        </div>
+                        {% if can_manage_scene %}
+                          <button class="btn btn-sm btn-outline-danger"
+                                  onclick="removeParticipant({{ participant.pk }})"
+                                  title="Remove participant">
+                            <i class="bi bi-x" aria-hidden="true"></i>
+                          </button>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="text-muted small mb-0">No participants yet.</p>
+                {% endif %}
+              </div>
+            </div>
+            <!-- Quick Actions -->
+            {% if can_manage_scene %}
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="card-title mb-0">
+                    <i class="bi bi-gear" aria-hidden="true"></i> Quick Actions
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="d-grid gap-2">
+                    <a href="{% url 'scenes:scene_edit' pk=scene.pk %}"
+                       class="btn btn-sm btn-outline-primary">
+                      <i class="bi bi-pencil" aria-hidden="true"></i> Edit Scene
                     </a>
+                    <button class="btn btn-sm btn-outline-secondary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#changeStatusModal">
+                      <i class="bi bi-arrows-move" aria-hidden="true"></i> Change Status
+                    </button>
+                  </div>
                 </div>
-            </div>
-
-            <div class="row">
-                <!-- Main Chat Interface -->
-                <div class="col-lg-8 col-xl-9">
-                    <div id="scene-chat-container"></div>
-                </div>
-
-                <!-- Scene Info Sidebar -->
-                <div class="col-lg-4 col-xl-3">
-                    <!-- Scene Information -->
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">
-                                <i class="bi bi-info-circle" aria-hidden="true"></i> Scene Info
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-2">
-                                <span class="badge {% if scene.status == 'ACTIVE' %}bg-success{% elif scene.status == 'CLOSED' %}bg-warning{% else %}bg-secondary{% endif %}">
-                                    {{ scene.get_status_display }}
-                                </span>
-                            </div>
-                            {% if scene.description %}
-                                <p class="small mb-3">{{ scene.description|truncatewords:20 }}</p>
-                            {% endif %}
-                            <small class="text-muted">
-                                <strong>Created:</strong> {{ scene.created_at|date:"M j, Y" }}<br>
-                                <strong>Creator:</strong> {{ scene.created_by.display_name|default:scene.created_by.username }}
-                            </small>
-                        </div>
-                    </div>
-
-                    <!-- Participants -->
-                    <div class="card mb-3">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h6 class="card-title mb-0">
-                                <i class="bi bi-people" aria-hidden="true"></i> Participants
-                                <span class="badge bg-primary ms-1">{{ participants.count }}</span>
-                            </h6>
-                            {% if can_manage_scene %}
-                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addParticipantModal" title="Add Participants">
-                                    <i class="bi bi-person-plus" aria-hidden="true"></i>
-                                </button>
-                            {% endif %}
-                        </div>
-                        <div class="card-body">
-                            {% if participants %}
-                                <div class="list-group list-group-flush">
-                                    {% for participant in participants %}
-                                        <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <div class="fw-semibold">{{ participant.name }}</div>
-                                                <small class="text-muted">{{ participant.player_owner.display_name|default:participant.player_owner.username }}</small>
-                                            </div>
-                                            {% if can_manage_scene %}
-                                                <button class="btn btn-sm btn-outline-danger" onclick="removeParticipant({{ participant.pk }})" title="Remove participant">
-                                                    <i class="bi bi-x" aria-hidden="true"></i>
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <p class="text-muted small mb-0">No participants yet.</p>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Quick Actions -->
-                    {% if can_manage_scene %}
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="card-title mb-0">
-                                    <i class="bi bi-gear" aria-hidden="true"></i> Quick Actions
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-grid gap-2">
-                                    <a href="{% url 'scenes:scene_edit' pk=scene.pk %}" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-pencil" aria-hidden="true"></i> Edit Scene
-                                    </a>
-                                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#changeStatusModal">
-                                        <i class="bi bi-arrows-move" aria-hidden="true"></i> Change Status
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
+              </div>
+            {% endif %}
+          </div>
         </div>
+      </div>
     </div>
-</div>
-
-<!-- Add Participant Modal -->
-{% if can_manage_scene %}
-<div class="modal fade" id="addParticipantModal" tabindex="-1" aria-labelledby="addParticipantModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+  </div>
+  <!-- Add Participant Modal -->
+  {% if can_manage_scene %}
+    <div class="modal fade"
+         id="addParticipantModal"
+         tabindex="-1"
+         aria-labelledby="addParticipantModalLabel"
+         aria-hidden="true">
+      <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addParticipantModalLabel">Add Participants</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- This will be populated by AJAX when Issue 38 is implemented -->
-                <p class="text-muted">Participant management will be available when Issue 38 is implemented.</p>
-            </div>
+          <div class="modal-header">
+            <h5 class="modal-title" id="addParticipantModalLabel">Add Participants</h5>
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <!-- This will be populated by AJAX when Issue 38 is implemented -->
+            <p class="text-muted">
+              Participant management will be available when Issue 38 is implemented.
+            </p>
+          </div>
         </div>
+      </div>
     </div>
-</div>
-
-<!-- Change Status Modal -->
-<div class="modal fade" id="changeStatusModal" tabindex="-1" aria-labelledby="changeStatusModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <!-- Change Status Modal -->
+    <div class="modal fade"
+         id="changeStatusModal"
+         tabindex="-1"
+         aria-labelledby="changeStatusModalLabel"
+         aria-hidden="true">
+      <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="changeStatusModalLabel">Change Scene Status</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- This will be populated by AJAX when Issue 40 is implemented -->
-                <p class="text-muted">Status management will be available when Issue 40 is implemented.</p>
-            </div>
+          <div class="modal-header">
+            <h5 class="modal-title" id="changeStatusModalLabel">Change Scene Status</h5>
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <!-- This will be populated by AJAX when Issue 40 is implemented -->
+            <p class="text-muted">
+              Status management will be available when Issue 40 is implemented.
+            </p>
+          </div>
         </div>
+      </div>
     </div>
-</div>
-{% endif %}
-
+  {% endif %}
 {% endblock %}
-
 {% block extra_js %}
-    <script src="{% static 'js/websocket-chat.js' %}"></script>
-    <script src="{% static 'js/scene-chat.js' %}"></script>
-    <script>
+  <script src="{% static 'js/websocket-chat.js' %}"></script>
+  <script src="{% static 'js/scene-chat.js' %}"></script>
+  <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize scene chat
             const sceneChatUI = new SceneChatUI('scene-chat-container', {{ scene.id }}, {
@@ -190,5 +216,5 @@
             console.log('Remove participant:', participantId);
             alert('Participant removal will be available when Issue 38 is implemented.');
         }
-    </script>
+  </script>
 {% endblock %}

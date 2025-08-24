@@ -57,7 +57,7 @@ The Game Master Application (GMA) is a web-based tabletop RPG campaign managemen
 The GMA system manages:
 - **Campaign Management**: Creation, membership, settings
 - **User Authentication**: Registration, login, profile management
-- **Real-Time Communication**: Chat, notifications via WebSocket
+- **Real-Time Scene Chat**: Complete WebSocket-based chat with message types, rate limiting, and history API
 - **Game System Support**: Flexible character models for different RPG systems
 - **Content Organization**: Scenes, locations, items, characters
 - **Location Management**: Hierarchical location trees with character ownership
@@ -2073,24 +2073,197 @@ queryset = Location.objects.filter(campaign=campaign).select_related(
 
 ### WebSocket Implementation
 
-The system uses Django Channels for real-time features:
+The GMA implements a comprehensive real-time chat system using Django Channels for scene-based communication.
 
-1. **Single Connection**: One WebSocket per user
-2. **Dynamic Subscriptions**: Subscribe to multiple campaign channels
-3. **Message Routing**: Channel-based message distribution
+#### Architecture Overview
 
-### Use Cases
+```
+WebSocket Client (JavaScript)
+        ↓
+Django Channels Routing (/ws/scenes/{scene_id}/chat/)
+        ↓
+SceneChatConsumer (WebSocket Consumer)
+        ↓
+Channel Groups (scene_chat_{scene_id})
+        ↓
+Message Broadcasting to All Scene Participants
+```
 
-- **Chat Systems**: Real-time scene chat
-- **Notifications**: Campaign invitations and updates
-- **Live Updates**: Member status changes
-- **Dice Rolling**: Real-time dice roll results
+#### Core Components
 
-### Scaling Considerations
+**1. SceneChatConsumer (`scenes/consumers.py`)**
 
-- Redis as channel layer for horizontal scaling
-- Connection pooling for database efficiency
-- Message queuing for reliable delivery
+The main WebSocket consumer handling real-time chat functionality:
+
+```python
+class SceneChatConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Authenticate user and validate scene access
+        # Join scene-specific channel group
+
+    async def receive(self, text_data):
+        # Handle incoming messages with rate limiting
+        # Validate message content and permissions
+        # Broadcast to channel group
+```
+
+**Key Features:**
+- **Authentication Required**: Only authenticated users with scene access can connect
+- **Permission Validation**: Role-based access control (OWNER → GM → PLAYER → OBSERVER)
+- **Rate Limiting**: Configurable limits based on user role and message type
+- **Content Filtering**: Basic inappropriate content detection
+- **Error Handling**: Comprehensive error responses with security considerations
+
+**2. Message Model (`scenes/models/Message`)**
+
+Persistent storage for chat messages with rich metadata:
+
+```python
+class Message(models.Model):
+    scene = models.ForeignKey(Scene)
+    character = models.ForeignKey(Character, null=True)  # For IC messages
+    sender = models.ForeignKey(User)
+    content = models.TextField()  # Supports Markdown
+    message_type = models.CharField(choices=TYPE_CHOICES)
+    recipients = models.ManyToManyField(User)  # For private messages
+    created_at = models.DateTimeField(auto_now_add=True)
+```
+
+**Message Types:**
+- **PUBLIC**: In-character messages requiring character attribution
+- **OOC**: Out-of-character messages from players (no character required)
+- **PRIVATE**: Private messages between specific users
+- **SYSTEM**: GM/Owner-only system messages
+
+**3. Rate Limiting System (`core/rate_limiting.py`)**
+
+Multi-tier rate limiting with Redis backend support:
+
+```python
+class ChatRateLimiter:
+    limits = {
+        "default": {"max_requests": 10, "time_window": 60},   # 10/min
+        "staff": {"max_requests": 30, "time_window": 60},     # 30/min
+        "system": {"max_requests": 100, "time_window": 60},   # 100/min
+    }
+```
+
+**Features:**
+- **Sliding Window**: Memory-efficient rate limiting implementation
+- **Role-Based Limits**: Different limits for users, staff, and system messages
+- **Redis Backend**: Distributed rate limiting with fallback to memory
+- **Graceful Degradation**: Automatic fallback when Redis unavailable
+
+**4. Message History API (`api/views/scene_views.py:messages`)**
+
+REST API endpoint for message history with advanced filtering:
+
+```bash
+GET /api/scenes/{id}/messages/?message_type=PUBLIC,OOC&since=2024-01-15T10:00:00Z
+```
+
+**Filtering Capabilities:**
+- **Message Type**: Single or comma-separated list (PUBLIC, OOC, PRIVATE, SYSTEM)
+- **Character/Sender**: Filter by character or user
+- **Date Range**: Since/until timestamp filtering
+- **Full-Text Search**: Case-insensitive content search
+- **Pagination**: Efficient pagination for large histories
+
+**Permission Integration:**
+- **Campaign Owners/GMs**: Can see all message types including private messages
+- **Players/Observers**: Can see PUBLIC, OOC, SYSTEM messages, and private messages where they are sender/recipient
+
+#### JavaScript Chat Interface (`static/js/scene-chat.js`)
+
+Full-featured chat UI with WebSocket integration:
+
+**Key Features:**
+- **Real-time Updates**: Live message display with automatic scrolling
+- **Character Selection**: Dynamic dropdown for in-character messages
+- **Message Type Switching**: Toggle between IC, OOC, and Private modes
+- **Rate Limit Feedback**: Real-time rate limit status display
+- **Connection Management**: Auto-reconnection with connection status indicators
+- **Accessibility**: ARIA live regions, keyboard navigation, screen reader support
+
+**Message Handling:**
+```javascript
+// Send message
+websocket.send(JSON.stringify({
+    type: 'chat_message',
+    message: {
+        content: messageText,
+        message_type: selectedType,
+        character: selectedCharacter,
+        recipients: privateRecipients
+    }
+}));
+
+// Receive message
+websocket.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    if (data.type === 'chat.message') {
+        displayMessage(data);
+    }
+};
+```
+
+#### WebSocket Routing (`scenes/routing.py`)
+
+Channel routing configuration:
+
+```python
+websocket_urlpatterns = [
+    re_path(r"ws/scenes/(?P<scene_id>\d+)/chat/$", SceneChatConsumer.as_asgi()),
+]
+```
+
+#### Security Features
+
+**1. Authentication & Authorization**
+- WebSocket connections require authenticated users
+- Scene access validation based on campaign membership
+- Role-based message visibility and sending permissions
+
+**2. Rate Limiting & Abuse Prevention**
+- Configurable per-user message limits
+- Content length validation (2000 character limit)
+- Inappropriate content filtering hooks
+
+**3. Data Validation**
+- Message type validation with character requirements
+- Cross-campaign character validation
+- Recipient validation for private messages
+
+#### Performance Optimizations
+
+**1. Database Queries**
+- Optimized message queries with select_related/prefetch_related
+- Strategic database indexing for common query patterns
+- Efficient pagination for message history
+
+**2. WebSocket Management**
+- Channel groups for efficient broadcasting
+- Connection cleanup on disconnect
+- Heartbeat mechanism for connection health
+
+**3. Caching Strategy**
+- Redis caching for rate limiting data
+- Memory fallback for high availability
+- Periodic cleanup of stale data
+
+#### Scaling Considerations
+
+**Horizontal Scaling:**
+- Redis as channel layer backend for multi-server deployments
+- Stateless WebSocket consumers for load balancing
+- Database connection pooling for efficiency
+
+**Future Enhancements:**
+- Message persistence optimization with archiving
+- Advanced content filtering with machine learning
+- File attachment support for images and documents
+- Voice message integration
+- Typing indicators for enhanced user experience
 
 ## Security Architecture
 

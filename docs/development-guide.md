@@ -1793,6 +1793,9 @@ app/tests/
 ├── test_api.py            # API endpoint functionality
 ├── test_permissions.py    # Permission/security tests
 ├── test_integration.py    # Cross-component tests
+├── test_websocket.py      # WebSocket consumer tests
+├── test_chat.py          # Real-time chat functionality
+├── test_rate_limiting.py  # Rate limiting system tests
 └── test_edge_cases.py     # Error conditions, boundaries
 ```
 
@@ -2461,6 +2464,345 @@ class TestCampaignMembershipAPI(APITestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn('role', response.data)
+```
+
+### Real-Time Chat System Testing
+
+The real-time chat system requires comprehensive testing across multiple components: WebSocket consumers, message models, rate limiting, and API endpoints.
+
+#### WebSocket Consumer Testing
+
+```python
+# scenes/tests/test_scene_chat_consumer.py
+from channels.testing import WebsocketCommunicator
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+
+class SceneChatConsumerTest(TestCase):
+    """Test WebSocket chat consumer functionality."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass'
+        )
+        self.campaign = Campaign.objects.create(
+            name='Test Campaign',
+            owner=self.user
+        )
+        self.scene = Scene.objects.create(
+            name='Test Scene',
+            campaign=self.campaign,
+            created_by=self.user
+        )
+
+    async def test_websocket_connection_requires_auth(self):
+        """Test that WebSocket connection requires authentication."""
+        communicator = WebsocketCommunicator(
+            SceneChatConsumer.as_asgi(),
+            f"ws/scenes/{self.scene.id}/chat/"
+        )
+
+        connected, subprotocol = await communicator.connect()
+        self.assertFalse(connected)  # Should reject unauthenticated users
+
+    async def test_chat_message_sending(self):
+        """Test sending chat messages through WebSocket."""
+        # Authenticate user for WebSocket
+        communicator = WebsocketCommunicator(
+            SceneChatConsumer.as_asgi(),
+            f"ws/scenes/{self.scene.id}/chat/",
+            headers=[(b"cookie", f"sessionid={self.client.session.session_key}".encode())]
+        )
+
+        connected, subprotocol = await communicator.connect()
+        self.assertTrue(connected)
+
+        # Create character for IC message
+        character = Character.objects.create(
+            name='Test Character',
+            campaign=self.campaign,
+            player_owner=self.user
+        )
+
+        # Send message
+        message_data = {
+            "type": "chat_message",
+            "message": {
+                "content": "Hello, world!",
+                "message_type": "PUBLIC",
+                "character": character.id
+            }
+        }
+
+        await communicator.send_json_to(message_data)
+
+        # Receive broadcasted message
+        response = await communicator.receive_json_from()
+
+        self.assertEqual(response["type"], "chat.message")
+        self.assertEqual(response["content"], "Hello, world!")
+        self.assertEqual(response["message_type"], "PUBLIC")
+        self.assertEqual(response["character"]["id"], character.id)
+
+        await communicator.disconnect()
+
+    async def test_rate_limiting(self):
+        """Test rate limiting prevents message spam."""
+        communicator = WebsocketCommunicator(
+            SceneChatConsumer.as_asgi(),
+            f"ws/scenes/{self.scene.id}/chat/"
+        )
+
+        connected, subprotocol = await communicator.connect()
+        self.assertTrue(connected)
+
+        # Send messages rapidly to trigger rate limit
+        for i in range(15):  # Exceed 10/minute limit
+            await communicator.send_json_to({
+                "type": "chat_message",
+                "message": {
+                    "content": f"Message {i}",
+                    "message_type": "OOC"
+                }
+            })
+
+        # Should receive rate limit error
+        response = await communicator.receive_json_from()
+        self.assertEqual(response["type"], "error")
+        self.assertIn("Rate limit exceeded", response["error"])
+
+        await communicator.disconnect()
+```
+
+#### Message Model Testing
+
+```python
+# scenes/tests/test_message_model.py
+class MessageModelTest(TestCase):
+    """Test Message model validation and business logic."""
+
+    def test_public_message_requires_character(self):
+        """Test that PUBLIC messages require character attribution."""
+        with self.assertRaises(ValidationError) as context:
+            message = Message(
+                scene=self.scene,
+                sender=self.user,
+                content="Test message",
+                message_type="PUBLIC"
+                # No character - should fail validation
+            )
+            message.full_clean()
+
+        self.assertIn("character", str(context.exception))
+
+    def test_ooc_message_cannot_have_character(self):
+        """Test that OOC messages cannot have character attribution."""
+        character = Character.objects.create(
+            name='Test Character',
+            campaign=self.campaign,
+            player_owner=self.user
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            message = Message(
+                scene=self.scene,
+                sender=self.user,
+                character=character,  # Should not be allowed for OOC
+                content="Test OOC message",
+                message_type="OOC"
+            )
+            message.full_clean()
+
+        self.assertIn("OOC messages cannot have character attribution", str(context.exception))
+
+    def test_system_message_requires_gm_permissions(self):
+        """Test that only GMs can send system messages."""
+        player = get_user_model().objects.create_user(
+            username='player',
+            email='player@example.com'
+        )
+
+        # Add player to campaign
+        Membership.objects.create(
+            campaign=self.campaign,
+            user=player,
+            role='PLAYER'
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            message = Message(
+                scene=self.scene,
+                sender=player,  # Player cannot send system messages
+                content="System announcement",
+                message_type="SYSTEM"
+            )
+            message.full_clean()
+
+        self.assertIn("Only GMs can send system messages", str(context.exception))
+```
+
+#### Rate Limiting Testing
+
+```python
+# core/tests/test_rate_limiting.py
+from core.rate_limiting import ChatRateLimiter
+
+class ChatRateLimiterTest(TestCase):
+    """Test chat rate limiting functionality."""
+
+    def setUp(self):
+        self.limiter = ChatRateLimiter()
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            email='test@example.com'
+        )
+
+    def test_default_user_rate_limit(self):
+        """Test default user rate limiting (10 messages/minute)."""
+        # Should allow 10 messages
+        for i in range(10):
+            allowed, info = self.limiter.check_message_rate_limit(self.user, "PUBLIC")
+            self.assertTrue(allowed)
+            self.assertEqual(info["remaining"], 9 - i)
+
+        # 11th message should be blocked
+        allowed, info = self.limiter.check_message_rate_limit(self.user, "PUBLIC")
+        self.assertFalse(allowed)
+        self.assertEqual(info["remaining"], 0)
+        self.assertGreater(info["retry_after"], 0)
+
+    def test_staff_user_higher_limits(self):
+        """Test that staff users have higher rate limits (30/minute)."""
+        self.user.is_staff = True
+        self.user.save()
+
+        # Should allow 30 messages for staff
+        for i in range(30):
+            allowed, info = self.limiter.check_message_rate_limit(self.user, "PUBLIC")
+            self.assertTrue(allowed, f"Message {i+1} should be allowed")
+
+        # 31st message should be blocked
+        allowed, info = self.limiter.check_message_rate_limit(self.user, "PUBLIC")
+        self.assertFalse(allowed)
+
+    def test_system_messages_bypass_limits(self):
+        """Test that system messages have very high limits."""
+        # System messages should have 100/minute limit
+        for i in range(100):
+            allowed, info = self.limiter.check_message_rate_limit(self.user, "SYSTEM")
+            self.assertTrue(allowed, f"System message {i+1} should be allowed")
+```
+
+#### Message History API Testing
+
+```python
+# api/tests/test_message_history_api.py
+class MessageHistoryAPITest(APITestCase):
+    """Test message history API endpoint."""
+
+    def test_message_filtering_by_type(self):
+        """Test filtering messages by message type."""
+        # Create messages of different types
+        Message.objects.create(
+            scene=self.scene,
+            sender=self.user,
+            character=self.character,
+            content="IC message",
+            message_type="PUBLIC"
+        )
+
+        Message.objects.create(
+            scene=self.scene,
+            sender=self.user,
+            content="OOC message",
+            message_type="OOC"
+        )
+
+        # Filter for only PUBLIC messages
+        response = self.client.get(
+            f'/api/scenes/{self.scene.id}/messages/?message_type=PUBLIC'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['message_type'], 'PUBLIC')
+
+    def test_permission_based_message_visibility(self):
+        """Test that users only see messages they have permission for."""
+        player = get_user_model().objects.create_user(
+            username='player',
+            email='player@example.com'
+        )
+
+        # Create private message not intended for player
+        private_message = Message.objects.create(
+            scene=self.scene,
+            sender=self.user,
+            content="Private message",
+            message_type="PRIVATE"
+        )
+        # Don't add player as recipient
+
+        # Player should not see private message
+        self.client.force_authenticate(user=player)
+        response = self.client.get(f'/api/scenes/{self.scene.id}/messages/')
+
+        self.assertEqual(response.status_code, 200)
+        message_ids = [msg['id'] for msg in response.data['results']]
+        self.assertNotIn(private_message.id, message_ids)
+
+    def test_date_range_filtering(self):
+        """Test filtering messages by date range."""
+        from datetime import datetime, timedelta
+
+        # Create message in the past
+        past_message = Message.objects.create(
+            scene=self.scene,
+            sender=self.user,
+            content="Old message",
+            message_type="OOC"
+        )
+        past_message.created_at = datetime.now() - timedelta(hours=2)
+        past_message.save()
+
+        # Create recent message
+        recent_message = Message.objects.create(
+            scene=self.scene,
+            sender=self.user,
+            content="Recent message",
+            message_type="OOC"
+        )
+
+        # Filter for messages since 1 hour ago
+        since_time = (datetime.now() - timedelta(hours=1)).isoformat()
+        response = self.client.get(
+            f'/api/scenes/{self.scene.id}/messages/?since={since_time}'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['id'], recent_message.id)
+```
+
+#### Integration Testing
+
+```python
+# scenes/tests/test_chat_integration.py
+class ChatIntegrationTest(TransactionTestCase):
+    """Integration tests for complete chat workflow."""
+
+    def test_end_to_end_chat_workflow(self):
+        """Test complete chat workflow from WebSocket to API."""
+        # 1. Send message via WebSocket
+        # 2. Verify message stored in database
+        # 3. Retrieve message via API
+        # 4. Verify all data consistent across interfaces
+
+        # This would use both WebSocket communicator and API client
+        # to test the full integration
+        pass
 ```
 
 ## Git Workflow
