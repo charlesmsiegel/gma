@@ -499,7 +499,19 @@ class SceneViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def messages(self, request, pk=None):
         """Get message history for a scene with filtering and pagination."""
-        scene = self.get_object()
+        # Manual scene retrieval to avoid get_object() issues with complex queryset
+        queryset = self.get_queryset()
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        pk_value = self.kwargs[lookup_url_kwarg]
+        filter_kwargs = {self.lookup_field: int(pk_value)}
+        filtered_queryset = queryset.filter(**filter_kwargs)
+        
+        if filtered_queryset.exists():
+            scene = filtered_queryset.first()
+        else:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Scene not found.")
+        
         user = request.user
 
         # Check if user has access to this scene

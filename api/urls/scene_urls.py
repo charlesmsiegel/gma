@@ -19,7 +19,7 @@ urlpatterns = [
     path("", include(router.urls)),
     # Specific URL pattern for message history API expected by tests
     path(
-        "<int:scene_id>/messages/",
+        "<int:pk>/messages/",
         SceneViewSet.as_view({"get": "messages"}),
         name="scene-messages",
     ),
