@@ -552,8 +552,8 @@ class SceneStatusManagementTest(SceneViewTestCase):
         # Try to skip from ACTIVE directly to ARCHIVED
         response = self.client.post(url, {"status": "ARCHIVED"})
 
-        # Should fail validation
-        self.assertEqual(response.status_code, 400)
+        # Should redirect back to scene detail with error message
+        self.assertEqual(response.status_code, 302)
         self.scene1.refresh_from_db()
         self.assertEqual(self.scene1.status, "ACTIVE")  # Unchanged
 

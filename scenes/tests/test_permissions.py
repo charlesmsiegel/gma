@@ -810,9 +810,9 @@ class ScenePermissionEdgeCaseTest(ScenePermissionTestCase):
         self.campaign.owner = self.gm
         self.campaign.save()
 
-        # Original owner should lose management permissions
+        # Original owner should lose all access (no membership)
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)  # Now just a regular member
+        self.assertEqual(response.status_code, 404)  # No longer a member
 
         # New owner (GM) should gain permissions
         self.client.login(username="gm", password="testpass123")

@@ -38,7 +38,7 @@ class CampaignFilterMixin(LoginRequiredMixin):
 
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         """Get campaign and check permissions before processing request."""
-        # Check authentication first - if not authenticated, 
+        # Check authentication first - if not authenticated,
         # LoginRequiredMixin will redirect
         if not request.user.is_authenticated:
             return super().dispatch(request, *args, **kwargs)
@@ -77,7 +77,7 @@ class CampaignFilterMixin(LoginRequiredMixin):
             user_role = self.campaign.get_user_role(request.user)
             self._cached_user_role = user_role
 
-            if not self._has_permission(user_role):
+            if not self._has_permission(user_role, request.user):
                 user_id = (
                     request.user.pk if request.user.is_authenticated else "anonymous"
                 )
@@ -116,13 +116,16 @@ class CampaignFilterMixin(LoginRequiredMixin):
         pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
         return bool(pattern.match(slug))
 
-    def _has_permission(self, user_role: Optional[str]) -> bool:
+    def _has_permission(self, user_role: Optional[str], user=None) -> bool:
         """
         Check if user has permission to access this view.
 
         Override this method in subclasses to implement specific permission logic.
-        Default: Allow OWNER, GM, PLAYER, OBSERVER
+        Default: Allow OWNER, GM, PLAYER, OBSERVER, or superusers
         """
+        # Superusers have access to all campaigns
+        if user and hasattr(user, "is_superuser") and user.is_superuser:
+            return True
         return user_role in ["OWNER", "GM", "PLAYER", "OBSERVER"]
 
     def get_user_role(self, user=None) -> Optional[str]:
@@ -252,8 +255,11 @@ class CampaignManagementMixin(CampaignFilterMixin):
     Mixin for campaign management views that require OWNER or GM permissions.
     """
 
-    def _has_permission(self, user_role: Optional[str]) -> bool:
-        """Only allow OWNER and GM to access management views."""
+    def _has_permission(self, user_role: Optional[str], user=None) -> bool:
+        """Only allow OWNER, GM, and superusers to access management views."""
+        # Superusers have access to all campaigns
+        if user and hasattr(user, "is_superuser") and user.is_superuser:
+            return True
         return user_role in ["OWNER", "GM"]
 
 
@@ -268,8 +274,11 @@ class CampaignCharacterMixin(CampaignFilterMixin):
     - Provides robust error handling for database operations
     """
 
-    def _has_permission(self, user_role: Optional[str]) -> bool:
-        """Allow all campaign members to view characters."""
+    def _has_permission(self, user_role: Optional[str], user=None) -> bool:
+        """Allow all campaign members and superusers to view characters."""
+        # Superusers have access to all campaigns
+        if user and hasattr(user, "is_superuser") and user.is_superuser:
+            return True
         return user_role in ["OWNER", "GM", "PLAYER", "OBSERVER"]
 
     def get_queryset(self):

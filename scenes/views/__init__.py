@@ -97,14 +97,16 @@ class SceneCreateView(CampaignFilterMixin, CreateView):
         # If we got here, the user is authenticated and has campaign access
         # Additional permission check for scene creation
         if hasattr(self, "campaign") and self.campaign:
-            user_role = self.campaign.get_user_role(request.user)
-            if user_role not in ["OWNER", "GM"]:
-                if user_role in ["PLAYER", "OBSERVER"]:
-                    # User is a campaign member but lacks permission
-                    raise PermissionDenied(
-                        "Only campaign owners and GMs can create scenes."
-                    )
-                # For non-members, parent dispatch already returned 404
+            # Superusers have access to all campaigns
+            if not request.user.is_superuser:
+                user_role = self.campaign.get_user_role(request.user)
+                if user_role not in ["OWNER", "GM"]:
+                    if user_role in ["PLAYER", "OBSERVER"]:
+                        # User is a campaign member but lacks permission
+                        raise PermissionDenied(
+                            "Only campaign owners and GMs can create scenes."
+                        )
+                    # For non-members, parent dispatch already returned 404
 
         return response
 
@@ -357,12 +359,16 @@ class SceneEditView(UpdateView):
         scene = get_object_or_404(Scene, pk=kwargs["pk"])
 
         # Check if user has access to this scene's campaign
-        user_role = scene.campaign.get_user_role(request.user)
-        if user_role not in ["OWNER", "GM"]:
-            if user_role in ["PLAYER", "OBSERVER"]:
-                raise PermissionDenied("Only campaign owners and GMs can edit scenes.")
-            else:
-                raise Http404("Scene not found")
+        # Superusers have access to all scenes
+        if not request.user.is_superuser:
+            user_role = scene.campaign.get_user_role(request.user)
+            if user_role not in ["OWNER", "GM"]:
+                if user_role in ["PLAYER", "OBSERVER"]:
+                    raise PermissionDenied(
+                        "Only campaign owners and GMs can edit scenes."
+                    )
+                else:
+                    raise Http404("Scene not found")
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -408,18 +414,22 @@ class SceneStatusChangeView(View):
         """Handle AJAX request to change scene status."""
         # Check authentication
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "Authentication required"}, status=401)
+            from django.contrib.auth.views import redirect_to_login
+
+            return redirect_to_login(request.get_full_path())
 
         # Get the scene
         scene = get_object_or_404(Scene, pk=kwargs["pk"])
 
         # Check if user has access to this scene's campaign
-        user_role = scene.campaign.get_user_role(request.user)
-        if user_role not in ["OWNER", "GM"]:
-            if user_role in ["PLAYER", "OBSERVER"]:
-                return JsonResponse({"error": "Permission denied"}, status=403)
-            else:
-                return JsonResponse({"error": "Scene not found"}, status=404)
+        # Superusers have access to all scenes
+        if not request.user.is_superuser:
+            user_role = scene.campaign.get_user_role(request.user)
+            if user_role not in ["OWNER", "GM"]:
+                if user_role in ["PLAYER", "OBSERVER"]:
+                    return JsonResponse({"error": "Permission denied"}, status=403)
+                else:
+                    return JsonResponse({"error": "Scene not found"}, status=404)
 
         # Get new status from request (handle both JSON and form data)
         if request.content_type == "application/json":
