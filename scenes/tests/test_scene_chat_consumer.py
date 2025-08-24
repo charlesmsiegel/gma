@@ -139,6 +139,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_websocket_connect_non_participant(self):
         """Test WebSocket connection with user not participating in scene."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -152,6 +153,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_websocket_connect_invalid_scene(self):
         """Test WebSocket connection with invalid scene ID."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -165,6 +167,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_send_public_message(self):
         """Test sending a public message."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -177,10 +180,12 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Send public message
         message_data = {
-            "type": "chat.message",
-            "message_type": "PUBLIC",
-            "character_id": self.character1.id,
-            "content": "Hello everyone!",
+            "type": "chat_message",
+            "message": {
+                "message_type": "PUBLIC",
+                "character": self.character1.id,
+                "content": "Hello everyone!",
+            },
         }
         await communicator.send_json_to(message_data)
 
@@ -197,6 +202,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_send_ooc_message(self):
         """Test sending an OOC message."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -209,9 +215,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Send OOC message
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "OOC",
-            "character_id": None,
+            "character": None,
             "content": "This is out of character",
         }
         await communicator.send_json_to(message_data)
@@ -228,6 +234,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_send_private_message(self):
         """Test sending a private message."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -240,9 +247,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Send private message
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "PRIVATE",
-            "character_id": self.character1.id,
+            "character": self.character1.id,
             "content": "Private whisper",
             "recipients": [self.user2.id],
         }
@@ -258,6 +265,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_gm_system_message(self):
         """Test GM sending system messages."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -270,9 +278,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Send system message
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "SYSTEM",
-            "character_id": None,
+            "character": None,
             "content": "The room grows darker",
         }
         await communicator.send_json_to(message_data)
@@ -287,6 +295,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_player_cannot_send_system_message(self):
         """Test that regular players cannot send system messages."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -299,9 +308,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Try to send system message as player
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "SYSTEM",
-            "character_id": None,
+            "character": None,
             "content": "Trying to send system message",
         }
         await communicator.send_json_to(message_data)
@@ -315,6 +324,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_invalid_character_ownership(self):
         """Test sending message as character user doesn't own."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -327,9 +337,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Try to send message as user2's character
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "PUBLIC",
-            "character_id": self.character2.id,  # User2's character
+            "character": self.character2.id,  # User2's character
             "content": "Trying to impersonate",
         }
         await communicator.send_json_to(message_data)
@@ -343,6 +353,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_invalid_json_handling(self):
         """Test handling of invalid JSON messages."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -365,6 +376,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_message_validation_empty_content(self):
         """Test validation of empty message content."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -377,9 +389,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Send message with empty content
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "PUBLIC",
-            "character_id": self.character1.id,
+            "character": self.character1.id,
             "content": "",
         }
         await communicator.send_json_to(message_data)
@@ -393,6 +405,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_message_validation_too_long(self):
         """Test validation of overly long messages."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -405,9 +418,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Send message with content that's too long
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "PUBLIC",
-            "character_id": self.character1.id,
+            "character": self.character1.id,
             "content": "A" * 50000,  # 50k characters
         }
         await communicator.send_json_to(message_data)
@@ -421,6 +434,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_rate_limiting(self):
         """Test message rate limiting (10 messages per minute)."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -434,7 +448,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         # Send messages rapidly to trigger rate limiting
         for i in range(12):  # Send more than the limit of 10
             message_data = {
-                "type": "chat.message",
+                "type": "chat_message",
                 "message_type": "OOC",
                 "content": f"Message {i + 1}",
             }
@@ -459,6 +473,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_message_broadcasting(self):
         """Test that messages are broadcast to all scene participants."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         # Create two connections for different users
@@ -480,9 +495,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Send message from user1
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "PUBLIC",
-            "character_id": self.character1.id,
+            "character": self.character1.id,
             "content": "Hello from user1!",
         }
         await communicator1.send_json_to(message_data)
@@ -501,6 +516,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_private_message_visibility(self):
         """Test that private messages are only visible to intended recipients."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         # Create three connections
@@ -526,9 +542,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Send private message from user1 to user2
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "PRIVATE",
-            "character_id": self.character1.id,
+            "character": self.character1.id,
             "content": "Secret message",
             "recipients": [self.user2.id],
         }
@@ -557,6 +573,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_scene_channel_group_management(self):
         """Test proper channel group management for scenes."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -579,6 +596,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
     @patch("scenes.consumers.Message.objects.create")
     async def test_message_persistence(self, mock_create):
         """Test that messages are properly saved to database."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         mock_message = Mock()
@@ -600,9 +618,9 @@ class SceneChatConsumerTestCase(TransactionTestCase):
         self.assertTrue(connected)
 
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "PUBLIC",
-            "character_id": self.character1.id,
+            "character": self.character1.id,
             "content": "Test message",
         }
         await communicator.send_json_to(message_data)
@@ -618,6 +636,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
     async def test_websocket_routing_configuration(self):
         """Test that WebSocket routing is properly configured."""
         # This test verifies that the URL pattern matches correctly
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         # Test various URL patterns
@@ -636,6 +655,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_concurrent_connections_same_user(self):
         """Test multiple connections from the same user."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         # Create two connections for the same user
@@ -657,7 +677,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
         # Send message from first connection
         message_data = {
-            "type": "chat.message",
+            "type": "chat_message",
             "message_type": "OOC",
             "content": "Multi-connection test",
         }
@@ -675,6 +695,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_connection_cleanup_on_scene_deletion(self):
         """Test proper cleanup when scene is deleted during active connections."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         communicator = WebsocketCommunicator(
@@ -694,6 +715,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
 
     async def test_message_history_integration(self):
         """Test integration with message history for new connections."""
+        await self._setup_test_data()
         from scenes.consumers import SceneChatConsumer
 
         # Create a message first through the model

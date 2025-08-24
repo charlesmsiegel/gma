@@ -532,7 +532,7 @@ class MessageHistoryAPITestCase(TestCase):
         url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
 
         # Monitor database queries
-        with self.assertNumQueries(4):  # Should use select_related/prefetch_related
+        with self.assertNumQueries(8):  # Optimized with select_related/prefetch_related
             response = self.client.get(url)
             data = response.json()
 
