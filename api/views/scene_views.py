@@ -499,19 +499,38 @@ class SceneViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def messages(self, request, pk=None):
         """Get message history for a scene with filtering and pagination."""
+        # Validate pagination parameters
+        page_size = request.query_params.get("page_size")
+        if page_size is not None:
+            try:
+                page_size_int = int(page_size)
+                if page_size_int < 1:
+                    from rest_framework.exceptions import ValidationError
+                    
+                    raise ValidationError({"page_size": ["Page size must be positive."]})
+                if page_size_int > 100:  # Max page size from ScenePagination
+                    from rest_framework.exceptions import ValidationError
+                    
+                    raise ValidationError({"page_size": ["Page size too large. Maximum is 100."]})
+            except (ValueError, TypeError):
+                from rest_framework.exceptions import ValidationError
+                
+                raise ValidationError({"page_size": ["Invalid page size format."]})
+        
         # Manual scene retrieval to avoid get_object() issues with complex queryset
         queryset = self.get_queryset()
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         pk_value = self.kwargs[lookup_url_kwarg]
         filter_kwargs = {self.lookup_field: int(pk_value)}
         filtered_queryset = queryset.filter(**filter_kwargs)
-        
+
         if filtered_queryset.exists():
             scene = filtered_queryset.first()
         else:
             from rest_framework.exceptions import NotFound
+
             raise NotFound("Scene not found.")
-        
+
         user = request.user
 
         # Check if user has access to this scene
@@ -573,17 +592,23 @@ class SceneViewSet(viewsets.ModelViewSet):
             try:
                 queryset = queryset.filter(character_id=int(character_id))
             except (ValueError, TypeError):
-                pass
+                from rest_framework.exceptions import ValidationError
+                
+                raise ValidationError({"character_id": ["Invalid character ID format."]})
 
         sender_id = request.query_params.get("sender_id")
         if sender_id:
             try:
                 queryset = queryset.filter(sender_id=int(sender_id))
             except (ValueError, TypeError):
-                pass
+                from rest_framework.exceptions import ValidationError
+                
+                raise ValidationError({"sender_id": ["Invalid sender ID format."]})
 
-        # Date range filtering
-        since = request.query_params.get("since")
+        # Date range filtering - support both 'since'/'until' and 'date_from'/'date_to'
+        since = request.query_params.get("since") or request.query_params.get(
+            "date_from"
+        )
         if since:
             try:
                 from datetime import datetime
@@ -591,9 +616,11 @@ class SceneViewSet(viewsets.ModelViewSet):
                 since_datetime = datetime.fromisoformat(since.replace("Z", "+00:00"))
                 queryset = queryset.filter(created_at__gte=since_datetime)
             except (ValueError, TypeError):
-                pass
+                from rest_framework.exceptions import ValidationError
+                
+                raise ValidationError({"date_from": ["Invalid date format."]})
 
-        until = request.query_params.get("until")
+        until = request.query_params.get("until") or request.query_params.get("date_to")
         if until:
             try:
                 from datetime import datetime
@@ -601,7 +628,9 @@ class SceneViewSet(viewsets.ModelViewSet):
                 until_datetime = datetime.fromisoformat(until.replace("Z", "+00:00"))
                 queryset = queryset.filter(created_at__lte=until_datetime)
             except (ValueError, TypeError):
-                pass
+                from rest_framework.exceptions import ValidationError
+                
+                raise ValidationError({"date_to": ["Invalid date format."]})
 
         # Apply distinct to avoid duplicates from joins
         queryset = queryset.distinct()

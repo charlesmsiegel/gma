@@ -1,7 +1,6 @@
 """Tests for chat permissions and validation (Issue #49)."""
 
 import time
-from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -294,6 +293,7 @@ class ChatPermissionsValidationTestCase(TestCase):
 
         # Simulate time passing - clear cache to simulate time window reset
         from django.core.cache import cache
+
         cache.clear()  # Clear cache to simulate time passing
 
         # Rate limit should be reset after cache clear (simulating time window expiry)
@@ -608,23 +608,21 @@ class ChatPermissionsValidationTestCase(TestCase):
         """Validate HTML content for security after sanitization simulation."""
         # Check if content contains dangerous patterns that would make it unsafe
         # even after sanitization attempts
-        import re
-        
         content_lower = content.lower()
-        
+
         # Patterns that indicate the content would be unsafe even after sanitization
         unsafe_patterns = [
             "javascript:",  # JavaScript URLs in links
-            "onerror=",     # Event handlers
+            "onerror=",  # Event handlers
             "onload=",
             "onclick=",
             "onmouseover=",
         ]
-        
+
         # If content contains these patterns, it's not safe
         if any(pattern in content_lower for pattern in unsafe_patterns):
             return False
-        
+
         # Script tags can be safely removed, so content with only script tags
         # (and no other dangerous patterns) is safe after sanitization
         return True

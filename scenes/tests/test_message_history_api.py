@@ -106,7 +106,7 @@ class MessageHistoryAPITestCase(TestCase):
     def test_get_messages_invalid_scene(self):
         """Test getting messages for non-existent scene."""
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"scene_id": 99999})
+        url = reverse("api:scene-messages", kwargs={"pk": 99999})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
