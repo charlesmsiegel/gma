@@ -97,9 +97,12 @@ class PrerequisiteModelBasicTest(TestCase):
     def test_prerequisite_with_json_requirements(self):
         """Test creating prerequisite with JSON requirements."""
         requirements = {
-            "attributes": {"arete": {"min": 3, "max": 10}},
-            "spheres": {"matter": {"min": 2}},
-            "items": ["Focus", "Grimoire"],
+            "all": [
+                {"trait": {"name": "arete", "min": 3, "max": 10}},
+                {"trait": {"name": "matter", "min": 2}},
+                {"has": {"field": "items", "name": "Focus"}},
+                {"has": {"field": "items", "name": "Grimoire"}},
+            ]
         }
 
         prerequisite = Prerequisite.objects.create(
@@ -109,9 +112,9 @@ class PrerequisiteModelBasicTest(TestCase):
         self.assertEqual(prerequisite.requirements, requirements)
         # Verify JSON serialization/deserialization
         prerequisite.refresh_from_db()
-        self.assertEqual(prerequisite.requirements["attributes"]["arete"]["min"], 3)
-        self.assertEqual(prerequisite.requirements["spheres"]["matter"]["min"], 2)
-        self.assertEqual(prerequisite.requirements["items"], ["Focus", "Grimoire"])
+        self.assertEqual(prerequisite.requirements["all"][0]["trait"]["min"], 3)
+        self.assertEqual(prerequisite.requirements["all"][1]["trait"]["min"], 2)
+        self.assertEqual(prerequisite.requirements["all"][2]["has"]["name"], "Focus")
 
     def test_prerequisite_empty_requirements_default(self):
         """Test that requirements defaults to empty dict."""
@@ -165,7 +168,7 @@ class PrerequisiteGenericForeignKeyTest(TestCase):
         """Test attaching prerequisite to a character."""
         prerequisite = Prerequisite.objects.create(
             description="Must have Combat training",
-            requirements={"skills": {"melee": {"min": 2}}},
+            requirements={"trait": {"name": "melee", "min": 2}},
             content_object=self.character,
         )
 
@@ -187,7 +190,7 @@ class PrerequisiteGenericForeignKeyTest(TestCase):
         """Test attaching prerequisite to an item."""
         prerequisite = Prerequisite.objects.create(
             description="Must be worthy to wield",
-            requirements={"attributes": {"honor": {"min": 5}}},
+            requirements={"trait": {"name": "honor", "min": 5}},
             content_object=self.item,
         )
 
@@ -201,7 +204,12 @@ class PrerequisiteGenericForeignKeyTest(TestCase):
         """Test attaching prerequisite to a polymorphic character subclass."""
         prerequisite = Prerequisite.objects.create(
             description="Mage-specific requirement",
-            requirements={"arete": {"min": 3}, "spheres": {"forces": {"min": 2}}},
+            requirements={
+                "all": [
+                    {"trait": {"name": "arete", "min": 3}},
+                    {"trait": {"name": "forces", "min": 2}},
+                ]
+            },
             content_object=self.character,  # This is a MageCharacter
         )
 
@@ -317,15 +325,20 @@ class PrerequisiteValidationTest(TestCase):
         """Test that requirements field accepts valid JSON."""
         valid_requirements = [
             {},  # Empty dict
-            {"simple": "value"},
-            {"nested": {"key": "value"}},
-            {"list": [1, 2, 3]},
+            {"trait": {"name": "strength", "min": 1}},  # Simple trait
+            {"has": {"field": "items", "name": "sword"}},  # Simple has
             {
-                "complex": {
-                    "attributes": {"strength": {"min": 3, "max": 5}},
-                    "skills": ["combat", "academics"],
-                    "items": {"required": ["sword"], "optional": ["shield"]},
-                }
+                "any": [
+                    {"trait": {"name": "str", "min": 1}},
+                    {"trait": {"name": "dex", "min": 1}},
+                ]
+            },  # Simple any
+            {
+                "all": [  # Complex nested requirement
+                    {"trait": {"name": "strength", "min": 3, "max": 5}},
+                    {"has": {"field": "items", "name": "sword"}},
+                    {"count_tag": {"model": "skills", "tag": "combat", "minimum": 2}},
+                ]
             },
         ]
 
@@ -454,7 +467,7 @@ class PrerequisiteCRUDTest(TestCase):
         """Test creating a prerequisite."""
         prerequisite = Prerequisite.objects.create(
             description="Must have high intelligence",
-            requirements={"attributes": {"intelligence": {"min": 4}}},
+            requirements={"trait": {"name": "intelligence", "min": 4}},
             content_object=self.character,
         )
 
@@ -464,7 +477,7 @@ class PrerequisiteCRUDTest(TestCase):
 
     def test_read_prerequisite(self):
         """Test reading a prerequisite."""
-        original_req = {"skills": {"academics": {"min": 3}}}
+        original_req = {"trait": {"name": "academics", "min": 3}}
         prerequisite = Prerequisite.objects.create(
             description="Academic requirement", requirements=original_req
         )
@@ -477,20 +490,20 @@ class PrerequisiteCRUDTest(TestCase):
     def test_update_prerequisite(self):
         """Test updating a prerequisite."""
         prerequisite = Prerequisite.objects.create(
-            description="Original description", requirements={"old": "requirement"}
+            description="Original description",
+            requirements={"trait": {"name": "old_trait", "min": 1}},
         )
 
         # Update fields
         prerequisite.description = "Updated description"
-        prerequisite.requirements = {"new": "requirement", "level": 5}
+        prerequisite.requirements = {"trait": {"name": "new_trait", "min": 5}}
         prerequisite.save()
 
         # Verify update
         prerequisite.refresh_from_db()
         self.assertEqual(prerequisite.description, "Updated description")
-        self.assertEqual(prerequisite.requirements["new"], "requirement")
-        self.assertEqual(prerequisite.requirements["level"], 5)
-        self.assertNotIn("old", prerequisite.requirements)
+        self.assertEqual(prerequisite.requirements["trait"]["name"], "new_trait")
+        self.assertEqual(prerequisite.requirements["trait"]["min"], 5)
 
     def test_delete_prerequisite(self):
         """Test deleting a prerequisite."""
@@ -514,9 +527,18 @@ class PrerequisiteCRUDTest(TestCase):
         """Test bulk create and update operations."""
         # Bulk create
         prerequisites_data = [
-            {"description": "Bulk requirement 1", "requirements": {"type": "test1"}},
-            {"description": "Bulk requirement 2", "requirements": {"type": "test2"}},
-            {"description": "Bulk requirement 3", "requirements": {"type": "test3"}},
+            {
+                "description": "Bulk requirement 1",
+                "requirements": {"trait": {"name": "test1", "min": 1}},
+            },
+            {
+                "description": "Bulk requirement 2",
+                "requirements": {"trait": {"name": "test2", "min": 1}},
+            },
+            {
+                "description": "Bulk requirement 3",
+                "requirements": {"trait": {"name": "test3", "min": 1}},
+            },
         ]
 
         prerequisites = []
@@ -533,7 +555,8 @@ class PrerequisiteCRUDTest(TestCase):
         # Test bulk update
         bulk_prerequisites = Prerequisite.objects.filter(description__startswith="Bulk")
         for prereq in bulk_prerequisites:
-            prereq.requirements["updated"] = True
+            # Update the trait's min value instead of adding invalid root key
+            prereq.requirements["trait"]["min"] = 5
 
         Prerequisite.objects.bulk_update(bulk_prerequisites, ["requirements"])
 
@@ -542,7 +565,7 @@ class PrerequisiteCRUDTest(TestCase):
             description__startswith="Bulk"
         )
         for prereq in updated_prerequisites:
-            self.assertTrue(prereq.requirements.get("updated", False))
+            self.assertEqual(prereq.requirements["trait"]["min"], 5)
 
 
 class PrerequisiteQueryTest(TestCase):
@@ -574,18 +597,21 @@ class PrerequisiteQueryTest(TestCase):
         # Create test prerequisites
         self.char_prereq = Prerequisite.objects.create(
             description="Character requirement",
-            requirements={"type": "character"},
+            requirements={"trait": {"name": "character_trait", "min": 1}},
             content_object=self.character,
         )
 
         self.item_prereq = Prerequisite.objects.create(
             description="Item requirement",
-            requirements={"type": "item"},
+            requirements={"has": {"field": "items", "name": "required_item"}},
             content_object=self.item,
         )
 
         self.standalone_prereq = Prerequisite.objects.create(
-            description="Standalone requirement", requirements={"type": "standalone"}
+            description="Standalone requirement",
+            requirements={
+                "count_tag": {"model": "standalone", "tag": "test", "minimum": 1}
+            },
         )
 
     def test_filter_by_content_type(self):
@@ -622,7 +648,9 @@ class PrerequisiteQueryTest(TestCase):
     def test_filter_by_json_requirements(self):
         """Test filtering prerequisites by JSON field content."""
         # Filter by JSON field values
-        char_prerequisites = Prerequisite.objects.filter(requirements__type="character")
+        char_prerequisites = Prerequisite.objects.filter(
+            requirements__trait__name="character_trait"
+        )
 
         self.assertEqual(char_prerequisites.count(), 1)
         self.assertEqual(char_prerequisites.first(), self.char_prereq)
@@ -690,8 +718,11 @@ class PrerequisiteEdgeCaseTest(TestCase):
         """Test prerequisite with unicode content."""
         unicode_description = "Must have 🧙‍♂️ magical training with ñoño skills"
         unicode_requirements = {
-            "spells": ["Firebolt ⚡", "Healing ✨"],
-            "attributes": {"mañá": {"mín": 3}},
+            "all": [
+                {"has": {"field": "spells", "name": "Firebolt ⚡"}},
+                {"has": {"field": "spells", "name": "Healing ✨"}},
+                {"trait": {"name": "mañá", "min": 3}},
+            ]
         }
 
         prerequisite = Prerequisite.objects.create(
@@ -699,82 +730,54 @@ class PrerequisiteEdgeCaseTest(TestCase):
         )
 
         self.assertEqual(prerequisite.description, unicode_description)
-        self.assertEqual(prerequisite.requirements["spells"][0], "Firebolt ⚡")
-        self.assertEqual(prerequisite.requirements["attributes"]["mañá"]["mín"], 3)
+        self.assertEqual(
+            prerequisite.requirements["all"][0]["has"]["name"], "Firebolt ⚡"
+        )
+        self.assertEqual(prerequisite.requirements["all"][2]["trait"]["name"], "mañá")
 
     def test_prerequisite_very_complex_json(self):
-        """Test prerequisite with very complex JSON requirements."""
+        """Test prerequisite with very complex nested JSON requirements."""
         complex_requirements = {
-            "character_requirements": {
-                "primary_attributes": {
-                    "strength": {"min": 2, "max": 5, "optimal": 3},
-                    "dexterity": {"min": 2, "recommended": 4},
-                    "intelligence": {"min": 3, "scaling": "linear"},
-                },
-                "secondary_attributes": {
-                    "willpower": {"base": 5, "modifiers": [1, 2, -1]},
-                    "health_levels": {"min": 7, "bonus_per_stamina": 1},
-                },
-                "skills": {
-                    "required": {
-                        "academics": {
-                            "min": 2,
-                            "specializations": ["mathematics", "physics"],
+            "all": [
+                {
+                    "any": [
+                        {"trait": {"name": "strength", "min": 3, "max": 5}},
+                        {"trait": {"name": "dexterity", "min": 4}},
+                        {
+                            "all": [
+                                {"trait": {"name": "intelligence", "min": 3}},
+                                {"has": {"field": "skills", "name": "academics"}},
+                            ]
                         },
-                        "science": {"min": 1, "preferred_focus": "chemistry"},
-                    },
-                    "optional": {
-                        "crafts": {"bonus_if_present": 2},
-                        "computer": {"synergy_with": ["academics", "science"]},
-                    },
+                    ]
                 },
-                "backgrounds": {
-                    "resources": {"min": 1, "alternatives": ["mentor", "contacts"]},
-                    "library": {
-                        "required_rating": 2,
-                        "must_contain": ["alchemy", "hermetic theory"],
-                    },
+                {
+                    "count_tag": {
+                        "model": "spheres",
+                        "tag": "elemental",
+                        "minimum": 2,
+                        "maximum": 5,
+                    }
                 },
-            },
-            "item_requirements": {
-                "focus_items": {
-                    "required": True,
-                    "types": ["staff", "wand", "orb"],
-                    "minimum_rating": 2,
-                    "enchantments": ["matter_affinity", "forces_resonance"],
+                {
+                    "any": [
+                        {
+                            "has": {
+                                "field": "charms",
+                                "id": 123,
+                                "name": "Excellent Strike",
+                            }
+                        },
+                        {"has": {"field": "charms", "id": 456, "name": "Iron Skin"}},
+                        {
+                            "all": [
+                                {"trait": {"name": "martial_arts", "min": 3}},
+                                {"has": {"field": "backgrounds", "name": "mentor"}},
+                            ]
+                        },
+                    ]
                 },
-                "components": {
-                    "magical_materials": ["silver", "iron", "rare_earth"],
-                    "consumables": {
-                        "quintessence": {"amount": 5, "type": "refined"},
-                        "tass": {"various": True, "minimum_resonance": 1},
-                    },
-                },
-            },
-            "circumstantial": {
-                "location": {"type": "sanctum", "node_rating": {"min": 1}},
-                "time": {
-                    "phase": "new_moon",
-                    "duration": "hours",
-                    "uninterrupted": True,
-                },
-                "preparation": {
-                    "fasting": {"hours": 24},
-                    "meditation": {"hours": 4, "focus": "sphere_attunement"},
-                    "ritual_purification": {"required": True, "water_type": "blessed"},
-                },
-            },
-            "meta": {
-                "version": "1.2.3",
-                "created_by": "system_generator",
-                "difficulty_rating": 8,
-                "tags": ["advanced", "hermetic", "laboratory_work", "long_duration"],
-                "references": {
-                    "book": "Mage: The Ascension 20th Anniversary",
-                    "page": 123,
-                    "chapter": "Advanced Magick",
-                },
-            },
+            ]
         }
 
         prerequisite = Prerequisite.objects.create(
@@ -786,21 +789,12 @@ class PrerequisiteEdgeCaseTest(TestCase):
 
         # Verify deep nested access works
         self.assertEqual(
-            prerequisite.requirements["character_requirements"]["primary_attributes"][
-                "strength"
-            ]["min"],
-            2,
+            prerequisite.requirements["all"][0]["any"][0]["trait"]["min"], 3
         )
+        self.assertEqual(prerequisite.requirements["all"][1]["count_tag"]["minimum"], 2)
         self.assertEqual(
-            prerequisite.requirements["item_requirements"]["focus_items"][
-                "minimum_rating"
-            ],
-            2,
+            prerequisite.requirements["all"][2]["any"][0]["has"]["id"], 123
         )
-        self.assertEqual(
-            prerequisite.requirements["circumstantial"]["time"]["phase"], "new_moon"
-        )
-        self.assertEqual(prerequisite.requirements["meta"]["difficulty_rating"], 8)
 
     def test_prerequisite_empty_description_validation(self):
         """Test that empty description fails validation."""
