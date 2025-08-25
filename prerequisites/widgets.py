@@ -23,8 +23,21 @@ class PrerequisiteBuilderWidget(forms.Widget):
     template_name = "admin/widgets/prerequisite_builder.html"
 
     class Media:
-        css = {"all": ("admin/css/prerequisite-builder.css",)}
-        js = ("admin/js/prerequisite-builder.js",)
+        css = {
+            "all": (
+                "admin/css/prerequisite-builder.css",
+                "admin/css/drag-drop-builder.css",
+            )
+        }
+        js = (
+            "admin/js/prerequisite-builder.js",
+            "admin/js/drag-drop-builder.js",
+            "admin/js/drag-drop-palette.js",
+            "admin/js/drag-drop-canvas.js",
+            "admin/js/accessibility-manager.js",
+            "admin/js/undo-redo-manager.js",
+            "admin/js/touch-handler.js",
+        )
 
     def __init__(self, attrs=None):
         default_attrs = {
