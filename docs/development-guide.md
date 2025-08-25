@@ -6,13 +6,14 @@
 2. [Test-Driven Development Workflow](#test-driven-development-workflow)
 3. [Code Standards and Best Practices](#code-standards-and-best-practices)
 4. [Service Layer Development](#service-layer-development)
-5. [Source Reference Development](#source-reference-development)
-6. [API Development Patterns](#api-development-patterns)
-7. [Frontend Development](#frontend-development)
-8. [Database Development](#database-development)
-9. [Testing Practices](#testing-practices)
-10. [Git Workflow](#git-workflow)
-11. [Debugging and Troubleshooting](#debugging-and-troubleshooting)
+5. [Prerequisite System Development](#prerequisite-system-development)
+6. [Source Reference Development](#source-reference-development)
+7. [API Development Patterns](#api-development-patterns)
+8. [Frontend Development](#frontend-development)
+9. [Database Development](#database-development)
+10. [Testing Practices](#testing-practices)
+11. [Git Workflow](#git-workflow)
+12. [Debugging and Troubleshooting](#debugging-and-troubleshooting)
 
 ## Development Environment Setup
 
@@ -807,6 +808,448 @@ def test_invalid_transitions(self):
 
     with self.assertRaises(TransitionNotAllowed):
         session.start_session()
+```
+
+## Prerequisite System Development
+
+### Overview
+
+The prerequisite system provides comprehensive requirement validation for character advancement, item usage, spell casting, and other game mechanics. It combines structured JSON requirements, intuitive helper functions, a powerful checking engine, and advanced visual building tools across Issues #188-192.
+
+### Architecture Components
+
+The prerequisite system consists of five main components:
+
+1. **Requirement Helpers (Issue #188)**: `prerequisites/helpers.py` - Helper functions for building JSON requirements
+2. **Checking Engine (Issue #189)**: `prerequisites/checkers.py` - Validation engine with recursive checking
+3. **Visual Builder UI (Issue #190)**: `prerequisites/widgets.py` - Django form widget integration
+4. **Drag-Drop Interface (Issue #191)**: 7 JavaScript files - Advanced visual requirement building
+5. **Admin Interface (Issue #192)**: `prerequisites/admin.py` - Full Django admin integration
+
+### Development Workflow
+
+#### Setting Up Prerequisite Development
+
+```bash
+# All prerequisite components are included in the main GMA environment
+conda activate gma
+
+# Run prerequisite-specific tests
+python manage.py test prerequisites.tests
+
+# Test specific components
+python manage.py test prerequisites.tests.test_helpers
+python manage.py test prerequisites.tests.test_checkers
+python manage.py test prerequisites.tests.test_visual_builder
+python manage.py test prerequisites.tests.test_drag_drop_builder
+
+# Run all drag-drop related tests
+python manage.py test prerequisites.tests.test_drag_drop*
+```
+
+#### Creating Helper Functions
+
+When adding new requirement types, follow this pattern:
+
+```python
+# In prerequisites/helpers.py
+
+def new_requirement_type(param1, param2=None, **kwargs):
+    """
+    Generate a new requirement type JSON structure.
+
+    Args:
+        param1: Required parameter description
+        param2: Optional parameter description
+        **kwargs: Additional fields for the requirement
+
+    Returns:
+        Dictionary containing the requirement in JSON format
+
+    Raises:
+        ValidationError: If parameters are invalid
+
+    Examples:
+        >>> new_requirement = new_requirement_type("value", minimum=3)
+        {"new_type": {"param1": "value", "minimum": 3}}
+    """
+    # Validate required parameters
+    if not isinstance(param1, str) or not param1.strip():
+        raise ValidationError("param1 must be a non-empty string")
+
+    # Build requirement data
+    req_data = {"param1": param1.strip()}
+
+    if param2 is not None:
+        if not isinstance(param2, int) or param2 < 0:
+            raise ValidationError("param2 must be a non-negative integer")
+        req_data["param2"] = param2
+
+    # Add additional fields
+    for key, value in kwargs.items():
+        req_data[key] = value
+
+    # Create requirement structure
+    requirement = {"new_type": req_data}
+
+    # Validate generated structure
+    try:
+        validators.validate_requirements(requirement)
+    except ValidationError as e:
+        raise ValidationError(f"Generated requirement is invalid: {e}")
+
+    return requirement
+```
+
+#### Implementing Requirement Checkers
+
+Add new requirement types to the checking engine:
+
+```python
+# In prerequisites/checkers.py
+
+@RequirementChecker.register("new_type")
+def check_new_requirement(character, requirement_data):
+    """
+    Check a new requirement type against a character.
+
+    Args:
+        character: Character instance to check against
+        requirement_data: Dictionary containing requirement parameters
+
+    Returns:
+        RequirementCheckResult with success/failure information
+    """
+    param1 = requirement_data.get("param1")
+    param2 = requirement_data.get("param2")
+
+    # Implement checking logic
+    character_value = getattr(character, param1, None)
+
+    if character_value is None:
+        return RequirementCheckResult(
+            passed=False,
+            message=f"Character does not have {param1}",
+            requirement_type="new_type"
+        )
+
+    if param2 is not None and character_value < param2:
+        return RequirementCheckResult(
+            passed=False,
+            message=f"{param1} requirement not met ({character_value} < {param2})",
+            requirement_type="new_type"
+        )
+
+    return RequirementCheckResult(
+        passed=True,
+        message=f"{param1} requirement met ({character_value} >= {param2})",
+        requirement_type="new_type"
+    )
+```
+
+#### Adding Visual Builder Components
+
+For new requirement types, add JavaScript components to the drag-drop interface:
+
+```javascript
+// In static/admin/js/drag-drop-palette.js
+
+class NewTypeComponent extends RequirementComponent {
+    constructor() {
+        super();
+        this.type = 'new_type';
+        this.displayName = 'New Requirement';
+        this.description = 'Description of new requirement type';
+        this.icon = 'fas fa-new-icon';
+    }
+
+    getDefaultData() {
+        return {
+            param1: '',
+            param2: 1
+        };
+    }
+
+    renderForm(data) {
+        return `
+            <div class="form-group">
+                <label>Parameter 1:</label>
+                <input type="text" class="form-control param1-input"
+                       value="${data.param1 || ''}" placeholder="Enter value">
+            </div>
+            <div class="form-group">
+                <label>Parameter 2:</label>
+                <input type="number" class="form-control param2-input"
+                       value="${data.param2 || 1}" min="0">
+            </div>
+        `;
+    }
+
+    validate(data) {
+        if (!data.param1 || data.param1.trim() === '') {
+            return { valid: false, message: 'Parameter 1 is required' };
+        }
+        if (data.param2 !== undefined && (data.param2 < 0 || !Number.isInteger(data.param2))) {
+            return { valid: false, message: 'Parameter 2 must be a non-negative integer' };
+        }
+        return { valid: true };
+    }
+
+    getDisplayText(data) {
+        let text = `${data.param1}`;
+        if (data.param2 !== undefined) {
+            text += ` (min: ${data.param2})`;
+        }
+        return text;
+    }
+}
+
+// Register the component
+RequirementPalette.registerComponent(NewTypeComponent);
+```
+
+#### Testing Workflow
+
+The prerequisite system has comprehensive test coverage. Follow TDD principles:
+
+```python
+# In prerequisites/tests/test_new_feature.py
+
+from django.test import TestCase
+from django.core.exceptions import ValidationError
+
+from prerequisites.helpers import new_requirement_type
+from prerequisites.checkers import RequirementChecker
+from prerequisites.validators import validate_requirements
+
+class NewRequirementTypeTest(TestCase):
+    """Test the new requirement type helper function."""
+
+    def test_valid_requirement_creation(self):
+        """Test creating a valid new requirement."""
+        req = new_requirement_type("test_param", param2=3)
+
+        expected = {
+            "new_type": {
+                "param1": "test_param",
+                "param2": 3
+            }
+        }
+        self.assertEqual(req, expected)
+
+    def test_validation_error_empty_param1(self):
+        """Test validation error for empty param1."""
+        with self.assertRaises(ValidationError) as cm:
+            new_requirement_type("")
+
+        self.assertIn("param1 must be a non-empty string", str(cm.exception))
+
+    def test_generated_requirement_validation(self):
+        """Test that generated requirements pass validation."""
+        req = new_requirement_type("valid_param", param2=5)
+
+        # Should not raise ValidationError
+        validate_requirements(req)
+
+class NewRequirementCheckerTest(TestCase):
+    """Test the new requirement checking logic."""
+
+    def setUp(self):
+        self.checker = RequirementChecker()
+        self.character = create_test_character()  # Helper function
+
+    def test_requirement_passes(self):
+        """Test requirement checking when character meets requirements."""
+        # Set up character with required attribute
+        setattr(self.character, 'test_param', 5)
+
+        req = new_requirement_type("test_param", param2=3)
+        result = self.checker.check_requirement(self.character, req)
+
+        self.assertTrue(result.passed)
+        self.assertIn("requirement met", result.message.lower())
+
+    def test_requirement_fails(self):
+        """Test requirement checking when character doesn't meet requirements."""
+        # Set up character with insufficient attribute
+        setattr(self.character, 'test_param', 1)
+
+        req = new_requirement_type("test_param", param2=3)
+        result = self.checker.check_requirement(self.character, req)
+
+        self.assertFalse(result.passed)
+        self.assertIn("not met", result.message.lower())
+```
+
+#### JavaScript Testing
+
+For drag-drop interface components, add JavaScript tests:
+
+```javascript
+// In prerequisites/tests/test_javascript_components.py
+
+from django.test import TestCase
+from django.template.loader import render_to_string
+from django.contrib.auth import get_user_model
+
+class NewTypeComponentTest(TestCase):
+    """Test the new type JavaScript component."""
+
+    def test_component_rendering(self):
+        """Test that the component renders correctly."""
+        context = {
+            'component_type': 'new_type',
+            'initial_data': {'param1': 'test', 'param2': 5}
+        }
+
+        # Render template that includes JavaScript component
+        html = render_to_string('prerequisites/test_component.html', context)
+
+        self.assertIn('new_type', html)
+        self.assertIn('test', html)
+        self.assertIn('5', html)
+
+    def test_component_validation(self):
+        """Test client-side validation."""
+        # This would typically use Selenium or similar for full JavaScript testing
+        pass
+```
+
+#### Admin Integration
+
+Add admin interface support for new requirement types:
+
+```python
+# In prerequisites/admin.py
+
+class PrerequisiteAdmin(admin.ModelAdmin):
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+
+        # Customize form based on requirement type
+        if obj and obj.requirements:
+            req_type = self.get_requirement_type(obj.requirements)
+            if req_type == 'new_type':
+                # Add specific help text or field customizations
+                form.base_fields['requirements'].help_text += (
+                    " This prerequisite uses the new requirement type."
+                )
+
+        return form
+
+    def get_requirement_type(self, requirements):
+        """Extract the main requirement type from JSON structure."""
+        if isinstance(requirements, dict):
+            for key in ['new_type', 'trait', 'has', 'any', 'all', 'count_tag']:
+                if key in requirements:
+                    return key
+        return 'unknown'
+```
+
+### Performance Considerations
+
+When developing prerequisite features:
+
+#### Query Optimization
+
+```python
+# Efficient character checking with minimal database queries
+def check_multiple_requirements(character, requirements_list):
+    """Check multiple requirements efficiently."""
+    # Prefetch related data once
+    character = Character.objects.select_related('campaign').prefetch_related(
+        'possessions',
+        'achievements'
+    ).get(id=character.id)
+
+    checker = RequirementChecker()
+    results = []
+
+    for requirement in requirements_list:
+        result = checker.check_requirement(character, requirement)
+        results.append(result)
+
+    return results
+```
+
+#### Caching Strategy
+
+```python
+from django.core.cache import cache
+
+def get_cached_requirement_result(character_id, requirement_hash):
+    """Get cached requirement check result."""
+    cache_key = f"prereq_{character_id}_{requirement_hash}"
+    return cache.get(cache_key)
+
+def cache_requirement_result(character_id, requirement_hash, result, timeout=300):
+    """Cache requirement check result for 5 minutes."""
+    cache_key = f"prereq_{character_id}_{requirement_hash}"
+    cache.set(cache_key, result, timeout)
+```
+
+### Debugging and Troubleshooting
+
+#### Common Issues
+
+1. **Validation Errors**: Always validate JSON structure before saving
+2. **Circular Dependencies**: Avoid self-referencing requirements
+3. **Performance**: Monitor database queries in complex requirement trees
+4. **JavaScript Errors**: Use browser developer tools for drag-drop debugging
+
+#### Debug Utilities
+
+```python
+# In prerequisites/utils.py (create if needed)
+
+def debug_requirement_structure(requirement, indent=0):
+    """Print requirement structure for debugging."""
+    prefix = "  " * indent
+
+    if isinstance(requirement, dict):
+        for key, value in requirement.items():
+            print(f"{prefix}{key}:")
+            if isinstance(value, (list, dict)):
+                debug_requirement_structure(value, indent + 1)
+            else:
+                print(f"{prefix}  {value}")
+    elif isinstance(requirement, list):
+        for i, item in enumerate(requirement):
+            print(f"{prefix}[{i}]:")
+            debug_requirement_structure(item, indent + 1)
+
+def validate_requirement_depth(requirement, max_depth=5, current_depth=0):
+    """Validate requirement nesting doesn't exceed maximum depth."""
+    if current_depth > max_depth:
+        raise ValidationError(f"Requirement nesting exceeds maximum depth of {max_depth}")
+
+    if isinstance(requirement, dict):
+        for key, value in requirement.items():
+            if key in ['any', 'all'] and isinstance(value, list):
+                for sub_req in value:
+                    validate_requirement_depth(sub_req, max_depth, current_depth + 1)
+```
+
+### Integration with Existing Systems
+
+#### Character System Integration
+
+```python
+# Example of integrating prerequisites with character advancement
+def can_character_advance(character, advancement_type):
+    """Check if character can perform specific advancement."""
+    prereqs = Prerequisite.objects.filter(
+        content_type=ContentType.objects.get_for_model(advancement_type),
+        object_id=advancement_type.id
+    )
+
+    checker = RequirementChecker()
+    for prereq in prereqs:
+        result = checker.check_requirement(character, prereq.requirements)
+        if not result.passed:
+            return False, result.message
+
+    return True, "All prerequisites met"
 ```
 
 ## Source Reference Development

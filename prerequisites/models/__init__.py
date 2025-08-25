@@ -142,3 +142,71 @@ class Prerequisite(TimestampedMixin, models.Model):
 
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class PrerequisiteCheckResult(TimestampedMixin, models.Model):
+    """
+    Records the results of prerequisite checks for auditing and analysis.
+
+    Stores the outcome of checking whether a character meets the requirements
+    for a specific object (character advancement, item use, etc.).
+    """
+
+    # The object that was checked
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        help_text="Type of object that was checked",
+    )
+    object_id = models.PositiveIntegerField(
+        help_text="ID of the object that was checked"
+    )
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    # The character that was checked
+    character = models.ForeignKey(
+        "characters.Character",
+        on_delete=models.CASCADE,
+        help_text="Character that was checked",
+    )
+
+    # The requirements that were evaluated
+    requirements = models.JSONField(help_text="Requirements that were checked")
+
+    # The result of the check
+    result = models.BooleanField(help_text="Whether the character met the requirements")
+
+    # Details about failures
+    failure_reasons = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of reasons why requirements were not met",
+    )
+
+    # When the check was performed (from TimestampedMixin)
+    checked_at = models.DateTimeField(
+        auto_now_add=True, help_text="When this check was performed"
+    )
+
+    class Meta:
+        db_table = "prerequisites_check_result"
+        ordering = ["-checked_at"]  # Newest first
+        verbose_name = "Prerequisite Check Result"
+        verbose_name_plural = "Prerequisite Check Results"
+        indexes = [
+            # Index for object queries
+            models.Index(
+                fields=["content_type", "object_id"], name="prereq_check_object_idx"
+            ),
+            # Index for character queries
+            models.Index(fields=["character"], name="prereq_check_char_idx"),
+            # Index for result filtering
+            models.Index(fields=["result"], name="prereq_check_result_idx"),
+            # Index for time-based queries
+            models.Index(fields=["checked_at"], name="prereq_check_time_idx"),
+        ]
+
+    def __str__(self) -> str:
+        """Return string representation of the check result."""
+        result_str = "PASSED" if self.result else "FAILED"
+        return f"{self.character.name} - {self.content_object} [{result_str}]"

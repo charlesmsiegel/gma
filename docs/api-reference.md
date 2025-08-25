@@ -12,12 +12,13 @@
 8. [Character API](#character-api)
 9. [Location API](#location-api)
 10. [Item API](#item-api)
-11. [Scene API](#scene-api)
-12. [Scene Message History API](#scene-message-history-api)
-13. [WebSocket Chat API](#websocket-chat-api)
-14. [Source Reference API](#source-reference-api)
-15. [Data Models](#data-models)
-16. [Testing the API](#testing-the-api)
+11. [Prerequisite API](#prerequisite-api)
+12. [Scene API](#scene-api)
+13. [Scene Message History API](#scene-message-history-api)
+14. [WebSocket Chat API](#websocket-chat-api)
+15. [Source Reference API](#source-reference-api)
+16. [Data Models](#data-models)
+17. [Testing the API](#testing-the-api)
 
 ## Overview
 
@@ -1665,6 +1666,431 @@ PUT /api/items/15/
   "owner": null
 }
 ```
+
+## Prerequisite API
+
+### Prerequisite System Overview
+
+The Prerequisite API provides comprehensive requirement validation and management for character advancement, item usage, spell casting, and other game mechanics. The system supports complex logical requirements with intuitive helper functions, a powerful checking engine, and visual building tools.
+
+#### Implementation Status
+
+**Core System (Issues #188-192):**
+- ✅ **Requirement Helpers (Issue #188)**: Helper functions for building JSON requirements
+- ✅ **Checking Engine (Issue #189)**: Comprehensive validation engine with recursive checking
+- ✅ **Visual Builder UI (Issue #190)**: Django form widget integration
+- ✅ **Drag-Drop Interface (Issue #191)**: Advanced JavaScript interface with accessibility
+- ✅ **Admin Interface (Issue #192)**: Full Django admin integration with bulk operations
+
+**API Implementation Status:**
+- 🚧 **Future Implementation**: REST endpoints planned for Phase 3
+- ✅ **Helper Functions**: Available for programmatic use
+- ✅ **Model Integration**: Prerequisite models with GenericForeignKey support
+- ✅ **Checking System**: RequirementChecker class for validation operations
+
+### Python API Usage
+
+The prerequisite system is currently available through Python APIs for server-side use:
+
+#### Helper Functions
+
+```python
+from prerequisites.helpers import trait_req, has_item, any_of, all_of, count_with_tag
+
+# Simple requirements
+strength_req = trait_req("strength", minimum=3)
+sword_req = has_item("weapons", name="Magic Sword")
+
+# Complex logical combinations
+combat_req = any_of(
+    trait_req("strength", minimum=4),
+    trait_req("dexterity", minimum=4)
+)
+
+advanced_req = all_of(
+    trait_req("arete", minimum=3),
+    has_item("foci", name="Crystal Orb"),
+    count_with_tag("spheres", "elemental", minimum=2)
+)
+```
+
+**Available Helper Functions:**
+- `trait_req(name, minimum=None, maximum=None, exact=None)`: Character trait requirements
+- `has_item(field, id=None, name=None, **kwargs)`: Item possession requirements
+- `any_of(*requirements)`: Logical OR combinations
+- `all_of(*requirements)`: Logical AND combinations
+- `count_with_tag(model, tag, minimum=None, maximum=None)`: Tagged object counting
+
+#### Requirement Checking
+
+```python
+from prerequisites.checkers import RequirementChecker
+from characters.models import Character
+
+# Initialize checker
+checker = RequirementChecker()
+
+# Get character
+character = Character.objects.get(id=1)
+
+# Check simple requirement
+result = checker.check_requirement(character, strength_req)
+print(f"Passed: {result.passed}")
+print(f"Message: {result.message}")
+
+# Check complex requirement with detailed results
+result = checker.check_requirement(character, advanced_req)
+if not result.passed:
+    print("Failed requirements:")
+    for detail in result.details:
+        if not detail.passed:
+            print(f"  - {detail.requirement_type}: {detail.message}")
+```
+
+**RequirementCheckResult Properties:**
+- `passed`: Boolean indicating if requirement was met
+- `message`: Human-readable description of the result
+- `details`: List of sub-requirement results for complex requirements
+- `requirement_type`: Type of requirement checked (trait, has, any, all, count_tag)
+
+#### Model Integration
+
+```python
+from prerequisites.models import Prerequisite, PrerequisiteCheckResult
+
+# Create standalone prerequisite
+prereq = Prerequisite.objects.create(
+    description="Combat mastery required",
+    requirements=all_of(
+        trait_req("strength", minimum=3),
+        trait_req("melee", minimum=2)
+    )
+)
+
+# Attach prerequisite to any model
+character_prereq = Prerequisite.objects.create(
+    description="Advanced training needed",
+    requirements=has_item("training", name="Master Class"),
+    content_object=character
+)
+
+# Check prerequisite against character
+result = checker.check_requirement(character, prereq.requirements)
+
+# Log result for audit trail
+check_result = PrerequisiteCheckResult.objects.create(
+    content_object=item_requiring_prereq,
+    character=character,
+    requirements=prereq.requirements,
+    result=result.passed,
+    failure_reasons=result.get_failure_reasons() if not result.passed else []
+)
+```
+
+### Planned REST API Endpoints (Future Implementation)
+
+The following REST API endpoints are planned for Phase 3 implementation:
+
+#### Prerequisite Management
+
+**List Prerequisites**
+```http
+GET /api/prerequisites/
+```
+
+Query Parameters:
+- `content_type`: Filter by attached object type
+- `object_id`: Filter by attached object ID
+- `search`: Search in descriptions
+- `limit`: Pagination limit (default: 20)
+- `offset`: Pagination offset
+
+Response:
+```json
+{
+    "count": 25,
+    "next": "/api/prerequisites/?offset=20",
+    "previous": null,
+    "results": [
+        {
+            "id": 1,
+            "description": "Combat mastery required",
+            "requirements": {
+                "all": [
+                    {"trait": {"name": "strength", "min": 3}},
+                    {"trait": {"name": "melee", "min": 2}}
+                ]
+            },
+            "content_type": "characters.character",
+            "object_id": 123,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        }
+    ]
+}
+```
+
+**Create Prerequisite**
+```http
+POST /api/prerequisites/
+```
+
+Request Body:
+```json
+{
+    "description": "Advanced spell mastery",
+    "requirements": {
+        "all": [
+            {"trait": {"name": "arete", "min": 4}},
+            {"count_tag": {"model": "spheres", "tag": "forces", "minimum": 3}}
+        ]
+    },
+    "content_type": "items.item",
+    "object_id": 456
+}
+```
+
+**Retrieve Prerequisite**
+```http
+GET /api/prerequisites/{id}/
+```
+
+**Update Prerequisite**
+```http
+PUT /api/prerequisites/{id}/
+PATCH /api/prerequisites/{id}/
+```
+
+**Delete Prerequisite**
+```http
+DELETE /api/prerequisites/{id}/
+```
+
+#### Requirement Validation
+
+**Check Single Requirement**
+```http
+POST /api/prerequisites/{id}/check/
+```
+
+Request Body:
+```json
+{
+    "character_id": 123
+}
+```
+
+Response:
+```json
+{
+    "passed": false,
+    "message": "Character does not meet all requirements",
+    "details": [
+        {
+            "requirement_type": "trait",
+            "passed": true,
+            "message": "Strength requirement met (4 >= 3)"
+        },
+        {
+            "requirement_type": "trait",
+            "passed": false,
+            "message": "Melee requirement not met (1 < 2)"
+        }
+    ],
+    "checked_at": "2024-01-15T14:25:30Z"
+}
+```
+
+**Bulk Requirement Checking**
+```http
+POST /api/prerequisites/bulk-check/
+```
+
+Request Body:
+```json
+{
+    "character_id": 123,
+    "prerequisite_ids": [1, 2, 3, 4, 5]
+}
+```
+
+Response:
+```json
+{
+    "character_id": 123,
+    "results": [
+        {
+            "prerequisite_id": 1,
+            "passed": true,
+            "message": "All requirements met"
+        },
+        {
+            "prerequisite_id": 2,
+            "passed": false,
+            "message": "Missing required item",
+            "details": [...]
+        }
+    ],
+    "checked_at": "2024-01-15T14:30:00Z"
+}
+```
+
+#### Requirement Templates
+
+**List Templates**
+```http
+GET /api/prerequisites/templates/
+```
+
+**Apply Template**
+```http
+POST /api/prerequisites/templates/{template_id}/apply/
+```
+
+Request Body:
+```json
+{
+    "content_type": "items.item",
+    "object_ids": [123, 124, 125],
+    "description_override": "Custom description"
+}
+```
+
+#### Character Eligibility
+
+**Find Eligible Objects**
+```http
+GET /api/characters/{id}/eligible-for/
+```
+
+Query Parameters:
+- `content_type`: Filter by object type (items.item, locations.location, etc.)
+- `campaign_id`: Limit to specific campaign
+- `include_details`: Include requirement checking details
+
+Response:
+```json
+{
+    "character_id": 123,
+    "eligible_objects": [
+        {
+            "content_type": "items.item",
+            "object_id": 456,
+            "object_name": "Master's Sword",
+            "eligible": true,
+            "requirements_met": [
+                {
+                    "prerequisite_id": 1,
+                    "passed": true,
+                    "message": "Combat mastery achieved"
+                }
+            ]
+        }
+    ]
+}
+```
+
+### JavaScript Integration
+
+The prerequisite system includes comprehensive JavaScript components for visual requirement building:
+
+#### Drag-Drop Builder
+
+```javascript
+// Initialize drag-drop builder
+const builder = new PrerequisiteBuilder({
+    container: '#requirement-builder',
+    initialData: existingRequirements,
+    onChange: (requirements) => {
+        // Handle requirement changes
+        console.log('New requirements:', requirements);
+    }
+});
+
+// Get current requirements
+const currentRequirements = builder.getRequirements();
+
+// Validate requirements
+const isValid = builder.validateRequirements();
+
+// Reset builder
+builder.reset();
+```
+
+#### Visual Widget Integration
+
+```javascript
+// Initialize visual widget for forms
+const widget = new PrerequisiteWidget({
+    fieldName: 'requirements',
+    initialValue: existingData,
+    placeholder: 'Build your requirements...'
+});
+
+// Integrate with Django forms
+widget.attachToField('id_requirements');
+```
+
+### Admin Interface Integration
+
+The prerequisite system provides comprehensive admin interface support:
+
+#### Admin Widget Integration
+
+```python
+from prerequisites.widgets import PrerequisiteBuilderWidget
+
+class MyModelAdmin(admin.ModelAdmin):
+    formfield_overrides = {
+        models.JSONField: {'widget': PrerequisiteBuilderWidget}
+    }
+```
+
+#### Bulk Operations
+
+The admin interface supports several bulk operations:
+- Copy prerequisites to multiple objects
+- Bulk validation against character sets
+- Template application across objects
+- Export/import for requirement backup
+
+### Error Handling
+
+The prerequisite system follows GMA's standard error handling patterns:
+
+**Validation Errors (400)**
+```json
+{
+    "error": "Invalid requirement structure",
+    "details": {
+        "requirements": [
+            "Missing required field: 'name' in trait requirement"
+        ]
+    }
+}
+```
+
+**Permission Errors (404)**
+```json
+{
+    "error": "Prerequisite not found"
+}
+```
+
+**Character Not Found (404)**
+```json
+{
+    "error": "Character not found"
+}
+```
+
+### Security Considerations
+
+- **Campaign Scoping**: Prerequisites respect campaign membership boundaries
+- **Permission Validation**: Only authorized users can modify requirements
+- **Input Sanitization**: All JSON inputs are validated and sanitized
+- **XSS Prevention**: Safe rendering in admin interfaces
+- **Audit Trail**: Complete logging of requirement checks and modifications
 
 ## Scene API
 

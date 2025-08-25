@@ -80,14 +80,8 @@ class PrerequisiteBuilderWidget(forms.Widget):
     def value_from_datadict(self, data, files, name):
         """Extract value from form submission data."""
         value = data.get(name)
-        if value:
-            try:
-                # Validate that it's proper JSON
-                json.loads(value)
-                return value
-            except json.JSONDecodeError:
-                return None
-        return None
+        # Return the raw value - let the form handle validation
+        return value if value is not None else ""
 
     def format_value(self, value):
         """Format value for display in the widget."""

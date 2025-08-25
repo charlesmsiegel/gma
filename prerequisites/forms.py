@@ -20,6 +20,7 @@ class PrerequisiteForm(forms.ModelForm):
     requirements = forms.CharField(
         widget=PrerequisiteBuilderWidget(),
         help_text="Use the visual builder to create requirement logic.",
+        required=False,
     )
 
     class Meta:
@@ -63,3 +64,36 @@ class AdminPrerequisiteForm(PrerequisiteForm):
             "The system supports trait checks, item possession, and logical "
             "combinations."
         )
+
+
+class PrerequisiteRequiredForm(forms.Form):
+    """Form for bulk prerequisite operations in admin."""
+
+    requirements = forms.CharField(
+        widget=PrerequisiteBuilderWidget(),
+        help_text="Use the visual builder to create requirement logic.",
+        required=True,
+        label="Requirements",
+    )
+
+    def clean_requirements(self):
+        """Validate requirements JSON structure."""
+        requirements_data = self.cleaned_data["requirements"]
+
+        if not requirements_data:
+            raise forms.ValidationError("Requirements are required for this operation.")
+
+        try:
+            if isinstance(requirements_data, str):
+                requirements_json = json.loads(requirements_data)
+            else:
+                requirements_json = requirements_data
+
+            # Validate using our validator system
+            validate_requirements(requirements_json)
+            return requirements_json
+
+        except json.JSONDecodeError:
+            raise forms.ValidationError("Invalid JSON format in requirements.")
+        except Exception as e:
+            raise forms.ValidationError(f"Invalid requirement structure: {e}")

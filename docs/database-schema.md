@@ -6,13 +6,14 @@
 2. [Core Models](#core-models)
 3. [Campaign Domain](#campaign-domain)
    - [Item Model](#item-model)
-4. [User Domain](#user-domain)
-5. [Authentication and Sessions](#authentication-and-sessions)
-6. [Real-time Features](#real-time-features)
-7. [Relationship Diagrams](#relationship-diagrams)
-8. [Indexes and Performance](#indexes-and-performance)
-9. [Data Migration Patterns](#data-migration-patterns)
-10. [Query Optimization](#query-optimization)
+4. [Prerequisite System](#prerequisite-system)
+5. [User Domain](#user-domain)
+6. [Authentication and Sessions](#authentication-and-sessions)
+7. [Real-time Features](#real-time-features)
+8. [Relationship Diagrams](#relationship-diagrams)
+9. [Indexes and Performance](#indexes-and-performance)
+10. [Data Migration Patterns](#data-migration-patterns)
+11. [Query Optimization](#query-optimization)
 
 ## Schema Overview
 
@@ -1699,6 +1700,267 @@ Items integrate with the campaign permission system:
 3. **Recovery**: Accidentally deleted items can be restored
 4. **Performance**: Active/deleted filtering optimized with database indexes
 5. **Referential Integrity**: Related data (ownership, campaign history) preserved
+
+## Prerequisite System
+
+The prerequisite system provides comprehensive requirement validation for character advancement, item usage, spell casting, and other game mechanics using structured JSON requirements and GenericForeignKey relationships for universal attachment.
+
+### Prerequisite Model
+
+**Table**: `prerequisites_prerequisite`
+
+Core model that stores structured requirements and can be attached to any Django model via GenericForeignKey.
+
+```sql
+CREATE TABLE prerequisites_prerequisite (
+    id SERIAL PRIMARY KEY,
+    description VARCHAR(500) NOT NULL,
+    requirements JSONB NOT NULL DEFAULT '{}',
+
+    -- GenericForeignKey fields for universal attachment
+    content_type_id INTEGER REFERENCES django_content_type(id) ON DELETE SET NULL,
+    object_id INTEGER,
+
+    -- Timestamp tracking (from TimestampedMixin)
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    -- Constraints
+    CONSTRAINT prerequisite_description_not_empty
+        CHECK (TRIM(description) != ''),
+
+    -- Indexes for performance
+    INDEX prereq_content_idx (content_type_id, object_id),
+    INDEX prereq_content_type_idx (content_type_id),
+    INDEX prereq_created_at_idx (created_at),
+    INDEX prereq_requirements_gin (requirements USING GIN)
+);
+```
+
+**Key Features:**
+- **Universal Attachment**: Can be attached to any Django model (characters, items, locations, etc.)
+- **JSON Requirements**: Structured requirement storage using PostgreSQL JSONB with GIN indexing
+- **Description Validation**: Enforces non-empty, non-whitespace descriptions
+- **Audit Tracking**: TimestampedMixin provides creation and modification timestamps
+- **Performance Optimized**: Strategic indexing for GenericForeignKey and JSON queries
+
+**JSON Structure Examples:**
+```json
+{
+    "trait": {
+        "name": "strength",
+        "min": 3
+    }
+}
+
+{
+    "all": [
+        {"trait": {"name": "arete", "min": 3}},
+        {"has": {"field": "foci", "name": "Crystal Orb"}},
+        {"count_tag": {"model": "spheres", "tag": "elemental", "minimum": 2}}
+    ]
+}
+
+{
+    "any": [
+        {"trait": {"name": "strength", "min": 4}},
+        {"trait": {"name": "dexterity", "min": 4}}
+    ]
+}
+```
+
+### PrerequisiteCheckResult Model
+
+**Table**: `prerequisites_check_result`
+
+Audit trail model that records the results of prerequisite checking operations for analysis and debugging.
+
+```sql
+CREATE TABLE prerequisites_check_result (
+    id SERIAL PRIMARY KEY,
+
+    -- The object that was checked (GenericForeignKey)
+    content_type_id INTEGER NOT NULL REFERENCES django_content_type(id) ON DELETE CASCADE,
+    object_id INTEGER NOT NULL,
+
+    -- The character that was checked
+    character_id INTEGER NOT NULL REFERENCES characters_character(id) ON DELETE CASCADE,
+
+    -- The requirements and results
+    requirements JSONB NOT NULL,
+    result BOOLEAN NOT NULL,
+    failure_reasons JSONB NOT NULL DEFAULT '[]',
+
+    -- Timestamp tracking
+    checked_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+    -- Indexes for performance
+    INDEX prereq_check_object_idx (content_type_id, object_id),
+    INDEX prereq_check_char_idx (character_id),
+    INDEX prereq_check_result_idx (result),
+    INDEX prereq_check_time_idx (checked_at),
+    INDEX prereq_check_requirements_gin (requirements USING GIN),
+    INDEX prereq_check_failures_gin (failure_reasons USING GIN)
+);
+```
+
+**Key Features:**
+- **Audit Trail**: Complete record of all prerequisite checks performed
+- **Performance Analysis**: Identify commonly failing requirements
+- **Character Tracking**: Links to specific characters for debugging
+- **JSON Storage**: Both requirements and failure reasons stored as JSONB
+- **Time-based Queries**: Indexed for temporal analysis and reporting
+
+### Prerequisite System Integration
+
+The prerequisite system integrates with other models through GenericForeignKey relationships:
+
+#### Character Integration
+```sql
+-- Example: Prerequisites attached to characters for advancement
+SELECT p.description, p.requirements, c.name as character_name
+FROM prerequisites_prerequisite p
+JOIN django_content_type ct ON p.content_type_id = ct.id
+JOIN characters_character c ON p.object_id = c.id
+WHERE ct.app_label = 'characters' AND ct.model = 'character';
+```
+
+#### Item Integration
+```sql
+-- Example: Prerequisites for item usage
+SELECT p.description, p.requirements, i.name as item_name
+FROM prerequisites_prerequisite p
+JOIN django_content_type ct ON p.content_type_id = ct.id
+JOIN items_item i ON p.object_id = i.id
+WHERE ct.app_label = 'items' AND ct.model = 'item';
+```
+
+#### Location Integration
+```sql
+-- Example: Prerequisites for location access
+SELECT p.description, p.requirements, l.name as location_name
+FROM prerequisites_prerequisite p
+JOIN django_content_type ct ON p.content_type_id = ct.id
+JOIN locations_location l ON p.object_id = l.id
+WHERE ct.app_label = 'locations' AND ct.model = 'location';
+```
+
+### JSON Field Operations
+
+PostgreSQL JSONB operations commonly used with the prerequisite system:
+
+#### Requirement Type Queries
+```sql
+-- Find all trait requirements
+SELECT * FROM prerequisites_prerequisite
+WHERE requirements ? 'trait';
+
+-- Find all complex requirements (any/all)
+SELECT * FROM prerequisites_prerequisite
+WHERE requirements ? 'any' OR requirements ? 'all';
+
+-- Find specific trait requirements
+SELECT * FROM prerequisites_prerequisite
+WHERE requirements @> '{"trait": {"name": "strength"}}';
+```
+
+#### Performance Queries
+```sql
+-- Find most frequently checked requirements
+SELECT requirements, COUNT(*) as check_count
+FROM prerequisites_check_result
+GROUP BY requirements
+ORDER BY check_count DESC
+LIMIT 10;
+
+-- Find most common failure patterns
+SELECT failure_reasons, COUNT(*) as failure_count
+FROM prerequisites_check_result
+WHERE result = false AND jsonb_array_length(failure_reasons) > 0
+GROUP BY failure_reasons
+ORDER BY failure_count DESC
+LIMIT 10;
+```
+
+### Performance Considerations
+
+#### Indexing Strategy
+- **GIN indexes** on JSONB fields for efficient JSON queries
+- **Composite indexes** on GenericForeignKey fields (content_type_id, object_id)
+- **Time-based indexes** for audit trail queries
+- **Boolean indexes** for result filtering
+
+#### Query Optimization
+```sql
+-- Efficient prerequisite lookup for objects
+EXPLAIN ANALYZE
+SELECT p.* FROM prerequisites_prerequisite p
+WHERE p.content_type_id = $1 AND p.object_id = $2;
+
+-- Efficient requirement type filtering
+EXPLAIN ANALYZE
+SELECT p.* FROM prerequisites_prerequisite p
+WHERE p.requirements @> '{"trait": {}}';
+```
+
+#### Data Size Considerations
+- JSON requirements are typically small (< 1KB each)
+- Check results can accumulate over time - consider archival strategies
+- GIN indexes on JSONB fields require significant storage overhead
+- Regular VACUUM and ANALYZE recommended for optimal performance
+
+### Migration Patterns
+
+The prerequisite system was implemented with careful migration planning:
+
+#### Initial Schema Migration
+```sql
+-- Migration 0001: Initial prerequisite model
+CREATE TABLE prerequisites_prerequisite (
+    -- Initial fields as defined above
+);
+
+-- Migration 0002: Add check result model
+CREATE TABLE prerequisites_check_result (
+    -- Check result fields as defined above
+);
+```
+
+#### Index Creation Strategy
+```sql
+-- Indexes created concurrently to avoid downtime
+CREATE INDEX CONCURRENTLY prereq_content_idx
+ON prerequisites_prerequisite (content_type_id, object_id);
+
+CREATE INDEX CONCURRENTLY prereq_requirements_gin
+ON prerequisites_prerequisite USING GIN (requirements);
+```
+
+### Data Integrity
+
+#### Constraints and Validation
+- **Description validation**: Ensures non-empty descriptions
+- **JSON validation**: Server-side validation of requirement structures
+- **Reference integrity**: CASCADE deletes for check results, SET NULL for content objects
+- **Character consistency**: Check results maintain character references
+
+#### Cleanup Patterns
+```sql
+-- Clean up orphaned prerequisites (content object deleted)
+DELETE FROM prerequisites_prerequisite
+WHERE content_type_id IS NOT NULL
+  AND object_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM django_content_type ct
+    WHERE ct.id = content_type_id
+  );
+
+-- Archive old check results (older than 1 year)
+DELETE FROM prerequisites_check_result
+WHERE checked_at < NOW() - INTERVAL '1 year';
+```
 
 ## User Domain
 
