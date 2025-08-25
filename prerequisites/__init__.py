@@ -1,0 +1,1 @@
+# Prerequisites Django app
