@@ -263,7 +263,7 @@ class PrerequisiteGenericForeignKeyTest(TestCase):
         """Test prerequisite without attached object (standalone requirement)."""
         prerequisite = Prerequisite.objects.create(
             description="General campaign requirement",
-            requirements={"level": {"min": 5}},
+            requirements={"trait": {"name": "level", "min": 5}},
         )
 
         self.assertIsNone(prerequisite.content_object)
@@ -881,11 +881,11 @@ class PrerequisitePerformanceTest(TransactionTestCase):
         """Test querying on JSON field for performance."""
         # Create prerequisites with different JSON structures
         test_data = [
-            {"type": "combat", "level": 1},
-            {"type": "magic", "level": 2},
-            {"type": "social", "level": 1},
-            {"type": "combat", "level": 3},
-            {"type": "magic", "level": 1},
+            {"trait": {"name": "combat", "min": 1}},
+            {"trait": {"name": "magic", "min": 2}},
+            {"trait": {"name": "social", "min": 1}},
+            {"trait": {"name": "combat", "min": 3}},
+            {"trait": {"name": "magic", "min": 1}},
         ]
 
         for i, req in enumerate(test_data):
@@ -894,14 +894,14 @@ class PrerequisitePerformanceTest(TransactionTestCase):
             )
 
         # Test JSON field queries
-        combat_reqs = Prerequisite.objects.filter(requirements__type="combat")
+        combat_reqs = Prerequisite.objects.filter(requirements__trait__name="combat")
         self.assertEqual(combat_reqs.count(), 2)
 
-        level_1_reqs = Prerequisite.objects.filter(requirements__level=1)
+        level_1_reqs = Prerequisite.objects.filter(requirements__trait__min=1)
         self.assertEqual(level_1_reqs.count(), 3)
 
         # Test complex JSON query
         combat_level_1 = Prerequisite.objects.filter(
-            requirements__type="combat", requirements__level=1
+            requirements__trait__name="combat", requirements__trait__min=1
         )
         self.assertEqual(combat_level_1.count(), 1)

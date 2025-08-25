@@ -151,7 +151,7 @@ class TraitRequirementValidationTest(TestCase):
             validators.validate_requirements(invalid_req)
 
         error_msg = str(context.exception)
-        self.assertIn("name cannot be empty", error_msg)
+        self.assertIn("'name' cannot be empty", error_msg)
 
     def test_trait_conflicting_constraints_invalid(self):
         """Test trait requirement with conflicting constraints."""
@@ -219,7 +219,7 @@ class HasRequirementValidationTest(TestCase):
 
         error_msg = str(context.exception)
         self.assertIn("has", error_msg)
-        self.assertIn("id or name", error_msg)
+        self.assertIn("'id' or 'name'", error_msg)
 
     def test_has_empty_field_invalid(self):
         """Test has requirement with empty field."""
@@ -229,7 +229,7 @@ class HasRequirementValidationTest(TestCase):
             validators.validate_requirements(invalid_req)
 
         error_msg = str(context.exception)
-        self.assertIn("field cannot be empty", error_msg)
+        self.assertIn("'field' cannot be empty", error_msg)
 
     def test_has_invalid_id_type_invalid(self):
         """Test has requirement with invalid id type."""
@@ -239,7 +239,7 @@ class HasRequirementValidationTest(TestCase):
             validators.validate_requirements(invalid_req)
 
         error_msg = str(context.exception)
-        self.assertIn("id must be an integer", error_msg)
+        self.assertIn("'id' must be an integer", error_msg)
 
     def test_has_negative_id_invalid(self):
         """Test has requirement with negative id."""
@@ -249,7 +249,7 @@ class HasRequirementValidationTest(TestCase):
             validators.validate_requirements(invalid_req)
 
         error_msg = str(context.exception)
-        self.assertIn("id must be positive", error_msg)
+        self.assertIn("'id' must be positive", error_msg)
 
 
 class LogicalOperatorValidationTest(TestCase):
@@ -571,7 +571,7 @@ class ErrorMessageValidationTest(TestCase):
             any(
                 phrase in error_msg.lower()
                 for phrase in [
-                    "name cannot be empty",
+                    "'name' cannot be empty",
                     "min",
                     "max",
                     "must be",
@@ -593,7 +593,7 @@ class ErrorMessageValidationTest(TestCase):
         self.assertTrue(
             any(
                 phrase in error_msg.lower()
-                for phrase in ["field cannot be empty", "id", "positive", "integer"]
+                for phrase in ["'field' cannot be empty", "id", "positive", "integer"]
             )
         )
 
@@ -611,7 +611,7 @@ class ErrorMessageValidationTest(TestCase):
 
         error_msg = str(context.exception)
         # Should give some indication of location/path
-        self.assertIn("name cannot be empty", error_msg)
+        self.assertIn("'name' cannot be empty", error_msg)
 
     def test_multiple_errors_reported(self):
         """Test that multiple errors can be reported together."""
@@ -628,6 +628,41 @@ class ErrorMessageValidationTest(TestCase):
 
 class CustomRequirementTypeValidationTest(TestCase):
     """Test extensibility for custom requirement types."""
+
+    def setUp(self):
+        """Store original validators for cleanup."""
+        # Store the original registered validators
+        self._original_validators = validators.get_registered_validator_types().copy()
+
+    def tearDown(self):
+        """Restore original validators after each test."""
+        # Clear all validators
+        current_types = validators.get_registered_validator_types().copy()
+        for validator_type in current_types:
+            validators.unregister_requirement_validator(validator_type)
+
+        # Re-register original validators
+        for validator_type in self._original_validators:
+            if validator_type == "trait":
+                validators.register_requirement_validator(
+                    "trait", validators.validate_trait_requirement
+                )
+            elif validator_type == "has":
+                validators.register_requirement_validator(
+                    "has", validators.validate_has_requirement
+                )
+            elif validator_type == "any":
+                validators.register_requirement_validator(
+                    "any", validators.validate_any_requirement
+                )
+            elif validator_type == "all":
+                validators.register_requirement_validator(
+                    "all", validators.validate_all_requirement
+                )
+            elif validator_type == "count_tag":
+                validators.register_requirement_validator(
+                    "count_tag", validators.validate_count_tag_requirement
+                )
 
     def test_register_custom_validator(self):
         """Test registering a custom requirement type validator."""
