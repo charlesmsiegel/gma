@@ -38,6 +38,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from core.models import TimestampedMixin
+from prerequisites import validators
 
 
 def validate_description(value: str) -> None:
@@ -126,6 +127,12 @@ class Prerequisite(TimestampedMixin, models.Model):
             raise ValidationError(
                 {"requirements": "Requirements must be a JSON object (dictionary)."}
             )
+
+        # Validate requirements structure using the validators module
+        try:
+            validators.validate_requirements(self.requirements)
+        except ValidationError as e:
+            raise ValidationError({"requirements": str(e)})
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the prerequisite with validation."""
