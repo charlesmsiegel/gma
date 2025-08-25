@@ -202,14 +202,22 @@ def _check_trait_requirement(
         details["required_minimum"] = min_val
 
         if actual_value < min_val:
-            return RequirementCheckResult(
-                success=False,
-                message=(
-                    f"Character has insufficient {trait_name}: "
-                    f"{actual_value} < {min_val}"
-                ),
-                details=details,
-            )
+            # Check if trait doesn't exist
+            if actual_value == 0 and not hasattr(character, trait_name):
+                return RequirementCheckResult(
+                    success=False,
+                    message=f"Character does not have trait '{trait_name}'",
+                    details=details,
+                )
+            else:
+                return RequirementCheckResult(
+                    success=False,
+                    message=(
+                        f"Character has insufficient {trait_name}: "
+                        f"{actual_value} < {min_val}"
+                    ),
+                    details=details,
+                )
 
     # Check maximum constraint
     if "max" in requirement_data:
@@ -232,27 +240,23 @@ def _check_trait_requirement(
         details["required_exact"] = exact_val
 
         if actual_value != exact_val:
-            return RequirementCheckResult(
-                success=False,
-                message=(
-                    f"Character's {trait_name} must be exactly {exact_val}, "
-                    f"got {actual_value}"
-                ),
-                details=details,
-            )
+            # Check if trait doesn't exist and exact value > 0
+            if actual_value == 0 and not hasattr(character, trait_name) and exact_val > 0:
+                return RequirementCheckResult(
+                    success=False,
+                    message=f"Character does not have trait '{trait_name}'",
+                    details=details,
+                )
+            else:
+                return RequirementCheckResult(
+                    success=False,
+                    message=(
+                        f"Character's {trait_name} must be exactly {exact_val}, "
+                        f"got {actual_value}"
+                    ),
+                    details=details,
+                )
 
-    # Handle case where trait doesn't exist (actual_value == 0 from getattr default)
-    if actual_value == 0 and not hasattr(character, trait_name):
-        # Special case: if requirement allows 0, it's still a success
-        min_val = requirement_data.get("min", 0)
-        exact_val = requirement_data.get("exact")
-
-        if min_val > 0 or (exact_val is not None and exact_val > 0):
-            return RequirementCheckResult(
-                success=False,
-                message=f"Character does not have trait '{trait_name}'",
-                details=details,
-            )
 
     # All constraints satisfied
     constraint_parts = []
