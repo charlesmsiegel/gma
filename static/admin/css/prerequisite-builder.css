@@ -1,0 +1,149 @@
+/* CSS for Prerequisite Visual Builder (Issue #190) */
+
+.prerequisite-builder-widget {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background: #f9f9f9;
+    min-height: 200px;
+}
+
+.prerequisite-builder-container {
+    margin-top: 10px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.empty-state p {
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+.add-first-requirement {
+    background: #417690;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.requirement-controls {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.requirement-controls button {
+    margin-right: 10px;
+}
+
+.requirement-blocks {
+    min-height: 100px;
+}
+
+.requirement-block {
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: white;
+    position: relative;
+}
+
+.requirement-block .remove-requirement {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 2px;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.requirement-group {
+    border: 2px dashed #007cba;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 10px 0;
+    background: #f0f8ff;
+}
+
+.requirement-group[data-requirement-type="all"] {
+    border-color: #28a745;
+    background: #f0fff0;
+}
+
+.requirement-group[data-requirement-type="any"] {
+    border-color: #ffc107;
+    background: #fffbf0;
+}
+
+.existing-requirements {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #e9ecef;
+    border-radius: 4px;
+}
+
+.existing-requirements h4 {
+    margin-top: 0;
+    color: #495057;
+}
+
+.requirement-display pre {
+    background: white;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 12px;
+    overflow-x: auto;
+}
+
+/* Form styling */
+.prerequisite-builder select,
+.prerequisite-builder input[type="text"],
+.prerequisite-builder input[type="number"] {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    margin: 2px;
+}
+
+.prerequisite-builder button {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #f8f9fa;
+    cursor: pointer;
+}
+
+.prerequisite-builder button:hover {
+    background: #e9ecef;
+}
+
+.prerequisite-builder button.btn-primary {
+    background: #007cba;
+    color: white;
+    border-color: #007cba;
+}
+
+.prerequisite-builder button.btn-success {
+    background: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+.prerequisite-builder button.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border-color: #6c757d;
+}
