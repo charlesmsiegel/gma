@@ -535,7 +535,7 @@ class NestedRequirementValidationTest(TestCase):
             validators.validate_requirements(invalid_req)
 
         error_msg = str(context.exception)
-        self.assertIn("name cannot be empty", error_msg)
+        self.assertIn("'name' cannot be empty", error_msg)
 
     def test_circular_reference_protection(self):
         """Test protection against circular references in validation."""
