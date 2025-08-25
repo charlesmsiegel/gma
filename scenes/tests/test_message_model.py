@@ -587,15 +587,18 @@ class MessageModelTestCase(TestCase):
         """Test that message content can handle various inputs safely."""
         from scenes.models import Message
 
-        # Test HTML content (should be stored as-is, sanitized at display)
+        # Test HTML content (gets sanitized on save for security)
         html_content = "<script>alert('xss')</script>Hello <b>world</b>"
+        expected_sanitized = (
+            "alert('xss')Hello <b>world</b>"  # Script tag removed, safe HTML preserved
+        )
         message = Message.objects.create(
             scene=self.scene,
             sender=self.user1,
             content=html_content,
             message_type="OOC",
         )
-        self.assertEqual(message.content, html_content)
+        self.assertEqual(message.content, expected_sanitized)
 
         # Test Unicode content
         unicode_content = "Hello 世界 🎲 ñoño"

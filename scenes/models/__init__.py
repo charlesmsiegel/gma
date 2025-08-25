@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+import bleach
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -399,6 +400,37 @@ class Message(models.Model):
         if len(self.content) > 20000:  # Allow up to 20k characters
             raise ValidationError("Message content cannot exceed 20000 characters")
 
+    def save(self, *args, **kwargs):
+        """Save the message with HTML sanitization."""
+        # Sanitize HTML content to prevent XSS attacks
+        if self.content:
+            # Allow basic formatting tags but strip dangerous elements
+            allowed_tags = [
+                "b",
+                "i",
+                "u",
+                "em",
+                "strong",
+                "p",
+                "br",
+                "ul",
+                "ol",
+                "li",
+                "blockquote",
+                "code",
+                "pre",
+            ]
+            allowed_attributes = {}  # No attributes allowed for security
+
+            self.content = bleach.clean(
+                self.content,
+                tags=allowed_tags,
+                attributes=allowed_attributes,
+                strip=True,  # Strip disallowed tags instead of escaping
+            )
+
+        super().save(*args, **kwargs)
+
     def can_send_message(self):
         """Check if the sender can send messages in this scene."""
         # If sender is None (deleted), can't validate permissions
@@ -416,8 +448,11 @@ class Message(models.Model):
             return True
 
         # Check if sender is a scene participant through their characters
-        user_characters = self.sender.characters.filter(campaign=campaign)
-        scene_participants = self.scene.participants.all()
+        # Optimize with select_related to avoid additional queries
+        user_characters = self.sender.characters.filter(
+            campaign=campaign
+        ).select_related("campaign")
+        scene_participants = self.scene.participants.select_related("campaign").all()
 
         return user_characters.filter(
             id__in=scene_participants.values_list("id", flat=True)

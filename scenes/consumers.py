@@ -135,8 +135,8 @@ class SceneChatConsumer(AsyncWebsocketConsumer):
                 await self.send_error("Message content cannot be empty")
                 return
 
-            if len(content) > 2000:  # Match frontend limit
-                await self.send_error("Message too long (max 2000 characters)")
+            if len(content) > 20000:  # Match model limit
+                await self.send_error("Message too long (max 20,000 characters)")
                 return
 
             # Content filtering
@@ -224,13 +224,39 @@ class SceneChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def is_content_inappropriate(self, content: str) -> bool:
-        """Check if message content is inappropriate."""
-        # Basic content filtering - can be enhanced
+        """
+        Check if message content is inappropriate.
+
+        This is a basic implementation that can be extended based on community needs.
+        For production use, consider integrating with:
+        - Content moderation APIs (e.g., Perspective API)
+        - Custom word filtering
+        - Machine learning-based content classification
+        """
+        # Basic spam/abuse detection patterns
+        # This list is intentionally minimal - expand based on actual community needs
         blocked_patterns = [
-            # Add patterns for inappropriate content
-            # This is a placeholder - implement according to community standards
+            # Common spam indicators (adjust based on community standards)
+            "http://",  # Block unencrypted links (HTTPS is safer)
+            "www.",  # Simple URL detection (can be refined)
         ]
 
+        # Check for excessive repetition (basic spam detection)
+        if len(content) > 100:
+            # Check if message has excessive character repetition
+            char_counts = {}
+            for char in content.lower():
+                if char.isalnum():
+                    char_counts[char] = char_counts.get(char, 0) + 1
+
+            # If any character appears more than 50% of the message, likely spam
+            max_char_ratio = (
+                max(char_counts.values()) / len(content) if char_counts else 0
+            )
+            if max_char_ratio > 0.5:
+                return True
+
+        # Check against blocked patterns
         content_lower = content.lower()
         for pattern in blocked_patterns:
             if pattern in content_lower:

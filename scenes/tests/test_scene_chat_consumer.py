@@ -434,7 +434,7 @@ class SceneChatConsumerTestCase(TransactionTestCase):
             "message": {
                 "message_type": "PUBLIC",
                 "character": self.character1.id,
-                "content": "A" * 50000,  # 50k characters
+                "content": "A" * 25000,  # 25k characters (exceeds 20k limit)
             },
         }
         await communicator.send_json_to(message_data)

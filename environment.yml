@@ -61,6 +61,8 @@ dependencies:
     # Development tools
     - django-stubs
     - djangorestframework-stubs
+    # Security
+    - bleach  # HTML sanitization for XSS prevention
     # Testing
     - factory-boy
     - faker

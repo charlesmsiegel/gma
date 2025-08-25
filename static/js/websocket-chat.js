@@ -167,7 +167,15 @@ class SceneChatWebSocket {
         // Get CSRF token
         const csrfToken = this.getCSRFToken();
         if (!csrfToken) {
-            throw new Error('CSRF token not found');
+            // Attempt to reload page to get fresh CSRF token
+            console.warn('CSRF token not found, attempting to reload page for fresh token');
+            if (this.options.onCSRFError) {
+                this.options.onCSRFError();
+            } else {
+                // Default fallback - show user-friendly error
+                alert('Security token expired. Please refresh the page and try again.');
+            }
+            throw new Error('CSRF token not found - page refresh required');
         }
 
         // Prepare message with CSRF token
