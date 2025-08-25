@@ -773,10 +773,15 @@ class IntegrationTest(TestCase):
         result = check_requirement(character, requirement)
         self.assertTrue(result.success)
 
+        # Create a separate campaign for WoD character to avoid character limit
+        wod_campaign = Campaign.objects.create(
+            name="WoD Campaign", description="WoD Test", owner=self.user
+        )
+
         # Test with WoDCharacter
         wod_char = WoDCharacter.objects.create(
             name="WoD Character",
-            campaign=self.campaign,
+            campaign=wod_campaign,
             player_owner=self.user,
             game_system="World of Darkness",
             willpower=6,
@@ -786,10 +791,15 @@ class IntegrationTest(TestCase):
         result = check_requirement(wod_char, requirement)
         self.assertTrue(result.success)
 
+        # Create another campaign for Mage character
+        mage_campaign = Campaign.objects.create(
+            name="Mage Campaign", description="Mage Test", owner=self.user
+        )
+
         # Test with MageCharacter
         mage_char = MageCharacter.objects.create(
             name="Mage Character",
-            campaign=self.campaign,
+            campaign=mage_campaign,
             player_owner=self.user,
             game_system="Mage: The Ascension",
             willpower=5,
@@ -812,9 +822,14 @@ class IntegrationTest(TestCase):
 
     def test_realistic_requirement_scenario(self):
         """Test a realistic complex requirement scenario."""
+        # Create a separate campaign for this test
+        advanced_campaign = Campaign.objects.create(
+            name="Advanced Campaign", description="Advanced Test", owner=self.user
+        )
+        
         mage = MageCharacter.objects.create(
             name="Advanced Mage",
-            campaign=self.campaign,
+            campaign=advanced_campaign,
             player_owner=self.user,
             game_system="Mage: The Ascension",
             willpower=7,
