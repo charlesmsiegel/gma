@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "scenes",
     "locations",
     "items",
+    "prerequisites",
     "api",
 ]
 

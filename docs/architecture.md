@@ -11,6 +11,7 @@
    - [Location Domain Models](#location-domain-models)
    - [Location Management Interface Architecture](#location-management-interface-architecture)
    - [Item Domain Models](#item-domain-models)
+   - [Prerequisite System Architecture](#prerequisite-system-architecture)
 7. [Frontend Integration](#frontend-integration)
 8. [Real-Time Architecture](#real-time-architecture)
 9. [Security Architecture](#security-architecture)
@@ -62,6 +63,7 @@ The GMA system manages:
 - **Content Organization**: Scenes, locations, items, characters
 - **Location Management**: Hierarchical location trees with character ownership
 - **Scene Management**: Status workflow system with participant management and role-based permissions
+- **Prerequisite System**: Comprehensive requirement validation for character advancement, item usage, and game mechanics
 - **State Management**: Workflow transitions for campaigns, scenes, and characters
 
 ## Service Layer Architecture
@@ -1943,6 +1945,397 @@ The Item API provides comprehensive REST endpoints for equipment and treasure ma
 - ✅ **Permission Testing**: Role-based access control validation
 - ✅ **Security Testing**: Information leakage and boundary condition testing
 - ✅ **Filter Testing**: All query parameter combinations and validation
+
+### Prerequisite System Architecture
+
+**Location**: `prerequisites/` - Complete prerequisite validation system (Issues #188-192)
+
+The prerequisite system provides comprehensive requirement validation for character advancement, item usage, spell casting, and other game mechanics. It combines structured JSON requirements with intuitive helper functions, a powerful checking engine, and advanced visual building tools.
+
+#### System Components
+
+**1. Requirement Helpers (Issue #188)**
+Location: `prerequisites/helpers.py` - 408 lines
+
+Provides developer-friendly functions for building JSON requirement structures:
+
+```python
+from prerequisites.helpers import trait_req, has_item, any_of, all_of, count_with_tag
+
+# Simple requirements
+strength_req = trait_req("strength", minimum=3)
+sword_req = has_item("weapons", name="Magic Sword")
+
+# Complex logical combinations
+combat_mastery = all_of(
+    any_of(
+        trait_req("strength", minimum=4),
+        trait_req("dexterity", minimum=4)
+    ),
+    has_item("weapons", name="Master's Blade"),
+    count_with_tag("achievements", "combat", minimum=5)
+)
+```
+
+**Key Helper Functions:**
+- `trait_req(name, minimum, maximum, exact)`: Character trait requirements
+- `has_item(field, id, name, **kwargs)`: Item possession requirements
+- `any_of(*requirements)`: Logical OR combinations (at least one must pass)
+- `all_of(*requirements)`: Logical AND combinations (all must pass)
+- `count_with_tag(model, tag, minimum, maximum)`: Counting requirements for tagged objects
+
+**2. Checking Engine (Issue #189)**
+Location: `prerequisites/checkers.py` - 696 lines
+
+Comprehensive validation engine with recursive checking and detailed result reporting:
+
+```python
+from prerequisites.checkers import RequirementChecker
+
+checker = RequirementChecker()
+
+# Simple requirement checking
+result = checker.check_requirement(character, strength_req)
+print(f"Result: {result.passed} - {result.message}")
+
+# Complex requirement checking with detailed breakdown
+result = checker.check_requirement(character, combat_mastery)
+for detail in result.details:
+    print(f"  {detail.requirement_type}: {detail.passed} - {detail.message}")
+```
+
+**RequirementChecker Features:**
+- **Polymorphic Character Support**: Works with Character → WoDCharacter → MageCharacter hierarchy
+- **Recursive Logic**: Handles nested any/all combinations up to 5 levels deep
+- **Performance Optimized**: Efficient queries with minimal database hits
+- **Extensible Registry**: Plugin system for custom requirement types
+- **Detailed Results**: Complete success/failure breakdown with human-readable messages
+
+**Supported Requirement Types:**
+- `trait`: Character attributes, abilities, skills, and custom traits
+- `has`: Object possession (items, relationships, achievements)
+- `any`: Logical OR - at least one sub-requirement must pass
+- `all`: Logical AND - all sub-requirements must pass
+- `count_tag`: Count objects with specific tags (minimum/maximum constraints)
+
+**3. Visual Builder UI (Issue #190)**
+Location: `prerequisites/widgets.py` - Django form widget integration
+
+Seamless Django form integration for requirement building:
+
+```python
+from prerequisites.widgets import PrerequisiteBuilderWidget
+
+class MyModelForm(forms.ModelForm):
+    requirements = forms.JSONField(widget=PrerequisiteBuilderWidget)
+
+    class Meta:
+        model = MyModel
+        fields = ['name', 'requirements']
+```
+
+**Widget Features:**
+- **Django Integration**: Drop-in widget for JSONField forms
+- **Visual Interface**: User-friendly requirement building UI
+- **Real-time Validation**: Live JSON structure validation
+- **Bootstrap Styling**: Consistent with GMA design system
+- **Template Rendering**: Custom template with proper CSRF handling
+
+**4. Advanced Drag-Drop Interface (Issue #191)**
+Location: 7 JavaScript files (4,112 lines total)
+
+Professional drag-and-drop interface for complex requirement building:
+
+**JavaScript Architecture:**
+- **`prerequisite-builder.js`** (330 lines): Main coordination and API integration
+- **`drag-drop-builder.js`** (478 lines): Core drag-drop engine with event handling
+- **`drag-drop-canvas.js`** (794 lines): Canvas management, rendering, and validation
+- **`drag-drop-palette.js`** (477 lines): Component palette and toolbox management
+- **`accessibility-manager.js`** (735 lines): WCAG 2.1 AA compliance and screen reader support
+- **`touch-handler.js`** (707 lines): Mobile touch interactions and gesture recognition
+- **`undo-redo-manager.js`** (591 lines): Action history and state management
+
+**Advanced Features:**
+- **Visual Building**: Drag-and-drop requirement composition with component palette
+- **Touch Support**: Full mobile compatibility with touch gestures and haptic feedback
+- **Accessibility**: Complete WCAG 2.1 AA compliance with keyboard navigation and screen readers
+- **Undo/Redo System**: Full action history with unlimited undo levels
+- **Real-time Preview**: Live JSON generation with syntax highlighting and validation
+- **Component Library**: Pre-built requirement components with smart defaults
+- **Auto-Layout**: Intelligent requirement tree visualization and layout optimization
+
+**5. Admin Interface (Issue #192)**
+Location: `prerequisites/admin.py` - 477 lines
+
+Comprehensive Django admin integration with visual tools and bulk operations:
+
+**Admin Features:**
+- **Visual Builder Integration**: PrerequisiteBuilderWidget embedded in admin forms
+- **List Display**: Requirement summaries with complexity indicators and type badges
+- **Advanced Filtering**: By content type, requirement complexity, description keywords
+- **Search Functionality**: Full-text search across descriptions and JSON requirements
+- **Permission System**: Role-based access with campaign scoping
+- **Bulk Operations**: Copy requirements, template application, validation reporting
+
+**Bulk Operations:**
+- **Copy Prerequisites**: Duplicate requirement structures across objects
+- **Bulk Validation**: Test multiple characters against requirement sets
+- **Template Application**: Apply common requirements to multiple objects
+- **Export/Import**: JSON export for backup, migration, and sharing
+- **Validation Reports**: Campaign-wide requirement analysis and reporting
+
+#### Data Models
+
+**Prerequisite Model**
+Location: `prerequisites/models/__init__.py`
+
+Core model supporting universal attachment via GenericForeignKey:
+
+```python
+class Prerequisite(TimestampedMixin, models.Model):
+    description = CharField(max_length=500, validators=[validate_description])
+    requirements = JSONField(default=dict, blank=True)
+
+    # GenericForeignKey for universal attachment
+    content_type = ForeignKey(ContentType, on_delete=SET_NULL, null=True, blank=True)
+    object_id = PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    class Meta:
+        indexes = [
+            Index(fields=["content_type", "object_id"], name="prereq_content_idx"),
+            Index(fields=["content_type"], name="prereq_content_type_idx"),
+        ]
+```
+
+**Key Features:**
+- **Universal Attachment**: Works with characters, items, locations, or any Django model
+- **JSON Requirements**: Structured requirement storage with comprehensive validation
+- **Audit Tracking**: TimestampedMixin provides creation/modification history
+- **Database Optimization**: Strategic indexing for GenericForeignKey performance
+- **Validation Pipeline**: Multi-layer validation from form to database level
+
+**PrerequisiteCheckResult Model**
+Audit trail for requirement checking operations:
+
+```python
+class PrerequisiteCheckResult(TimestampedMixin, models.Model):
+    content_object = GenericForeignKey("content_type", "object_id")  # Object checked
+    character = ForeignKey("characters.Character", on_delete=CASCADE)  # Character tested
+    requirements = JSONField()  # Requirements that were evaluated
+    result = BooleanField()  # Pass/fail result
+    failure_reasons = JSONField(default=list, blank=True)  # Detailed failure information
+    checked_at = DateTimeField(auto_now_add=True)  # Timestamp
+```
+
+#### Integration Architecture
+
+**Character System Integration**
+Seamless integration with polymorphic character hierarchy:
+
+```python
+# Works with all character types transparently
+base_character = Character.objects.get(id=1)
+wod_character = WoDCharacter.objects.get(id=2)
+mage_character = MageCharacter.objects.get(id=3)
+
+# Same checking API for all character types
+checker = RequirementChecker()
+results = [
+    checker.check_requirement(base_character, requirement),
+    checker.check_requirement(wod_character, requirement),
+    checker.check_requirement(mage_character, requirement)
+]
+```
+
+**Campaign Scoping**
+Prerequisites respect campaign boundaries and permissions:
+
+```python
+# Campaign-specific requirements
+campaign_specific_req = Prerequisite.objects.create(
+    description="Chronicle mastery required",
+    requirements=all_of(
+        trait_req("chronicle_reputation", minimum=3),
+        count_with_tag("story_beats", "completed", minimum=10)
+    ),
+    content_object=campaign_specific_item
+)
+```
+
+**API Integration**
+RESTful endpoints for requirement management (future implementation):
+
+```python
+# Planned API endpoints
+GET    /api/prerequisites/                    # List prerequisites with filtering
+POST   /api/prerequisites/                   # Create new requirement
+GET    /api/prerequisites/{id}/              # Retrieve specific requirement
+PUT    /api/prerequisites/{id}/              # Update requirement
+DELETE /api/prerequisites/{id}/              # Delete requirement
+POST   /api/prerequisites/{id}/check/        # Check requirement against character
+POST   /api/prerequisites/bulk-check/        # Batch requirement checking
+GET    /api/prerequisites/templates/         # Common requirement templates
+```
+
+#### Performance Architecture
+
+**Query Optimization Strategies:**
+- **N+1 Prevention**: Efficient checking with minimal database operations
+- **Bulk Operations**: Batch processing for multiple character/requirement combinations
+- **Strategic Indexing**: GenericForeignKey optimization with composite indexes
+- **Caching Layer**: Redis caching for frequently-accessed requirements
+- **Lazy Evaluation**: Deferred requirement resolution where appropriate
+
+**Scalability Patterns:**
+- **Registry Design**: Extensible requirement type system for custom game mechanics
+- **Depth Limits**: Maximum 5 levels of nested requirements for performance control
+- **JSON Optimization**: Efficient PostgreSQL JSON field operations
+- **Query Batching**: Grouped database operations for complex requirement trees
+
+#### Security Model
+
+**JSON Structure Validation**
+Location: `prerequisites/validators.py`
+
+Comprehensive validation pipeline preventing malicious or malformed requirements:
+
+```python
+from prerequisites.validators import validate_requirements
+
+# Multi-layer validation
+try:
+    validate_requirements(requirement_json)
+except ValidationError as e:
+    # Handle validation failure
+    return JsonResponse({"error": str(e)}, status=400)
+```
+
+**Protection Features:**
+- **Structure Validation**: Prevents malformed JSON and infinite recursion
+- **Type Safety**: Validates requirement types and parameter constraints
+- **XSS Prevention**: Safe JSON rendering in admin widgets
+- **Input Sanitization**: Comprehensive cleaning of user-provided data
+- **Recursion Limits**: Prevents stack overflow attacks through nested requirements
+
+**Access Control Architecture:**
+- **Campaign Isolation**: Requirements scoped to campaign membership
+- **Role-Based Permissions**: Admin-only access to bulk operations
+- **Content Security**: GenericForeignKey respects source model permissions
+- **Audit Trail**: Complete tracking of requirement creation and modifications
+
+#### Testing Coverage
+
+Comprehensive test suite with **417 test methods across 16 test files**:
+
+**Test Organization:**
+- **`test_helpers.py`**: Requirement building function validation (48 tests)
+- **`test_checkers.py`**: Requirement checking engine logic (73 tests)
+- **`test_models.py`**: Prerequisite model validation and constraints (52 tests)
+- **`test_admin.py`**: Admin interface functionality and bulk operations (41 tests)
+- **`test_visual_builder.py`**: Widget integration and form rendering (29 tests)
+- **`test_admin_widgets.py`**: Admin widget customization (22 tests)
+- **`test_javascript_components.py`**: Frontend component functionality (38 tests)
+- **`test_drag_drop_*`**: Drag-drop interface testing (114 tests across 4 files)
+
+**Coverage Areas:**
+- **Requirement Building**: All helper functions with edge cases and error conditions
+- **Character Integration**: Full polymorphic character hierarchy testing
+- **Complex Logic**: Nested any/all combinations with deep recursion validation
+- **Performance**: Database query count validation and optimization verification
+- **Security**: XSS prevention, input sanitization, and permission boundary testing
+- **Accessibility**: WCAG 2.1 AA compliance verification with automated testing
+- **Mobile Support**: Touch interaction testing and responsive design validation
+- **Admin Integration**: Bulk operations, filtering, and permission enforcement
+
+#### Usage Patterns
+
+**Character Advancement Requirements**
+```python
+# Multi-tier advancement system
+advancement_req = all_of(
+    trait_req("experience_points", minimum=50),
+    trait_req("current_level", maximum=4),
+    any_of(
+        has_item("training", name="Combat Training Certificate"),
+        count_with_tag("achievements", "combat", minimum=3),
+        all_of(
+            trait_req("mentor_approval", exact=1),
+            has_item("recommendations", name="Master's Endorsement")
+        )
+    )
+)
+```
+
+**Spell/Power Prerequisites**
+```python
+# Complex magical requirements
+fireball_mastery_req = all_of(
+    trait_req("arete", minimum=3),
+    trait_req("forces", minimum=2),
+    trait_req("prime", minimum=1),
+    any_of(
+        has_item("foci", name="Fire Focus"),
+        trait_req("avatar_resonance", exact=1)  # Fire resonance
+    ),
+    count_with_tag("spells", "forces", minimum=5)
+)
+```
+
+**Item Usage Requirements**
+```python
+# Artifact attunement system
+legendary_artifact_req = all_of(
+    trait_req("willpower", minimum=6),
+    any_of(
+        trait_req("arete", minimum=4),
+        count_with_tag("backgrounds", "avatar", minimum=3)
+    ),
+    trait_req("artifact_compatibility", exact=1),
+    has_item("attunement_ritual", name="Legendary Binding")
+)
+```
+
+#### Extensibility Framework
+
+**Custom Requirement Types**
+Registry pattern supports game-specific requirement checkers:
+
+```python
+from prerequisites.checkers import RequirementChecker
+
+@RequirementChecker.register("resonance_match")
+def check_resonance_requirement(character, requirement_data):
+    """Custom resonance matching for Mage characters."""
+    required_resonance = requirement_data.get("resonance")
+    character_resonance = getattr(character, "resonance", None)
+
+    passed = character_resonance == required_resonance
+    message = f"Resonance {'matches' if passed else 'does not match'} requirement"
+
+    return RequirementCheckResult(passed=passed, message=message)
+```
+
+**Future Game System Support**
+Ready for expansion to additional RPG systems:
+
+```python
+# D&D 5e integration (future)
+dnd_requirements = all_of(
+    trait_req("level", minimum=5),
+    trait_req("strength", minimum=13),
+    has_item("class_features", name="Extra Attack"),
+    count_with_tag("feats", "combat", minimum=2)
+)
+
+# World of Darkness expansion
+werewolf_requirements = all_of(
+    trait_req("gnosis", minimum=3),
+    trait_req("rage", minimum=4),
+    has_item("totems", name="Spirit Guide"),
+    count_with_tag("gifts", "tribal", minimum=5)
+)
+```
 
 ## Frontend Integration
 

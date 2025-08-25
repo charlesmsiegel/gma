@@ -1,0 +1,60 @@
+{% load static %}
+
+<div class="prerequisite-builder-widget"
+     id="{{ widget.attrs.id }}"
+     data-widget-type="prerequisite-builder"
+     data-field-name="{{ widget.name }}">
+
+    <!-- Hidden input field for actual form data -->
+    <input type="hidden"
+           name="{{ widget.name }}"
+           id="{{ widget.attrs.id }}_input"
+           value="{{ widget.value|default:'' }}">
+
+    <!-- Visual builder interface -->
+    <div class="prerequisite-builder-container">
+        {% if widget.initial_data %}
+            <div class="existing-requirements" data-initial-requirements="{{ widget.value }}">
+                <h4>Current Requirements:</h4>
+                <div class="requirement-display">
+                    <pre>{{ widget.initial_data|pprint }}</pre>
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No requirements defined</p>
+                <button type="button" class="btn btn-primary add-first-requirement">
+                    Add First Requirement
+                </button>
+            </div>
+        {% endif %}
+
+        <!-- Requirement building area -->
+        <div class="requirement-builder"
+             data-requirement-type="{% if widget.initial_data %}{{ widget.initial_data.type }}{% endif %}">
+
+            <div class="requirement-controls">
+                <button type="button" class="btn btn-sm btn-success" id="add-requirement-btn">
+                    Add Requirement
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" id="clear-requirements-btn">
+                    Clear All
+                </button>
+            </div>
+
+            <!-- Dynamic requirement blocks will be added here -->
+            <div class="requirement-blocks" id="requirement-blocks">
+                <!-- Requirements rendered here via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Include prerequisite builder JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof PrerequisiteBuilder !== 'undefined') {
+                new PrerequisiteBuilder('{{ widget.name }}', {{ widget.value|default:"null" }});
+            }
+        });
+    </script>
+</div>

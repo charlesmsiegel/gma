@@ -1,0 +1,85 @@
+{% load static %}
+
+<div class="prerequisite-builder" data-field-name="{{ field_name }}">
+    {% if initial_data %}
+        <div class="current-requirements">
+            <h5>Current Requirements:</h5>
+            {% if 'trait' in initial_data %}
+                <div class="requirement-group" data-requirement-type="trait">
+                    <div class="requirement-block">
+                        <strong>Trait:</strong> {{ initial_data.trait.name }}
+                        {% if initial_data.trait.min %} (minimum: {{ initial_data.trait.min }}){% endif %}
+                        {% if initial_data.trait.max %} (maximum: {{ initial_data.trait.max }}){% endif %}
+                    </div>
+                </div>
+            {% elif 'has' in initial_data %}
+                <div class="requirement-group" data-requirement-type="has">
+                    <div class="requirement-block">
+                        <strong>Has:</strong> {{ initial_data.has.field }}
+                        {% if initial_data.has.name %} "{{ initial_data.has.name }}"{% endif %}
+                    </div>
+                </div>
+            {% elif 'any' in initial_data %}
+                <div class="requirement-group" data-requirement-type="any">
+                    <div class="requirement-block">
+                        <strong>Any:</strong>
+                        <ul>
+                        {% for req in initial_data.any %}
+                            {% for req_type, req_data in req.items %}
+                                <li>{{ req_type }}:
+                                {% if req_type == 'trait' %}
+                                    {{ req_data.name }}
+                                {% elif req_type == 'has' %}
+                                    {{ req_data.field }}{% if req_data.name %} "{{ req_data.name }}"{% endif %}
+                                {% else %}
+                                    {{ req_data }}
+                                {% endif %}
+                                </li>
+                            {% endfor %}
+                        {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% elif 'all' in initial_data %}
+                <div class="requirement-group" data-requirement-type="all">
+                    <div class="requirement-block">
+                        <strong>All:</strong>
+                        <ul>
+                        {% for req in initial_data.all %}
+                            {% for req_type, req_data in req.items %}
+                                <li>{{ req_type }}:
+                                {% if req_type == 'trait' %}
+                                    {{ req_data.name }}
+                                {% elif req_type == 'has' %}
+                                    {{ req_data.field }}{% if req_data.name %} "{{ req_data.name }}"{% endif %}
+                                {% else %}
+                                    {{ req_data }}
+                                {% endif %}
+                                </li>
+                            {% endfor %}
+                        {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% else %}
+                <div class="requirement-group" data-requirement-type="">
+                    <div class="requirement-block">
+                        <em>Unknown requirement type</em>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="empty-requirements">
+            <p>No requirements defined</p>
+            <button type="button" class="btn btn-primary" id="add-first-requirement">
+                Add First Requirement
+            </button>
+        </div>
+    {% endif %}
+
+    <div class="builder-controls">
+        <button type="button" class="btn btn-success">Add Requirement</button>
+        <button type="button" class="btn btn-secondary">Clear</button>
+    </div>
+</div>
