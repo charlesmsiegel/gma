@@ -13,13 +13,15 @@
 9. [Location API](#location-api)
 10. [Item API](#item-api)
 11. [Scene API](#scene-api)
-12. [Source Reference API](#source-reference-api)
-13. [Data Models](#data-models)
-14. [Testing the API](#testing-the-api)
+12. [Scene Message History API](#scene-message-history-api)
+13. [WebSocket Chat API](#websocket-chat-api)
+14. [Source Reference API](#source-reference-api)
+15. [Data Models](#data-models)
+16. [Testing the API](#testing-the-api)
 
 ## Overview
 
-The GMA API provides RESTful endpoints for campaign management, user authentication, and real-time collaboration features. All endpoints return JSON responses and follow consistent patterns for error handling and data formatting.
+The GMA API provides RESTful endpoints for campaign management, user authentication, and real-time scene chat communication. All endpoints return JSON responses and follow consistent patterns for error handling and data formatting. The real-time chat system uses WebSocket connections for live message broadcasting with comprehensive rate limiting and permission controls.
 
 ### Base URL
 
@@ -2165,6 +2167,220 @@ POST /api/scenes/15/add_participant/
 
 # Remove character from scene
 DELETE /api/scenes/15/participants/12/
+```
+
+### Scene Message History API
+
+#### Get Message History
+
+**GET** `/api/scenes/{id}/messages/`
+
+Retrieve message history for a scene with advanced filtering, pagination, and permission-based visibility.
+
+**Path Parameters:**
+- `id` (integer): Scene ID
+
+**Query Parameters:**
+- `message_type` (string): Filter by message type(s) - supports single type or comma-separated list (`PUBLIC`, `OOC`, `PRIVATE`, `SYSTEM`)
+- `type` (string): Alias for `message_type` parameter
+- `character_id` (integer): Filter messages by character
+- `sender_id` (integer): Filter messages by sender user
+- `search` (string): Search message content (case-insensitive)
+- `since` (ISO datetime): Messages after this timestamp
+- `until` (ISO datetime): Messages before this timestamp
+- `page` (integer): Page number for pagination
+- `page_size` (integer): Items per page (max 100, default 20)
+
+**Permission-Based Filtering:**
+- **Campaign Owners/GMs**: Can see all message types including private messages
+- **Players/Observers**: Can see PUBLIC, OOC, SYSTEM messages, and private messages where they are sender or recipient
+
+**Request Examples:**
+```bash
+# Get recent public messages
+GET /api/scenes/15/messages/?message_type=PUBLIC&page=1&page_size=50
+
+# Search for specific content
+GET /api/scenes/15/messages/?search=dragon&message_type=PUBLIC,OOC
+
+# Get messages from specific character
+GET /api/scenes/15/messages/?character_id=23&since=2024-01-15T10:00:00Z
+
+# Get multiple message types with date range
+GET /api/scenes/15/messages/?type=PUBLIC,PRIVATE&until=2024-01-20T18:00:00Z
+```
+
+**Success Response (200):**
+```json
+{
+  "count": 156,
+  "next": "http://localhost:8080/api/scenes/15/messages/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 89,
+      "content": "I cast *Fireball* at the approaching enemies!",
+      "message_type": "PUBLIC",
+      "created_at": "2024-01-15T14:30:25.123456Z",
+      "character": {
+        "id": 23,
+        "name": "Gandalf the Grey",
+        "npc": false
+      },
+      "sender": {
+        "id": 5,
+        "username": "playerone",
+        "display_name": "Player One"
+      },
+      "recipients": [],
+      "scene": {
+        "id": 15,
+        "name": "Battle at Helm's Deep",
+        "status": "ACTIVE"
+      }
+    },
+    {
+      "id": 88,
+      "content": "((Rolling initiative...))",
+      "message_type": "OOC",
+      "created_at": "2024-01-15T14:29:10.654321Z",
+      "character": null,
+      "sender": {
+        "id": 1,
+        "username": "gamemaster",
+        "display_name": "GM"
+      },
+      "recipients": [],
+      "scene": {
+        "id": 15,
+        "name": "Battle at Helm's Deep",
+        "status": "ACTIVE"
+      }
+    },
+    {
+      "id": 87,
+      "content": "Secret plan discussed with Aragorn",
+      "message_type": "PRIVATE",
+      "created_at": "2024-01-15T14:25:45.987654Z",
+      "character": {
+        "id": 23,
+        "name": "Gandalf the Grey",
+        "npc": false
+      },
+      "sender": {
+        "id": 5,
+        "username": "playerone",
+        "display_name": "Player One"
+      },
+      "recipients": [
+        {
+          "id": 7,
+          "username": "playertwo",
+          "display_name": "Player Two"
+        }
+      ],
+      "scene": {
+        "id": 15,
+        "name": "Battle at Helm's Deep",
+        "status": "ACTIVE"
+      }
+    }
+  ]
+}
+```
+
+**Error Responses:**
+
+**401 Unauthorized:**
+```json
+{
+  "detail": "Authentication credentials were not provided."
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "detail": "Scene not found."
+}
+```
+
+**Message Type Reference:**
+- **PUBLIC**: In-character messages requiring character attribution
+- **OOC**: Out-of-character messages from players (no character required)
+- **PRIVATE**: Private messages between specific users with recipient list
+- **SYSTEM**: GM/Owner-only system messages for game mechanics
+
+### WebSocket Chat API
+
+The real-time chat system uses WebSocket connections for live message broadcasting.
+
+**WebSocket Endpoint:**
+```
+ws://localhost:8080/ws/scenes/{scene_id}/chat/
+```
+
+**Authentication:** Required - users must be authenticated and have scene access
+
+**Message Format:**
+
+**Send Message:**
+```json
+{
+  "type": "chat_message",
+  "message": {
+    "content": "Hello, adventurers!",
+    "message_type": "PUBLIC",
+    "character": 23,
+    "recipients": []  // For PRIVATE messages only
+  }
+}
+```
+
+**Receive Message:**
+```json
+{
+  "type": "chat.message",
+  "message_type": "PUBLIC",
+  "content": "Hello, adventurers!",
+  "character": {
+    "id": 23,
+    "name": "Gandalf the Grey"
+  },
+  "sender": {
+    "id": 5,
+    "username": "playerone"
+  },
+  "recipients": [],
+  "timestamp": "2024-01-15T14:30:25.123456Z",
+  "id": 89
+}
+```
+
+**Rate Limiting:**
+- **Default Users**: 10 messages per minute
+- **Staff Users**: 30 messages per minute
+- **System Messages**: 100 messages per minute
+
+**Error Handling:**
+```json
+{
+  "type": "error",
+  "error": "Rate limit exceeded. Try again in 45 seconds."
+}
+```
+
+**Heartbeat (Connection Health):**
+```json
+// Send
+{
+  "type": "heartbeat"
+}
+
+// Receive
+{
+  "type": "heartbeat_response"
+}
 ```
 
 ## Source Reference API

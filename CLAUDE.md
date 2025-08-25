@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Game Master Application (GMA) - A web-based tabletop RPG campaign management system focusing on World of Darkness games, specifically Mage: the Ascension for MVP.
+Game Master Application (GMA) - A web-based tabletop RPG campaign management system focusing on World of Darkness games, specifically Mage: the Ascension for MVP. Features comprehensive character management, hierarchical locations, item tracking, and real-time chat communication.
 
 ## Technology Stack
 
 ### Backend
 
 - **Django 5.2.4+** with Django REST Framework for API development
-- **Django Channels** for WebSocket support (real-time chat)
+- **Django Channels** for WebSocket support (real-time scene chat with rate limiting)
 - **PostgreSQL 16** as primary database
 - **Redis 7.2** for caching and Channels layer
 - **django-polymorphic** for game system character inheritance
@@ -21,7 +21,7 @@ Game Master Application (GMA) - A web-based tabletop RPG campaign management sys
 
 - **Django Templates** with Bootstrap 5 for responsive UI
 - **Vanilla JavaScript** for interactive features
-- **WebSocket integration** for real-time features
+- **WebSocket integration** for real-time scene chat with message history API
 
 ### Development Environment
 
@@ -213,7 +213,7 @@ The project follows a domain-driven monolithic architecture with these Django ap
 
 - **users**: Authentication, profiles, theme management, campaign role management
 - **campaigns**: Campaign creation, game system selection, membership, invitations, settings
-- **scenes**: Scene lifecycle, character participation, real-time features (basic implementation)
+- **scenes**: Scene lifecycle, character participation, comprehensive real-time chat system with WebSocket consumer, message history API, and rate limiting
 - **characters**: Polymorphic character models (Character → WoDCharacter → MageCharacter), game system logic
 - **locations**: Hierarchical location management with ownership, NPC control, bulk operations
 - **items**: Polymorphic item management with single character ownership, soft delete, transfer tracking, complete REST API
@@ -365,12 +365,45 @@ The Location system provides hierarchical organization of campaign areas with co
   - Circular reference prevention
   - Database integrity and performance
 
-### Real-Time Architecture
+### Real-Time Chat Architecture
 
-- Character-based scene architecture
-- Single WebSocket connection per player
-- Dynamic subscriptions to multiple scene channels
-- Django Channels for WebSocket message routing
+The GMA implements a comprehensive real-time chat system for scene communication with the following key features:
+
+#### Message Model
+- **Message Types**: PUBLIC (IC with character), OOC (out-of-character), PRIVATE (with recipients), SYSTEM (GM-only)
+- **Character Attribution**: IC messages require character selection; OOC messages are player-based
+- **Recipient Management**: Private messages support multiple recipients with permission checking
+- **Content Validation**: 2000-character limit, Markdown support, inappropriate content filtering
+
+#### WebSocket Consumer (SceneChatConsumer)
+- **Authentication**: Secure WebSocket connections with user authentication required
+- **Permission Checking**: Role-based access control (OWNER → GM → PLAYER → OBSERVER)
+- **Rate Limiting**: Configurable limits (10/minute default, 30/minute staff, 100/minute system)
+- **Connection Management**: Auto-reconnection, heartbeat monitoring, graceful error handling
+
+#### Message History API
+- **REST Endpoint**: `GET /api/scenes/{id}/messages/` with comprehensive filtering
+- **Advanced Filtering**: Message type, sender, character, date range, search functionality
+- **Permission Integration**: Messages filtered by user role and visibility rules
+- **Pagination**: Efficient pagination for large message histories
+
+#### JavaScript Chat Interface
+- **Real-time Updates**: WebSocket message handling with automatic reconnection
+- **Character Selection**: Dynamic character dropdown for IC messages
+- **Message Formatting**: Timestamp display, message type indicators, character attribution
+- **Rate Limit Feedback**: Real-time rate limit status with user-friendly messaging
+- **Accessibility**: Screen reader support, keyboard navigation, ARIA live regions
+
+#### Rate Limiting System
+- **Multi-tier Limits**: Different rate limits based on user roles and message types
+- **Sliding Window**: Memory-efficient rate limiting with Redis backend support
+- **Security Features**: Content filtering, spam prevention, abuse protection
+
+#### WebSocket Infrastructure
+- **Routing**: `/ws/scenes/{scene_id}/chat/` endpoint pattern
+- **Channel Groups**: Scene-based message broadcasting
+- **Message Broadcasting**: Real-time delivery to all connected scene participants
+- **Error Handling**: Comprehensive error messages with security considerations
 
 ### API Design
 
@@ -408,7 +441,7 @@ Tests are organized by functionality and complexity:
 - **characters/tests/**: Polymorphic character models, forms, views, ownership, FSM integration
 - **items/tests/**: Item management, single ownership, polymorphic conversion, bulk operations
 - **locations/tests/**: Hierarchical locations, NPC ownership, admin bulk operations, permissions
-- **scenes/tests/**: Basic scene models and functionality
+- **scenes/tests/**: Scene models, WebSocket consumer functionality, message model validation, chat integration, rate limiting, and real-time communication
 - **core/tests/**: Management commands, health checks, WebSocket connections, mixins, source references
 
 ### Running Tests
@@ -450,9 +483,11 @@ ALWAYS use `make test` it will check all tests to avoid regressions and you will
 - ✅ WoD character base class implementation
 - ✅ MageCharacter with arete, quintessence, and paradox
 - ✅ Scene API with participant management and status workflows
+- ✅ Comprehensive real-time chat system with WebSocket consumer and message history API
+- ✅ Rate limiting system for chat messages with role-based limits
+- ✅ JavaScript chat interface with character selection and accessibility features
 - 🚧 WoD dice rolling system
 - 🚧 Game system selection validation
-- 🚧 Real-time scene features
 
 ### Phase 3: Mage Implementation (PLANNED)
 

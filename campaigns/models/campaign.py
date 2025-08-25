@@ -281,6 +281,27 @@ class Campaign(models.Model):
         """
         return self.has_role(user, "OBSERVER")
 
+    def add_member(self, user: AbstractUser, role: str) -> "CampaignMembership":
+        """Add a member to the campaign with the specified role.
+
+        This is a convenience method that delegates to MembershipService.
+        For complex membership operations, use MembershipService directly.
+
+        Args:
+            user: The user to add as a member
+            role: The role to assign ("GM", "PLAYER", or "OBSERVER")
+
+        Returns:
+            The created CampaignMembership instance
+
+        Raises:
+            ValidationError: If the user cannot be added or role is invalid
+        """
+        from ..services import MembershipService
+
+        service = MembershipService(self)
+        return service.add_member(user, role)
+
 
 class CampaignMembership(models.Model):
     """Membership relationship between users and campaigns."""

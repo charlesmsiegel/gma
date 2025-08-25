@@ -7,7 +7,7 @@
 [![Django](https://img.shields.io/badge/django-5.2.4-green.svg)](https://djangoproject.com)
 [![Code Style](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
 
-A modern, web-based tabletop RPG campaign management system designed for World of Darkness games. Features comprehensive character management, hierarchical locations, item tracking, and campaign organization with accessibility-first design.
+A modern, web-based tabletop RPG campaign management system designed for World of Darkness games. Features comprehensive character management, hierarchical locations, item tracking, real-time scene chat communication, and campaign organization with accessibility-first design.
 
 ## 🎯 Project Overview
 
@@ -21,7 +21,7 @@ GMA is a comprehensive campaign management platform that bridges the gap between
 - **📦 Item Management**: Single character ownership with transfer tracking and soft delete functionality
 - **🏘️ Location Hierarchy**: Tree-based campaign locations with NPC ownership and bulk admin operations
 - **🎨 Theme System**: 13+ themes including accessibility options with WCAG 2.1 AA compliance
-- **💬 Real-time Features**: WebSocket infrastructure for scene management (basic implementation)
+- **💬 Real-time Scene Chat**: Complete WebSocket-based chat system with message types (IC/OOC/Private/System), character attribution, rate limiting, and message history API
 - **🔒 Enterprise Security**: Secure authentication, CSRF protection, permission-based API access
 - **🚀 API-First Design**: Complete REST API with modular views and comprehensive error handling
 
@@ -141,7 +141,7 @@ The application follows a domain-driven monolithic architecture with clear separ
 ```
 ├── api/           # Modular REST API with security features and bulk operations
 ├── campaigns/     # Campaign management with settings, membership, invitations
-├── scenes/        # Scene management with basic real-time infrastructure
+├── scenes/        # Scene management with comprehensive real-time chat system
 ├── characters/    # Polymorphic WoD character models with inheritance
 ├── users/         # Authentication, profiles, theme system
 ├── locations/     # Hierarchical locations with NPC ownership
@@ -198,9 +198,9 @@ This design enables support for multiple game systems while maintaining type saf
 - WCAG 2.1 AA accessibility implementation
 
 **🚧 In Progress:**
-- Real-time scene features (WebSocket infrastructure ready)
+- Advanced scene workflow management
+- WoD-specific dice rolling system
 - Advanced character sheet functionality
-- Dice rolling system integration
 
 ## 🧪 Development Workflow
 
@@ -254,8 +254,11 @@ make lint-css
 - **🚧 Phase 2**: World of Darkness Foundation (IN PROGRESS)
   - ✅ WoD character base class with willpower
   - ✅ MageCharacter with arete, quintessence, paradox
+  - ✅ Comprehensive real-time scene chat system
+  - ✅ WebSocket consumer with rate limiting and permission checking
+  - ✅ Message history API with advanced filtering
+  - ✅ JavaScript chat interface with accessibility features
   - 🚧 WoD-specific dice rolling system
-  - 🚧 Enhanced real-time scene features
   - 🚧 Game system validation framework
 
 - **📋 Phase 3**: Mage Implementation (PLANNED)
@@ -290,12 +293,15 @@ make lint-css
 - **Error Information Control**: Security-focused error responses prevent data leakage
 - **Rate Limiting Ready**: Production-ready rate limiting infrastructure
 
-### WebSocket Infrastructure
+### Real-Time Chat System
 
-- **Real-time Foundation**: Django Channels routing for WebSocket connections
-- **Scene Management**: Basic infrastructure for real-time scene updates
-- **Connection Handling**: Health monitoring and connection management
-- **Future Expansion**: Ready for advanced collaborative features
+- **WebSocket Consumer**: Complete SceneChatConsumer with authentication and rate limiting
+- **Message Types**: PUBLIC (IC), OOC, PRIVATE (with recipients), SYSTEM (GM-only)
+- **Permission System**: Role-based message visibility and sending permissions
+- **Rate Limiting**: Configurable limits (10/min default, 30/min staff, 100/min system)
+- **Message History API**: REST endpoint with filtering, pagination, and search
+- **JavaScript Interface**: Full-featured chat UI with character selection and accessibility
+- **Security Features**: Content validation, spam protection, error handling
 
 ## 🤝 Contributing
 

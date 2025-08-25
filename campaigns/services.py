@@ -308,18 +308,56 @@ class CampaignService:
         if len(query) < 2:
             return get_user_model().objects.none()
 
-        # Get excluded user IDs
+        # Get excluded user IDs - optimize by converting to list for better SQL perf
         membership_service = MembershipService(self.campaign)
-        excluded_users = membership_service._get_excluded_user_ids()
+        excluded_users = list(membership_service._get_excluded_user_ids())
 
         # Import Q here to avoid circular imports
         from django.db.models import Q
 
-        # Search users by username or email
-        return (
-            get_user_model()
-            .objects.filter(Q(username__icontains=query) | Q(email__icontains=query))
-            .exclude(id__in=excluded_users)
-            .order_by("username")
-            .only("id", "username", "email")[:limit]
-        )
+        # Optimize search with more efficient query patterns
+        User = get_user_model()
+
+        # Use startswith for better index utilization when possible
+        if query.isalnum() and len(query) >= 3:
+            # For longer alphanumeric queries, try exact prefix match first
+            exact_matches = (
+                User.objects.filter(
+                    Q(username__istartswith=query) | Q(email__istartswith=query)
+                )
+                .exclude(id__in=excluded_users)
+                .only("id", "username", "email")
+                .order_by("username")[: limit // 2 if limit > 2 else limit]
+            )
+
+            # If we don't have enough results, supplement with contains search
+            if len(exact_matches) < limit:
+                remaining_limit = limit - len(exact_matches)
+                exact_match_ids = [user.id for user in exact_matches]
+
+                contains_matches = (
+                    User.objects.filter(
+                        Q(username__icontains=query) | Q(email__icontains=query)
+                    )
+                    .exclude(id__in=excluded_users + exact_match_ids)
+                    .only("id", "username", "email")
+                    .order_by("username")[:remaining_limit]
+                )
+
+                # Combine results (convert to list to avoid complex querysets)
+                all_matches = list(exact_matches) + list(contains_matches)
+                return User.objects.filter(
+                    id__in=[user.id for user in all_matches]
+                ).order_by("username")
+            else:
+                return exact_matches
+        else:
+            # For short or non-alphanumeric queries, use regular contains search
+            return (
+                User.objects.filter(
+                    Q(username__icontains=query) | Q(email__icontains=query)
+                )
+                .exclude(id__in=excluded_users)
+                .only("id", "username", "email")
+                .order_by("username")[:limit]
+            )

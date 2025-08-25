@@ -1803,6 +1803,134 @@ CSRF tokens are managed through Django's built-in middleware:
 
 ## Real-time Features
 
+### Scene Chat System
+
+The real-time chat system includes several models for comprehensive scene communication.
+
+#### Message Model
+
+**Table**: `scenes_message`
+
+Stores all chat messages in scenes with support for multiple message types and recipient management.
+
+```sql
+CREATE TABLE scenes_message (
+    id SERIAL PRIMARY KEY,
+    scene_id INTEGER REFERENCES scenes_scene(id) ON DELETE CASCADE NOT NULL,
+    character_id INTEGER REFERENCES characters_character(id) ON DELETE SET NULL,
+    sender_id INTEGER REFERENCES auth_user(id) ON DELETE SET NULL,
+    content TEXT NOT NULL,
+    message_type VARCHAR(10) NOT NULL DEFAULT 'PUBLIC',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+
+    -- Constraints
+    CONSTRAINT check_content_length CHECK (length(content) <= 20000),
+    CONSTRAINT check_message_type CHECK (
+        message_type IN ('PUBLIC', 'PRIVATE', 'SYSTEM', 'OOC')
+    )
+);
+
+-- Message recipients (for private messages)
+CREATE TABLE scenes_message_recipients (
+    id SERIAL PRIMARY KEY,
+    message_id INTEGER REFERENCES scenes_message(id) ON DELETE CASCADE NOT NULL,
+    user_id INTEGER REFERENCES auth_user(id) ON DELETE CASCADE NOT NULL,
+    UNIQUE(message_id, user_id)
+);
+```
+
+**Indexes:**
+```sql
+-- Performance indexes for common query patterns
+CREATE INDEX scenes_message_scene_created_at_idx ON scenes_message(scene_id, created_at);
+CREATE INDEX scenes_message_scene_message_type_idx ON scenes_message(scene_id, message_type);
+CREATE INDEX scenes_message_sender_created_at_idx ON scenes_message(sender_id, created_at);
+CREATE INDEX scenes_message_message_type_created_at_idx ON scenes_message(message_type, created_at);
+CREATE INDEX scenes_message_message_type_idx ON scenes_message(message_type);
+CREATE INDEX scenes_message_created_at_idx ON scenes_message(created_at);
+```
+
+**Message Type Reference:**
+- `PUBLIC`: In-character messages requiring character attribution
+- `OOC`: Out-of-character messages from players (no character required)
+- `PRIVATE`: Private messages between specific users with recipient list
+- `SYSTEM`: GM/Owner-only system messages for game mechanics
+
+**Business Rules:**
+- PUBLIC messages require character attribution (`character_id` NOT NULL)
+- OOC messages cannot have character attribution (`character_id` IS NULL)
+- PRIVATE messages use the recipients many-to-many relationship
+- SYSTEM messages can only be sent by campaign owners or GMs
+- Character must belong to the same campaign as the scene
+- Sender must be a campaign member or scene participant
+- Content length limited to 20,000 characters (Markdown supported)
+
+#### Scene Status Change Log Model
+
+**Table**: `scenes_scene_status_change_log`
+
+Audit trail for scene status transitions.
+
+```sql
+CREATE TABLE scenes_scene_status_change_log (
+    id SERIAL PRIMARY KEY,
+    scene_id INTEGER REFERENCES scenes_scene(id) ON DELETE CASCADE NOT NULL,
+    user_id INTEGER REFERENCES auth_user(id) ON DELETE CASCADE NOT NULL,
+    old_status VARCHAR(10) NOT NULL,
+    new_status VARCHAR(10) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+
+    -- Constraints
+    CONSTRAINT check_old_status CHECK (old_status IN ('ACTIVE', 'CLOSED', 'ARCHIVED')),
+    CONSTRAINT check_new_status CHECK (new_status IN ('ACTIVE', 'CLOSED', 'ARCHIVED'))
+);
+
+-- Indexes for audit queries
+CREATE INDEX scenes_scene_status_change_log_scene_timestamp_idx ON scenes_scene_status_change_log(scene_id, timestamp DESC);
+CREATE INDEX scenes_scene_status_change_log_user_timestamp_idx ON scenes_scene_status_change_log(user_id, timestamp DESC);
+CREATE INDEX scenes_scene_status_change_log_timestamp_idx ON scenes_scene_status_change_log(timestamp DESC);
+```
+
+#### Query Patterns
+
+**Common Chat Queries:**
+
+```sql
+-- Get recent messages for a scene (with permission filtering)
+SELECT m.*, c.name as character_name, u.username as sender_username
+FROM scenes_message m
+LEFT JOIN characters_character c ON m.character_id = c.id
+LEFT JOIN auth_user u ON m.sender_id = u.id
+WHERE m.scene_id = $1
+  AND (
+    m.message_type IN ('PUBLIC', 'OOC', 'SYSTEM')  -- Public messages
+    OR (m.message_type = 'PRIVATE' AND (
+        m.sender_id = $2  -- User is sender
+        OR EXISTS(  -- User is recipient
+            SELECT 1 FROM scenes_message_recipients mr
+            WHERE mr.message_id = m.id AND mr.user_id = $2
+        )
+    ))
+  )
+ORDER BY m.created_at ASC
+LIMIT 50 OFFSET $3;
+
+-- Get message history with filtering
+SELECT m.* FROM scenes_message m
+WHERE m.scene_id = $1
+  AND ($2 IS NULL OR m.message_type = $2)  -- Message type filter
+  AND ($3 IS NULL OR m.character_id = $3)  -- Character filter
+  AND ($4 IS NULL OR m.created_at >= $4)   -- Since timestamp
+  AND ($5 IS NULL OR m.created_at <= $5)   -- Until timestamp
+  AND ($6 IS NULL OR m.content ILIKE '%' || $6 || '%')  -- Content search
+ORDER BY m.created_at ASC;
+
+-- Rate limiting query (handled by Redis/memory in practice)
+SELECT COUNT(*) FROM scenes_message m
+WHERE m.sender_id = $1
+  AND m.created_at >= (now() - INTERVAL '1 minute');
+```
+
 ### Health Check System
 
 **Table**: `core_healthchecklog`
