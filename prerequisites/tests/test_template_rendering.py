@@ -158,9 +158,9 @@ class PrerequisiteBuilderTemplateStructureTest(TestCase):
                     available_traits: {{ available_traits|default:'[]' }},
                     available_fields: {{ available_fields|default:'[]' }},
                     max_nesting_depth: {{ max_nesting_depth|default:5 }},
-                    auto_validate: {{ auto_validate|default:true|yesno:'true,false' }},
-                    show_json_preview: {{ show_json_preview|default:false|yesno:'true,false' }},
-                    enable_undo_redo: {{ enable_undo_redo|default:true|yesno:'true,false' }}
+                    auto_validate: {{ auto_validate|default:True|yesno:'true,false' }},
+                    show_json_preview: {{ show_json_preview|default:False|yesno:'true,false' }},
+                    enable_undo_redo: {{ enable_undo_redo|default:True|yesno:'true,false' }}
                 });
                 builder.initialize();
             }
@@ -774,7 +774,7 @@ class TemplateContextHandlingTest(TestCase):
         <div class="prerequisite-builder"
              data-builder-id="{{ builder_id|default:'default-builder' }}"
              data-max-depth="{{ max_nesting_depth|default:5 }}"
-             data-auto-validate="{{ auto_validate|default:true|yesno:'true,false' }}"
+             data-auto-validate="{{ auto_validate|default:True|yesno:'true,false' }}"
              data-initial-requirements="{{ initial_requirements|default:'{}' }}">
 
             {% if validation_url %}

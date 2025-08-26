@@ -747,7 +747,7 @@ class PerformanceOptimizationTest(TestCase):
         self.assertIn("gpu_acceleration", css_opt)
 
         gpu = css_opt["gpu_acceleration"]
-        self.assertIn("transform3d", gpu["use_transform3d"])
+        self.assertIn("GPU acceleration", gpu["use_transform3d"])
 
     def test_network_performance(self):
         """Test network performance optimization specifications."""

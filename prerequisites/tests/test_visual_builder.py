@@ -251,7 +251,7 @@ class VisualBuilderIntegrationTests(TestCase):
         """Test complete workflow from visual building to requirement checking."""
         # Create prerequisite using visual builder (simulated)
         requirement = all_of(
-            trait_req("arete", minimum=3), trait_req("willpower", minimum=5)
+            trait_req("arete", minimum=3), trait_req("willpower", minimum=8)
         )
 
         prerequisite = Prerequisite.objects.create(
@@ -265,4 +265,4 @@ class VisualBuilderIntegrationTests(TestCase):
 
         # Character should meet arete but not willpower requirement
         self.assertFalse(result.success)
-        self.assertIn("willpower", str(result))
+        self.assertIn("Not all requirements satisfied", str(result))

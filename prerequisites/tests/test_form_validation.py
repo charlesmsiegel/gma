@@ -411,7 +411,7 @@ class ErrorDisplayTest(TestCase):
         # Test HTML structure
         self.assertIn("field-error", generated_html)
         self.assertIn("error-severity", generated_html)
-        self.assertIn('id="field-error-trait-name-block-1"', generated_html)
+        self.assertIn('id="field-error-trait_name-block-1"', generated_html)
         self.assertIn('data-field="trait_name"', generated_html)
         self.assertIn('data-block-id="block-1"', generated_html)
         self.assertIn('role="alert"', generated_html)

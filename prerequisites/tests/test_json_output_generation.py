@@ -808,7 +808,9 @@ class JSONFormattingAndDisplayTest(TestCase):
 
         # Test compact formatting (for storage)
         compact = json.dumps(complex_json, separators=(",", ":"))
-        self.assertNotIn(" ", compact)
+        # Should not contain extra spaces (minimal formatting)
+        self.assertNotIn(", ", compact)  # No space after comma
+        self.assertNotIn(": ", compact)  # No space after colon
         self.assertNotIn("\n", compact)
 
         # Test pretty formatting (for display)
