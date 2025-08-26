@@ -135,7 +135,7 @@ class AdminInterfaceTests(TestCase):
         # Should contain visual builder with existing data
         content = response.content.decode()
         self.assertIn("prerequisite-builder-widget", content)
-        self.assertIn('"name": "strength"', content)
+        self.assertIn("&quot;name&quot;: &quot;strength&quot;", content)
 
     def test_prerequisite_admin_save(self):
         """Test saving a prerequisite through admin with visual builder data."""
