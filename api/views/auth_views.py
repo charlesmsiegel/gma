@@ -193,7 +193,8 @@ def login_view(request):
         user_agent = request.META.get("HTTP_USER_AGENT", "")
         username = request.data.get("username", "")
 
-        # Don't create a security log entry for non-existent users to prevent enumeration
+        # Don't create security log entry for non-existent users to prevent
+        # enumeration
         # Just log the attempt in application logs
         logger.warning(f"Failed login attempt for '{username}' from {ip_address}")
 
@@ -504,20 +505,8 @@ def password_reset_request_view(request):
                 0
             ].strip() or request.META.get("REMOTE_ADDR")
 
-            # Check rate limiting BEFORE creating reset
-            User = get_user_model()
-            email = serializer.validated_data["email"]
-
-            # Find the user to check rate limiting (same logic as serializer)
-            try:
-                user = User.objects.get(email__iexact=email)
-            except User.DoesNotExist:
-                try:
-                    user = User.objects.get(username__iexact=email)
-                except User.DoesNotExist:
-                    pass
-
-            # TODO: Implement proper rate limiting that doesn't interfere with legitimate invalidation
+            # TODO: Implement proper rate limiting that doesn't interfere with
+            # legitimate invalidation
             # For now, skip rate limiting to get core functionality working
 
             # Create password reset if user exists
@@ -546,7 +535,10 @@ def password_reset_request_view(request):
 
             # Return success message as expected by tests
             response_data = {
-                "message": "A password reset link has been sent to your email if an account exists."
+                "message": (
+                    "A password reset link has been sent to your email if an "
+                    "account exists."
+                )
             }
 
             if email_sending_failed:
@@ -559,7 +551,10 @@ def password_reset_request_view(request):
             # Still return success to prevent information leakage
             return Response(
                 {
-                    "message": "A password reset link has been sent to your email if an account exists."
+                    "message": (
+                        "A password reset link has been sent to your email if an "
+                        "account exists."
+                    )
                 },
                 status=status.HTTP_200_OK,
             )

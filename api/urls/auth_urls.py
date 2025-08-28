@@ -1,7 +1,5 @@
 from django.urls import path
 
-app_name = "auth"
-
 from ..views.auth_views import (
     csrf_token_view,
     current_session_view,
@@ -23,6 +21,8 @@ from ..views.auth_views import (
     user_info_view,
     verify_email_view,
 )
+
+app_name = "auth"
 
 urlpatterns = [
     path("register/", register_view, name="api_register"),
