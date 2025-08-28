@@ -1,7 +1,11 @@
 from django.urls import path
 
+app_name = "auth"
+
 from ..views.auth_views import (
     csrf_token_view,
+    current_session_view,
+    extend_session_view,
     login_view,
     logout_view,
     password_reset_confirm_view,
@@ -9,6 +13,9 @@ from ..views.auth_views import (
     password_reset_validate_view,
     register_view,
     resend_verification_view,
+    sessions_list_view,
+    terminate_all_sessions_view,
+    terminate_session_view,
     user_info_view,
     verify_email_view,
 )
@@ -38,4 +45,10 @@ urlpatterns = [
         name="password_reset_validate_empty",
         kwargs={"token": ""},
     ),
+    # Session Management URLs
+    path("sessions/", sessions_list_view, name="sessions-list"),
+    path("sessions/<int:pk>/", terminate_session_view, name="sessions-detail"),
+    path("sessions/all/", terminate_all_sessions_view, name="sessions-terminate-all"),
+    path("sessions/extend/", extend_session_view, name="sessions-extend"),
+    path("session/current/", current_session_view, name="session-current"),
 ]

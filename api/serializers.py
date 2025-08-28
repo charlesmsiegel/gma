@@ -13,6 +13,7 @@ from items.models import Item
 from locations.models import Location
 from scenes.models import Message, Scene
 from users.models.password_reset import PasswordReset
+from users.models.session_models import SessionSecurityLog, UserSession
 
 User = get_user_model()
 
@@ -2272,3 +2273,125 @@ class PasswordResetTokenValidationSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid token format.")
 
         return value
+
+
+# Session Management serializers
+class UserSessionSerializer(serializers.ModelSerializer):
+    """Serializer for UserSession model."""
+
+    is_current = serializers.SerializerMethodField()
+    expires_at = serializers.SerializerMethodField()
+    time_until_expiry = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserSession
+        fields = (
+            "id",
+            "ip_address",
+            "user_agent",
+            "device_type",
+            "browser",
+            "operating_system",
+            "location",
+            "is_active",
+            "remember_me",
+            "created_at",
+            "last_activity",
+            "ended_at",
+            "is_current",
+            "expires_at",
+            "time_until_expiry",
+        )
+        read_only_fields = (
+            "id",
+            "ip_address",
+            "user_agent",
+            "device_type",
+            "browser",
+            "operating_system",
+            "location",
+            "is_active",
+            "remember_me",
+            "created_at",
+            "last_activity",
+            "ended_at",
+            "is_current",
+            "expires_at",
+            "time_until_expiry",
+        )
+
+    def get_is_current(self, obj):
+        """Check if this is the current session."""
+        request = self.context.get("request")
+        if request and hasattr(request, "session"):
+            return obj.session.session_key == request.session.session_key
+        return False
+
+    def get_expires_at(self, obj):
+        """Get session expiry time."""
+        return obj.session.expire_date
+
+    def get_time_until_expiry(self, obj):
+        """Get time until session expires."""
+        from django.utils import timezone
+
+        if obj.session.expire_date > timezone.now():
+            return (obj.session.expire_date - timezone.now()).total_seconds()
+        return 0
+
+
+class SessionSecurityLogSerializer(serializers.ModelSerializer):
+    """Serializer for SessionSecurityLog model."""
+
+    class Meta:
+        model = SessionSecurityLog
+        fields = (
+            "id",
+            "event_type",
+            "ip_address",
+            "user_agent",
+            "details",
+            "timestamp",
+        )
+        read_only_fields = (
+            "id",
+            "event_type",
+            "ip_address",
+            "user_agent",
+            "details",
+            "timestamp",
+        )
+
+
+class CurrentSessionSerializer(UserSessionSerializer):
+    """Extended serializer for current session info with security events."""
+
+    recent_security_events = serializers.SerializerMethodField()
+
+    class Meta(UserSessionSerializer.Meta):
+        fields = UserSessionSerializer.Meta.fields + ("recent_security_events",)
+
+    def get_recent_security_events(self, obj):
+        """Get recent security events for this session."""
+        recent_events = SessionSecurityLog.objects.filter(user_session=obj).recent(
+            hours=24
+        )[:10]
+
+        return SessionSecurityLogSerializer(recent_events, many=True).data
+
+
+class SessionExtendSerializer(serializers.Serializer):
+    """Serializer for session extension requests."""
+
+    hours = serializers.IntegerField(
+        default=24,
+        min_value=1,
+        max_value=720,  # Max 30 days
+        help_text="Number of hours to extend the session",
+    )
+
+
+class TerminateAllSessionsResponseSerializer(serializers.Serializer):
+    """Serializer for terminate all sessions response."""
+
+    terminated_sessions = serializers.IntegerField(read_only=True)

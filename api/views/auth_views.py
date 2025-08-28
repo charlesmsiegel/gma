@@ -12,12 +12,16 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from ..serializers import (
+    CurrentSessionSerializer,
     LoginSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     PasswordResetTokenValidationSerializer,
+    SessionExtendSerializer,
+    TerminateAllSessionsResponseSerializer,
     UserRegistrationSerializer,
     UserSerializer,
+    UserSessionSerializer,
 )
 
 User = get_user_model()
@@ -130,14 +134,62 @@ def register_view(request):
 @permission_classes([AllowAny])
 def login_view(request):
     """Login a user."""
+    from django.contrib.sessions.models import Session
+
+    from users.models.session_models import SessionSecurityEvent, SessionSecurityLog
+    from users.services.session_security import SessionSecurityService
+
     serializer = LoginSerializer(data=request.data, context={"request": request})
     if serializer.is_valid():
         user = serializer.validated_data["user"]
+
+        # Get IP and user agent for session tracking
+        ip_address = request.META.get("REMOTE_ADDR", "127.0.0.1")
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+        remember_me = request.data.get("remember_me", False)
+
+        # Log the user in first
         login(request, user)
+
+        try:
+            # Create UserSession record
+            service = SessionSecurityService()
+            django_session = Session.objects.get(
+                session_key=request.session.session_key
+            )
+
+            user_session = service.create_user_session(
+                user=user,
+                session=django_session,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                remember_me=remember_me,
+            )
+
+            # Extend session for remember me functionality
+            if remember_me:
+                user_session.extend_for_remember_me()
+
+            logger.info(f"User {user.id} logged in successfully from {ip_address}")
+
+        except Exception as e:
+            logger.error(f"Error creating UserSession for user {user.id}: {e}")
+            # Don't fail the login if session tracking fails
+
         return Response(
             {"message": "Login successful", "user": UserSerializer(user).data},
             status=status.HTTP_200_OK,
         )
+    else:
+        # Log failed login attempt
+        ip_address = request.META.get("REMOTE_ADDR", "127.0.0.1")
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+        username = request.data.get("username", "")
+
+        # Don't create a security log entry for non-existent users to prevent enumeration
+        # Just log the attempt in application logs
+        logger.warning(f"Failed login attempt for '{username}' from {ip_address}")
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -145,6 +197,55 @@ def login_view(request):
 @permission_classes([IsAuthenticated])
 def logout_view(request):
     """Logout a user."""
+    from users.models.session_models import (
+        SessionSecurityEvent,
+        SessionSecurityLog,
+        UserSession,
+    )
+
+    # Get IP and user agent for logging
+    ip_address = request.META.get("REMOTE_ADDR", "127.0.0.1")
+    user_agent = request.META.get("HTTP_USER_AGENT", "")
+
+    # Find and deactivate the current UserSession
+    try:
+        session_key = request.session.session_key
+        if session_key:
+            user_session = UserSession.objects.get(
+                user=request.user, session__session_key=session_key, is_active=True
+            )
+
+            # Log logout event
+            SessionSecurityLog.log_event(
+                user=request.user,
+                event_type=SessionSecurityEvent.LOGOUT,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                user_session=user_session,
+                details={"logout_by_user": True},
+            )
+
+            # Deactivate UserSession
+            user_session.deactivate()
+
+            logger.info(f"User {request.user.id} logged out successfully")
+
+    except UserSession.DoesNotExist:
+        # Session not found, log it but continue with logout
+        logger.warning(f"UserSession not found for logout of user {request.user.id}")
+
+        # Still log the logout event without a user_session
+        SessionSecurityLog.log_event(
+            user=request.user,
+            event_type=SessionSecurityEvent.LOGOUT,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            details={"logout_by_user": True, "session_not_found": True},
+        )
+    except Exception as e:
+        logger.error(f"Error during logout for user {request.user.id}: {e}")
+
+    # Perform Django logout
     logout(request)
     return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
 
@@ -647,3 +748,222 @@ def password_reset_validate_view(request, token):
         {"error": "Invalid token format", "valid": False},
         status=status.HTTP_400_BAD_REQUEST,
     )
+
+
+# Session Management Views
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def sessions_list_view(request):
+    """List all active sessions for the authenticated user."""
+    from users.models.session_models import UserSession
+
+    user_sessions = UserSession.objects.filter(
+        user=request.user, is_active=True
+    ).select_related("session")
+    serializer = UserSessionSerializer(
+        user_sessions, many=True, context={"request": request}
+    )
+
+    return Response(
+        {"results": serializer.data, "count": user_sessions.count()},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def terminate_session_view(request, session_id):
+    """Terminate a specific session."""
+    from django.contrib.sessions.models import Session
+
+    from users.models.session_models import (
+        SessionSecurityEvent,
+        SessionSecurityLog,
+        UserSession,
+    )
+
+    try:
+        user_session = UserSession.objects.get(
+            id=session_id, user=request.user, is_active=True
+        )
+    except UserSession.DoesNotExist:
+        return Response(
+            {"error": "Session not found or already terminated"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Get IP address for logging
+    ip_address = request.META.get("REMOTE_ADDR", "127.0.0.1")
+    user_agent = request.META.get("HTTP_USER_AGENT", "")
+
+    # Log session termination
+    SessionSecurityLog.log_event(
+        user=request.user,
+        event_type=SessionSecurityEvent.SESSION_TERMINATED,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        user_session=user_session,
+        details={"terminated_by_user": True},
+    )
+
+    # Terminate session
+    user_session.deactivate()
+
+    # Also delete Django session if it exists
+    try:
+        django_session = user_session.session
+        django_session.delete()
+    except Session.DoesNotExist:
+        pass
+
+    return Response(
+        {"message": "Session terminated successfully"}, status=status.HTTP_200_OK
+    )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def terminate_all_sessions_view(request):
+    """Terminate all sessions except the current one."""
+    from django.contrib.sessions.models import Session
+
+    from users.models.session_models import (
+        SessionSecurityEvent,
+        SessionSecurityLog,
+        UserSession,
+    )
+
+    # Get current session key
+    current_session_key = request.session.session_key
+
+    # Get IP address for logging
+    ip_address = request.META.get("REMOTE_ADDR", "127.0.0.1")
+    user_agent = request.META.get("HTTP_USER_AGENT", "")
+
+    # Get all other active sessions for this user
+    user_sessions = UserSession.objects.filter(
+        user=request.user, is_active=True
+    ).select_related("session")
+
+    # Exclude current session if we can identify it
+    if current_session_key:
+        user_sessions = user_sessions.exclude(session__session_key=current_session_key)
+
+    terminated_count = 0
+    for user_session in user_sessions:
+        # Log session termination
+        SessionSecurityLog.log_event(
+            user=request.user,
+            event_type=SessionSecurityEvent.SESSION_TERMINATED,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            user_session=user_session,
+            details={"terminated_by_user": True, "bulk_termination": True},
+        )
+
+        # Terminate session
+        user_session.deactivate()
+
+        # Delete Django session
+        try:
+            user_session.session.delete()
+        except Session.DoesNotExist:
+            pass
+
+        terminated_count += 1
+
+    # Log bulk termination event
+    if terminated_count > 0:
+        SessionSecurityLog.log_event(
+            user=request.user,
+            event_type=SessionSecurityEvent.SESSION_TERMINATED,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            details={
+                "terminated_by_user": True,
+                "bulk_termination": True,
+                "terminated_count": terminated_count,
+            },
+        )
+
+    serializer = TerminateAllSessionsResponseSerializer(
+        {"terminated_sessions": terminated_count}
+    )
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def extend_session_view(request):
+    """Extend the current session."""
+    from users.models.session_models import (
+        SessionSecurityEvent,
+        SessionSecurityLog,
+        UserSession,
+    )
+
+    # Get current session
+    current_session_key = request.session.session_key
+    if not current_session_key:
+        return Response(
+            {"error": "No active session found"}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        user_session = UserSession.objects.get(
+            user=request.user, session__session_key=current_session_key, is_active=True
+        )
+    except UserSession.DoesNotExist:
+        return Response(
+            {"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+    serializer = SessionExtendSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    hours = serializer.validated_data["hours"]
+
+    # Extend session
+    user_session.extend_expiry(hours=hours)
+
+    # Return updated session info
+    session_serializer = UserSessionSerializer(
+        user_session, context={"request": request}
+    )
+
+    return Response(
+        {
+            "message": f"Session extended by {hours} hours",
+            "session": session_serializer.data,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def current_session_view(request):
+    """Get information about the current session."""
+    from users.models.session_models import UserSession
+
+    # Get current session
+    current_session_key = request.session.session_key
+    if not current_session_key:
+        return Response(
+            {"error": "No active session found"}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        user_session = UserSession.objects.get(
+            user=request.user, session__session_key=current_session_key, is_active=True
+        )
+    except UserSession.DoesNotExist:
+        return Response(
+            {"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+    serializer = CurrentSessionSerializer(user_session, context={"request": request})
+
+    return Response(serializer.data, status=status.HTTP_200_OK)

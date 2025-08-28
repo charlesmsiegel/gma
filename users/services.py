@@ -1,8 +1,10 @@
 """
-Email verification service for user registration with email confirmation.
+User services for various functionality including email verification and session security.
 
-This service provides business logic for email verification functionality
-for Issue #135, handling token generation, email sending, and verification.
+This module provides business logic services for:
+- Email verification (Issue #135)
+- Session security monitoring (Issue #143)
+- Password reset functionality
 """
 
 import logging
@@ -14,6 +16,9 @@ from django.template.loader import render_to_string
 
 from .models import EmailVerification
 from .models.password_reset import PasswordReset
+
+# Import session security service
+from .services.session_security import SessionSecurityService
 
 # from django.utils import timezone  # Removed unused import
 
