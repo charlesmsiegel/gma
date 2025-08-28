@@ -80,6 +80,17 @@ class User(AbstractUser):
     notification_preferences = models.JSONField(
         default=dict, blank=True, help_text="User notification preferences"
     )
+    # Email verification fields for Issue #135
+    email_verified = models.BooleanField(
+        default=False, help_text="Whether the user's email address has been verified"
+    )  # type: ignore[var-annotated]
+    email_verification_token = models.CharField(
+        max_length=64, blank=True, help_text="Current email verification token"
+    )  # type: ignore[var-annotated]
+    email_verification_sent_at = models.DateTimeField(
+        null=True, blank=True, help_text="When the last email verification was sent"
+    )  # type: ignore[var-annotated]
+
     created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
     updated_at = models.DateTimeField(auto_now=True)  # type: ignore[var-annotated]
 

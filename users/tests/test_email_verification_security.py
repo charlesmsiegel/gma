@@ -214,7 +214,7 @@ class InvalidTokenSecurityTest(TestCase):
     def test_token_enumeration_protection(self):
         """Test protection against token enumeration attacks."""
         # Create valid verification
-        verification = EmailVerification.objects.create_for_user(self.user)
+        verification = EmailVerification.create_for_user(self.user)
         valid_token = verification.token
 
         # Generate many invalid tokens
@@ -238,7 +238,7 @@ class InvalidTokenSecurityTest(TestCase):
 
     def test_case_sensitivity_security(self):
         """Test that tokens are properly case sensitive."""
-        verification = EmailVerification.objects.create_for_user(self.user)
+        verification = EmailVerification.create_for_user(self.user)
         original_token = verification.token
 
         # Only test if token contains letters
@@ -266,7 +266,7 @@ class InvalidTokenSecurityTest(TestCase):
 
     def test_url_encoding_attacks(self):
         """Test protection against URL encoding attacks."""
-        verification = EmailVerification.objects.create_for_user(self.user)
+        verification = EmailVerification.create_for_user(self.user)
         original_token = verification.token
 
         # Test various encoding schemes
@@ -341,7 +341,7 @@ class TimingAttackProtectionTest(TestCase):
         # would require statistical analysis of response times
 
         # Create valid verification
-        verification = EmailVerification.objects.create_for_user(self.user)
+        verification = EmailVerification.create_for_user(self.user)
         valid_token = verification.token
         invalid_token = "invalid_token_123"
 
@@ -364,7 +364,7 @@ class TimingAttackProtectionTest(TestCase):
 
     def test_database_query_consistency(self):
         """Test that database queries are consistent for timing protection."""
-        EmailVerification.objects.create_for_user(self.user)
+        EmailVerification.create_for_user(self.user)
 
         with patch("django.db.models.QuerySet.get") as mock_get:
             # Mock to always raise DoesNotExist
@@ -381,7 +381,7 @@ class TimingAttackProtectionTest(TestCase):
 
     def test_error_message_consistency(self):
         """Test that error messages don't reveal timing information."""
-        EmailVerification.objects.create_for_user(self.user)
+        EmailVerification.create_for_user(self.user)
 
         # Test different types of invalid tokens
         test_cases = [
@@ -502,7 +502,7 @@ class InformationLeakagePreventionTest(TestCase):
         )
 
         # Create verification
-        verification = EmailVerification.objects.create_for_user(user)
+        verification = EmailVerification.create_for_user(user)
 
         # Test with invalid token
         invalid_url = reverse("api:verify_email", kwargs={"token": "invalid_token"})
@@ -603,7 +603,7 @@ class TokenSecurityConstraintsTest(TransactionTestCase):
             mock_token.side_effect = [existing_token, "unique_token_456"]
 
             # Should handle collision and generate unique token
-            new_verification = EmailVerification.objects.create_for_user(user)
+            new_verification = EmailVerification.create_for_user(user)
 
             self.assertNotEqual(new_verification.token, existing_token)
             self.assertEqual(new_verification.token, "unique_token_456")
@@ -641,7 +641,7 @@ class TokenSecurityConstraintsTest(TransactionTestCase):
         # Generate tokens concurrently (simulated)
         verifications = []
         for user in users:
-            verification = EmailVerification.objects.create_for_user(user)
+            verification = EmailVerification.create_for_user(user)
             verifications.append(verification)
 
         # All tokens should be unique
@@ -659,7 +659,7 @@ class TokenSecurityConstraintsTest(TransactionTestCase):
         # Generate multiple tokens
         tokens = []
         for _ in range(100):
-            verification = EmailVerification.objects.create_for_user(user)
+            verification = EmailVerification.create_for_user(user)
             tokens.append(verification.token)
 
         # All tokens should be unique
@@ -689,7 +689,7 @@ class EdgeCaseSecurityTest(TestCase):
             password="TestPass123!",
         )
 
-        verification = EmailVerification.objects.create_for_user(user)
+        verification = EmailVerification.create_for_user(user)
         token = verification.token
 
         # Delete user (should cascade to verification)
@@ -715,7 +715,7 @@ class EdgeCaseSecurityTest(TestCase):
             password="TestPass123!",
         )
 
-        verification = EmailVerification.objects.create_for_user(user)
+        verification = EmailVerification.create_for_user(user)
 
         # Simulate database unavailability
         with patch.object(EmailVerification.objects, "get_by_token") as mock_get:
@@ -795,7 +795,7 @@ class EdgeCaseSecurityTest(TestCase):
 
         try:
             for i in range(max_attempts):
-                EmailVerification.objects.create_for_user(user)
+                EmailVerification.create_for_user(user)
                 verifications_created += 1
         except Exception:
             # Should handle gracefully if there are limits

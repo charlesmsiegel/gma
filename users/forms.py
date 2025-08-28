@@ -14,7 +14,9 @@ Security Notes:
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
 User = get_user_model()
 
@@ -77,6 +79,174 @@ class CustomUserCreationForm(UserCreationForm):
         user.display_name = display_name if display_name else None
         if commit:
             user.save()
+        return user
+
+
+class EmailVerificationRegistrationForm(forms.Form):
+    """
+    Registration form with email verification integration for Issue #135.
+
+    This form handles user registration with email verification,
+    creating both the user and the email verification record.
+    """
+
+    username = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Enter username"}
+        ),
+        help_text=(
+            "Required. 150 characters or fewer. Unique username for your account."
+        ),
+    )
+
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(
+            attrs={
+                "class": "form-control",
+                "type": "email",
+                "placeholder": "Enter email address",
+            }
+        ),
+        help_text="Required. Enter a valid email address for verification.",
+    )
+
+    password = forms.CharField(
+        min_length=8,
+        required=True,
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "placeholder": "Enter password"}
+        ),
+        help_text="Required. Your password must contain at least 8 characters.",
+    )
+
+    password_confirm = forms.CharField(
+        required=True,
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "placeholder": "Confirm password"}
+        ),
+        help_text="Required. Enter the same password as above for verification.",
+    )
+
+    display_name = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Enter display name (optional)",
+            }
+        ),
+        help_text="Optional. A display name for your profile.",
+    )
+
+    first_name = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Enter first name (optional)",
+            }
+        ),
+        help_text="Optional. Your first name.",
+    )
+
+    last_name = forms.CharField(
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Enter last name (optional)"}
+        ),
+        help_text="Optional. Your last name.",
+    )
+
+    def clean_username(self):
+        """Validate username uniqueness."""
+        username = self.cleaned_data.get("username")
+        if username and User.objects.filter(username=username).exists():
+            raise ValidationError("A user with this username already exists.")
+        return username
+
+    def clean_email(self):
+        """Validate email uniqueness (case-insensitive)."""
+        email = self.cleaned_data.get("email")
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise ValidationError("A user with this email already exists.")
+        return email.lower() if email else email
+
+    def clean_password(self):
+        """Validate password using Django's password validators."""
+        password = self.cleaned_data.get("password")
+        if password:
+            try:
+                validate_password(password)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+        return password
+
+    def clean(self):
+        """Validate password confirmation."""
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password")
+        password_confirm = cleaned_data.get("password_confirm")
+
+        if password and password_confirm and password != password_confirm:
+            raise ValidationError("Passwords do not match.")
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        """
+        Create user and email verification record.
+
+        Returns:
+            User: The created user instance
+        """
+        from users.models import EmailVerification
+        from users.services import EmailVerificationService
+
+        if not commit:
+            raise ValueError("EmailVerificationRegistrationForm must be committed")
+
+        username = self.cleaned_data["username"]
+        email = self.cleaned_data["email"]
+        password = self.cleaned_data["password"]
+        display_name = self.cleaned_data.get("display_name")
+        first_name = self.cleaned_data.get("first_name", "")
+        last_name = self.cleaned_data.get("last_name", "")
+
+        with transaction.atomic():
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+
+            # Set display_name to None if empty (for unique constraint)
+            user.display_name = display_name if display_name else None
+            user.email_verified = False  # Start unverified
+            user.save()
+
+            # Create email verification record
+            verification = EmailVerification.create_for_user(user)
+
+            # Update user's verification token field
+            user.email_verification_token = verification.token
+            user.email_verification_sent_at = verification.created_at
+            user.save(
+                update_fields=["email_verification_token", "email_verification_sent_at"]
+            )
+
+            # Send verification email
+            service = EmailVerificationService()
+            service.send_verification_email(user)
+
         return user
 
 

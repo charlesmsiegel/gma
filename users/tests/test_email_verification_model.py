@@ -588,7 +588,7 @@ class EmailVerificationManagerTest(TestCase):
 
     def test_create_for_user_manager_method(self):
         """Test manager method to create verification for user."""
-        verification = EmailVerification.objects.create_for_user(self.user)
+        verification = EmailVerification.create_for_user(self.user)
 
         self.assertEqual(verification.user, self.user)
         self.assertIsNotNone(verification.token)

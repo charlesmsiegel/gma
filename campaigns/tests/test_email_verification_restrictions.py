@@ -754,7 +754,7 @@ class VerificationWorkflowIntegrationTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         # Step 3: Verify email
-        verification = EmailVerification.objects.create_for_user(self.user)
+        verification = EmailVerification.create_for_user(self.user)
 
         verify_url = reverse("api:verify_email", kwargs={"token": verification.token})
         verify_response = self.client.get(verify_url)

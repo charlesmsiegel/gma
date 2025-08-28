@@ -61,7 +61,7 @@ class ResendVerificationAPIBasicTest(TestCase):
     def test_resend_creates_new_verification_record(self):
         """Test that resend creates new verification record."""
         # Create initial verification
-        old_verification = EmailVerification.objects.create_for_user(self.user)
+        old_verification = EmailVerification.create_for_user(self.user)
         old_token = old_verification.token
 
         data = {"email": "test@example.com"}
@@ -81,8 +81,8 @@ class ResendVerificationAPIBasicTest(TestCase):
     def test_resend_invalidates_old_verification_tokens(self):
         """Test that resend invalidates previous verification tokens."""
         # Create multiple old verifications
-        old_verification1 = EmailVerification.objects.create_for_user(self.user)
-        old_verification2 = EmailVerification.objects.create_for_user(self.user)
+        old_verification1 = EmailVerification.create_for_user(self.user)
+        old_verification2 = EmailVerification.create_for_user(self.user)
 
         data = {"email": "test@example.com"}
         response = self.client.post(self.resend_url, data, format="json")

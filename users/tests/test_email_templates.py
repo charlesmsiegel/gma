@@ -36,7 +36,7 @@ class EmailVerificationTemplateTest(TestCase):
             password="TestPass123!",
         )
 
-        self.verification = EmailVerification.objects.create_for_user(self.user)
+        self.verification = EmailVerification.create_for_user(self.user)
 
     def test_email_verification_html_template_exists(self):
         """Test that HTML email verification template exists."""
@@ -161,7 +161,7 @@ class EmailVerificationTemplateTest(TestCase):
             display_name="Display Name",
         )
 
-        verification = EmailVerification.objects.create_for_user(user_with_display)
+        verification = EmailVerification.create_for_user(user_with_display)
 
         context = {
             "user": user_with_display,
@@ -355,7 +355,7 @@ class EmailTemplateContextTest(TestCase):
             password="TestPass123!",
         )
 
-        self.verification = EmailVerification.objects.create_for_user(self.user)
+        self.verification = EmailVerification.create_for_user(self.user)
 
     def test_email_context_generation(self):
         """Test that email context is properly generated."""
@@ -428,7 +428,7 @@ class EmailTemplateContextTest(TestCase):
             display_name="Display Name",
         )
 
-        verification = EmailVerification.objects.create_for_user(user_with_display)
+        verification = EmailVerification.create_for_user(user_with_display)
 
         service = EmailVerificationService()
         context = service.get_email_context(user_with_display, verification)
@@ -508,7 +508,7 @@ class EmailErrorHandlingTest(TestCase):
             service.get_email_context(self.user, None)
 
         # Test with None user
-        verification = EmailVerification.objects.create_for_user(self.user)
+        verification = EmailVerification.create_for_user(self.user)
         with self.assertRaises(AttributeError):
             service.get_email_context(None, verification)
 
@@ -548,7 +548,7 @@ class EmailTemplateRenderingEdgeCasesTest(TestCase):
             display_name="Tëst Üser",
         )
 
-        verification = EmailVerification.objects.create_for_user(unicode_user)
+        verification = EmailVerification.create_for_user(unicode_user)
 
         context = {
             "user": unicode_user,
@@ -574,7 +574,7 @@ class EmailTemplateRenderingEdgeCasesTest(TestCase):
             password="LongPass123!",
         )
 
-        verification = EmailVerification.objects.create_for_user(long_user)
+        verification = EmailVerification.create_for_user(long_user)
 
         context = {
             "user": long_user,
@@ -601,7 +601,7 @@ class EmailTemplateRenderingEdgeCasesTest(TestCase):
             display_name="<script>alert('xss')</script>Test User",
         )
 
-        verification = EmailVerification.objects.create_for_user(html_user)
+        verification = EmailVerification.create_for_user(html_user)
 
         context = {
             "user": html_user,
@@ -632,7 +632,7 @@ class EmailTemplateRenderingEdgeCasesTest(TestCase):
                 email=f"user{i}@example.com",
                 password="TestPass123!",
             )
-            verification = EmailVerification.objects.create_for_user(user)
+            verification = EmailVerification.create_for_user(user)
             users.append(user)
             verifications.append(verification)
 

@@ -30,8 +30,9 @@ class UserSerializer(serializers.ModelSerializer):
             "display_name",
             "timezone",
             "date_joined",
+            "email_verified",
         )
-        read_only_fields = ("id", "date_joined")
+        read_only_fields = ("id", "date_joined", "email_verified")
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -49,6 +50,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "password_confirm",
             "first_name",
             "last_name",
+            "display_name",
         )
         extra_kwargs = {
             "username": {"validators": []},  # Remove default unique validator
@@ -92,12 +94,49 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        """Create a new user."""
+        """Create a new user with email verification."""
+        from django.db import transaction
+
+        from users.models import EmailVerification
+        from users.services import EmailVerificationService
+
         # Remove password_confirm from data
         validated_data.pop("password_confirm")
 
-        # Create user with encrypted password
-        user = User.objects.create_user(**validated_data)
+        with transaction.atomic():
+            # Create user with encrypted password
+            user = User.objects.create_user(**validated_data)
+
+            # Set email as unverified
+            user.email_verified = False
+
+            # Handle display_name
+            display_name = validated_data.get("display_name")
+            if display_name:
+                user.display_name = display_name
+            else:
+                user.display_name = None  # For unique constraint
+
+            user.save()
+
+            # Create email verification record
+            verification = EmailVerification.create_for_user(user)
+
+            # Update user's verification fields
+            user.email_verification_token = verification.token
+            user.email_verification_sent_at = verification.created_at
+            user.save(
+                update_fields=["email_verification_token", "email_verification_sent_at"]
+            )
+
+            # Send verification email
+            service = EmailVerificationService()
+            try:
+                service.send_verification_email(user)
+            except Exception:  # nosec B110
+                # Don't fail registration if email sending fails - intentional
+                pass
+
         return user
 
 
