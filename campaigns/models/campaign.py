@@ -160,6 +160,18 @@ class Campaign(models.Model):
         ),
     )
 
+    # Safety tools configuration
+    content_warnings = models.JSONField(  # type: ignore[var-annotated]
+        default=list,
+        blank=True,
+        help_text="List of content warnings for this campaign (JSON list)"
+    )
+    
+    safety_tools_enabled = models.BooleanField(  # type: ignore[var-annotated]
+        default=True,
+        help_text="Whether safety tools (Lines & Veils) are enabled for this campaign"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
     updated_at = models.DateTimeField(auto_now=True)  # type: ignore[var-annotated]
 
@@ -513,3 +525,56 @@ class CampaignInvitation(models.Model):
         # Notification removed for simplicity
 
         self.delete()
+
+
+class CampaignSafetyAgreement(models.Model):
+    """
+    Safety agreement between a campaign and a participant.
+    
+    Tracks whether users have acknowledged content warnings and agreed to
+    the safety terms for a specific campaign.
+    """
+    
+    campaign = models.ForeignKey(  # type: ignore[var-annotated]
+        Campaign,
+        on_delete=models.CASCADE,
+        related_name="safety_agreements",
+        help_text="The campaign this agreement is for"
+    )
+    
+    participant = models.ForeignKey(  # type: ignore[var-annotated]
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="safety_agreements",
+        help_text="The user participating in the campaign"
+    )
+    
+    agreed_to_terms = models.BooleanField(  # type: ignore[var-annotated]
+        default=False,
+        help_text="Whether the user has agreed to the safety terms"
+    )
+    
+    acknowledged_warnings = models.JSONField(  # type: ignore[var-annotated]
+        default=list,
+        blank=True,
+        help_text="List of content warnings the user has acknowledged (JSON list)"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
+    updated_at = models.DateTimeField(auto_now=True)  # type: ignore[var-annotated]
+    
+    class Meta:
+        db_table = "campaigns_safety_agreement"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["campaign", "participant"],
+                name="unique_campaign_participant_safety_agreement"
+            ),
+        ]
+        ordering = ["campaign", "participant__username"]
+        verbose_name = "Campaign Safety Agreement"
+        verbose_name_plural = "Campaign Safety Agreements"
+    
+    def __str__(self) -> str:
+        """Return string representation of the safety agreement."""
+        return f"Safety agreement: {self.participant.username} in {self.campaign.name}"
