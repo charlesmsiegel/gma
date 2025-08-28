@@ -1,5 +1,5 @@
 """
-Test suite for Issue #143: Session Management Integration with Existing Authentication System.
+Test suite for Issue #143: Session Management Integration.
 
 Tests cover:
 - Integration with Django's authentication backend
@@ -13,15 +13,11 @@ Tests cover:
 - Compatibility with existing user flows
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from datetime import timedelta
 
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.signals import user_logged_in, user_logged_out
+from django.contrib.auth import authenticate
 from django.contrib.sessions.models import Session
-from django.dispatch import receiver
 from django.test import Client, RequestFactory, TestCase
-from django.test.utils import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -195,41 +191,37 @@ class AuthenticationIntegrationTest(TestCase):
 
     def test_api_authentication_integration(self):
         """Test session management with API authentication."""
-        # Create session for API usage
-        django_session = Session.objects.create(
-            session_key="api_integration_session",
-            session_data="api_user_data",
-            expire_date=timezone.now() + timedelta(hours=24),
-        )
+        # Use Django test client that has session middleware
+        from django.test import Client
 
-        user_session = UserSession.objects.create(
+        client = Client()
+        client.force_login(self.user)
+        session_key = client.session.session_key
+
+        # Get the Django session
+        django_session = Session.objects.get(session_key=session_key)
+
+        UserSession.objects.create(
             user=self.user,
             session=django_session,
             ip_address="192.168.1.100",
             user_agent="APIClient/1.0",
         )
 
-        # Simulate API authentication
-        self.api_client.force_authenticate(user=self.user)
+        from django.urls import reverse
 
-        # Mock session key in request
-        with patch.object(self.api_client, "session") as mock_session:
-            mock_session.session_key = user_session.session.session_key
+        # Test API endpoint that would use session
+        try:
+            url = reverse("api:auth:session-current")
+            response = client.get(url)
 
-            from django.urls import reverse
-
-            # Test API endpoint that would use session
-            try:
-                url = reverse("api:auth:session-current")
-                response = self.api_client.get(url)
-
-                # Should work with valid session
-                self.assertIn(
-                    response.status_code, [200, 404]
-                )  # 404 if endpoint not implemented yet
-            except Exception:
-                # URL might not exist yet, that's ok for this test
-                pass
+            # Should work with valid session
+            self.assertIn(
+                response.status_code, [200, 404]
+            )  # 404 if endpoint not implemented yet
+        except Exception:
+            # URL might not exist yet, that's ok for this test
+            pass
 
     def test_remember_me_integration_with_auth_forms(self):
         """Test remember me integration with authentication forms."""

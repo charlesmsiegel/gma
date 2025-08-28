@@ -11,9 +11,7 @@ Tests cover:
 - Error handling and edge cases
 """
 
-import uuid
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
@@ -73,10 +71,10 @@ class SessionListAPITest(TestCase):
     def test_list_sessions_authenticated_user(self):
         """Test listing sessions for authenticated user."""
         # Create multiple sessions for the user
-        session1 = self.create_user_session(
+        self.create_user_session(
             self.user, "session1", ip_address="192.168.1.100", browser="Chrome"
         )
-        session2 = self.create_user_session(
+        self.create_user_session(
             self.user,
             "session2",
             ip_address="192.168.1.101",
@@ -197,12 +195,14 @@ class SessionTerminateAPITest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # NOTE: Due to CASCADE relationship, UserSession is deleted when Django session is deleted
-        # This is a design issue that should be fixed to preserve audit records
+        # NOTE: Due to CASCADE relationship, UserSession is deleted when Django
+        # session is deleted. This is a design issue that should be fixed to
+        # preserve audit records
         # Check Django session is deleted
         self.assertFalse(Session.objects.filter(pk=user_session.session_id).exists())
-        
-        # UserSession should still exist but is deleted due to CASCADE - this is the current behavior
+
+        # UserSession should still exist but is deleted due to CASCADE - this
+        # is the current behavior
         self.assertFalse(UserSession.objects.filter(id=user_session.id).exists())
 
         # Check security log entry
@@ -240,25 +240,26 @@ class SessionTerminateAPITest(TestCase):
         """Test terminating current session logs user out."""
         # Use Django test client to create a real session
         from django.test import Client
+
         client = Client()
         client.force_login(self.user)
         session_key = client.session.session_key
-        
+
         # Get the Django session
         django_session = Session.objects.get(session_key=session_key)
-        
+
         # Create UserSession with the real session
         user_session = UserSession.objects.create(
             user=self.user,
             session=django_session,
             ip_address="192.168.1.100",
-            user_agent="Chrome/91.0 Desktop"
+            user_agent="Chrome/91.0 Desktop",
         )
 
         url = reverse(
             "api:auth:sessions-detail", kwargs={"session_id": user_session.id}
         )
-        
+
         # Use Django client with real session to make the request
         response = client.delete(url)
 
@@ -312,22 +313,23 @@ class SessionTerminateAllAPITest(TestCase):
         # Create multiple sessions
         session1 = self.create_user_session(self.user, "session1")
         session2 = self.create_user_session(self.user, "session2")
-        
+
         # Use Django test client to create a real current session
         from django.test import Client
+
         client = Client()
         client.force_login(self.user)
         session_key = client.session.session_key
-        
+
         # Get the Django session
         django_session = Session.objects.get(session_key=session_key)
-        
+
         # Create UserSession with the real session
         current_session = UserSession.objects.create(
             user=self.user,
             session=django_session,
             ip_address="192.168.1.100",
-            user_agent="Chrome/91.0 Desktop"
+            user_agent="Chrome/91.0 Desktop",
         )
 
         # Create session for other user (should not be affected)
@@ -343,11 +345,11 @@ class SessionTerminateAllAPITest(TestCase):
         # NOTE: Due to CASCADE relationship, terminated UserSessions are deleted
         self.assertFalse(UserSession.objects.filter(id=session1.id).exists())
         self.assertFalse(UserSession.objects.filter(id=session2.id).exists())
-        
+
         # Current session should still exist and be active
         current_session.refresh_from_db()
         self.assertTrue(current_session.is_active)  # Current session preserved
-        
+
         # Other user's session preserved
         other_session.refresh_from_db()
         self.assertTrue(other_session.is_active)  # Other user's session preserved
@@ -355,8 +357,8 @@ class SessionTerminateAllAPITest(TestCase):
     def test_terminate_all_sessions_no_current(self):
         """Test terminating all sessions when no current session identified."""
         # Create multiple sessions
-        session1 = self.create_user_session(self.user, "session1")
-        session2 = self.create_user_session(self.user, "session2")
+        self.create_user_session(self.user, "session1")
+        self.create_user_session(self.user, "session2")
 
         self.client.force_authenticate(user=self.user)
         response = self.client.delete(self.url)
@@ -405,22 +407,23 @@ class SessionExtendAPITest(TestCase):
 
     def test_extend_current_session(self):
         """Test extending current session."""
-        # Use Django test client that has session middleware  
+        # Use Django test client that has session middleware
         from django.test import Client
+
         client = Client()
         client.force_login(self.user)
         session_key = client.session.session_key
-        
+
         # Get the Django session
         django_session = Session.objects.get(session_key=session_key)
         original_expiry = django_session.expire_date
-        
+
         # Create UserSession with the real session
         user_session = UserSession.objects.create(
             user=self.user,
             session=django_session,
             ip_address="192.168.1.100",
-            user_agent="Chrome/91.0 Desktop"
+            user_agent="Chrome/91.0 Desktop",
         )
 
         # Make the request using Django test client with the real session
@@ -442,21 +445,22 @@ class SessionExtendAPITest(TestCase):
 
     def test_extend_session_default_hours(self):
         """Test extending session with default hours."""
-        # Use Django test client that has session middleware  
+        # Use Django test client that has session middleware
         from django.test import Client
+
         client = Client()
         client.force_login(self.user)
         session_key = client.session.session_key
-        
+
         # Get the Django session
         django_session = Session.objects.get(session_key=session_key)
-        
+
         # Create UserSession with the real session
-        user_session = UserSession.objects.create(
+        UserSession.objects.create(
             user=self.user,
             session=django_session,
             ip_address="192.168.1.100",
-            user_agent="Chrome/91.0 Desktop"
+            user_agent="Chrome/91.0 Desktop",
         )
 
         # Make the request using Django test client with the real session
@@ -482,19 +486,20 @@ class SessionExtendAPITest(TestCase):
         """Test extending session with invalid hours value."""
         # Use Django test client that has session middleware
         from django.test import Client
+
         client = Client()
         client.force_login(self.user)
         session_key = client.session.session_key
-        
+
         # Get the Django session
         django_session = Session.objects.get(session_key=session_key)
-        
+
         # Create UserSession with the real session
-        user_session = UserSession.objects.create(
+        UserSession.objects.create(
             user=self.user,
             session=django_session,
             ip_address="192.168.1.100",
-            user_agent="Chrome/91.0 Desktop"
+            user_agent="Chrome/91.0 Desktop",
         )
 
         # Test negative hours using Django client with real session
@@ -502,7 +507,9 @@ class SessionExtendAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # Test too many hours
-        response = client.post(self.url, {"hours": 8760}, content_type="application/json")  # 1 year
+        response = client.post(
+            self.url, {"hours": 8760}, content_type="application/json"
+        )  # 1 year
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_extend_session_unauthenticated(self):

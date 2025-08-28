@@ -62,8 +62,8 @@ class SessionSecurityEvent:
         ]
 
 
-class UserSessionManager(models.Manager):
-    """Custom manager for UserSession model."""
+class UserSessionQuerySet(models.QuerySet):
+    """Custom queryset for UserSession model with chainable methods."""
 
     def active(self):
         """Return only active sessions."""
@@ -76,6 +76,26 @@ class UserSessionManager(models.Manager):
     def expired(self):
         """Return expired sessions based on Django session expiry."""
         return self.filter(session__expire_date__lt=timezone.now())
+
+
+class UserSessionManager(models.Manager):
+    """Custom manager for UserSession model."""
+
+    def get_queryset(self):
+        """Return custom queryset with chainable methods."""
+        return UserSessionQuerySet(self.model, using=self._db)
+
+    def active(self):
+        """Return only active sessions."""
+        return self.get_queryset().active()
+
+    def for_user(self, user):
+        """Return sessions for a specific user."""
+        return self.get_queryset().for_user(user)
+
+    def expired(self):
+        """Return expired sessions based on Django session expiry."""
+        return self.get_queryset().expired()
 
     def cleanup_expired(self):
         """Clean up expired sessions and deactivate associated UserSessions."""
@@ -273,8 +293,8 @@ class UserSession(models.Model):
         self.extend_expiry(hours=24 * 30)  # 30 days
 
 
-class SessionSecurityLogManager(models.Manager):
-    """Custom manager for SessionSecurityLog model."""
+class SessionSecurityLogQuerySet(models.QuerySet):
+    """Custom queryset for SessionSecurityLog model with chainable methods."""
 
     def for_user(self, user):
         """Return security logs for a specific user."""
@@ -289,6 +309,26 @@ class SessionSecurityLogManager(models.Manager):
         """Return recent log entries within the specified hours."""
         since = timezone.now() - timedelta(hours=hours)
         return self.filter(timestamp__gte=since)
+
+
+class SessionSecurityLogManager(models.Manager):
+    """Custom manager for SessionSecurityLog model."""
+
+    def get_queryset(self):
+        """Return custom queryset with chainable methods."""
+        return SessionSecurityLogQuerySet(self.model, using=self._db)
+
+    def for_user(self, user):
+        """Return security logs for a specific user."""
+        return self.get_queryset().for_user(user)
+
+    def security_events(self):
+        """Return only security-related events."""
+        return self.get_queryset().security_events()
+
+    def recent(self, hours: int = 24):
+        """Return recent log entries within the specified hours."""
+        return self.get_queryset().recent(hours)
 
 
 class SessionSecurityLog(models.Model):
