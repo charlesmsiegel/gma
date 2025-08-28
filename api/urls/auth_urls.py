@@ -47,7 +47,7 @@ urlpatterns = [
     ),
     # Session Management URLs
     path("sessions/", sessions_list_view, name="sessions-list"),
-    path("sessions/<int:pk>/", terminate_session_view, name="sessions-detail"),
+    path("sessions/<int:session_id>/", terminate_session_view, name="sessions-detail"),
     path("sessions/all/", terminate_all_sessions_view, name="sessions-terminate-all"),
     path("sessions/extend/", extend_session_view, name="sessions-extend"),
     path("session/current/", current_session_view, name="session-current"),

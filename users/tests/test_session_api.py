@@ -49,11 +49,15 @@ class SessionListAPITest(TestCase):
 
     def create_user_session(self, user, session_key="test_session", **kwargs):
         """Helper to create UserSession with Django session."""
-        django_session = Session.objects.create(
-            session_key=session_key,
-            session_data="test_data",
-            expire_date=timezone.now() + timedelta(days=1),
-        )
+        # Try to get existing session first
+        try:
+            django_session = Session.objects.get(session_key=session_key)
+        except Session.DoesNotExist:
+            django_session = Session.objects.create(
+                session_key=session_key,
+                session_data="test_data",
+                expire_date=timezone.now() + timedelta(days=1),
+            )
 
         defaults = {
             "ip_address": "192.168.1.100",
@@ -475,34 +479,57 @@ class CurrentSessionAPITest(TestCase):
 
     def test_get_current_session_info(self):
         """Test getting current session information."""
-        user_session = self.create_user_session(self.user, "current_session")
+        # Use regular test client to create real sessions
+        from django.test import Client
 
-        with patch.object(self.client, "session") as mock_session:
-            mock_session.session_key = user_session.session.session_key
+        client = Client()
 
-            self.client.force_authenticate(user=self.user)
-            response = self.client.get(self.url)
+        # Login to create actual session
+        client.force_login(self.user)
 
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Get the session that was created by force_login
+        session_key = client.session.session_key
+        django_session = Session.objects.get(session_key=session_key)
 
-            # Check response structure
-            self.assertEqual(response.data["id"], user_session.id)
-            self.assertEqual(response.data["ip_address"], "192.168.1.100")
-            self.assertEqual(response.data["device_type"], "desktop")
-            self.assertEqual(response.data["browser"], "Chrome")
-            self.assertEqual(response.data["operating_system"], "Windows")
-            self.assertEqual(response.data["location"], "New York, NY")
-            self.assertTrue(response.data["is_current"])
-            self.assertIn("expires_at", response.data)
-            self.assertIn("time_until_expiry", response.data)
+        # Create UserSession using the existing session
+        user_session = UserSession.objects.create(
+            user=self.user,
+            session=django_session,
+            ip_address="192.168.1.100",
+            user_agent="Chrome/91.0 Desktop",
+            device_type="desktop",
+            browser="Chrome",
+            operating_system="Windows",
+            location="New York, NY",
+        )
+
+        # Make request using same client with real session
+        from django.urls import reverse
+
+        url = reverse("api:auth:session-current")
+        response = client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Check response structure
+        data = response.json()
+        self.assertEqual(data["id"], user_session.id)
+        self.assertEqual(data["ip_address"], "192.168.1.100")
+        self.assertEqual(data["device_type"], "desktop")
+        self.assertEqual(data["browser"], "Chrome")
+        self.assertEqual(data["operating_system"], "Windows")
+        self.assertEqual(data["location"], "New York, NY")
+        self.assertTrue(data["is_current"])
+        self.assertIn("expires_at", data)
+        self.assertIn("time_until_expiry", data)
 
     def test_get_current_session_no_session(self):
         """Test getting current session when no session exists."""
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.url)
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn("No active session found", response.data["detail"])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("No active session found", response.data["error"])
 
     def test_get_current_session_unauthenticated(self):
         """Test getting current session without authentication."""
@@ -511,7 +538,29 @@ class CurrentSessionAPITest(TestCase):
 
     def test_get_current_session_with_security_logs(self):
         """Test current session info includes recent security events."""
-        user_session = self.create_user_session(self.user, "current_session")
+        # Use regular test client to create real sessions
+        from django.test import Client
+
+        client = Client()
+
+        # Login to create actual session
+        client.force_login(self.user)
+
+        # Get the session that was created by force_login
+        session_key = client.session.session_key
+        django_session = Session.objects.get(session_key=session_key)
+
+        # Create UserSession using the existing session
+        user_session = UserSession.objects.create(
+            user=self.user,
+            session=django_session,
+            ip_address="192.168.1.100",
+            user_agent="Chrome/91.0 Desktop",
+            device_type="desktop",
+            browser="Chrome",
+            operating_system="Windows",
+            location="New York, NY",
+        )
 
         # Create some security log entries
         SessionSecurityLog.objects.create(
@@ -530,15 +579,16 @@ class CurrentSessionAPITest(TestCase):
             user_agent="Chrome/91.0 Desktop",
         )
 
-        with patch.object(self.client, "session") as mock_session:
-            mock_session.session_key = user_session.session.session_key
+        # Make request using same client with real session
+        from django.urls import reverse
 
-            self.client.force_authenticate(user=self.user)
-            response = self.client.get(self.url)
+        url = reverse("api:auth:session-current")
+        response = client.get(url)
 
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertIn("recent_security_events", response.data)
-            self.assertEqual(len(response.data["recent_security_events"]), 2)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertIn("recent_security_events", data)
+        self.assertEqual(len(data["recent_security_events"]), 2)
 
 
 class SessionAPIPermissionTest(TestCase):

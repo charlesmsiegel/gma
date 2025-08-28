@@ -2373,8 +2373,8 @@ class CurrentSessionSerializer(UserSessionSerializer):
 
     def get_recent_security_events(self, obj):
         """Get recent security events for this session."""
-        recent_events = SessionSecurityLog.objects.filter(user_session=obj).recent(
-            hours=24
+        recent_events = SessionSecurityLog.objects.recent(hours=24).filter(
+            user_session=obj
         )[:10]
 
         return SessionSecurityLogSerializer(recent_events, many=True).data
