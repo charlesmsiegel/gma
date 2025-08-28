@@ -11,7 +11,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from ..serializers import LoginSerializer, UserRegistrationSerializer, UserSerializer
+from ..serializers import (
+    LoginSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetTokenValidationSerializer,
+    UserRegistrationSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -373,3 +380,117 @@ def resend_verification_view(request):
             {"error": "An error occurred while processing your request."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def password_reset_request_view(request):
+    """Request a password reset."""
+    from users.services import PasswordResetService
+
+    serializer = PasswordResetRequestSerializer(data=request.data)
+    if serializer.is_valid():
+        try:
+            # Create password reset if user exists
+            reset = serializer.save()
+
+            # Send email if reset was created
+            if reset:
+                service = PasswordResetService()
+                email_sent = service.send_reset_email(reset.user, reset)
+
+                if email_sent:
+                    logger.info(
+                        f"Password reset email sent for user ID {reset.user.id}"
+                    )
+                else:
+                    logger.error(
+                        f"Failed to send password reset email for user "
+                        f"{reset.user.email}"
+                    )
+
+            # Always return success to prevent user enumeration
+            return Response(
+                {
+                    "message": (
+                        "If your email address is registered, you will "
+                        "receive password reset instructions."
+                    )
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            logger.error(f"Password reset request error: {str(e)}")
+            # Still return success to prevent information leakage
+            return Response(
+                {
+                    "message": (
+                        "If your email address is registered, you will "
+                        "receive password reset instructions."
+                    )
+                },
+                status=status.HTTP_200_OK,
+            )
+
+    # Return validation errors
+    return Response(
+        {"error": "Invalid request", "errors": serializer.errors},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def password_reset_confirm_view(request):
+    """Confirm password reset with token and new password."""
+    serializer = PasswordResetConfirmSerializer(data=request.data)
+    if serializer.is_valid():
+        try:
+            user = serializer.save()
+            logger.info(f"Password reset successful for user ID {user.id}")
+
+            return Response(
+                {"message": "Password has been reset successfully."},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            logger.error(f"Password reset confirm error: {str(e)}")
+            return Response(
+                {"error": "An error occurred while resetting your password."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    # Return validation errors
+    return Response(
+        {"error": "Invalid request", "errors": serializer.errors},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def password_reset_validate_view(request, token):
+    """Validate password reset token."""
+    from users.models.password_reset import PasswordReset
+
+    serializer = PasswordResetTokenValidationSerializer(data={"token": token})
+    if serializer.is_valid():
+        # Get the reset object to access user email
+        reset = PasswordReset.objects.get_valid_reset_by_token(token)
+        if reset:
+            return Response(
+                {
+                    "message": "Token is valid.",
+                    "valid": True,
+                    "user_email": reset.user.email,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+    # Return validation errors
+    return Response(
+        {"error": "Invalid token", "errors": serializer.errors, "valid": False},
+        status=status.HTTP_400_BAD_REQUEST,
+    )

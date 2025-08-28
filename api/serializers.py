@@ -12,6 +12,7 @@ from characters.models import Character
 from items.models import Item
 from locations.models import Location
 from scenes.models import Message, Scene
+from users.models.password_reset import PasswordReset
 
 User = get_user_model()
 
@@ -2110,3 +2111,148 @@ class MessageSerializer(serializers.ModelSerializer):
                 for recipient in obj.recipients.all()
             ]
         return []
+
+
+# Password Reset serializers
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Serializer for password reset request."""
+
+    email = serializers.CharField(max_length=254)
+
+    def validate_email(self, value):
+        """Validate email field (can be email or username)."""
+        if not value or value.strip() == "":
+            raise serializers.ValidationError("Email or username is required.")
+
+        # Clean whitespace
+        value = value.strip()
+
+        # Check length
+        if len(value) > 254:
+            raise serializers.ValidationError("Email/username is too long.")
+
+        return value.lower()  # Normalize case
+
+    def save(self):
+        """Create password reset for user if they exist."""
+        email = self.validated_data["email"]
+
+        # Try to find user by email first, then by username
+        user = None
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            try:
+                user = User.objects.get(username__iexact=email)
+            except User.DoesNotExist:
+                pass
+
+        if user and user.is_active:
+            # Create password reset (this will invalidate existing resets)
+            reset = PasswordReset.objects.create_for_user(user)
+            return reset
+
+        # Return None for non-existent or inactive users
+        # (but don't reveal this information)
+        return None
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Serializer for password reset confirmation."""
+
+    token = serializers.CharField(max_length=64, min_length=64)
+    new_password = serializers.CharField(min_length=8, write_only=True)
+    new_password_confirm = serializers.CharField(write_only=True)
+
+    def validate_token(self, value):
+        """Validate token format."""
+        if not value:
+            raise serializers.ValidationError("Token is required.")
+
+        if len(value) != 64:
+            raise serializers.ValidationError("Invalid token format.")
+
+        # Check if token is valid hex
+        try:
+            int(value, 16)
+        except ValueError:
+            raise serializers.ValidationError("Invalid token format.")
+
+        return value
+
+    def validate_new_password(self, value):
+        """Validate new password strength."""
+        if len(value) < 8:
+            raise serializers.ValidationError(
+                "Password must be at least 8 characters long."
+            )
+
+        # Basic password strength checks
+        if value.lower() in ["password", "12345678", "qwerty123", "abc123456"]:
+            raise serializers.ValidationError("Password is too weak.")
+
+        return value
+
+    def validate(self, data):
+        """Cross-field validation."""
+        # Check password confirmation match
+        if data.get("new_password") != data.get("new_password_confirm"):
+            raise serializers.ValidationError(
+                {"new_password_confirm": "Passwords do not match."}
+            )
+
+        # Validate token exists and is valid
+        token = data.get("token")
+        if token:
+            reset = PasswordReset.objects.get_valid_reset_by_token(token)
+            if not reset:
+                raise serializers.ValidationError(
+                    {"token": "Password reset token is invalid or has expired."}
+                )
+            data["_reset"] = reset  # Store for save method
+
+        return data
+
+    def save(self):
+        """Reset the user's password and mark token as used."""
+        reset = self.validated_data["_reset"]
+        new_password = self.validated_data["new_password"]
+
+        # Reset password
+        user = reset.user
+        user.set_password(new_password)
+        user.save()
+
+        # Mark token as used
+        reset.mark_as_used()
+
+        return user
+
+
+class PasswordResetTokenValidationSerializer(serializers.Serializer):
+    """Serializer for password reset token validation."""
+
+    token = serializers.CharField(max_length=64, min_length=64)
+
+    def validate_token(self, value):
+        """Validate token format and existence."""
+        if not value:
+            raise serializers.ValidationError("Token is required.")
+
+        if len(value) != 64:
+            raise serializers.ValidationError("Invalid token format.")
+
+        # Check if token is valid hex
+        try:
+            int(value, 16)
+        except ValueError:
+            raise serializers.ValidationError("Invalid token format.")
+
+        # Check if token exists and is valid
+        reset = PasswordReset.objects.get_valid_reset_by_token(value)
+        if not reset:
+            raise serializers.ValidationError(
+                "Password reset token is invalid or has expired."
+            )
+
+        return value

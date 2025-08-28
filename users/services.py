@@ -13,6 +13,7 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
 from .models import EmailVerification
+from .models.password_reset import PasswordReset
 
 # from django.utils import timezone  # Removed unused import
 
@@ -301,6 +302,207 @@ the link below:
 This verification link will expire in 24 hours.
 
 If you did not create an account, please ignore this email.
+
+Thank you,
+The {site_name} Team
+        """.strip()
+
+
+class PasswordResetService:
+    """
+    Service for managing password reset functionality.
+
+    Handles the complete password reset workflow including
+    token generation, email sending, and password reset processing.
+    """
+
+    def __init__(self):
+        """Initialize the password reset service."""
+        self.from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")
+        self.site_name = getattr(settings, "SITE_NAME", "Game Master Application")
+
+    def create_reset_for_user(
+        self, user: "AbstractUser", ip_address: Optional[str] = None
+    ) -> PasswordReset:
+        """
+        Create a new password reset for a user.
+
+        Args:
+            user: The user to create password reset for
+            ip_address: Optional IP address of the requester
+
+        Returns:
+            PasswordReset: The created password reset instance
+        """
+        return PasswordReset.objects.create_for_user(user, ip_address)
+
+    def send_reset_email(self, user: "AbstractUser", reset: PasswordReset) -> bool:
+        """
+        Send password reset email to user.
+
+        Args:
+            user: User to send password reset email to
+            reset: Password reset instance
+
+        Returns:
+            bool: True if email was sent successfully, False otherwise
+        """
+        try:
+            # Build reset URL
+            reset_url = self._build_reset_url(reset.token)
+
+            # Prepare email context
+            context = {
+                "user": user,
+                "reset": reset,
+                "reset_url": reset_url,
+                "site_name": self.site_name,
+                "expires_in_hours": 24,  # Default expiration
+            }
+
+            # Render email content
+            subject = f"Password Reset - {self.site_name}"
+
+            # Try to use templates if they exist
+            try:
+                html_message = render_to_string(
+                    "users/emails/password_reset.html", context
+                )
+                text_message = render_to_string(
+                    "users/emails/password_reset.txt", context
+                )
+            except Exception:
+                # Fallback to simple text message
+                text_message = self._get_fallback_reset_email_content(
+                    user.username, reset_url, self.site_name
+                )
+                html_message = None
+
+            # Send email
+            send_mail(
+                subject=subject,
+                message=text_message,
+                from_email=self.from_email,
+                recipient_list=[user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+
+            logger.info(f"Password reset email sent to user ID {user.id}")
+            return True
+
+        except Exception as e:
+            logger.error(
+                f"Failed to send password reset email to {user.email}: {str(e)}"
+            )
+            return False
+
+    def validate_reset_token(self, token: str) -> Optional[PasswordReset]:
+        """
+        Validate password reset token.
+
+        Args:
+            token: Reset token
+
+        Returns:
+            PasswordReset or None: Reset instance if valid, None otherwise
+        """
+        return PasswordReset.objects.get_valid_reset_by_token(token)
+
+    def reset_password(self, token: str, new_password: str) -> tuple[bool, str]:
+        """
+        Reset user password using token.
+
+        Args:
+            token: Reset token
+            new_password: New password
+
+        Returns:
+            tuple: (success, message)
+        """
+        try:
+            reset = self.validate_reset_token(token)
+
+            if not reset:
+                return False, "Invalid or expired reset token."
+
+            # Reset password
+            user = reset.user
+            user.set_password(new_password)
+            user.save()
+
+            # Mark token as used
+            reset.mark_as_used()
+
+            logger.info(f"Password reset successful for user {user.email}")
+            return True, "Password reset successful."
+
+        except Exception as e:
+            logger.error(f"Error during password reset for token {token}: {str(e)}")
+            return False, "An error occurred during password reset."
+
+    def cleanup_expired_resets(self) -> int:
+        """
+        Clean up expired password reset records.
+
+        Returns:
+            int: Number of expired records deleted
+        """
+        return PasswordReset.objects.cleanup_expired()
+
+    def _build_reset_url(self, token: str) -> str:
+        """
+        Build the password reset URL for the given token.
+
+        Args:
+            token: Reset token
+
+        Returns:
+            str: Complete password reset URL
+        """
+        # Get domain from settings or use localhost
+        allowed_hosts = getattr(settings, "ALLOWED_HOSTS", ["localhost"])
+        if allowed_hosts and allowed_hosts[0] != "*":
+            domain = allowed_hosts[0]
+        else:
+            domain = "localhost:8000"
+
+        # Use HTTPS in production, HTTP in development
+        protocol = "https" if not settings.DEBUG else "http"
+
+        # Build the URL - this points to the frontend password reset page
+        return f"{protocol}://{domain}/reset-password/{token}/"
+
+    def _get_fallback_reset_email_content(
+        self,
+        username: str,
+        reset_url: str,
+        site_name: str,
+    ) -> str:
+        """
+        Generate fallback password reset email content when templates are not available.
+
+        Args:
+            username: User's username
+            reset_url: URL for password reset
+            site_name: Name of the site
+
+        Returns:
+            str: Email content
+        """
+        return f"""
+Hello {username},
+
+We received a request to reset your password for your {site_name} account.
+
+To reset your password, please click the link below:
+
+{reset_url}
+
+This password reset link will expire in 24 hours.
+
+If you did not request a password reset, please ignore this email.
+Your password will not be changed.
 
 Thank you,
 The {site_name} Team

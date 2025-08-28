@@ -4,6 +4,9 @@ from ..views.auth_views import (
     csrf_token_view,
     login_view,
     logout_view,
+    password_reset_confirm_view,
+    password_reset_request_view,
+    password_reset_validate_view,
     register_view,
     resend_verification_view,
     user_info_view,
@@ -18,4 +21,15 @@ urlpatterns = [
     path("csrf/", csrf_token_view, name="api_csrf_token"),
     path("verify-email/<str:token>/", verify_email_view, name="verify_email"),
     path("resend-verification/", resend_verification_view, name="resend_verification"),
+    path("password-reset/", password_reset_request_view, name="password_reset_request"),
+    path(
+        "password-reset-confirm/",
+        password_reset_confirm_view,
+        name="password_reset_confirm",
+    ),
+    path(
+        "password-reset-validate/<str:token>/",
+        password_reset_validate_view,
+        name="password_reset_validate",
+    ),
 ]
