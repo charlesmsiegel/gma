@@ -256,6 +256,8 @@ class PasswordResetTokenValidationAPITest(TestCase):
 
     def get_validate_url(self, token):
         """Get validation URL for a specific token."""
+        if not token:
+            return reverse("api:password_reset_validate_empty")
         return reverse(self.validate_url_pattern, kwargs={"token": token})
 
     def test_validate_valid_token_success(self):

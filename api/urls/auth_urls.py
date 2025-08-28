@@ -28,8 +28,14 @@ urlpatterns = [
         name="password_reset_confirm",
     ),
     path(
-        "password-reset-validate/<str:token>/",
+        "password-reset-validate/<path:token>",
         password_reset_validate_view,
         name="password_reset_validate",
+    ),
+    path(
+        "password-reset-validate/",
+        password_reset_validate_view,
+        name="password_reset_validate_empty",
+        kwargs={"token": ""},
     ),
 ]

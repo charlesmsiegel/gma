@@ -2131,6 +2131,25 @@ class PasswordResetRequestSerializer(serializers.Serializer):
         if len(value) > 254:
             raise serializers.ValidationError("Email/username is too long.")
 
+        # Basic format validation - reject obviously invalid formats
+        # but allow usernames and valid emails
+        if "@" in value:
+            # If it has @, it should be a valid email format
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            from django.core.validators import validate_email
+
+            try:
+                validate_email(value)
+            except DjangoValidationError:
+                raise serializers.ValidationError("Invalid email format.")
+        else:
+            # It's a username - do basic username validation
+            # Require usernames to start with letter/number and contain only alphanumeric and underscore
+            import re
+
+            if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9_]*$", value) or len(value) < 1:
+                raise serializers.ValidationError("Invalid email or username format.")
+
         return value.lower()  # Normalize case
 
     def save(self):
@@ -2182,14 +2201,13 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
     def validate_new_password(self, value):
         """Validate new password strength."""
-        if len(value) < 8:
-            raise serializers.ValidationError(
-                "Password must be at least 8 characters long."
-            )
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
 
-        # Basic password strength checks
-        if value.lower() in ["password", "12345678", "qwerty123", "abc123456"]:
-            raise serializers.ValidationError("Password is too weak.")
+        try:
+            validate_password(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
 
         return value
 
@@ -2208,6 +2226,11 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             if not reset:
                 raise serializers.ValidationError(
                     {"token": "Password reset token is invalid or has expired."}
+                )
+            # Check if user is active
+            if not reset.user.is_active:
+                raise serializers.ValidationError(
+                    {"token": "User account is inactive."}
                 )
             data["_reset"] = reset  # Store for save method
 
@@ -2247,12 +2270,5 @@ class PasswordResetTokenValidationSerializer(serializers.Serializer):
             int(value, 16)
         except ValueError:
             raise serializers.ValidationError("Invalid token format.")
-
-        # Check if token exists and is valid
-        reset = PasswordReset.objects.get_valid_reset_by_token(value)
-        if not reset:
-            raise serializers.ValidationError(
-                "Password reset token is invalid or has expired."
-            )
 
         return value
