@@ -448,3 +448,255 @@ class UserProfileForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+
+class UserProfileManagementForm(forms.ModelForm):
+    """
+    Enhanced form for comprehensive user profile management (Issue #137).
+
+    This form handles all profile fields including bio, avatar, privacy settings,
+    and social links with proper validation and security considerations.
+    """
+
+    bio = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 4,
+                "placeholder": "Tell others about yourself...",
+                "maxlength": 500,
+            }
+        ),
+        max_length=500,
+        required=False,
+        help_text="A brief description about yourself (max 500 characters)",
+    )
+
+    avatar = forms.ImageField(
+        widget=forms.ClearableFileInput(
+            attrs={"class": "form-control", "accept": "image/*"}
+        ),
+        required=False,
+        help_text="Profile picture (JPG, PNG, GIF - max 5MB)",
+    )
+
+    website_url = forms.URLField(
+        widget=forms.URLInput(
+            attrs={"class": "form-control", "placeholder": "https://your-website.com"}
+        ),
+        required=False,
+        help_text="Your personal website or portfolio",
+    )
+
+    # Social links as individual fields for better UX
+    twitter_url = forms.URLField(
+        widget=forms.URLInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "https://twitter.com/yourusername",
+            }
+        ),
+        required=False,
+        help_text="Your Twitter profile URL",
+    )
+
+    discord_username = forms.CharField(
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "username#1234"}
+        ),
+        max_length=50,
+        required=False,
+        help_text="Your Discord username (e.g., username#1234)",
+    )
+
+    github_url = forms.URLField(
+        widget=forms.URLInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "https://github.com/yourusername",
+            }
+        ),
+        required=False,
+        help_text="Your GitHub profile URL",
+    )
+
+    # Privacy settings
+    profile_visibility = forms.ChoiceField(
+        choices=[
+            ("public", "Public - Visible to everyone"),
+            ("members", "Campaign Members - Visible to users in your campaigns"),
+            ("private", "Private - Only visible to you"),
+        ],
+        widget=forms.Select(attrs={"class": "form-select"}),
+        help_text="Who can view your profile information",
+    )
+
+    show_email = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        required=False,
+        help_text="Show your email address in your public profile",
+    )
+
+    show_real_name = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        required=False,
+        help_text="Show your first and last name in your public profile",
+    )
+
+    show_last_login = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        required=False,
+        help_text="Show when you were last online",
+    )
+
+    allow_activity_tracking = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        required=False,
+        help_text="Allow activity tracking for analytics and recommendations",
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "display_name",
+            "bio",
+            "avatar",
+            "website_url",
+            "profile_visibility",
+            "show_email",
+            "show_real_name",
+            "show_last_login",
+            "allow_activity_tracking",
+        ]
+        widgets = {
+            "first_name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Your first name"}
+            ),
+            "last_name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Your last name"}
+            ),
+            "display_name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Optional display name"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        """Initialize form and populate social links from JSONField."""
+        super().__init__(*args, **kwargs)
+
+        # Set initial values for social links if they exist
+        if self.instance and self.instance.social_links:
+            social_links = self.instance.social_links
+            self.fields["twitter_url"].initial = social_links.get("twitter", "")
+            self.fields["discord_username"].initial = social_links.get("discord", "")
+            self.fields["github_url"].initial = social_links.get("github", "")
+
+        # Set show_real_name default to True for new users
+        if not self.instance.pk:
+            self.fields["show_real_name"].initial = True
+            self.fields["allow_activity_tracking"].initial = True
+
+    def clean_avatar(self):
+        """Validate avatar file size and type."""
+        avatar = self.cleaned_data.get("avatar")
+        if avatar:
+            # Check file size (5MB limit)
+            if avatar.size > 5 * 1024 * 1024:
+                raise ValidationError("Avatar file size must be less than 5MB.")
+
+            # Check file type
+            allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+            if avatar.content_type not in allowed_types:
+                raise ValidationError("Avatar must be a JPG, PNG, GIF, or WebP image.")
+
+        return avatar
+
+    def clean_display_name(self):
+        """Validate display_name uniqueness (case-insensitive, excluding self)."""
+        display_name = self.cleaned_data.get("display_name")
+
+        # Convert empty string to None for database unique constraint
+        if not display_name:
+            return None
+
+        # Check for uniqueness, excluding current user
+        queryset = User.objects.filter(display_name__iexact=display_name)
+        if self.instance and self.instance.pk:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise ValidationError("A user with this display name already exists.")
+
+        return display_name
+
+    def clean_discord_username(self):
+        """Validate Discord username format."""
+        discord = self.cleaned_data.get("discord_username")
+        if discord:
+            # Basic validation for Discord username format
+            if "#" not in discord:
+                raise ValidationError(
+                    "Discord username should include the discriminator (e.g., username#1234)"
+                )
+            username, discriminator = discord.rsplit("#", 1)
+            if not discriminator.isdigit() or len(discriminator) != 4:
+                raise ValidationError(
+                    "Discord discriminator should be a 4-digit number"
+                )
+        return discord
+
+    def save(self, commit=True):
+        """Save the form with social links JSON data."""
+        user = super().save(commit=False)
+
+        # Build social_links JSON from individual fields
+        social_links = {}
+        if self.cleaned_data.get("twitter_url"):
+            social_links["twitter"] = self.cleaned_data["twitter_url"]
+        if self.cleaned_data.get("discord_username"):
+            social_links["discord"] = self.cleaned_data["discord_username"]
+        if self.cleaned_data.get("github_url"):
+            social_links["github"] = self.cleaned_data["github_url"]
+
+        user.social_links = social_links
+
+        if commit:
+            user.save()
+        return user
+
+
+class UserPrivacySettingsForm(forms.ModelForm):
+    """
+    Simplified form focused only on privacy settings (Issue #137).
+
+    This form can be used separately for privacy-only updates or in
+    combination with other profile forms.
+    """
+
+    class Meta:
+        model = User
+        fields = [
+            "profile_visibility",
+            "show_email",
+            "show_real_name",
+            "show_last_login",
+            "allow_activity_tracking",
+        ]
+        widgets = {
+            "profile_visibility": forms.Select(attrs={"class": "form-select"}),
+            "show_email": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "show_real_name": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "show_last_login": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "allow_activity_tracking": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+        }
+        help_texts = {
+            "profile_visibility": "Who can view your profile information",
+            "show_email": "Show your email address in your public profile",
+            "show_real_name": "Show your first and last name in your public profile",
+            "show_last_login": "Show when you were last online",
+            "allow_activity_tracking": "Allow activity tracking for analytics and recommendations",
+        }

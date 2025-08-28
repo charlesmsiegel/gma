@@ -11,6 +11,10 @@ from ..views.auth_views import (
     password_reset_confirm_view,
     password_reset_request_view,
     password_reset_validate_view,
+    privacy_settings_view,
+    profile_view,
+    public_profile_by_username_view,
+    public_profile_view,
     register_view,
     resend_verification_view,
     sessions_list_view,
@@ -51,4 +55,13 @@ urlpatterns = [
     path("sessions/all/", terminate_all_sessions_view, name="sessions-terminate-all"),
     path("sessions/extend/", extend_session_view, name="sessions-extend"),
     path("session/current/", current_session_view, name="session-current"),
+    # Profile Management URLs
+    path("profile/", profile_view, name="profile"),
+    path("profile/privacy/", privacy_settings_view, name="privacy-settings"),
+    path("users/<int:user_id>/profile/", public_profile_view, name="public-profile"),
+    path(
+        "users/<str:username>/profile/",
+        public_profile_by_username_view,
+        name="public-profile-username",
+    ),
 ]

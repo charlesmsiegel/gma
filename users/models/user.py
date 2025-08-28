@@ -80,6 +80,52 @@ class User(AbstractUser):
     notification_preferences = models.JSONField(
         default=dict, blank=True, help_text="User notification preferences"
     )
+
+    # Profile fields for Issue #137: User Profile Management
+    bio = models.TextField(
+        max_length=500,
+        blank=True,
+        help_text="A brief description about yourself (max 500 characters)",
+    )  # type: ignore[var-annotated]
+    avatar = models.ImageField(
+        upload_to="avatars/", blank=True, null=True, help_text="Profile picture"
+    )  # type: ignore[var-annotated]
+    website_url = models.URLField(
+        blank=True, help_text="Your personal website or portfolio"
+    )  # type: ignore[var-annotated]
+    social_links = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Social media links (Twitter, Discord, etc.)",
+    )  # type: ignore[var-annotated]
+
+    # Privacy settings for Issue #137
+    profile_visibility = models.CharField(
+        max_length=20,
+        choices=[
+            ("public", "Public - Visible to everyone"),
+            ("members", "Campaign Members - Visible to users in your campaigns"),
+            ("private", "Private - Only visible to you"),
+        ],
+        default="members",
+        help_text="Who can view your profile information",
+    )  # type: ignore[var-annotated]
+    show_email = models.BooleanField(
+        default=False,
+        help_text="Whether to show your email address in your public profile",
+    )  # type: ignore[var-annotated]
+    show_real_name = models.BooleanField(
+        default=True,
+        help_text="Whether to show your first and last name in your public profile",
+    )  # type: ignore[var-annotated]
+    allow_activity_tracking = models.BooleanField(
+        default=True,
+        help_text="Whether to allow activity tracking for analytics and recommendations",
+    )  # type: ignore[var-annotated]
+    show_last_login = models.BooleanField(
+        default=False, help_text="Whether to show when you were last online"
+    )  # type: ignore[var-annotated]
+
     # Email verification fields for Issue #135
     email_verified = models.BooleanField(
         default=False, help_text="Whether the user's email address has been verified"
@@ -159,3 +205,129 @@ class User(AbstractUser):
         except Exception:
             # During migrations or if Theme model doesn't exist yet
             return None
+
+    def get_full_display_name(self) -> str:
+        """
+        Get the user's full display name based on privacy settings.
+
+        Returns display_name if available, otherwise first_name + last_name
+        if show_real_name is True, otherwise just username.
+        """
+        if self.display_name:
+            return self.display_name
+
+        if self.show_real_name and (self.first_name or self.last_name):
+            full_name = f"{self.first_name} {self.last_name}".strip()
+            return full_name or self.username
+
+        return self.username
+
+    def get_avatar_url(self) -> str | None:
+        """Get the avatar URL if avatar exists."""
+        if self.avatar:
+            return self.avatar.url
+        return None
+
+    def can_view_profile(self, viewer_user=None) -> bool:
+        """
+        Check if a user can view this user's profile based on privacy settings.
+
+        Args:
+            viewer_user: The user trying to view the profile (None for anonymous)
+
+        Returns:
+            bool: Whether the profile can be viewed
+        """
+        # Users can always view their own profile
+        if viewer_user and viewer_user.id == self.id:
+            return True
+
+        # Check profile visibility setting
+        if self.profile_visibility == "public":
+            return True
+        elif self.profile_visibility == "private":
+            return False
+        elif self.profile_visibility == "members":
+            # Only campaign members can view
+            if not viewer_user or not viewer_user.is_authenticated:
+                return False
+
+            # Check if they're in any campaigns together
+            return self.are_campaign_members(viewer_user)
+
+        return False
+
+    def are_campaign_members(self, other_user) -> bool:
+        """
+        Check if this user and another user are in any campaigns together.
+
+        Args:
+            other_user: The other user to check
+
+        Returns:
+            bool: Whether they share campaign membership
+        """
+        if not other_user or not other_user.is_authenticated:
+            return False
+
+        # Import here to avoid circular imports
+        from campaigns.models import CampaignMembership
+
+        # Get campaigns where both users are members
+        my_campaigns = set(
+            CampaignMembership.objects.filter(user=self).values_list(
+                "campaign_id", flat=True
+            )
+        )
+        their_campaigns = set(
+            CampaignMembership.objects.filter(user=other_user).values_list(
+                "campaign_id", flat=True
+            )
+        )
+
+        return len(my_campaigns & their_campaigns) > 0
+
+    def get_public_profile_data(self, viewer_user=None) -> dict:
+        """
+        Get profile data that can be shown to a specific viewer based on privacy settings.
+
+        Args:
+            viewer_user: The user viewing the profile
+
+        Returns:
+            dict: Profile data filtered by privacy settings
+        """
+        if not self.can_view_profile(viewer_user):
+            # Return minimal public data
+            return {
+                "username": self.username,
+                "display_name": self.get_display_name(),
+                "profile_visible": False,
+            }
+
+        data = {
+            "id": self.id,
+            "username": self.username,
+            "display_name": self.get_full_display_name(),
+            "bio": self.bio,
+            "avatar_url": self.get_avatar_url(),
+            "website_url": self.website_url,
+            "social_links": self.social_links,
+            "date_joined": self.date_joined,
+            "profile_visible": True,
+        }
+
+        # Add email if allowed
+        if self.show_email:
+            data["email"] = self.email
+
+        # Add real name if allowed
+        if self.show_real_name:
+            data["first_name"] = self.first_name
+            data["last_name"] = self.last_name
+
+        # Add last login if allowed
+        if self.show_last_login:
+            data["last_login"] = self.last_login
+
+        return data

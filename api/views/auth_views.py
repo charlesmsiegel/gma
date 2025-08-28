@@ -11,6 +11,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+# Import profile serializers
+from users.serializers import (
+    PublicUserProfileSerializer,
+    UserPrivacySettingsSerializer,
+    UserProfileSerializer,
+)
+
 from ..serializers import (
     CurrentSessionSerializer,
     LoginSerializer,
@@ -967,3 +974,92 @@ def current_session_view(request):
     serializer = CurrentSessionSerializer(user_session, context={"request": request})
 
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# Profile Management API Views
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([IsAuthenticated])
+def profile_view(request):
+    """Get or update the current user's profile."""
+    user = request.user
+
+    if request.method == "GET":
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == "PUT":
+        serializer = UserProfileSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            logger.info(f"Profile updated for user {user.id}")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_profile_view(request, user_id):
+    """Get a user's public profile with privacy filtering."""
+    try:
+        profile_user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Get viewer user (None if anonymous)
+    viewer_user = request.user if request.user.is_authenticated else None
+
+    # Check if profile can be viewed
+    if not profile_user.can_view_profile(viewer_user):
+        return Response(
+            {"error": "Profile not accessible"},
+            status=status.HTTP_404_NOT_FOUND,  # Use 404 instead of 403 to hide existence
+        )
+
+    serializer = PublicUserProfileSerializer(profile_user, viewer_user=viewer_user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_profile_by_username_view(request, username):
+    """Get a user's public profile by username with privacy filtering."""
+    try:
+        profile_user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Get viewer user (None if anonymous)
+    viewer_user = request.user if request.user.is_authenticated else None
+
+    # Check if profile can be viewed
+    if not profile_user.can_view_profile(viewer_user):
+        return Response(
+            {"error": "Profile not accessible"},
+            status=status.HTTP_404_NOT_FOUND,  # Use 404 instead of 403 to hide existence
+        )
+
+    serializer = PublicUserProfileSerializer(profile_user, viewer_user=viewer_user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([IsAuthenticated])
+def privacy_settings_view(request):
+    """Get or update the current user's privacy settings."""
+    user = request.user
+
+    if request.method == "GET":
+        serializer = UserPrivacySettingsSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == "PUT":
+        serializer = UserPrivacySettingsSerializer(
+            user, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            logger.info(f"Privacy settings updated for user {user.id}")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
