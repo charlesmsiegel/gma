@@ -32,6 +32,11 @@ def register_view(request):
             service = EmailVerificationService()
             verification_required = service.is_verification_required(user)
 
+            # Email is already sent in the serializer, check if it succeeded
+            email_sending_failed = False
+            if verification_required and not user.email_verification_sent_at:
+                email_sending_failed = True
+
             # Prepare response data
             response_data = {
                 "message": (
@@ -42,9 +47,8 @@ def register_view(request):
                 "email_verification_required": verification_required,
             }
 
-            # Email is already sent during user creation in the serializer
-            # Just check if there was an issue (which would be rare)
-            if verification_required and not user.email_verification_sent_at:
+            # Handle email sending failure
+            if email_sending_failed:
                 response_data["email_sending_failed"] = True
                 response_data["message"] = (
                     "User registered successfully, but there was an issue "
@@ -59,6 +63,50 @@ def register_view(request):
                 {"detail": "Registration failed. Please try again."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    # For certain validation errors, provide specific feedback
+    errors = serializer.errors
+
+    # Check for password validation errors first
+    if "non_field_errors" in errors:
+        for error in errors["non_field_errors"]:
+            if "Passwords do not match" in str(error):
+                return Response(
+                    {"detail": "Passwords do not match"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+    # Check for specific validation scenarios that should show detailed errors
+    if "password" in errors:
+        if any("password" in str(error).lower() for error in errors["password"]):
+            return Response(
+                {"detail": f"Password validation failed: {errors['password'][0]}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    if "email" in errors:
+        # Don't leak information for generic registration failures
+        if any("Registration failed" in str(error) for error in errors["email"]):
+            return Response(
+                {"detail": "Registration failed. Please try different information."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"detail": f"Email validation failed: {errors['email'][0]}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if "username" in errors:
+        # Don't leak information for generic registration failures
+        if any("Registration failed" in str(error) for error in errors["username"]):
+            return Response(
+                {"detail": "Registration failed. Please try different information."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"detail": f"Username validation failed: {errors['username'][0]}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     # Return validation errors with generic message for security
     return Response(

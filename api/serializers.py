@@ -58,8 +58,25 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         }
 
     def validate_email(self, value):
-        """Validate email is unique (case-insensitive)."""
-        if value and User.objects.filter(email__iexact=value).exists():
+        """Validate email format and uniqueness (case-insensitive)."""
+        from django.core.exceptions import ValidationError
+        from django.core.validators import validate_email
+
+        if not value:
+            raise serializers.ValidationError("Email is required.")
+
+        # Validate email format
+        try:
+            validate_email(value)
+        except ValidationError:
+            raise serializers.ValidationError("Enter a valid email address.")
+
+        # Check for very long emails
+        if len(value) > 254:  # RFC 5321 limit
+            raise serializers.ValidationError("Email address is too long.")
+
+        # Check uniqueness
+        if User.objects.filter(email__iexact=value).exists():
             # Generic error to prevent email enumeration
             raise serializers.ValidationError(
                 "Registration failed. Please try different information."
@@ -67,8 +84,21 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def validate_username(self, value):
-        """Validate username is unique."""
-        if value and User.objects.filter(username=value).exists():
+        """Validate username format and uniqueness."""
+        if not value:
+            raise serializers.ValidationError("Username is required.")
+
+        # Basic format validation
+        if len(value) < 3:
+            raise serializers.ValidationError(
+                "Username must be at least 3 characters long."
+            )
+
+        if len(value) > 150:  # Django User model default max_length
+            raise serializers.ValidationError("Username is too long.")
+
+        # Check uniqueness
+        if User.objects.filter(username=value).exists():
             # Generic error to prevent username enumeration
             raise serializers.ValidationError(
                 "Registration failed. Please try different information."
