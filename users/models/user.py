@@ -120,7 +120,7 @@ class User(AbstractUser):
     )  # type: ignore[var-annotated]
     allow_activity_tracking = models.BooleanField(
         default=True,
-        help_text="Whether to allow activity tracking for analytics and recommendations",
+        help_text="Whether to allow activity tracking for analytics and recommendations",  # noqa: E501
     )  # type: ignore[var-annotated]
     show_last_login = models.BooleanField(
         default=False, help_text="Whether to show when you were last online"
@@ -295,7 +295,7 @@ class User(AbstractUser):
             viewer_user: The user viewing the profile
 
         Returns:
-            dict: Profile data filtered by privacy settings
+            dict: Profile data filtered by privacy settings  # noqa: E501
         """
         if not self.can_view_profile(viewer_user):
             # Return minimal public data
@@ -331,3 +331,61 @@ class User(AbstractUser):
             data["last_login"] = self.last_login
 
         return data
+
+    # Email verification methods
+    def generate_email_verification_token(self) -> str:
+        """
+        Generate a new email verification token for the user.
+
+        Returns:
+            str: The generated token
+        """
+        import secrets
+
+        from django.utils import timezone
+
+        self.email_verification_token = secrets.token_urlsafe(32)
+        self.email_verification_sent_at = timezone.now()
+        return self.email_verification_token
+
+    def clear_email_verification_token(self) -> None:
+        """Clear the email verification token."""
+        self.email_verification_token = ""  # nosec B105
+        self.email_verification_sent_at = None
+
+    def mark_email_verified(self) -> None:
+        """Mark the user's email as verified and clear the token."""
+        self.email_verified = True
+        self.clear_email_verification_token()
+
+    def is_email_verification_token_expired(self) -> bool:
+        """
+        Check if the email verification token has expired.
+
+        Returns:
+            bool: True if token is expired or doesn't exist
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        if not self.email_verification_token or not self.email_verification_sent_at:
+            return True
+
+        # Token expires after 24 hours
+        expiry_time = self.email_verification_sent_at + timedelta(hours=24)
+        return timezone.now() > expiry_time
+
+    def get_email_verification_expiry(self):
+        """
+        Get the expiry time for the current email verification token.
+
+        Returns:
+            datetime or None: The expiry time, or None if no token
+        """
+        from datetime import timedelta
+
+        if not self.email_verification_sent_at:
+            return None
+
+        return self.email_verification_sent_at + timedelta(hours=24)

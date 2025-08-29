@@ -649,37 +649,49 @@ class EmailVerificationValidationTest(TransactionTestCase):
                     expires_at=timezone.now() + timedelta(hours=24),
                 )
 
-    def test_cannot_create_verification_without_token(self):
-        """Test that EmailVerification requires a token."""
+    def test_auto_generates_token_when_missing(self):
+        """Test that EmailVerification auto-generates token when not provided."""
         user = User.objects.create_user(
             username="testuser",
             email="test@example.com",
             password="TestPass123!",
         )
 
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                EmailVerification.objects.create(
-                    user=user,
-                    expires_at=timezone.now() + timedelta(hours=24),
-                    # No token
-                )
+        # Create verification without providing token - should auto-generate
+        verification = EmailVerification.objects.create(
+            user=user,
+            expires_at=timezone.now() + timedelta(hours=24),
+            # No token provided - should be auto-generated
+        )
 
-    def test_cannot_create_verification_without_expires_at(self):
-        """Test that EmailVerification requires expires_at."""
+        # Should have auto-generated a token
+        self.assertIsNotNone(verification.token)
+        self.assertGreater(len(verification.token), 16)  # Should be a reasonable length
+
+    def test_auto_generates_expires_at_when_missing(self):
+        """Test that EmailVerification auto-generates expires_at when not provided."""
         user = User.objects.create_user(
             username="testuser",
             email="test@example.com",
             password="TestPass123!",
         )
 
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                EmailVerification.objects.create(
-                    user=user,
-                    token="test_token",
-                    # No expires_at
-                )
+        before_creation = timezone.now()
+
+        # Create verification without providing expires_at - should auto-generate
+        verification = EmailVerification.objects.create(
+            user=user,
+            token="test_token",
+            # No expires_at provided - should be auto-generated
+        )
+
+        # Should have auto-generated expires_at (24 hours from creation)
+        self.assertIsNotNone(verification.expires_at)
+        expected_expiry = before_creation + timedelta(hours=24)
+        # Allow 1 minute tolerance
+        self.assertAlmostEqual(
+            verification.expires_at.timestamp(), expected_expiry.timestamp(), delta=60
+        )
 
     def test_token_uniqueness_across_users(self):
         """Test that token uniqueness is enforced across all users."""

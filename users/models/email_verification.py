@@ -14,6 +14,73 @@ from django.db import models
 from django.utils import timezone
 
 
+class EmailVerificationQuerySet(models.QuerySet):
+    """Custom QuerySet for EmailVerification."""
+
+    def active(self):
+        """Return non-expired verifications."""
+        return self.filter(expires_at__gt=timezone.now())
+
+    def expired(self):
+        """Return expired verifications."""
+        return self.filter(expires_at__lte=timezone.now())
+
+    def verified(self):
+        """Return verified verifications."""
+        return self.filter(verified_at__isnull=False)
+
+    def pending(self):
+        """Return pending (active and not verified) verifications."""
+        return self.active().filter(verified_at__isnull=True)
+
+    def for_user(self, user):
+        """Return verifications for a specific user."""
+        return self.filter(user=user)
+
+    def cleanup_expired(self):
+        """Delete expired, unverified verifications."""
+        expired_count, _ = self.expired().filter(verified_at__isnull=True).delete()
+        return expired_count
+
+
+class EmailVerificationManager(models.Manager):
+    """Custom Manager for EmailVerification."""
+
+    def get_queryset(self):
+        return EmailVerificationQuerySet(self.model, using=self._db)
+
+    def active(self):
+        return self.get_queryset().active()
+
+    def expired(self):
+        return self.get_queryset().expired()
+
+    def verified(self):
+        return self.get_queryset().verified()
+
+    def pending(self):
+        return self.get_queryset().pending()
+
+    def for_user(self, user):
+        return self.get_queryset().for_user(user)
+
+    def cleanup_expired(self):
+        return self.get_queryset().cleanup_expired()
+
+    def get_by_token(self, token):
+        """Get verification by token, return None if not found."""
+        try:
+            return self.get(token=token)
+        except self.model.DoesNotExist:
+            return None
+
+    def invalidate_user_verifications(self, user):
+        """Invalidate all active verifications for a user by expiring them."""
+        return self.filter(user=user, verified_at__isnull=True).update(
+            expires_at=timezone.now()
+        )
+
+
 class EmailVerification(models.Model):
     """
     Model for managing email verification tokens.
@@ -40,6 +107,8 @@ class EmailVerification(models.Model):
         help_text="When this verification was completed (null if not verified)",
     )
 
+    objects = EmailVerificationManager()
+
     class Meta:
         db_table = "users_email_verification"
         verbose_name = "Email Verification"
@@ -58,6 +127,7 @@ class EmailVerification(models.Model):
 
     def save(self, *args, **kwargs):
         """Override save to generate token and set expiration if not provided."""
+        # Only auto-generate if not explicitly provided
         if not self.token:
             self.token = self.generate_unique_token()
 
@@ -82,8 +152,8 @@ class EmailVerification(models.Model):
             ValidationError: If unable to generate unique token after max_attempts
         """
         for attempt in range(max_attempts):
-            # Generate 32 random bytes and convert to 64-character hex string
-            token = secrets.token_hex(32)
+            # Generate URL-safe token
+            token = secrets.token_urlsafe(32)
 
             # Check if token already exists
             if not cls.objects.filter(token=token).exists():
@@ -112,16 +182,23 @@ class EmailVerification(models.Model):
         """
         return self.verified_at is not None
 
-    def verify(self):
+    def verify(self, token=None):
         """
         Mark this verification as completed.
 
+        Args:
+            token (str, optional): Token to verify against. If None, no token check.
+
         Returns:
-            bool: True if verification was successful, False if already verified
-                or expired
+            bool: True if verification was successful, False if already verified,
+                expired, or token mismatch
         """
-        if self.is_verified():
+        # If token is provided, check if it matches
+        if token is not None and self.token != token:
             return False
+
+        if self.is_verified():
+            return True  # Already verified is considered success
 
         if self.is_expired():
             return False
@@ -134,6 +211,35 @@ class EmailVerification(models.Model):
         self.user.save(update_fields=["email_verified"])
 
         return True
+
+    def mark_verified(self):
+        """
+        Mark this verification as completed without token check.
+
+        Returns:
+            bool: True if verification was successful, False if expired
+        """
+        if self.is_expired():
+            return False
+
+        if not self.is_verified():
+            self.verified_at = timezone.now()
+            self.save(update_fields=["verified_at"])
+
+            # Update user's email verification status
+            self.user.email_verified = True
+            self.user.save(update_fields=["email_verified"])
+
+        return True
+
+    def get_time_until_expiry(self):
+        """
+        Get time remaining until expiry.
+
+        Returns:
+            timedelta: Time remaining until expiry (negative if expired)
+        """
+        return self.expires_at - timezone.now()
 
     def clean(self):
         """Validate the EmailVerification instance."""
@@ -158,24 +264,28 @@ class EmailVerification(models.Model):
             )
 
     @classmethod
-    def create_for_user(cls, user, expires_in_hours=24):
+    def create_for_user(cls, user, expires_in_hours=24, expiry_hours=None):
         """
         Create a new email verification for a user.
 
         Args:
             user (User): The user to create verification for
-            expires_in_hours (int): Hours until verification expires
+            expires_in_hours (int): Hours until verification expires (deprecated)
+            expiry_hours (int): Hours until verification expires
 
         Returns:
             EmailVerification: The created verification instance
         """
+        # Support both parameter names for backwards compatibility
+        hours = expiry_hours if expiry_hours is not None else expires_in_hours
+
         # Deactivate any existing verifications for this user
         cls.objects.filter(user=user, verified_at__isnull=True).update(
             expires_at=timezone.now()  # Expire immediately
         )
 
         verification = cls.objects.create(
-            user=user, expires_at=timezone.now() + timedelta(hours=expires_in_hours)
+            user=user, expires_at=timezone.now() + timedelta(hours=hours)
         )
 
         # Update user's verification fields
