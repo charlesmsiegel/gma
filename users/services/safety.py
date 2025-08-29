@@ -99,17 +99,31 @@ class SafetyPreferencesService:
             # Ensure lines is a list and clean up empty/whitespace entries
             if not isinstance(lines, list):
                 raise ValidationError("Lines must be a list")
-            preferences.lines = [
-                line.strip() for line in lines if line and line.strip()
-            ]
+            cleaned_lines = []
+            for line in lines:
+                if isinstance(line, str):
+                    # String items - strip whitespace
+                    if line and line.strip():
+                        cleaned_lines.append(line.strip())
+                elif line:
+                    # Non-string items (dict, etc.) - keep as is if truthy
+                    cleaned_lines.append(line)
+            preferences.lines = cleaned_lines
 
         if veils is not None:
             # Ensure veils is a list and clean up empty/whitespace entries
             if not isinstance(veils, list):
                 raise ValidationError("Veils must be a list")
-            preferences.veils = [
-                veil.strip() for veil in veils if veil and veil.strip()
-            ]
+            cleaned_veils = []
+            for veil in veils:
+                if isinstance(veil, str):
+                    # String items - strip whitespace
+                    if veil and veil.strip():
+                        cleaned_veils.append(veil.strip())
+                elif veil:
+                    # Non-string items (dict, etc.) - keep as is if truthy
+                    cleaned_veils.append(veil)
+            preferences.veils = cleaned_veils
 
         if privacy_level is not None:
             preferences.privacy_level = privacy_level

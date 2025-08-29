@@ -18,6 +18,9 @@ from users.serializers import (
     UserProfileSerializer,
 )
 
+# Import safety serializers
+from ..serializers import UserSafetyPreferencesSerializer
+
 from ..serializers import (
     CurrentSessionSerializer,
     LoginSerializer,
@@ -1058,3 +1061,100 @@ def privacy_settings_view(request):
             logger.info(f"Privacy settings updated for user {user.id}")
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Safety Preferences API Views
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([IsAuthenticated])
+def safety_preferences_view(request):
+    """Get or update the current user's safety preferences."""
+    from users.services.safety import SafetyPreferencesService
+    
+    service = SafetyPreferencesService()
+    user = request.user
+    
+    if request.method == "GET":
+        # Get or create user safety preferences
+        preferences = service.get_user_safety_preferences(user, create_if_missing=True)
+        serializer = UserSafetyPreferencesSerializer(preferences)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    elif request.method == "PUT":
+        serializer = UserSafetyPreferencesSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                # Update preferences using service
+                preferences = service.update_safety_preferences(
+                    user=user,
+                    lines=serializer.validated_data.get('lines'),
+                    veils=serializer.validated_data.get('veils'),
+                    privacy_level=serializer.validated_data.get('privacy_level'),
+                    consent_required=serializer.validated_data.get('consent_required')
+                )
+                
+                # Return updated preferences
+                response_serializer = UserSafetyPreferencesSerializer(preferences)
+                logger.info(f"Safety preferences updated for user {user.id}")
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
+                
+            except Exception as e:
+                logger.error(f"Error updating safety preferences for user {user.id}: {e}")
+                return Response(
+                    {"detail": "Failed to update safety preferences"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_safety_preferences_view(request, user_id):
+    """Get another user's safety preferences (with privacy checking)."""
+    from users.services.safety import SafetyPreferencesService
+    from campaigns.models import Campaign
+    from django.db import models
+    
+    try:
+        target_user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response(
+            {"detail": "User not found"}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    service = SafetyPreferencesService()
+    viewer = request.user
+    
+    # Get campaigns where both users are members for context
+    viewer_campaigns = Campaign.objects.filter(
+        models.Q(owner=viewer) | models.Q(memberships__user=viewer)
+    ).distinct()
+    
+    target_campaigns = Campaign.objects.filter(
+        models.Q(owner=target_user) | models.Q(memberships__user=target_user)
+    ).distinct()
+    
+    # Find shared campaigns
+    shared_campaigns = viewer_campaigns & target_campaigns
+    campaign_context = shared_campaigns.first()  # Use first shared campaign for permission checking
+    
+    # Check if viewer can access target user's preferences
+    if not service.can_view_safety_preferences(viewer, target_user, campaign_context):
+        return Response(
+            {"privacy_restricted": True, "detail": "User's safety preferences are private"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Get filtered safety data
+    safety_data = service.get_filtered_safety_data(target_user, viewer, campaign_context)
+    
+    if safety_data is None:
+        return Response(
+            {"privacy_restricted": True, "detail": "User's safety preferences are private"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    return Response(safety_data, status=status.HTTP_200_OK)
