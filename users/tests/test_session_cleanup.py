@@ -12,8 +12,7 @@ Tests cover:
 - Data archival strategies
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
@@ -27,7 +26,6 @@ from users.models.session_models import (
     SessionSecurityLog,
     UserSession,
 )
-from users.services import SessionSecurityService
 
 User = get_user_model()
 
@@ -89,11 +87,10 @@ class ExpiredSessionCleanupTest(TestCase):
 
         self.assertEqual(cleaned_count, 3)  # Should clean 3 expired sessions
 
-        # Verify expired sessions are deactivated
+        # Verify expired sessions are deleted
         for session in expired_sessions:
-            session.refresh_from_db()
-            self.assertFalse(session.is_active)
-            self.assertIsNotNone(session.ended_at)
+            with self.assertRaises(UserSession.DoesNotExist):
+                session.refresh_from_db()
 
         # Verify active sessions remain active
         for session in active_sessions:
@@ -134,13 +131,14 @@ class ExpiredSessionCleanupTest(TestCase):
 
         self.assertEqual(cleaned_count, 2)  # Should clean both expired sessions
 
-        # Verify cleanup results
-        expired_remember_session.refresh_from_db()
-        expired_regular_session.refresh_from_db()
-        active_remember_session.refresh_from_db()
+        # Verify cleanup results - expired sessions should be deleted
+        with self.assertRaises(UserSession.DoesNotExist):
+            expired_remember_session.refresh_from_db()
+        with self.assertRaises(UserSession.DoesNotExist):
+            expired_regular_session.refresh_from_db()
 
-        self.assertFalse(expired_remember_session.is_active)
-        self.assertFalse(expired_regular_session.is_active)
+        # Active session should remain
+        active_remember_session.refresh_from_db()
         self.assertTrue(active_remember_session.is_active)
 
     def test_cleanup_performance_with_large_dataset(self):
@@ -204,10 +202,10 @@ class ExpiredSessionCleanupTest(TestCase):
 
         self.assertEqual(cleaned_count, 5)
 
-        # Verify all sessions are deactivated
+        # Verify all sessions are deleted
         for session in sessions_to_expire:
-            session.refresh_from_db()
-            self.assertFalse(session.is_active)
+            with self.assertRaises(UserSession.DoesNotExist):
+                session.refresh_from_db()
 
     def test_cleanup_idempotency(self):
         """Test that cleanup operations are idempotent."""
@@ -230,9 +228,9 @@ class ExpiredSessionCleanupTest(TestCase):
         self.assertEqual(second_cleanup_count, 0)
         self.assertEqual(third_cleanup_count, 0)
 
-        # Session should remain deactivated
-        expired_session.refresh_from_db()
-        self.assertFalse(expired_session.is_active)
+        # Session should be deleted
+        with self.assertRaises(UserSession.DoesNotExist):
+            expired_session.refresh_from_db()
 
 
 class OrphanedSessionHandlingTest(TestCase):
@@ -267,7 +265,7 @@ class OrphanedSessionHandlingTest(TestCase):
             expire_date=timezone.now() + timedelta(days=1),
         )
 
-        orphaned_user_session = UserSession.objects.create(
+        UserSession.objects.create(
             user=self.user,
             session=orphaned_django_session,
             ip_address="192.168.1.101",
@@ -282,11 +280,8 @@ class OrphanedSessionHandlingTest(TestCase):
         orphaned_user_sessions = UserSession.objects.filter(session__isnull=True)
 
         if orphaned_user_sessions.exists():
-            orphaned_count = orphaned_user_sessions.count()
             # Deactivate orphaned sessions
             orphaned_user_sessions.update(is_active=False, ended_at=timezone.now())
-        else:
-            orphaned_count = 0
 
         # Check results
         # Note: Due to CASCADE deletion, orphaned_user_session should be deleted
@@ -393,10 +388,10 @@ class DatabaseMaintenanceTest(TransactionTestCase):
                 # Should clean all expired sessions
                 self.assertEqual(cleaned_count, 20)
 
-                # Verify cleanup results
+                # Verify cleanup results - sessions should be deleted
                 for session in expired_sessions:
-                    session.refresh_from_db()
-                    self.assertFalse(session.is_active)
+                    with self.assertRaises(UserSession.DoesNotExist):
+                        session.refresh_from_db()
 
             except Exception as e:
                 # If anything fails, transaction should rollback
@@ -431,9 +426,9 @@ class DatabaseMaintenanceTest(TransactionTestCase):
         cleaned_count = UserSession.objects.cleanup_expired()
         self.assertEqual(cleaned_count, 1)
 
-        # Session should be deactivated
-        expired_session.refresh_from_db()
-        self.assertFalse(expired_session.is_active)
+        # Session should be deleted
+        with self.assertRaises(UserSession.DoesNotExist):
+            expired_session.refresh_from_db()
 
         # Security log should still exist (SET_NULL behavior)
         security_log.refresh_from_db()
@@ -700,9 +695,9 @@ class RetentionPolicyTest(TestCase):
             timestamp__gte=log_retention_cutoff
         )
 
-        # Should clean only the very old log
-        self.assertEqual(logs_to_clean.count(), 1)
-        self.assertEqual(logs_to_keep.count(), 3)
+        # Should clean logs older than 90 days (95 days and 370 days)
+        self.assertEqual(logs_to_clean.count(), 2)
+        self.assertEqual(logs_to_keep.count(), 2)
 
     def test_graduated_retention_policy(self):
         """Test graduated retention policy with different rules."""
@@ -717,7 +712,7 @@ class RetentionPolicyTest(TestCase):
             {
                 "type": "security_event",
                 "has_security_events": True,
-                "retention_days": 180,  # Longest retention for sessions with security events
+                "retention_days": 180,  # Longest retention for security events
             },
         ]
 
@@ -726,7 +721,7 @@ class RetentionPolicyTest(TestCase):
             session = UserSession.objects.create(
                 user=self.user,
                 session=Session.objects.create(
-                    session_key=f"graduated_retention_{session_type['type']}_session",
+                    session_key=(f"graduated_retention_{session_type['type']}_session"),
                     session_data="test_data",
                     expire_date=timezone.now() - timedelta(days=35),
                 ),

@@ -28,7 +28,7 @@ class SessionSecurityEvent:
     SESSION_EXTENDED = "session_extended"
     SESSION_TERMINATED = "session_terminated"
     CONCURRENT_SESSION_LIMIT = "concurrent_session_limit"
-    PASSWORD_CHANGED = "password_changed"
+    PASSWORD_CHANGED = "password_changed"  # nosec B105
     ACCOUNT_LOCKED = "account_locked"
 
     @classmethod
@@ -98,12 +98,13 @@ class UserSessionManager(models.Manager):
         return self.get_queryset().expired()
 
     def cleanup_expired(self):
-        """Clean up expired sessions and deactivate associated UserSessions."""
+        """Clean up expired sessions and delete associated UserSessions."""
         expired_sessions = self.expired()
         count = expired_sessions.count()
 
-        # Deactivate expired UserSessions
-        expired_sessions.update(is_active=False, ended_at=timezone.now())
+        # Delete expired UserSessions
+        # This will trigger SET_NULL on related SessionSecurityLog records
+        expired_sessions.delete()
 
         return count
 
