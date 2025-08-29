@@ -79,6 +79,30 @@ class EmailVerificationService:
             logger.error(f"Error during email verification: {e}")
             return False, None, "An error occurred during verification."
 
+    def send_verification_email(self, user):
+        """
+        Send verification email to a new user.
+
+        Args:
+            user (User): The user to send verification to
+
+        Returns:
+            bool: True if email was sent successfully, False otherwise
+        """
+        try:
+            # Create verification for user
+            verification = EmailVerification.create_for_user(user)
+
+            # Send the actual email
+            self._send_email(user, verification)
+
+            logger.info(f"Email verification sent for user {user.id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error sending verification email for user {user.id}: {e}")
+            return False
+
     def resend_verification_email(self, user):
         """
         Resend verification email to the user.
@@ -94,21 +118,70 @@ class EmailVerificationService:
             EmailVerification.objects.invalidate_user_verifications(user)
 
             # Create new verification
-            EmailVerification.create_for_user(user)
+            verification = EmailVerification.create_for_user(user)
 
-            # In a real implementation, you would send the email here
-            # For now, we'll just log it and return True to indicate "sent"
+            # Send the actual email
+            self._send_email(user, verification)
+
             logger.info(f"Email verification resent for user {user.id}")
-
-            # TODO: Implement actual email sending
-            # from django.core.mail import send_mail
-            # send_mail(...)
-
             return True
 
         except Exception as e:
             logger.error(f"Error resending verification email for user {user.id}: {e}")
             return False
+
+    def _send_email(self, user, verification):
+        """
+        Internal method to send verification email. Separated for easier testing.
+
+        Args:
+            user (User): The user to send email to
+            verification (EmailVerification): The verification instance
+        """
+        from html import escape
+
+        from django.core.mail import send_mail
+        from django.urls import reverse
+
+        # Create verification email
+        subject = "Email Verification Required"
+
+        # Build verification URL
+        verify_path = reverse(
+            "api:auth:verify_email", kwargs={"token": verification.token}
+        )
+
+        # Create a full URL (fallback for tests)
+        verify_url = f"http://localhost:8000{verify_path}"
+
+        # Escape user input for security
+        safe_username = escape(user.username)
+
+        body = f"""
+Hello {safe_username},
+
+Please verify your email address by clicking the link below:
+
+Token: {verification.token}
+Verification URL: {verify_url}
+
+If you did not create this account, please ignore this email.
+
+Thank you,
+Your Application Team
+"""
+
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=(
+                settings.DEFAULT_FROM_EMAIL
+                if hasattr(settings, "DEFAULT_FROM_EMAIL")
+                else "noreply@example.com"
+            ),
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
 
     def create_verification_for_user(self, user):
         """
