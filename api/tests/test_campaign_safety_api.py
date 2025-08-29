@@ -429,7 +429,7 @@ class CampaignSafetyAgreementAPITest(TestCase):
         )
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['agreements']), 2)
+        self.assertEqual(len(response.data['agreements']), 3)  # owner + 2 players
 
     def test_delete_safety_agreement(self):
         """Test deleting a safety agreement."""
@@ -636,7 +636,7 @@ class CampaignSafetyOverviewAPITest(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('agreements_status', response.data)
-        self.assertEqual(len(response.data['agreements_status']), 3)  # 2 players + GM
+        self.assertEqual(len(response.data['agreements_status']), 4)  # owner + GM + 2 players
         
         # Find player1's status
         player1_status = next(

@@ -66,11 +66,20 @@ class CampaignSafetyService:
                 raise ValidationError("Content warnings must be a list")
 
             # Clean up warnings - remove empty/whitespace entries
-            cleaned_warnings = [
-                warning.strip()
-                for warning in content_warnings
-                if warning and warning.strip()
-            ]
+            # Handle both string and dict warnings
+            cleaned_warnings = []
+            for warning in content_warnings:
+                if isinstance(warning, str):
+                    # String warning - clean up whitespace
+                    cleaned = warning.strip()
+                    if cleaned:
+                        cleaned_warnings.append(cleaned)
+                elif isinstance(warning, dict) and warning:
+                    # Dictionary warning - keep as-is if not empty
+                    cleaned_warnings.append(warning)
+                elif warning:
+                    # Other non-empty types - keep as-is
+                    cleaned_warnings.append(warning)
             campaign.content_warnings = cleaned_warnings
 
         # Update safety tools setting if provided
@@ -120,12 +129,20 @@ class CampaignSafetyService:
         if not isinstance(acknowledged_warnings, list):
             raise ValidationError("Acknowledged warnings must be a list")
 
-        # Clean up acknowledged warnings
-        cleaned_warnings = [
-            warning.strip()
-            for warning in acknowledged_warnings
-            if warning and warning.strip()
-        ]
+        # Clean up acknowledged warnings - handle both strings and complex structures
+        cleaned_warnings = []
+        for warning in acknowledged_warnings:
+            if isinstance(warning, str):
+                # String warning - clean up whitespace
+                cleaned = warning.strip()
+                if cleaned:
+                    cleaned_warnings.append(cleaned)
+            elif isinstance(warning, dict) and warning:
+                # Dictionary warning - keep as-is if not empty
+                cleaned_warnings.append(warning)
+            elif warning:
+                # Other non-empty types - keep as-is
+                cleaned_warnings.append(warning)
 
         # Get or create agreement
         agreement, created = CampaignSafetyAgreement.objects.get_or_create(
@@ -304,10 +321,15 @@ class CampaignSafetyService:
 
         # Get all campaign participants
         membership_service = MembershipService(campaign)
-        participants = [campaign.owner]
-
+        participants = []
+        
+        # Add all members
         for membership in membership_service.get_campaign_members():
             participants.append(membership.user)
+        
+        # Add owner if not already included
+        if campaign.owner not in participants:
+            participants.append(campaign.owner)
 
         # Get agreement status for each participant
         agreements_data = []
