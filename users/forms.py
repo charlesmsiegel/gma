@@ -529,6 +529,7 @@ class UserProfileManagementForm(forms.ModelForm):
         ],
         widget=forms.Select(attrs={"class": "form-select"}),
         help_text="Who can view your profile information",
+        required=False,
     )
 
     show_email = forms.BooleanField(
@@ -573,6 +574,15 @@ class UserProfileManagementForm(forms.ModelForm):
         fields = [
             "display_name",
             "timezone",
+            "theme",
+            "bio",
+            "avatar",
+            "website_url",
+            "profile_visibility",
+            "show_email",
+            "show_real_name",
+            "show_last_login",
+            "allow_activity_tracking",
         ]
         widgets = {
             "display_name": forms.TextInput(
@@ -709,35 +719,7 @@ class UserProfileManagementForm(forms.ModelForm):
         """Save the form with social links JSON data."""
         user = super().save(commit=False)
 
-        # Handle non-Meta fields manually
-        if "first_name" in self.cleaned_data:
-            user.first_name = self.cleaned_data.get("first_name", "")
-        if "last_name" in self.cleaned_data:
-            user.last_name = self.cleaned_data.get("last_name", "")
-        if "bio" in self.cleaned_data:
-            user.bio = self.cleaned_data.get("bio", "")
-        if "avatar" in self.cleaned_data and self.cleaned_data.get("avatar"):
-            user.avatar = self.cleaned_data["avatar"]
-        if "website_url" in self.cleaned_data:
-            user.website_url = self.cleaned_data.get("website_url", "")
-
-        # Handle privacy settings
-        if "profile_visibility" in self.cleaned_data:
-            user.profile_visibility = self.cleaned_data.get(
-                "profile_visibility", "members"
-            )
-        if "show_email" in self.cleaned_data:
-            user.show_email = self.cleaned_data.get("show_email", False)
-        if "show_real_name" in self.cleaned_data:
-            user.show_real_name = self.cleaned_data.get("show_real_name", True)
-        if "show_last_login" in self.cleaned_data:
-            user.show_last_login = self.cleaned_data.get("show_last_login", False)
-        if "allow_activity_tracking" in self.cleaned_data:
-            user.allow_activity_tracking = self.cleaned_data.get(
-                "allow_activity_tracking", True
-            )
-
-        # Build social_links JSON from individual fields
+        # Build social_links JSON from individual form fields (not in Meta.fields)
         social_links = {}
         if self.cleaned_data.get("twitter_url"):
             social_links["twitter"] = self.cleaned_data["twitter_url"]
@@ -747,10 +729,6 @@ class UserProfileManagementForm(forms.ModelForm):
             social_links["github"] = self.cleaned_data["github_url"]
 
         user.social_links = social_links
-
-        # Set theme if provided in cleaned_data
-        if self.cleaned_data.get("theme"):
-            user.theme = self.cleaned_data["theme"]
 
         if commit:
             user.save()

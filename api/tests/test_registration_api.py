@@ -596,33 +596,37 @@ class RegistrationEdgeCasesTest(TestCase):
             "password_confirm": "NewPass123!",
         }
 
-        # Mock token generation to create collision scenario
-        with patch(
-            "users.models.EmailVerification.generate_unique_token"
-        ) as mock_token:
-            # First call returns existing token, second returns unique one
-            mock_token.side_effect = ["existing_token", "unique_token"]
+        # Create existing verification with a known token
+        existing_user = User.objects.create_user(
+            username="existing",
+            email="existing@example.com",
+            password="ExistingPass123!",
+        )
+        EmailVerification.objects.create(
+            user=existing_user,
+            token="existing_collision_token",
+            expires_at=timezone.now() + timedelta(hours=24),
+        )
 
-            # Create existing verification with "existing_token"
-            existing_user = User.objects.create_user(
-                username="existing",
-                email="existing@example.com",
-                password="ExistingPass123!",
-            )
-            EmailVerification.objects.create(
-                user=existing_user,
-                token="existing_token",
-                expires_at=timezone.now() + timedelta(hours=24),
-            )
+        # Mock secrets.token_urlsafe to first return existing token, then unique token
+        with patch("secrets.token_urlsafe") as mock_token_gen:
+            # First call returns existing token (collision), second returns unique token
+            mock_token_gen.side_effect = [
+                "existing_collision_token",
+                "unique_new_token",
+            ]
 
             response = self.client.post(self.register_url, data, format="json")
 
-            # Should still succeed with unique token
+            # Should still succeed with unique token after collision handling
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
             user = User.objects.get(username="newuser")
             verification = EmailVerification.objects.get(user=user)
-            self.assertEqual(verification.token, "unique_token")
+            self.assertEqual(verification.token, "unique_new_token")
+
+            # Verify the method was called twice due to collision
+            self.assertEqual(mock_token_gen.call_count, 2)
 
     def test_registration_concurrent_requests(self):
         """Test handling of concurrent registration requests."""
