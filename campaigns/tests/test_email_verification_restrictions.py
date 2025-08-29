@@ -77,7 +77,7 @@ class CampaignCreationRestrictionTest(TestCase):
         }
 
         # Try to create campaign via API
-        api_url = reverse("api:campaigns:campaign-list")
+        api_url = reverse("api:campaigns:list_create")
         response = self.client.post(api_url, campaign_data, format="json")
 
         # Should be forbidden
@@ -99,7 +99,7 @@ class CampaignCreationRestrictionTest(TestCase):
             "game_system": "mage",
         }
 
-        api_url = reverse("api:campaigns:campaign-list")
+        api_url = reverse("api:campaigns:list_create")
         response = self.client.post(api_url, campaign_data, format="json")
 
         # Should succeed
@@ -119,7 +119,7 @@ class CampaignCreationRestrictionTest(TestCase):
             "game_system": "mage",
         }
 
-        api_url = reverse("api:campaigns:campaign-list")
+        api_url = reverse("api:campaigns:list_create")
         response = self.client.post(api_url, campaign_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -160,7 +160,7 @@ class CampaignCreationRestrictionTest(TestCase):
             "game_system": "mage",
         }
 
-        api_url = reverse("api:campaigns:campaign-list")
+        api_url = reverse("api:campaigns:list_create")
         response = self.client.post(api_url, campaign_data, format="json")
 
         # Should now work
@@ -274,7 +274,7 @@ class CampaignJoiningRestrictionTest(TestCase):
         self.client.force_authenticate(user=self.unverified_user)
 
         # Try to list campaigns
-        list_url = reverse("api:campaigns:campaign-list")
+        list_url = reverse("api:campaign-list")
         response = self.client.get(list_url)
 
         # Should succeed but with appropriate filtering/warnings
@@ -604,7 +604,7 @@ class PermissionMiddlewareTest(TestCase):
             "game_system": "mage",
         }
 
-        api_url = reverse("api:campaigns:campaign-list")
+        api_url = reverse("api:campaigns:list_create")
         response = self.client.post(api_url, campaign_data, format="json")
 
         # Should succeed for superuser
@@ -629,7 +629,7 @@ class PermissionMiddlewareTest(TestCase):
             "game_system": "mage",
         }
 
-        api_url = reverse("api:campaigns:campaign-list")
+        api_url = reverse("api:campaigns:list_create")
         response = self.client.post(api_url, campaign_data, format="json")
 
         # Staff users should still need email verification
@@ -748,7 +748,7 @@ class VerificationWorkflowIntegrationTest(TestCase):
             "game_system": "mage",
         }
 
-        api_url = reverse("api:campaigns:campaign-list")
+        api_url = reverse("api:campaigns:list_create")
         response = self.client.post(api_url, campaign_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -789,7 +789,7 @@ class VerificationWorkflowIntegrationTest(TestCase):
             "game_system": "mage",
         }
 
-        api_url = reverse("api:campaigns:campaign-list")
+        api_url = reverse("api:campaigns:list_create")
         response = self.client.post(api_url, campaign_data, format="json")
 
         # Should work immediately (no caching issues)
@@ -811,7 +811,7 @@ class VerificationWorkflowIntegrationTest(TestCase):
             "game_system": "mage",
         }
 
-        api_url = reverse("api:campaigns:campaign-list")
+        api_url = reverse("api:campaigns:list_create")
         response = self.client.post(api_url, campaign_data, format="json")
 
         # Should still be forbidden (token alone is not enough)
