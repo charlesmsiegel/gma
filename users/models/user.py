@@ -391,3 +391,19 @@ class User(AbstractUser):
             return None
 
         return self.email_verification_sent_at + timedelta(hours=24)
+
+    def save(self, *args, **kwargs):
+        """Override save to handle email changes and reset verification."""
+        # Check if this is an existing user with changed email
+        if self.pk:
+            try:
+                old_user = User.objects.get(pk=self.pk)
+                if old_user.email != self.email:
+                    # Email changed - reset verification
+                    self.email_verified = False
+                    self.clear_email_verification_token()
+            except User.DoesNotExist:
+                # This shouldn't happen, but handle it gracefully
+                pass
+
+        super().save(*args, **kwargs)
