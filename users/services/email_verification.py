@@ -90,11 +90,21 @@ class EmailVerificationService:
             bool: True if email was sent successfully, False otherwise
         """
         try:
-            # Create verification for user
-            verification = EmailVerification.create_for_user(user)
+            # Get existing verification or create new one
+            verification = EmailVerification.get_active_for_user(user)
+            if not verification:
+                verification = EmailVerification.create_for_user(user)
+
+            # Update user's token (but not sent_at until email is successfully sent)
+            user.email_verification_token = verification.token
+            user.save(update_fields=["email_verification_token"])
 
             # Send the actual email
             self._send_email(user, verification)
+
+            # Only update sent_at if email was actually sent
+            user.email_verification_sent_at = verification.created_at
+            user.save(update_fields=["email_verification_sent_at"])
 
             logger.info(f"Email verification sent for user {user.id}")
             return True
@@ -144,7 +154,7 @@ class EmailVerificationService:
         from django.urls import reverse
 
         # Create verification email
-        subject = "Email Verification Required"
+        subject = "Please Verify Your Email"
 
         # Build verification URL
         verify_path = reverse(

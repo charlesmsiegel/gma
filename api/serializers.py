@@ -7,15 +7,19 @@ from django.db import models
 from rest_framework import serializers
 
 from api.messages import ErrorMessages
-from campaigns.models import Campaign, CampaignInvitation, CampaignMembership
+from campaigns.models import (
+    Campaign,
+    CampaignInvitation,
+    CampaignMembership,
+    CampaignSafetyAgreement,
+)
 from characters.models import Character
 from items.models import Item
 from locations.models import Location
 from scenes.models import Message, Scene
 from users.models.password_reset import PasswordReset
-from users.models.session_models import SessionSecurityLog, UserSession
 from users.models.safety import UserSafetyPreferences
-from campaigns.models import CampaignSafetyAgreement
+from users.models.session_models import SessionSecurityLog, UserSession
 
 User = get_user_model()
 
@@ -153,23 +157,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
             user.save()
 
-            # Create email verification record
-            verification = EmailVerification.create_for_user(user)
-
-            # Update user's verification fields
-            user.email_verification_token = verification.token
-            user.email_verification_sent_at = verification.created_at
-            user.save(
-                update_fields=["email_verification_token", "email_verification_sent_at"]
-            )
-
-            # Send verification email
+            # Send verification email using the service (creates record and sends email)
             service = EmailVerificationService()
             try:
                 service.send_verification_email(user)
             except Exception:  # nosec B110
                 # Don't fail registration if email sending fails - intentional
-                pass
+                # But ensure we still have a verification record for the user
+                if not EmailVerification.objects.filter(user=user).exists():
+                    verification = EmailVerification.create_for_user(user)
+                    user.email_verification_token = verification.token
+                    user.save(update_fields=["email_verification_token"])
 
         return user
 
@@ -2147,7 +2145,8 @@ class PasswordResetRequestSerializer(serializers.Serializer):
                 raise serializers.ValidationError("Invalid email format.")
         else:
             # It's a username - do basic username validation
-            # Require usernames to start with letter/number and contain only alphanumeric and underscore
+            # Require usernames to start with letter/number and contain only
+            # alphanumeric and underscore characters
             import re
 
             if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9_]*$", value) or len(value) < 1:
@@ -2404,20 +2403,28 @@ class TerminateAllSessionsResponseSerializer(serializers.Serializer):
 
 class UserSafetyPreferencesSerializer(serializers.ModelSerializer):
     """Serializer for user safety preferences."""
-    
+
     class Meta:
         model = UserSafetyPreferences
         fields = [
-            'lines', 'veils', 'privacy_level', 'consent_required',
-            'created_at', 'updated_at'
+            "lines",
+            "veils",
+            "privacy_level",
+            "consent_required",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ["created_at", "updated_at"]
 
     def validate_privacy_level(self, value):
         """Validate privacy level choice."""
-        valid_choices = [choice[0] for choice in UserSafetyPreferences.PRIVACY_LEVEL_CHOICES]
+        valid_choices = [
+            choice[0] for choice in UserSafetyPreferences.PRIVACY_LEVEL_CHOICES
+        ]
         if value not in valid_choices:
-            raise serializers.ValidationError(f"Invalid privacy level. Must be one of: {valid_choices}")
+            raise serializers.ValidationError(
+                f"Invalid privacy level. Must be one of: {valid_choices}"
+            )
         return value
 
     def validate_lines(self, value):
@@ -2435,10 +2442,10 @@ class UserSafetyPreferencesSerializer(serializers.ModelSerializer):
 
 class CampaignSafetySerializer(serializers.ModelSerializer):
     """Serializer for campaign safety settings."""
-    
+
     class Meta:
         model = Campaign
-        fields = ['content_warnings', 'safety_tools_enabled']
+        fields = ["content_warnings", "safety_tools_enabled"]
 
     def validate_content_warnings(self, value):
         """Validate content warnings field."""
@@ -2449,17 +2456,22 @@ class CampaignSafetySerializer(serializers.ModelSerializer):
 
 class CampaignSafetyAgreementSerializer(serializers.ModelSerializer):
     """Serializer for campaign safety agreements."""
-    
+
     participant = serializers.PrimaryKeyRelatedField(read_only=True)
     campaign = serializers.PrimaryKeyRelatedField(read_only=True)
-    
+
     class Meta:
         model = CampaignSafetyAgreement
         fields = [
-            'id', 'campaign', 'participant', 'agreed_to_terms', 
-            'acknowledged_warnings', 'created_at', 'updated_at'
+            "id",
+            "campaign",
+            "participant",
+            "agreed_to_terms",
+            "acknowledged_warnings",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['id', 'campaign', 'participant', 'created_at', 'updated_at']
+        read_only_fields = ["id", "campaign", "participant", "created_at", "updated_at"]
 
     def validate_acknowledged_warnings(self, value):
         """Validate acknowledged warnings field."""
@@ -2470,11 +2482,11 @@ class CampaignSafetyAgreementSerializer(serializers.ModelSerializer):
 
 class ContentValidationRequestSerializer(serializers.Serializer):
     """Serializer for content validation requests."""
-    
+
     content = serializers.CharField(required=True, allow_blank=True)
     user_id = serializers.IntegerField(required=False)
     campaign_id = serializers.IntegerField(required=True)
-    
+
     def validate_user_id(self, value):
         """Validate user exists."""
         if value is not None:
@@ -2483,7 +2495,7 @@ class ContentValidationRequestSerializer(serializers.Serializer):
             except User.DoesNotExist:
                 raise serializers.ValidationError("User not found.")
         return value
-    
+
     def validate_campaign_id(self, value):
         """Validate campaign exists."""
         try:
@@ -2495,7 +2507,7 @@ class ContentValidationRequestSerializer(serializers.Serializer):
 
 class ContentValidationResponseSerializer(serializers.Serializer):
     """Serializer for content validation responses."""
-    
+
     is_safe = serializers.BooleanField()
     lines_violated = serializers.ListField(child=serializers.CharField(), default=list)
     veils_triggered = serializers.ListField(child=serializers.CharField(), default=list)
@@ -2507,10 +2519,10 @@ class ContentValidationResponseSerializer(serializers.Serializer):
 
 class CampaignContentValidationRequestSerializer(serializers.Serializer):
     """Serializer for campaign-wide content validation requests."""
-    
+
     content = serializers.CharField(required=True, allow_blank=True)
     campaign_id = serializers.IntegerField(required=True)
-    
+
     def validate_campaign_id(self, value):
         """Validate campaign exists."""
         try:
@@ -2522,7 +2534,7 @@ class CampaignContentValidationRequestSerializer(serializers.Serializer):
 
 class UserValidationResultSerializer(serializers.Serializer):
     """Serializer for individual user validation results."""
-    
+
     user_id = serializers.IntegerField()
     username = serializers.CharField()
     is_safe = serializers.BooleanField()
@@ -2533,26 +2545,23 @@ class UserValidationResultSerializer(serializers.Serializer):
 
 class CampaignContentValidationResponseSerializer(serializers.Serializer):
     """Serializer for campaign-wide content validation responses."""
-    
+
     is_safe = serializers.BooleanField()
     user_results = UserValidationResultSerializer(many=True, default=list)
     overall_violations = serializers.DictField(
-        child=serializers.ListField(child=serializers.CharField()),
-        default=dict
+        child=serializers.ListField(child=serializers.CharField()), default=dict
     )
 
 
 class PreSceneCheckRequestSerializer(serializers.Serializer):
     """Serializer for pre-scene safety check requests."""
-    
+
     campaign_id = serializers.IntegerField(required=True)
     planned_content_summary = serializers.CharField(required=False, allow_blank=True)
     participants = serializers.ListField(
-        child=serializers.IntegerField(),
-        required=False,
-        default=list
+        child=serializers.IntegerField(), required=False, default=list
     )
-    
+
     def validate_campaign_id(self, value):
         """Validate campaign exists."""
         try:
@@ -2560,7 +2569,7 @@ class PreSceneCheckRequestSerializer(serializers.Serializer):
         except Campaign.DoesNotExist:
             raise serializers.ValidationError("Campaign not found.")
         return value
-    
+
     def validate_participants(self, value):
         """Validate all participant users exist."""
         for user_id in value:
@@ -2573,34 +2582,35 @@ class PreSceneCheckRequestSerializer(serializers.Serializer):
 
 class ParticipantStatusSerializer(serializers.Serializer):
     """Serializer for participant status in pre-scene check."""
-    
+
     has_safety_agreement = serializers.BooleanField()
     safety_preferences_set = serializers.BooleanField()
-    potential_issues = serializers.ListField(child=serializers.CharField(), default=list)
+    potential_issues = serializers.ListField(
+        child=serializers.CharField(), default=list
+    )
 
 
 class PreSceneCheckResponseSerializer(serializers.Serializer):
     """Serializer for pre-scene safety check responses."""
-    
+
     check_passed = serializers.BooleanField()
     participant_status = serializers.DictField(
-        child=ParticipantStatusSerializer(),
-        default=dict
+        child=ParticipantStatusSerializer(), default=dict
     )
     warnings = serializers.ListField(child=serializers.CharField(), default=list)
-    required_actions = serializers.ListField(child=serializers.CharField(), default=list)
+    required_actions = serializers.ListField(
+        child=serializers.CharField(), default=list
+    )
 
 
 class BatchContentValidationRequestSerializer(serializers.Serializer):
     """Serializer for batch content validation requests."""
-    
+
     campaign_id = serializers.IntegerField(required=True)
     content_items = serializers.ListField(
-        child=serializers.DictField(),
-        required=True,
-        min_length=1
+        child=serializers.DictField(), required=True, min_length=1
     )
-    
+
     def validate_campaign_id(self, value):
         """Validate campaign exists."""
         try:
@@ -2608,20 +2618,24 @@ class BatchContentValidationRequestSerializer(serializers.Serializer):
         except Campaign.DoesNotExist:
             raise serializers.ValidationError("Campaign not found.")
         return value
-    
+
     def validate_content_items(self, value):
         """Validate content items structure."""
         for item in value:
             if not isinstance(item, dict):
-                raise serializers.ValidationError("Each content item must be a dictionary.")
-            if 'id' not in item or 'content' not in item:
-                raise serializers.ValidationError("Each content item must have 'id' and 'content' fields.")
+                raise serializers.ValidationError(
+                    "Each content item must be a dictionary."
+                )
+            if "id" not in item or "content" not in item:
+                raise serializers.ValidationError(
+                    "Each content item must have 'id' and 'content' fields."
+                )
         return value
 
 
 class ContentItemResultSerializer(serializers.Serializer):
     """Serializer for individual content item validation result."""
-    
+
     id = serializers.CharField()
     is_safe = serializers.BooleanField()
     lines_violated = serializers.ListField(child=serializers.CharField(), default=list)
@@ -2631,13 +2645,13 @@ class ContentItemResultSerializer(serializers.Serializer):
 
 class BatchContentValidationResponseSerializer(serializers.Serializer):
     """Serializer for batch content validation responses."""
-    
+
     results = ContentItemResultSerializer(many=True, default=list)
 
 
 class CampaignSafetyOverviewParticipantSerializer(serializers.Serializer):
     """Serializer for participant info in safety overview."""
-    
+
     username = serializers.CharField()
     has_preferences = serializers.BooleanField()
     privacy_level = serializers.CharField(required=False, allow_null=True)
@@ -2646,18 +2660,17 @@ class CampaignSafetyOverviewParticipantSerializer(serializers.Serializer):
 
 class CampaignSafetyOverviewSerializer(serializers.Serializer):
     """Serializer for campaign safety overview."""
-    
+
     participants = CampaignSafetyOverviewParticipantSerializer(many=True, default=list)
     common_concerns = serializers.DictField(
-        child=serializers.ListField(child=serializers.CharField()),
-        default=dict
+        child=serializers.ListField(child=serializers.CharField()), default=dict
     )
     privacy_summary = serializers.DictField(default=dict)
 
 
 class AgreementStatusSerializer(serializers.Serializer):
     """Serializer for agreement status."""
-    
+
     user_id = serializers.IntegerField()
     username = serializers.CharField()
     role = serializers.CharField()
@@ -2668,15 +2681,15 @@ class AgreementStatusSerializer(serializers.Serializer):
 
 class CampaignSafetyAgreementsStatusSerializer(serializers.Serializer):
     """Serializer for campaign safety agreements status."""
-    
+
     agreements_status = AgreementStatusSerializer(many=True, default=list)
 
 
 class SafetyCompatibilityRequestSerializer(serializers.Serializer):
     """Serializer for safety compatibility check requests."""
-    
+
     user_id = serializers.IntegerField(required=True)
-    
+
     def validate_user_id(self, value):
         """Validate user exists."""
         try:
@@ -2688,5 +2701,5 @@ class SafetyCompatibilityRequestSerializer(serializers.Serializer):
 
 class SafetyCompatibilityResultSerializer(serializers.Serializer):
     """Serializer for safety compatibility results."""
-    
+
     compatibility_result = serializers.DictField(default=dict)
