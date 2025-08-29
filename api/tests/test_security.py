@@ -367,8 +367,16 @@ class CSRFTokenHandlingTest(TestCase):
         self.assertTrue(response2.status_code < 500)  # Should not be server error
 
         # Both requests should be handled properly (not crash)
-        self.assertIsNotNone(response.data)
-        self.assertIsNotNone(response2.data)
+        # Check if response has .data attribute (DRF Response) or .content (Django HttpResponse)  # noqa: E501
+        if hasattr(response, "data"):
+            self.assertIsNotNone(response.data)
+        else:
+            self.assertIsNotNone(response.content)
+
+        if hasattr(response2, "data"):
+            self.assertIsNotNone(response2.data)
+        else:
+            self.assertIsNotNone(response2.content)
 
     @override_settings(CSRF_COOKIE_AGE=10)  # 10 seconds for testing
     def test_csrf_token_expiration_handling(self):
