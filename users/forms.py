@@ -555,6 +555,13 @@ class UserProfileManagementForm(forms.ModelForm):
         help_text="Allow activity tracking for analytics and recommendations",
     )
 
+    theme = forms.ChoiceField(
+        choices=User.THEME_CHOICES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        help_text="Choose your preferred theme for the interface",
+        required=False,
+    )
+
     class Meta:
         model = User
         fields = [
@@ -597,6 +604,11 @@ class UserProfileManagementForm(forms.ModelForm):
         if not self.instance.pk:
             self.fields["show_real_name"].initial = True
             self.fields["allow_activity_tracking"].initial = True
+            self.fields["profile_visibility"].initial = "members"
+
+        # Set initial value for theme field from current user
+        if self.instance and hasattr(self.instance, "theme"):
+            self.fields["theme"].initial = self.instance.theme
 
     def clean_avatar(self):
         """Validate avatar file size and type."""
@@ -638,7 +650,8 @@ class UserProfileManagementForm(forms.ModelForm):
             # Basic validation for Discord username format
             if "#" not in discord:
                 raise ValidationError(
-                    "Discord username should include the discriminator (e.g., username#1234)"
+                    "Discord username should include the discriminator "
+                    "(e.g., username#1234)"
                 )
             username, discriminator = discord.rsplit("#", 1)
             if not discriminator.isdigit() or len(discriminator) != 4:
@@ -646,6 +659,30 @@ class UserProfileManagementForm(forms.ModelForm):
                     "Discord discriminator should be a 4-digit number"
                 )
         return discord
+
+    def clean_theme(self):
+        """Validate theme field, allowing None but not empty string."""
+        theme = self.cleaned_data.get("theme")
+
+        # If theme field is missing from form data entirely, that's OK
+        if "theme" not in self.data:
+            return None
+
+        # If an empty string is explicitly provided, that's invalid
+        if theme == "":
+            raise ValidationError(
+                "Select a valid choice. That choice is not one of the "
+                "available choices."
+            )
+
+        # None is also invalid if explicitly provided in form data
+        if theme is None and "theme" in self.data:
+            raise ValidationError(
+                "Select a valid choice. That choice is not one of the "
+                "available choices."
+            )
+
+        return theme
 
     def save(self, commit=True):
         """Save the form with social links JSON data."""
@@ -661,6 +698,10 @@ class UserProfileManagementForm(forms.ModelForm):
             social_links["github"] = self.cleaned_data["github_url"]
 
         user.social_links = social_links
+
+        # Set theme if provided in cleaned_data
+        if self.cleaned_data.get("theme"):
+            user.theme = self.cleaned_data["theme"]
 
         if commit:
             user.save()
@@ -698,5 +739,7 @@ class UserPrivacySettingsForm(forms.ModelForm):
             "show_email": "Show your email address in your public profile",
             "show_real_name": "Show your first and last name in your public profile",
             "show_last_login": "Show when you were last online",
-            "allow_activity_tracking": "Allow activity tracking for analytics and recommendations",
+            "allow_activity_tracking": (
+                "Allow activity tracking for analytics and recommendations"
+            ),
         }
