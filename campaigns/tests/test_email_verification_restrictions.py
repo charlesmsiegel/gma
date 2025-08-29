@@ -336,7 +336,9 @@ class CampaignInvitationRestrictionTest(TestCase):
         self.client.force_authenticate(user=self.unverified_user)
 
         # Try to accept invitation
-        accept_url = reverse("api:invitations:accept", kwargs={"pk": invitation.pk})
+        accept_url = reverse(
+            "api:campaigns:accept_invitation", kwargs={"pk": invitation.pk}
+        )
         response = self.client.post(accept_url)
 
         # Should be forbidden
@@ -363,7 +365,9 @@ class CampaignInvitationRestrictionTest(TestCase):
         self.client.force_authenticate(user=self.unverified_user)
 
         # Try to accept invitation
-        accept_url = reverse("api:invitations:accept", kwargs={"pk": invitation.pk})
+        accept_url = reverse(
+            "api:campaigns:accept_invitation", kwargs={"pk": invitation.pk}
+        )
         response = self.client.post(accept_url)
 
         # Should now succeed
@@ -420,7 +424,9 @@ class CampaignInvitationRestrictionTest(TestCase):
             "message": "Join my campaign!",
         }
 
-        invite_url = reverse("api:campaigns:invite", kwargs={"pk": self.campaign.pk})
+        invite_url = reverse(
+            "api:campaigns:send_invitation", kwargs={"campaign_id": self.campaign.pk}
+        )
         response = self.client.post(invite_url, invitation_data, format="json")
 
         # Depending on implementation, this might succeed or fail
