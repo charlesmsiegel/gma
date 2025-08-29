@@ -462,7 +462,7 @@ class SceneParticipationRestrictionTest(TestCase):
         }
 
         # Try to create scene
-        create_url = reverse("api:scenes:scene-list")
+        create_url = reverse("api:scenes:scenes-list")
         response = self.client.post(create_url, scene_data, format="json")
 
         # Should be forbidden

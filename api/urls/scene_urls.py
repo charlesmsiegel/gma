@@ -10,6 +10,8 @@ from rest_framework.routers import DefaultRouter
 
 from api.views.scene_views import SceneViewSet
 
+app_name = "scenes"
+
 # Create router for scene viewset
 router = DefaultRouter()
 router.register(r"", SceneViewSet, basename="scenes")
