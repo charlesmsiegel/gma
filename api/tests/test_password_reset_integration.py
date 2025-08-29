@@ -64,7 +64,7 @@ class PasswordResetWorkflowIntegrationTest(TestCase):
 
         # Step 3: Validate token (optional step)
         validate_url = reverse(
-            "api:password_reset_validate", kwargs={"token": reset.token}
+            "api:auth:password_reset_validate", kwargs={"token": reset.token}
         )
         validate_response = self.client.get(validate_url)
 

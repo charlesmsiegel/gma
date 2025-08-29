@@ -259,7 +259,7 @@ class InvalidTokenSecurityTest(TestCase):
                 if variant_token != original_token:
                     with self.subTest(token=variant_token):
                         url = reverse(
-                            "api:verify_email", kwargs={"token": variant_token}
+                            "api:auth:verify_email", kwargs={"token": variant_token}
                         )
                         response = self.client.get(url)
 
@@ -287,7 +287,7 @@ class InvalidTokenSecurityTest(TestCase):
                 with self.subTest(token=encoded_token):
                     try:
                         url = reverse(
-                            "api:verify_email", kwargs={"token": encoded_token}
+                            "api:auth:verify_email", kwargs={"token": encoded_token}
                         )
                         response = self.client.get(url)
 

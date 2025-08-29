@@ -42,7 +42,7 @@ class EmailVerificationAPIBasicTest(TestCase):
         self.verification = EmailVerification.create_for_user(self.user)
 
         self.verify_url = reverse(
-            "api:verify_email", kwargs={"token": self.verification.token}
+            "api:auth:verify_email", kwargs={"token": self.verification.token}
         )
 
     def test_successful_email_verification(self):
@@ -496,7 +496,7 @@ class EmailVerificationURLPatternTest(TestCase):
         if any(c.isalpha() for c in token):
             token_different_case = token.swapcase()
             url_different = reverse(
-                "api:verify_email", kwargs={"token": token_different_case}
+                "api:auth:verify_email", kwargs={"token": token_different_case}
             )
             response_different = self.client.get(url_different)
 
@@ -519,7 +519,7 @@ class EmailVerificationMethodTest(TestCase):
 
         self.verification = EmailVerification.create_for_user(self.user)
         self.url = reverse(
-            "api:verify_email", kwargs={"token": self.verification.token}
+            "api:auth:verify_email", kwargs={"token": self.verification.token}
         )
 
     def test_verification_get_method(self):

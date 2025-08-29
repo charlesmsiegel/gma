@@ -252,7 +252,7 @@ class PasswordResetTokenValidationAPITest(TestCase):
         self.valid_reset = PasswordReset.objects.create_for_user(self.user)
 
         # URL pattern expects token in path
-        self.validate_url_pattern = "api:password_reset_validate"
+        self.validate_url_pattern = "api:auth:password_reset_validate"
 
     def get_validate_url(self, token):
         """Get validation URL for a specific token."""

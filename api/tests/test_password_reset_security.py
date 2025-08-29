@@ -385,7 +385,7 @@ class PasswordResetInformationDisclosureTest(TestCase):
         """Test that error messages don't leak sensitive information."""
         # Test token validation with various invalid tokens
         validate_url = reverse(
-            "api:password_reset_validate", kwargs={"token": "invalid"}
+            "api:auth:password_reset_validate", kwargs={"token": "invalid"}
         )
 
         response = self.client.get(validate_url)
@@ -662,7 +662,8 @@ class PasswordResetSecurityLoggingTest(TestCase):
             [
                 (
                     reverse(
-                        "api:password_reset_validate", kwargs={"token": reset.token}
+                        "api:auth:password_reset_validate",
+                        kwargs={"token": reset.token},
                     ),
                     "GET",
                     None,
