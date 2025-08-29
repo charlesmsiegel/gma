@@ -363,18 +363,20 @@ class User(AbstractUser):
         Check if the email verification token has expired.
 
         Returns:
-            bool: True if token is expired or doesn't exist
+            bool: True if token exists and is expired, False if no token or token is still valid  # noqa: E501
         """
         from datetime import timedelta
 
         from django.utils import timezone
 
+        # If no token exists, it's not expired (it's just not set)
         if not self.email_verification_token or not self.email_verification_sent_at:
-            return True
+            return False
 
         # Token expires after 24 hours
         expiry_time = self.email_verification_sent_at + timedelta(hours=24)
-        return timezone.now() > expiry_time
+        current_time = timezone.now()
+        return current_time > expiry_time
 
     def get_email_verification_expiry(self):
         """
