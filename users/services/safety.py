@@ -359,16 +359,21 @@ class SafetyPreferencesService:
 
         # Get all campaign participants
         membership_service = MembershipService(campaign)
-        participants = [campaign.owner]
-
+        participants = []
+        
+        # Add all members
         for membership in membership_service.get_campaign_members():
             participants.append(membership.user)
+        
+        # Add owner if not already included
+        if campaign.owner not in participants:
+            participants.append(campaign.owner)
 
         results = []
 
         for user in participants:
             user_info = {
-                "user": user,
+                "user_id": user.id,
                 "username": user.username,
                 "has_preferences": False,
                 "privacy_level": None,
