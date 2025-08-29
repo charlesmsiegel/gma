@@ -437,6 +437,26 @@ class SafetyValidationServiceTest(TestCase):
 class SafetyValidationUtilsTest(TestCase):
     """Test utility functions for safety validation."""
 
+    def setUp(self):
+        """Set up test fixtures."""
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123"
+        )
+        self.gm = User.objects.create_user(
+            username="gm",
+            email="gm@example.com",
+            password="testpass123"
+        )
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign",
+            owner=self.gm,
+            game_system="Mage: The Ascension",
+            content_warnings=["Violence", "Supernatural themes"],
+            safety_tools_enabled=True
+        )
+
     def test_content_keyword_matching(self):
         """Test keyword matching for content analysis."""
         from core.utils.safety import ContentAnalyzer
@@ -522,7 +542,7 @@ class SafetyValidationUtilsTest(TestCase):
             user_name='TestUser'
         )
         
-        self.assertIn('hard boundary', lines_message.lower())
+        self.assertIn('hard boundar', lines_message.lower())  # matches both "boundary" and "boundaries"
         self.assertIn('testuser', lines_message.lower())
         self.assertIn('sexual content', lines_message.lower())
 

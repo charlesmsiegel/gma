@@ -5,7 +5,7 @@ from .safety import CampaignSafetyService
 
 __all__ = [
     "CampaignService",
-    "CampaignSafetyService", 
+    "CampaignSafetyService",
     "InvitationService",
     "MembershipService",
 ]
