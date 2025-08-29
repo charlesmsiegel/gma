@@ -555,6 +555,12 @@ class UserProfileManagementForm(forms.ModelForm):
         help_text="Allow activity tracking for analytics and recommendations",
     )
 
+    timezone = forms.ChoiceField(
+        choices=[],  # Will be populated in __init__
+        widget=forms.Select(attrs={"class": "form-select"}),
+        help_text="Select your timezone for accurate time displays.",
+    )
+
     theme = forms.ChoiceField(
         choices=User.THEME_CHOICES,
         widget=forms.Select(attrs={"class": "form-control"}),
@@ -565,25 +571,10 @@ class UserProfileManagementForm(forms.ModelForm):
     class Meta:
         model = User
         fields = [
-            "first_name",
-            "last_name",
             "display_name",
-            "bio",
-            "avatar",
-            "website_url",
-            "profile_visibility",
-            "show_email",
-            "show_real_name",
-            "show_last_login",
-            "allow_activity_tracking",
+            "timezone",
         ]
         widgets = {
-            "first_name": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": "Your first name"}
-            ),
-            "last_name": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": "Your last name"}
-            ),
             "display_name": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Optional display name"}
             ),
@@ -605,6 +596,22 @@ class UserProfileManagementForm(forms.ModelForm):
             self.fields["show_real_name"].initial = True
             self.fields["allow_activity_tracking"].initial = True
             self.fields["profile_visibility"].initial = "members"
+
+        # Common timezone choices - using Django-compatible timezone names
+        timezone_choices = [
+            ("UTC", "UTC"),
+            ("America/New_York", "America/New_York"),
+            ("America/Chicago", "America/Chicago"),
+            ("America/Denver", "America/Denver"),
+            ("America/Los_Angeles", "America/Los_Angeles"),
+            ("Europe/London", "Europe/London"),
+            ("Europe/Paris", "Europe/Paris"),
+            ("Europe/Berlin", "Europe/Berlin"),
+            ("Asia/Tokyo", "Asia/Tokyo"),
+            ("Asia/Shanghai", "Asia/Shanghai"),
+            ("Australia/Sydney", "Australia/Sydney"),
+        ]
+        self.fields["timezone"].choices = timezone_choices
 
         # Set initial value for theme field from current user
         if self.instance and hasattr(self.instance, "theme"):
@@ -684,9 +691,51 @@ class UserProfileManagementForm(forms.ModelForm):
 
         return theme
 
+    def clean_timezone(self):
+        """Validate timezone using the model validator."""
+        timezone = self.cleaned_data.get("timezone")
+        if timezone:
+            # Use the model's timezone validator
+            from .models.user import validate_timezone
+
+            try:
+                validate_timezone(timezone)
+            except ValidationError as e:
+                # Re-raise the validation error with proper message handling
+                raise ValidationError(str(e))
+        return timezone
+
     def save(self, commit=True):
         """Save the form with social links JSON data."""
         user = super().save(commit=False)
+
+        # Handle non-Meta fields manually
+        if "first_name" in self.cleaned_data:
+            user.first_name = self.cleaned_data.get("first_name", "")
+        if "last_name" in self.cleaned_data:
+            user.last_name = self.cleaned_data.get("last_name", "")
+        if "bio" in self.cleaned_data:
+            user.bio = self.cleaned_data.get("bio", "")
+        if "avatar" in self.cleaned_data and self.cleaned_data.get("avatar"):
+            user.avatar = self.cleaned_data["avatar"]
+        if "website_url" in self.cleaned_data:
+            user.website_url = self.cleaned_data.get("website_url", "")
+
+        # Handle privacy settings
+        if "profile_visibility" in self.cleaned_data:
+            user.profile_visibility = self.cleaned_data.get(
+                "profile_visibility", "members"
+            )
+        if "show_email" in self.cleaned_data:
+            user.show_email = self.cleaned_data.get("show_email", False)
+        if "show_real_name" in self.cleaned_data:
+            user.show_real_name = self.cleaned_data.get("show_real_name", True)
+        if "show_last_login" in self.cleaned_data:
+            user.show_last_login = self.cleaned_data.get("show_last_login", False)
+        if "allow_activity_tracking" in self.cleaned_data:
+            user.allow_activity_tracking = self.cleaned_data.get(
+                "allow_activity_tracking", True
+            )
 
         # Build social_links JSON from individual fields
         social_links = {}
