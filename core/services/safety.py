@@ -6,11 +6,14 @@ content validation against user safety preferences and campaign settings.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
+
+if TYPE_CHECKING:
+    from campaigns.models import Campaign
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +88,8 @@ class SafetyValidationService:
             "kill animal",
             "killing animals",
             "hurt animals",
+            "violence against animals",
+            "animals",
         ],
         "mental_health": [
             "mental health",
@@ -268,7 +273,8 @@ class SafetyValidationService:
 
         # Debug: Log who we're checking
         logger.debug(
-            f"Checking {len(users_to_check)} users for campaign safety: {[u.username for u in users_to_check]}"
+            f"Checking {len(users_to_check)} users for campaign safety: "
+            f"{[u.username for u in users_to_check]}"
         )
 
         # Check each user's preferences
@@ -366,7 +372,8 @@ class SafetyValidationService:
         for membership in membership_service.get_campaign_members():
             participants.append(membership.user)
 
-        # Also include users with safety agreements (they might not be formal members yet)
+        # Also include users with safety agreements (they might not be formal
+        # members yet)
         from campaigns.models import CampaignSafetyAgreement
 
         safety_agreement_users = CampaignSafetyAgreement.objects.filter(
@@ -649,42 +656,62 @@ class SafetyValidationService:
         content_lower = content.lower()
 
         # Check for direct keyword match in content first (exact phrase matching)
-        if theme_lower in content_lower:
+        # Use word boundaries to avoid partial matches (e.g., "character death"
+        # should not match "characters")
+        import re
+
+        # Escape theme_lower for regex and use word boundaries
+        pattern = r"\b" + re.escape(theme_lower) + r"\b"
+        if re.search(pattern, content_lower):
             return True
 
-        # Check if theme is in our keyword mapping
-        if theme_lower in self.THEME_KEYWORDS:
-            return theme_lower in detected_themes
+        # Check if theme is in our keyword mapping (normalize spaces to underscores)
+        theme_normalized = theme_lower.replace(" ", "_")
+        if theme_normalized in self.THEME_KEYWORDS:
+            return theme_normalized in detected_themes
 
         # For multi-word themes with qualifiers, be more strict about matching
         theme_words = theme_lower.split()
         if len(theme_words) > 1:
             # Check for qualifier words that make themes more specific
-            qualifiers = ['extreme', 'graphic', 'detailed', 'brutal', 'severe', 'intense']
+            qualifiers = [
+                "extreme",
+                "graphic",
+                "detailed",
+                "brutal",
+                "severe",
+                "intense",
+            ]
             theme_has_qualifier = any(qual in theme_words for qual in qualifiers)
-            
+
             if theme_has_qualifier:
                 # For qualified themes, be more strict - require either:
                 # 1. The exact phrase match, OR
                 # 2. The qualifier + base concept to be present
-                
+
                 # Check for exact phrase match first
-                if theme_lower in content_lower:
+                pattern = r"\b" + re.escape(theme_lower) + r"\b"
+                if re.search(pattern, content_lower):
                     return True
-                
-                content_has_qualifier = any(qual in content_lower for qual in qualifiers)
-                base_theme_words = [word for word in theme_words if word not in qualifiers]
-                
+
+                content_has_qualifier = any(
+                    qual in content_lower for qual in qualifiers
+                )
+                base_theme_words = [
+                    word for word in theme_words if word not in qualifiers
+                ]
+
                 # Check if base theme concepts are present (with stemming)
                 base_words_present = 0
                 content_words = content_lower.split()
-                
+
                 for base_word in base_theme_words:
-                    # Check for exact match first
-                    if base_word in content_lower:
+                    # Check for exact match first (word boundaries)
+                    pattern = r"\b" + re.escape(base_word) + r"\b"
+                    if re.search(pattern, content_lower):
                         base_words_present += 1
                         continue
-                    
+
                     # Check for stemmed matches
                     for content_word in content_words:
                         if len(base_word) >= 4 and len(content_word) >= 4:
@@ -694,33 +721,43 @@ class SafetyValidationService:
                             if base_word in content_word or content_word in base_word:
                                 base_words_present += 1
                                 break
-                
+
                 if base_words_present >= len(base_theme_words):
                     # If content has qualifier words, it's definitely a match
                     if content_has_qualifier:
                         return True
-                    
+
                     # Check for contradictory qualifiers (mild vs extreme, etc.)
-                    contradictory_qualifiers = ['mild', 'minor', 'slight', 'light']
-                    content_has_contradictory = any(qual in content_lower for qual in contradictory_qualifiers)
-                    
+                    contradictory_qualifiers = ["mild", "minor", "slight", "light"]
+                    content_has_contradictory = any(
+                        qual in content_lower for qual in contradictory_qualifiers
+                    )
+
                     if content_has_contradictory:
-                        # If content explicitly says "mild" and theme is "extreme", don't match
+                        # If content explicitly says "mild" and theme is
+                        # "extreme", don't match
                         return False
-                    
-                    # If content doesn't have qualifiers but has the base concept,
-                    # match anyway to be safe (better to over-warn than under-warn)
+
+                    # If content doesn't have qualifiers but has the base
+                    # concept, match anyway to be safe (better to over-warn
+                    # than under-warn)
                     return True
-                
+
                 return False
             else:
-                # For non-qualified multi-word themes, check for partial matches
-                matching_words = sum(1 for word in theme_words if word in content_lower)
+                # For non-qualified multi-word themes, check for partial
+                # matches (word boundaries)
+                matching_words = 0
+                for word in theme_words:
+                    pattern = r"\b" + re.escape(word) + r"\b"
+                    if re.search(pattern, content_lower):
+                        matching_words += 1
                 return matching_words >= len(theme_words) / 2
         else:
-            # For single-word themes, check for word matches
+            # For single-word themes, check for word matches (word boundaries)
             for word in theme_words:
-                if word in content_lower:
+                pattern = r"\b" + re.escape(word) + r"\b"
+                if re.search(pattern, content_lower):
                     return True
 
         # Check for root word matches (e.g., "torture" should match "torturing")
@@ -731,8 +768,11 @@ class SafetyValidationService:
                 if len(theme_word) >= 4 and len(content_word) >= 4:
                     if theme_word[:4] == content_word[:4]:  # Simple prefix match
                         return True
-                    if theme_word in content_word or content_word in theme_word:
-                        return True
+                    # Skip aggressive substring matching to avoid false positives
+                    # like "character" matching "characters"
+                    if len(theme_word) >= 6 and len(content_word) >= 6:
+                        if theme_word in content_word or content_word in theme_word:
+                            return True
 
         return False
 
