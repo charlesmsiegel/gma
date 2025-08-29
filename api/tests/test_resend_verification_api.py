@@ -28,7 +28,7 @@ class ResendVerificationAPIBasicTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = APIClient()
-        self.resend_url = reverse("api:resend_verification")
+        self.resend_url = reverse("api:auth:resend_verification")
 
         # Create unverified user
         self.user = User.objects.create_user(
@@ -138,7 +138,7 @@ class ResendVerificationValidationTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = APIClient()
-        self.resend_url = reverse("api:resend_verification")
+        self.resend_url = reverse("api:auth:resend_verification")
 
     def test_resend_nonexistent_email(self):
         """Test resend with nonexistent email."""
@@ -226,7 +226,7 @@ class ResendVerificationRateLimitingTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = APIClient()
-        self.resend_url = reverse("api:resend_verification")
+        self.resend_url = reverse("api:auth:resend_verification")
 
         self.user = User.objects.create_user(
             username="testuser",
@@ -336,7 +336,7 @@ class ResendVerificationSecurityTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = APIClient()
-        self.resend_url = reverse("api:resend_verification")
+        self.resend_url = reverse("api:auth:resend_verification")
 
     def test_resend_no_user_enumeration(self):
         """Test that resend doesn't allow user enumeration."""
@@ -432,7 +432,7 @@ class ResendVerificationServiceIntegrationTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = APIClient()
-        self.resend_url = reverse("api:resend_verification")
+        self.resend_url = reverse("api:auth:resend_verification")
 
         self.user = User.objects.create_user(
             username="testuser",
@@ -520,7 +520,7 @@ class ResendVerificationHTTPMethodTest(TestCase):
     def setUp(self):
         """Set up test data."""
         self.client = APIClient()
-        self.resend_url = reverse("api:resend_verification")
+        self.resend_url = reverse("api:auth:resend_verification")
 
     def test_resend_post_method(self):
         """Test that POST method works for resend."""

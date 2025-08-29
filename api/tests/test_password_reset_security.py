@@ -41,7 +41,7 @@ class PasswordResetRateLimitingTest(TestCase):
             username="testuser2", email="test2@example.com", password="TestPass123!"
         )
 
-        self.password_reset_url = reverse("api:password_reset_request")
+        self.password_reset_url = reverse("api:auth:password_reset_request")
 
         # Clear any existing cache
         cache.clear()
@@ -309,7 +309,7 @@ class PasswordResetInformationDisclosureTest(TestCase):
             username="testuser", email="test@example.com", password="TestPass123!"
         )
 
-        self.password_reset_url = reverse("api:password_reset_request")
+        self.password_reset_url = reverse("api:auth:password_reset_request")
 
     def test_no_user_enumeration_through_responses(self):
         """Test that responses don't reveal user existence."""
@@ -410,7 +410,7 @@ class PasswordResetBruteForceProtectionTest(TestCase):
         )
         self.reset = PasswordReset.objects.create_for_user(self.user)
 
-        self.confirm_url = reverse("api:password_reset_confirm")
+        self.confirm_url = reverse("api:auth:password_reset_confirm")
 
     def test_invalid_token_attempts_logged(self):
         """Test that invalid token attempts are logged."""
@@ -501,14 +501,14 @@ class PasswordResetSessionSecurityTest(TestCase):
         """Test that password reset invalidates active sessions."""
         # Login user first
         login_response = self.client.post(
-            reverse("api:api_login"),
+            reverse("api:auth:api_login"),
             {"username": "testuser", "password": "TestPass123!"},
             format="json",
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
 
         # Verify user is authenticated
-        info_response = self.client.get(reverse("api:api_user_info"))
+        info_response = self.client.get(reverse("api:auth:api_user_info"))
         self.assertEqual(info_response.status_code, status.HTTP_200_OK)
 
         # Reset password
@@ -520,12 +520,12 @@ class PasswordResetSessionSecurityTest(TestCase):
         }
 
         confirm_response = self.client.post(
-            reverse("api:password_reset_confirm"), confirm_data, format="json"
+            reverse("api:auth:password_reset_confirm"), confirm_data, format="json"
         )
         self.assertEqual(confirm_response.status_code, status.HTTP_200_OK)
 
         # Session should be invalidated (user should need to login again)
-        info_response2 = self.client.get(reverse("api:api_user_info"))
+        info_response2 = self.client.get(reverse("api:auth:api_user_info"))
         # This test depends on implementation - might still be authenticated
         # or might require re-login
         if info_response2.status_code == status.HTTP_401_UNAUTHORIZED:
@@ -549,7 +549,7 @@ class PasswordResetSessionSecurityTest(TestCase):
         }
 
         response = self.client.post(
-            reverse("api:password_reset_confirm"), data, format="json"
+            reverse("api:auth:password_reset_confirm"), data, format="json"
         )
 
         # Should work without CSRF token
@@ -578,7 +578,7 @@ class PasswordResetSecurityLoggingTest(TestCase):
         }
 
         response = self.client.post(
-            reverse("api:password_reset_confirm"), data, format="json"
+            reverse("api:auth:password_reset_confirm"), data, format="json"
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -599,7 +599,7 @@ class PasswordResetSecurityLoggingTest(TestCase):
         }
 
         response = self.client.post(
-            reverse("api:password_reset_confirm"), data, format="json"
+            reverse("api:auth:password_reset_confirm"), data, format="json"
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -617,7 +617,7 @@ class PasswordResetSecurityLoggingTest(TestCase):
 
             data = {"email": "test@example.com"}
             response = self.client.post(
-                reverse("api:password_reset_request"), data, format="json"
+                reverse("api:auth:password_reset_request"), data, format="json"
             )
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -634,7 +634,7 @@ class PasswordResetSecurityLoggingTest(TestCase):
 
             data = {"email": "test@example.com"}
             response = self.client.post(
-                reverse("api:password_reset_request"),
+                reverse("api:auth:password_reset_request"),
                 data,
                 format="json",
                 REMOTE_ADDR="192.168.1.100",
@@ -651,7 +651,7 @@ class PasswordResetSecurityLoggingTest(TestCase):
         # Test various endpoints for security headers
         endpoints_to_test = [
             (
-                reverse("api:password_reset_request"),
+                reverse("api:auth:password_reset_request"),
                 "POST",
                 {"email": "test@example.com"},
             ),
@@ -668,7 +668,7 @@ class PasswordResetSecurityLoggingTest(TestCase):
                     None,
                 ),
                 (
-                    reverse("api:password_reset_confirm"),
+                    reverse("api:auth:password_reset_confirm"),
                     "POST",
                     {
                         "token": reset.token,

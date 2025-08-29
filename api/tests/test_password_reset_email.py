@@ -232,7 +232,7 @@ class PasswordResetEmailSendingTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -252,7 +252,7 @@ class PasswordResetEmailSendingTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -275,7 +275,7 @@ class PasswordResetEmailSendingTest(TestCase):
 
         with self.settings(DEFAULT_FROM_EMAIL="noreply@example.com"):
             response = client.post(
-                reverse("api:password_reset_request"), data, format="json"
+                reverse("api:auth:password_reset_request"), data, format="json"
             )
 
             self.assertEqual(response.status_code, 200)
@@ -292,7 +292,7 @@ class PasswordResetEmailSendingTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -316,7 +316,7 @@ class PasswordResetEmailSendingTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         # Should still return success for security
@@ -336,7 +336,7 @@ class PasswordResetEmailSendingTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -365,7 +365,7 @@ class PasswordResetEmailSendingTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -398,7 +398,7 @@ class PasswordResetEmailSendingTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -442,7 +442,7 @@ class PasswordResetEmailInternationalizationTest(TestCase):
                     data = {"email": "test@example.com"}
 
                     response = client.post(
-                        reverse("api:password_reset_request"), data, format="json"
+                        reverse("api:auth:password_reset_request"), data, format="json"
                     )
 
                     self.assertEqual(response.status_code, 200)
@@ -469,7 +469,7 @@ class PasswordResetEmailInternationalizationTest(TestCase):
                 data = {"email": "test@example.com"}
 
                 response = client.post(
-                    reverse("api:password_reset_request"), data, format="json"
+                    reverse("api:auth:password_reset_request"), data, format="json"
                 )
 
                 self.assertEqual(response.status_code, 200)
@@ -501,7 +501,7 @@ class PasswordResetEmailSecurityTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -530,7 +530,7 @@ class PasswordResetEmailSecurityTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -565,7 +565,7 @@ class PasswordResetEmailSecurityTest(TestCase):
         data = {"email": "test@example.com"}
 
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -593,7 +593,7 @@ class PasswordResetEmailSecurityTest(TestCase):
 
         # This should work with console backend
         response = client.post(
-            reverse("api:password_reset_request"), data, format="json"
+            reverse("api:auth:password_reset_request"), data, format="json"
         )
 
         self.assertEqual(response.status_code, 200)

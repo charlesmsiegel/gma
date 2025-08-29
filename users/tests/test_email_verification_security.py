@@ -50,7 +50,7 @@ class TokenExpirationSecurityTest(TestCase):
             expires_at=timezone.now() - timedelta(hours=1),
         )
 
-        url = reverse("api:verify_email", kwargs={"token": verification.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
         response = self.client.get(url)
 
         # Should fail
@@ -95,7 +95,7 @@ class TokenExpirationSecurityTest(TestCase):
             expires_at=very_old_expiry,
         )
 
-        url = reverse("api:verify_email", kwargs={"token": verification.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
         response = self.client.get(url)
 
         # Should still handle gracefully
@@ -113,7 +113,7 @@ class TokenExpirationSecurityTest(TestCase):
         )
 
         # Should still work normally
-        url = reverse("api:verify_email", kwargs={"token": verification.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -192,7 +192,9 @@ class InvalidTokenSecurityTest(TestCase):
         for malformed_token in malformed_tokens:
             with self.subTest(token=malformed_token):
                 try:
-                    url = reverse("api:verify_email", kwargs={"token": malformed_token})
+                    url = reverse(
+                        "api:auth:verify_email", kwargs={"token": malformed_token}
+                    )
                     response = self.client.get(url)
 
                     # Should return error status
@@ -221,13 +223,15 @@ class InvalidTokenSecurityTest(TestCase):
         invalid_tokens = [secrets.token_urlsafe(32) for _ in range(50)]
 
         # Test timing consistency (simplified)
-        valid_url = reverse("api:verify_email", kwargs={"token": valid_token})
+        valid_url = reverse("api:auth:verify_email", kwargs={"token": valid_token})
 
         self.client.get(valid_url)
 
         # Test a few invalid tokens
         for invalid_token in invalid_tokens[:5]:
-            invalid_url = reverse("api:verify_email", kwargs={"token": invalid_token})
+            invalid_url = reverse(
+                "api:auth:verify_email", kwargs={"token": invalid_token}
+            )
             invalid_response = self.client.get(invalid_url)
 
             # Should return consistent error response
@@ -306,7 +310,7 @@ class InvalidTokenSecurityTest(TestCase):
             )
 
             # If creation succeeds, test that it handles properly
-            url = reverse("api:verify_email", kwargs={"token": unicode_token})
+            url = reverse("api:auth:verify_email", kwargs={"token": unicode_token})
             response = self.client.get(url)
 
             # Should either work or fail gracefully
@@ -345,8 +349,8 @@ class TimingAttackProtectionTest(TestCase):
         valid_token = verification.token
         invalid_token = "invalid_token_123"
 
-        valid_url = reverse("api:verify_email", kwargs={"token": valid_token})
-        invalid_url = reverse("api:verify_email", kwargs={"token": invalid_token})
+        valid_url = reverse("api:auth:verify_email", kwargs={"token": valid_token})
+        invalid_url = reverse("api:auth:verify_email", kwargs={"token": invalid_token})
 
         # Test multiple times
         valid_responses = []
@@ -372,7 +376,7 @@ class TimingAttackProtectionTest(TestCase):
 
             mock_get.side_effect = ObjectDoesNotExist()
 
-            invalid_url = reverse("api:verify_email", kwargs={"token": "invalid"})
+            invalid_url = reverse("api:auth:verify_email", kwargs={"token": "invalid"})
             response = self.client.get(invalid_url)
 
             # Should still perform consistent processing
@@ -393,7 +397,7 @@ class TimingAttackProtectionTest(TestCase):
         error_messages = []
         for token, case_name in test_cases:
             try:
-                url = reverse("api:verify_email", kwargs={"token": token})
+                url = reverse("api:auth:verify_email", kwargs={"token": token})
                 response = self.client.get(url)
 
                 error_messages.append((case_name, response.data.get("error", "")))
@@ -425,7 +429,7 @@ class InformationLeakagePreventionTest(TestCase):
             password="ExistingPass123!",
         )
 
-        register_url = reverse("api:api_register")
+        register_url = reverse("api:auth:api_register")
 
         # Test duplicate username
         duplicate_username_data = {
@@ -470,7 +474,7 @@ class InformationLeakagePreventionTest(TestCase):
             password="TestPass123!",
         )
 
-        resend_url = reverse("api:resend_verification")
+        resend_url = reverse("api:auth:resend_verification")
 
         # Test with existing email
         existing_response = self.client.post(
@@ -505,7 +509,9 @@ class InformationLeakagePreventionTest(TestCase):
         verification = EmailVerification.create_for_user(user)
 
         # Test with invalid token
-        invalid_url = reverse("api:verify_email", kwargs={"token": "invalid_token"})
+        invalid_url = reverse(
+            "api:auth:verify_email", kwargs={"token": "invalid_token"}
+        )
         response = self.client.get(invalid_url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -534,7 +540,7 @@ class InformationLeakagePreventionTest(TestCase):
         with patch.object(EmailVerification.objects, "get_by_token") as mock_get:
             mock_get.side_effect = Exception("Database error")
 
-            url = reverse("api:verify_email", kwargs={"token": "test_token"})
+            url = reverse("api:auth:verify_email", kwargs={"token": "test_token"})
             response = self.client.get(url)
 
             # Should return generic error, not expose exception
@@ -696,7 +702,7 @@ class EdgeCaseSecurityTest(TestCase):
         user.delete()
 
         # Attempt verification
-        url = reverse("api:verify_email", kwargs={"token": token})
+        url = reverse("api:auth:verify_email", kwargs={"token": token})
         response = self.client.get(url)
 
         # Should handle gracefully
@@ -721,7 +727,7 @@ class EdgeCaseSecurityTest(TestCase):
         with patch.object(EmailVerification.objects, "get_by_token") as mock_get:
             mock_get.side_effect = Exception("Database unavailable")
 
-            url = reverse("api:verify_email", kwargs={"token": verification.token})
+            url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
             response = self.client.get(url)
 
             # Should return appropriate error

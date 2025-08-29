@@ -30,7 +30,7 @@ class RegistrationAPIBasicTest(TestCase):
     def setUp(self):
         """Set up test client and URLs."""
         self.client = APIClient()
-        self.register_url = reverse("api:api_register")
+        self.register_url = reverse("api:auth:api_register")
 
     def test_successful_registration_with_email_verification(self):
         """Test successful user registration creates EmailVerification record."""
@@ -133,7 +133,7 @@ class RegistrationValidationTest(TestCase):
     def setUp(self):
         """Set up test client and URLs."""
         self.client = APIClient()
-        self.register_url = reverse("api:api_register")
+        self.register_url = reverse("api:auth:api_register")
 
     def test_registration_duplicate_username(self):
         """Test registration with duplicate username."""
@@ -317,7 +317,7 @@ class RegistrationSecurityTest(TestCase):
     def setUp(self):
         """Set up test client and URLs."""
         self.client = APIClient()
-        self.register_url = reverse("api:api_register")
+        self.register_url = reverse("api:auth:api_register")
 
     def test_registration_does_not_leak_user_existence(self):
         """Test that registration errors don't reveal user existence."""
@@ -397,7 +397,7 @@ class RegistrationEmailVerificationIntegrationTest(TestCase):
     def setUp(self):
         """Set up test client and URLs."""
         self.client = APIClient()
-        self.register_url = reverse("api:api_register")
+        self.register_url = reverse("api:auth:api_register")
 
     def test_registration_creates_unique_verification_tokens(self):
         """Test that multiple registrations create unique verification tokens."""
@@ -532,7 +532,7 @@ class RegistrationEdgeCasesTest(TestCase):
     def setUp(self):
         """Set up test client and URLs."""
         self.client = APIClient()
-        self.register_url = reverse("api:api_register")
+        self.register_url = reverse("api:auth:api_register")
 
     def test_registration_with_unicode_characters(self):
         """Test registration with unicode characters in fields."""

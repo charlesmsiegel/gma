@@ -133,7 +133,7 @@ class EmailVerificationErrorHandlingTest(TestCase):
     def test_verification_invalid_token(self):
         """Test verification with invalid token."""
         invalid_token = "invalid_token_123"
-        url = reverse("api:verify_email", kwargs={"token": invalid_token})
+        url = reverse("api:auth:verify_email", kwargs={"token": invalid_token})
 
         response = self.client.get(url)
 
@@ -150,7 +150,7 @@ class EmailVerificationErrorHandlingTest(TestCase):
     def test_verification_nonexistent_token(self):
         """Test verification with nonexistent token."""
         nonexistent_token = "nonexistent_token_456"
-        url = reverse("api:verify_email", kwargs={"token": nonexistent_token})
+        url = reverse("api:auth:verify_email", kwargs={"token": nonexistent_token})
 
         response = self.client.get(url)
 
@@ -169,7 +169,7 @@ class EmailVerificationErrorHandlingTest(TestCase):
             expires_at=timezone.now() - timedelta(hours=1),  # Expired
         )
 
-        url = reverse("api:verify_email", kwargs={"token": verification.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -196,7 +196,9 @@ class EmailVerificationErrorHandlingTest(TestCase):
         for malformed_token in malformed_tokens:
             with self.subTest(token=malformed_token):
                 try:
-                    url = reverse("api:verify_email", kwargs={"token": malformed_token})
+                    url = reverse(
+                        "api:auth:verify_email", kwargs={"token": malformed_token}
+                    )
                     response = self.client.get(url)
 
                     # Should return 400 or 404 depending on validation
@@ -217,7 +219,7 @@ class EmailVerificationErrorHandlingTest(TestCase):
         # Delete user (should cascade to verification)
         self.user.delete()
 
-        url = reverse("api:verify_email", kwargs={"token": token})
+        url = reverse("api:auth:verify_email", kwargs={"token": token})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -230,7 +232,7 @@ class EmailVerificationErrorHandlingTest(TestCase):
         self.user.is_active = False
         self.user.save()
 
-        url = reverse("api:verify_email", kwargs={"token": verification.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -262,8 +264,10 @@ class EmailVerificationSecurityTest(TestCase):
         fake_token = "fake_token_that_doesnt_exist"
 
         # Both should return different status codes but not leak info
-        valid_url = reverse("api:verify_email", kwargs={"token": verification.token})
-        invalid_url = reverse("api:verify_email", kwargs={"token": fake_token})
+        valid_url = reverse(
+            "api:auth:verify_email", kwargs={"token": verification.token}
+        )
+        invalid_url = reverse("api:auth:verify_email", kwargs={"token": fake_token})
 
         valid_response = self.client.get(valid_url)
         invalid_response = self.client.get(invalid_url)
@@ -281,7 +285,7 @@ class EmailVerificationSecurityTest(TestCase):
         invalid_tokens = ["token1", "token2", "token3", "token4", "token5"]
 
         for token in invalid_tokens:
-            url = reverse("api:verify_email", kwargs={"token": token})
+            url = reverse("api:auth:verify_email", kwargs={"token": token})
             response = self.client.get(url)
 
             # All should return same error response
@@ -301,8 +305,8 @@ class EmailVerificationSecurityTest(TestCase):
         invalid_token = "invalid_token_123"
 
         # Both requests should take similar time (basic check)
-        valid_url = reverse("api:verify_email", kwargs={"token": valid_token})
-        invalid_url = reverse("api:verify_email", kwargs={"token": invalid_token})
+        valid_url = reverse("api:auth:verify_email", kwargs={"token": valid_token})
+        invalid_url = reverse("api:auth:verify_email", kwargs={"token": invalid_token})
 
         response1 = self.client.get(valid_url)
         response2 = self.client.get(invalid_url)
@@ -314,7 +318,7 @@ class EmailVerificationSecurityTest(TestCase):
     def test_verification_rate_limiting_headers(self):
         """Test that verification includes rate limiting info."""
         verification = EmailVerification.create_for_user(self.user)
-        url = reverse("api:verify_email", kwargs={"token": verification.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
 
         response = self.client.get(url)
 
@@ -329,7 +333,7 @@ class EmailVerificationSecurityTest(TestCase):
         verification = EmailVerification.create_for_user(self.user)
 
         with patch("logging.Logger.info") as mock_log:
-            url = reverse("api:verify_email", kwargs={"token": verification.token})
+            url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
             response = self.client.get(url)
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -367,7 +371,7 @@ class EmailVerificationIntegrationTest(TestCase):
         self.assertFalse(self.user.email_verified)
         self.assertFalse(verification.is_verified())
 
-        url = reverse("api:verify_email", kwargs={"token": verification.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -388,7 +392,7 @@ class EmailVerificationIntegrationTest(TestCase):
 
         verification = EmailVerification.create_for_user(self.user)
 
-        url = reverse("api:verify_email", kwargs={"token": verification.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -408,7 +412,7 @@ class EmailVerificationIntegrationTest(TestCase):
         self.assertFalse(self.user.email_verified)
 
         # Verify email
-        url = reverse("api:verify_email", kwargs={"token": verification.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification.token})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -424,7 +428,7 @@ class EmailVerificationIntegrationTest(TestCase):
         verification2 = EmailVerification.create_for_user(self.user)
 
         # Use second (latest) token since old ones are expired by create_for_user
-        url = reverse("api:verify_email", kwargs={"token": verification2.token})
+        url = reverse("api:auth:verify_email", kwargs={"token": verification2.token})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -458,7 +462,9 @@ class EmailVerificationURLPatternTest(TestCase):
         """Test that verification URL pattern works correctly."""
         # URL should be properly formed
         expected_path = f"/api/auth/verify-email/{self.verification.token}/"
-        url = reverse("api:verify_email", kwargs={"token": self.verification.token})
+        url = reverse(
+            "api:auth:verify_email", kwargs={"token": self.verification.token}
+        )
 
         parsed_url = urlparse(url)
         self.assertEqual(parsed_url.path, expected_path)
@@ -473,7 +479,7 @@ class EmailVerificationURLPatternTest(TestCase):
             expires_at=timezone.now() + timedelta(hours=24),
         )
 
-        url = reverse("api:verify_email", kwargs={"token": special_token})
+        url = reverse("api:auth:verify_email", kwargs={"token": special_token})
 
         # URL should be properly encoded
         self.assertIn(special_token, url)
@@ -483,7 +489,7 @@ class EmailVerificationURLPatternTest(TestCase):
         token = self.verification.token
 
         # Original case should work
-        url_original = reverse("api:verify_email", kwargs={"token": token})
+        url_original = reverse("api:auth:verify_email", kwargs={"token": token})
         response_original = self.client.get(url_original)
 
         # Different case should not work (if token contains letters)

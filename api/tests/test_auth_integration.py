@@ -33,11 +33,11 @@ class AuthenticationIntegrationTest(TestCase):
         )
 
         # API endpoints
-        self.csrf_url = reverse("api:api_csrf_token")
-        self.login_url = reverse("api:api_login")
-        self.register_url = reverse("api:api_register")
-        self.logout_url = reverse("api:api_logout")
-        self.user_info_url = reverse("api:api_user_info")
+        self.csrf_url = reverse("api:auth:api_csrf_token")
+        self.login_url = reverse("api:auth:api_login")
+        self.register_url = reverse("api:auth:api_register")
+        self.logout_url = reverse("api:auth:api_logout")
+        self.user_info_url = reverse("api:auth:api_user_info")
 
     def test_complete_login_workflow_with_csrf(self):
         """Test complete login workflow including CSRF token handling."""

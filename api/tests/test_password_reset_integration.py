@@ -40,8 +40,8 @@ class PasswordResetWorkflowIntegrationTest(TestCase):
         )
 
         # URL endpoints
-        self.request_url = reverse("api:password_reset_request")
-        self.confirm_url = reverse("api:password_reset_confirm")
+        self.request_url = reverse("api:auth:password_reset_request")
+        self.confirm_url = reverse("api:auth:password_reset_confirm")
 
     def test_complete_successful_workflow(self):
         """Test complete successful password reset workflow."""
@@ -97,7 +97,7 @@ class PasswordResetWorkflowIntegrationTest(TestCase):
         # Step 7: Verify user can login with new password
         login_data = {"username": "testuser", "password": "NewPassword123!"}
         login_response = self.client.post(
-            reverse("api:api_login"), login_data, format="json"
+            reverse("api:auth:api_login"), login_data, format="json"
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
 
@@ -295,17 +295,17 @@ class PasswordResetAuthenticationIntegrationTest(TestCase):
         # First, verify old password works
         login_data_old = {"username": "testuser", "password": "OldPassword123!"}
         login_response_old = self.client.post(
-            reverse("api:api_login"), login_data_old, format="json"
+            reverse("api:auth:api_login"), login_data_old, format="json"
         )
         self.assertEqual(login_response_old.status_code, status.HTTP_200_OK)
 
         # Logout
-        self.client.post(reverse("api:api_logout"))
+        self.client.post(reverse("api:auth:api_logout"))
 
         # Reset password
         request_data = {"email": "test@example.com"}
         request_response = self.client.post(
-            reverse("api:password_reset_request"), request_data, format="json"
+            reverse("api:auth:password_reset_request"), request_data, format="json"
         )
         self.assertEqual(request_response.status_code, status.HTTP_200_OK)
 
@@ -318,13 +318,13 @@ class PasswordResetAuthenticationIntegrationTest(TestCase):
         }
 
         confirm_response = self.client.post(
-            reverse("api:password_reset_confirm"), confirm_data, format="json"
+            reverse("api:auth:password_reset_confirm"), confirm_data, format="json"
         )
         self.assertEqual(confirm_response.status_code, status.HTTP_200_OK)
 
         # Old password should no longer work
         login_response_old_after = self.client.post(
-            reverse("api:api_login"), login_data_old, format="json"
+            reverse("api:auth:api_login"), login_data_old, format="json"
         )
         self.assertEqual(
             login_response_old_after.status_code, status.HTTP_400_BAD_REQUEST
@@ -333,7 +333,7 @@ class PasswordResetAuthenticationIntegrationTest(TestCase):
         # New password should work
         login_data_new = {"username": "testuser", "password": "NewPassword123!"}
         login_response_new = self.client.post(
-            reverse("api:api_login"), login_data_new, format="json"
+            reverse("api:auth:api_login"), login_data_new, format="json"
         )
         self.assertEqual(login_response_new.status_code, status.HTTP_200_OK)
 
@@ -343,18 +343,18 @@ class PasswordResetAuthenticationIntegrationTest(TestCase):
         # Login user first
         login_data = {"username": "testuser", "password": "OldPassword123!"}
         login_response = self.client.post(
-            reverse("api:api_login"), login_data, format="json"
+            reverse("api:auth:api_login"), login_data, format="json"
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
 
         # Verify user is authenticated
-        info_response = self.client.get(reverse("api:api_user_info"))
+        info_response = self.client.get(reverse("api:auth:api_user_info"))
         self.assertEqual(info_response.status_code, status.HTTP_200_OK)
 
         # Reset password while logged in
         request_data = {"email": "test@example.com"}
         request_response = self.client.post(
-            reverse("api:password_reset_request"), request_data, format="json"
+            reverse("api:auth:password_reset_request"), request_data, format="json"
         )
         self.assertEqual(request_response.status_code, status.HTTP_200_OK)
 
@@ -367,12 +367,12 @@ class PasswordResetAuthenticationIntegrationTest(TestCase):
         }
 
         confirm_response = self.client.post(
-            reverse("api:password_reset_confirm"), confirm_data, format="json"
+            reverse("api:auth:password_reset_confirm"), confirm_data, format="json"
         )
         self.assertEqual(confirm_response.status_code, status.HTTP_200_OK)
 
         # Check if session is still valid (depends on implementation)
-        info_response_after = self.client.get(reverse("api:api_user_info"))
+        info_response_after = self.client.get(reverse("api:auth:api_user_info"))
 
         # Either session should be invalidated (for security) or still valid
         self.assertIn(
@@ -392,7 +392,7 @@ class PasswordResetAuthenticationIntegrationTest(TestCase):
         # Request password reset
         request_data = {"email": "test@example.com"}
         request_response = self.client.post(
-            reverse("api:password_reset_request"), request_data, format="json"
+            reverse("api:auth:password_reset_request"), request_data, format="json"
         )
 
         # Should return success for security
@@ -404,7 +404,7 @@ class PasswordResetAuthenticationIntegrationTest(TestCase):
         # Login should still fail
         login_data = {"username": "testuser", "password": "OldPassword123!"}
         login_response = self.client.post(
-            reverse("api:api_login"), login_data, format="json"
+            reverse("api:auth:api_login"), login_data, format="json"
         )
         self.assertEqual(login_response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -425,7 +425,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
         # Request password reset
         request_data = {"email": "test@example.com"}
         request_response = self.client.post(
-            reverse("api:password_reset_request"), request_data, format="json"
+            reverse("api:auth:password_reset_request"), request_data, format="json"
         )
         self.assertEqual(request_response.status_code, status.HTTP_200_OK)
 
@@ -442,7 +442,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
         }
 
         confirm_response = self.client.post(
-            reverse("api:password_reset_confirm"), confirm_data, format="json"
+            reverse("api:auth:password_reset_confirm"), confirm_data, format="json"
         )
         self.assertEqual(confirm_response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -451,7 +451,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
 
         # User should be able to request new reset
         request_response2 = self.client.post(
-            reverse("api:password_reset_request"), request_data, format="json"
+            reverse("api:auth:password_reset_request"), request_data, format="json"
         )
         self.assertEqual(request_response2.status_code, status.HTTP_200_OK)
 
@@ -463,7 +463,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
 
         confirm_data["token"] = new_reset.token
         confirm_response2 = self.client.post(
-            reverse("api:password_reset_confirm"), confirm_data, format="json"
+            reverse("api:auth:password_reset_confirm"), confirm_data, format="json"
         )
         self.assertEqual(confirm_response2.status_code, status.HTTP_200_OK)
 
@@ -478,7 +478,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
 
             request_data = {"email": "test@example.com"}
             request_response = self.client.post(
-                reverse("api:password_reset_request"), request_data, format="json"
+                reverse("api:auth:password_reset_request"), request_data, format="json"
             )
 
             # Should still return success but indicate email failure
@@ -492,7 +492,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
             mock_send.return_value = True  # Email works now
 
             request_response2 = self.client.post(
-                reverse("api:password_reset_request"), request_data, format="json"
+                reverse("api:auth:password_reset_request"), request_data, format="json"
             )
             self.assertEqual(request_response2.status_code, status.HTTP_200_OK)
             self.assertFalse(request_response2.data.get("email_sending_failed", False))
@@ -510,7 +510,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
         }
 
         confirm_response = self.client.post(
-            reverse("api:password_reset_confirm"), partial_data, format="json"
+            reverse("api:auth:password_reset_confirm"), partial_data, format="json"
         )
         self.assertEqual(confirm_response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -526,7 +526,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
         }
 
         confirm_response2 = self.client.post(
-            reverse("api:password_reset_confirm"), complete_data, format="json"
+            reverse("api:auth:password_reset_confirm"), complete_data, format="json"
         )
         self.assertEqual(confirm_response2.status_code, status.HTTP_200_OK)
 
@@ -543,7 +543,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
         }
 
         confirm_response = self.client.post(
-            reverse("api:password_reset_confirm"), weak_data, format="json"
+            reverse("api:auth:password_reset_confirm"), weak_data, format="json"
         )
         self.assertEqual(confirm_response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -559,7 +559,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
         }
 
         confirm_response2 = self.client.post(
-            reverse("api:password_reset_confirm"), strong_data, format="json"
+            reverse("api:auth:password_reset_confirm"), strong_data, format="json"
         )
         self.assertEqual(confirm_response2.status_code, status.HTTP_200_OK)
 
@@ -587,7 +587,7 @@ class PasswordResetPerformanceIntegrationTest(TransactionTestCase):
             data = {"email": user.email}
 
             response = client.post(
-                reverse("api:password_reset_request"), data, format="json"
+                reverse("api:auth:password_reset_request"), data, format="json"
             )
             return response.status_code == status.HTTP_200_OK
 
@@ -613,7 +613,7 @@ class PasswordResetPerformanceIntegrationTest(TransactionTestCase):
             data = {"email": user.email}
 
             response = client.post(
-                reverse("api:password_reset_request"), data, format="json"
+                reverse("api:auth:password_reset_request"), data, format="json"
             )
             return response.status_code
 
@@ -707,7 +707,7 @@ class PasswordResetCrossSystemIntegrationTest(TestCase):
 
             request_data = {"email": "test@example.com"}
             request_response = self.client.post(
-                reverse("api:password_reset_request"), request_data, format="json"
+                reverse("api:auth:password_reset_request"), request_data, format="json"
             )
             self.assertEqual(request_response.status_code, status.HTTP_200_OK)
 
@@ -721,7 +721,7 @@ class PasswordResetCrossSystemIntegrationTest(TestCase):
         }
 
         confirm_response = self.client.post(
-            reverse("api:password_reset_confirm"), confirm_data, format="json"
+            reverse("api:auth:password_reset_confirm"), confirm_data, format="json"
         )
         self.assertEqual(confirm_response.status_code, status.HTTP_200_OK)
 
@@ -755,7 +755,7 @@ class PasswordResetCrossSystemIntegrationTest(TestCase):
         }
 
         confirm_response = self.client.post(
-            reverse("api:password_reset_confirm"), confirm_data, format="json"
+            reverse("api:auth:password_reset_confirm"), confirm_data, format="json"
         )
         self.assertEqual(confirm_response.status_code, status.HTTP_200_OK)
 
@@ -781,7 +781,7 @@ class PasswordResetCrossSystemIntegrationTest(TestCase):
         }
 
         confirm_response = self.client.post(
-            reverse("api:password_reset_confirm"), confirm_data, format="json"
+            reverse("api:auth:password_reset_confirm"), confirm_data, format="json"
         )
         self.assertEqual(confirm_response.status_code, status.HTTP_200_OK)
 
@@ -798,7 +798,7 @@ class PasswordResetCrossSystemIntegrationTest(TestCase):
         ):
             request_data = {"email": "test@example.com"}
             request_response = self.client.post(
-                reverse("api:password_reset_request"), request_data, format="json"
+                reverse("api:auth:password_reset_request"), request_data, format="json"
             )
             self.assertEqual(request_response.status_code, status.HTTP_200_OK)
 

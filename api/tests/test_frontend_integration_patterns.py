@@ -33,11 +33,11 @@ class FrontendIntegrationPatternsTest(TestCase):
         )
 
         # API endpoints
-        self.csrf_url = reverse("api:api_csrf_token")
-        self.login_url = reverse("api:api_login")
-        self.register_url = reverse("api:api_register")
-        self.logout_url = reverse("api:api_logout")
-        self.user_info_url = reverse("api:api_user_info")
+        self.csrf_url = reverse("api:auth:api_csrf_token")
+        self.login_url = reverse("api:auth:api_login")
+        self.register_url = reverse("api:auth:api_register")
+        self.logout_url = reverse("api:auth:api_logout")
+        self.user_info_url = reverse("api:auth:api_user_info")
 
     def test_login_response_structure_for_javascript(self):
         """Test that login response matches JavaScript fetch/ajax expectations."""
