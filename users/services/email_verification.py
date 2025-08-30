@@ -225,3 +225,59 @@ Your Application Team
             EmailVerification or None: The active verification or None
         """
         return EmailVerification.get_active_for_user(user)
+
+    def get_email_context(self, user, verification):
+        """
+        Get the email context for verification email templates.
+
+        Args:
+            user (User): The user to get context for
+            verification (EmailVerification): The verification instance
+
+        Returns:
+            dict: Template context for verification emails
+        """
+        # Calculate expiry hours (default 24 hours)
+        expiry_hours = getattr(settings, "EMAIL_VERIFICATION_EXPIRY_HOURS", 24)
+
+        # Build verification URL (fallback if reverse fails)
+        try:
+            from django.urls import reverse
+
+            verification_path = reverse(
+                "api:auth:verify-email", kwargs={"token": verification.token}
+            )
+        except Exception:
+            # Fallback URL path if reverse fails
+            verification_path = f"/api/auth/verify-email/{verification.token}/"
+
+        # Build complete URL with domain
+        domain = getattr(settings, "DOMAIN_NAME", "localhost:8000")
+        scheme = "https" if getattr(settings, "SECURE_SSL_REDIRECT", False) else "http"
+        verification_url = f"{scheme}://{domain}{verification_path}"
+
+        # Build context
+        context = {
+            "user": user,
+            "verification": verification,
+            "expiry_hours": expiry_hours,
+            "site_name": getattr(settings, "SITE_NAME", "Game Master App"),
+            "verification_url": verification_url,
+        }
+
+        # Add expires_at if available
+        if hasattr(verification, "expires_at") and verification.expires_at:
+            context["expires_at"] = verification.expires_at
+
+        # Add site information if available
+        try:
+            from django.contrib.sites.models import Site
+
+            current_site = Site.objects.get_current()
+            context["site"] = current_site
+            context["domain"] = current_site.domain
+        except (ImportError, Exception):
+            # Fallback if sites framework not configured
+            context["domain"] = getattr(settings, "DOMAIN_NAME", "localhost")
+
+        return context
