@@ -1,0 +1,17 @@
+Subject: Security Alert for {{ site_name }}
+Hello {{ user.get_full_display_name|default:user.username }},
+We detected suspicious activity on your account and wanted to alert you immediately.
+Event Type: {{ event_type }}
+IP Address: {{ details.ip_address }}
+Time: {{ details.timestamp|default:"now" }}
+{% if details.location %}Location: {{ details.location }}{% endif %}
+{% if details.device %}Device: {{ details.device }}{% endif %}
+{% if details.user_agent %}Browser/Device Info: {{ details.user_agent }}{% endif %}
+If this activity was authorized by you, no action is needed. However, if you did not recognize this activity, we recommend:
+1. Change your password immediately
+2. Review your active sessions and terminate any unauthorized ones
+3. Enable two-factor authentication if not already enabled
+4. Review your recent account activity
+If you need assistance, please contact our support team.
+Thank you for your attention to account security.
+{{ site_name }} Security Team

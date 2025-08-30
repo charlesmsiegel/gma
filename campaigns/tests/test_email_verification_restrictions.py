@@ -456,9 +456,9 @@ class SceneParticipationRestrictionTest(TestCase):
         self.client.force_authenticate(user=self.unverified_user)
 
         scene_data = {
-            "title": "Test Scene",
+            "name": "Test Scene",
             "description": "A test scene",
-            "scene_type": "COMBAT",
+            "campaign": self.campaign.id,
         }
 
         # Try to create scene
@@ -475,7 +475,7 @@ class SceneParticipationRestrictionTest(TestCase):
         # Create scene
         scene = Scene.objects.create(
             campaign=self.campaign,
-            title="Test Scene",
+            name="Test Scene",
             created_by=self.owner,
         )
 
@@ -489,7 +489,7 @@ class SceneParticipationRestrictionTest(TestCase):
         self.client.force_authenticate(user=self.unverified_user)
 
         # Try to join scene
-        join_url = reverse("api:scenes:join-scene", kwargs={"pk": scene.pk})
+        join_url = reverse("api:scenes:scenes-join-scene", kwargs={"pk": scene.pk})
         response = self.client.post(join_url)
 
         # Should be forbidden
@@ -502,7 +502,7 @@ class SceneParticipationRestrictionTest(TestCase):
         # Create scene
         scene = Scene.objects.create(
             campaign=self.campaign,
-            title="Test Scene",
+            name="Test Scene",
             created_by=self.owner,
         )
 
@@ -521,7 +521,7 @@ class SceneParticipationRestrictionTest(TestCase):
         }
 
         # Try to send message
-        message_url = reverse("api:scenes:messages", kwargs={"scene_id": scene.pk})
+        message_url = reverse("api:scenes:scenes-messages", kwargs={"pk": scene.pk})
         response = self.client.post(message_url, message_data, format="json")
 
         # Should be forbidden
