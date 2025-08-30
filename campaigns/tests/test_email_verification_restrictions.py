@@ -656,10 +656,13 @@ class UserInterfaceVerificationTest(TestCase):
         self.client.force_login(self.unverified_user)
 
         # Test various pages
-        pages_to_test = [
-            reverse("campaigns:list"),
-            reverse("dashboard"),  # If it exists
-        ]
+        pages_to_test = [reverse("campaigns:list")]
+
+        # Add dashboard URL if it exists
+        try:
+            pages_to_test.append(reverse("dashboard"))
+        except Exception:
+            pass  # Dashboard doesn't exist, skip it
 
         for page_url in pages_to_test:
             try:

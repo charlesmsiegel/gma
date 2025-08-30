@@ -114,9 +114,13 @@ class BaseSceneAPITestCase(APITestCase):
         )
 
         # API URLs
-        self.list_url = reverse("api:scenes-list")
-        self.detail_url1 = reverse("api:scenes-detail", kwargs={"pk": self.scene1.pk})
-        self.detail_url2 = reverse("api:scenes-detail", kwargs={"pk": self.scene2.pk})
+        self.list_url = reverse("api:scenes:scenes-list")
+        self.detail_url1 = reverse(
+            "api:scenes:scenes-detail", kwargs={"pk": self.scene1.pk}
+        )
+        self.detail_url2 = reverse(
+            "api:scenes:scenes-detail", kwargs={"pk": self.scene2.pk}
+        )
 
 
 class SceneListAPITest(BaseSceneAPITestCase):
