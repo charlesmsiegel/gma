@@ -39,6 +39,21 @@ class ProfileAPITest(APITestCase):
 
         self.profile_url = reverse("api:auth:profile")
 
+    def tearDown(self):
+        """Clean up uploaded avatar files."""
+        import glob
+        import os
+
+        # Clean up any test avatar files created during tests
+        avatar_dir = "avatars"
+        if os.path.exists(avatar_dir):
+            test_files = glob.glob(os.path.join(avatar_dir, "test_avatar_*.jpg"))
+            for file_path in test_files:
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass  # File might already be deleted
+
     def test_get_profile_authenticated(self):
         """Test getting own profile when authenticated."""
         self.client.force_authenticate(user=self.user)

@@ -66,12 +66,6 @@ class UserProfileFieldsTest(TestCase):
             self.user.website_url = url
             self.user.full_clean()  # Should not raise
 
-        # Invalid URLs
-        invalid_urls = [
-            "not-a-url",
-            "ftp://example.com",  # URLField validates but may not be what we want
-        ]
-
         # Note: Django's URLField is quite permissive, so we test what actually fails
         self.user.website_url = "not-a-url"
         with self.assertRaises(ValidationError):
@@ -144,20 +138,35 @@ class UserProfileMethodsTest(TestCase):
             username="user2", email="user2@example.com", password="testpass123"
         )
 
+    def tearDown(self):
+        """Clean up uploaded avatar files."""
+        import glob
+        import os
+
+        # Clean up any test avatar files created during tests
+        avatar_dir = "avatars"
+        if os.path.exists(avatar_dir):
+            test_files = glob.glob(os.path.join(avatar_dir, "test_avatar_*.jpg"))
+            for file_path in test_files:
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass  # File might already be deleted
+
     def test_get_full_display_name_with_display_name(self):
         """Test get_full_display_name returns display_name when set."""
         result = self.user1.get_full_display_name()
         self.assertEqual(result, "JohnD")
 
     def test_get_full_display_name_with_real_name(self):
-        """Test get_full_display_name returns real name when display_name not set and show_real_name is True."""
+        """Test get_full_display_name returns real name when display_name not set."""
         self.user1.display_name = ""
         self.user1.show_real_name = True
         result = self.user1.get_full_display_name()
         self.assertEqual(result, "John Doe")
 
     def test_get_full_display_name_no_real_name(self):
-        """Test get_full_display_name returns username when no real name or display name."""
+        """Test get_full_display_name returns username when no real/display name."""
         self.user1.display_name = ""
         self.user1.first_name = ""
         self.user1.last_name = ""

@@ -61,7 +61,7 @@ class UserProfileManagementFormTest(TestCase):
     def test_display_name_uniqueness_validation(self):
         """Test display name uniqueness validation."""
         # Create another user with a display name
-        other_user = User.objects.create_user(
+        User.objects.create_user(
             username="otheruser",
             email="other@example.com",
             password="testpass123",
@@ -196,6 +196,21 @@ class AvatarValidationTest(TestCase):
             username="testuser", email="test@example.com", password="testpass123"
         )
 
+    def tearDown(self):
+        """Clean up uploaded avatar files."""
+        import glob
+        import os
+
+        # Clean up any test avatar files created during tests
+        avatar_dir = "avatars"
+        if os.path.exists(avatar_dir):
+            test_files = glob.glob(os.path.join(avatar_dir, "test_avatar_*.jpg"))
+            for file_path in test_files:
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass  # File might already be deleted
+
     def create_test_image(self, format="JPEG", size=(100, 100), file_size_mb=1):
         """Helper to create test images."""
         with tempfile.NamedTemporaryFile(
@@ -249,8 +264,9 @@ class AvatarValidationTest(TestCase):
         )
         self.assertTrue(form.is_valid(), form.errors)
 
-        # Note: Testing large file uploads in unit tests is complex due to memory constraints
-        # and Django's handling of file uploads. In practice, the validation works correctly.
+        # Note: Testing large file uploads in unit tests is complex due to memory
+        # constraints and Django's handling of file uploads. In practice, the
+        # validation works correctly.
 
     def test_avatar_optional(self):
         """Test avatar field is optional."""
