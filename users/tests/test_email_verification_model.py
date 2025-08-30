@@ -56,7 +56,7 @@ class EmailVerificationModelTest(TestCase):
 
         self.assertEqual(field.__class__.__name__, "ForeignKey")
         self.assertEqual(field.related_model, User)
-        self.assertEqual(field.on_delete.__name__, "CASCADE")
+        self.assertEqual(field.remote_field.on_delete.__name__, "CASCADE")
 
     def test_token_field_properties(self):
         """Test token field properties."""
