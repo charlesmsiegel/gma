@@ -13,9 +13,10 @@ Tests cover:
 - Timeout configuration and settings
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from datetime import timedelta
+from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
 from django.test import TestCase, override_settings
@@ -357,7 +358,7 @@ class SessionTimeoutAPITest(TestCase):
                 self.assertIn("time_until_expiry", response.data)
 
                 # Check expiry information is correct
-                expires_at = response.data["expires_at"]
+                # expires_at = response.data["expires_at"]
                 # Parse and compare (implementation dependent)
 
     def test_expired_session_api_access(self):
@@ -469,7 +470,7 @@ class SessionTimeoutConfigurationTest(TestCase):
         }
 
         # These would be implemented in the session security service
-        service = SessionSecurityService()
+        # service = SessionSecurityService()
 
         # Test that service can handle custom timeout configurations
         # (Implementation would read from settings)

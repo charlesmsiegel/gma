@@ -14,6 +14,7 @@ Tests cover:
 """
 
 from datetime import timedelta
+from unittest.mock import Mock
 
 from django.contrib.auth import authenticate
 from django.contrib.sessions.models import Session
