@@ -642,7 +642,7 @@ class UserInterfaceVerificationTest(TestCase):
         self.client.force_login(self.unverified_user)
 
         # Get campaign list page
-        list_url = reverse("campaigns:campaign_list")
+        list_url = reverse("campaigns:list")
         response = self.client.get(list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -657,7 +657,7 @@ class UserInterfaceVerificationTest(TestCase):
 
         # Test various pages
         pages_to_test = [
-            reverse("campaigns:campaign_list"),
+            reverse("campaigns:list"),
             reverse("dashboard"),  # If it exists
         ]
 
