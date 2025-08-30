@@ -12,8 +12,9 @@ Tests cover:
 - Cross-device remember me behavior
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+import uuid
+from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
@@ -44,7 +45,7 @@ class RememberMeSessionTest(TestCase):
     def create_session(self, remember_me=False, expire_hours=24):
         """Helper to create session with remember me option."""
         django_session = Session.objects.create(
-            session_key="test_session_key",
+            session_key=f"test_session_key_{uuid.uuid4().hex[:8]}",
             session_data="test_data",
             expire_date=timezone.now() + timedelta(hours=expire_hours),
         )
@@ -64,12 +65,7 @@ class RememberMeSessionTest(TestCase):
         self.assertTrue(user_session.remember_me)
         self.assertEqual(user_session.user, self.user)
 
-        # Check security log entry
-        log_entry = SessionSecurityLog.objects.filter(
-            user=self.user, event_type=SessionSecurityEvent.LOGIN_SUCCESS
-        ).first()
-
-        # The log would be created by the service, not the model directly
+        # Check security log entry (created by service, not model directly)
         # This tests the model field functionality
 
     def test_remember_me_extended_expiry(self):
@@ -406,7 +402,7 @@ class RememberMeSecurityTest(TestCase):
     def test_remember_me_password_change_invalidation(self):
         """Test remember me sessions invalidated on password change."""
         # Create remember me session
-        user_session = UserSession.objects.create(
+        UserSession.objects.create(
             user=self.user,
             session=Session.objects.create(
                 session_key="password_change_session",
@@ -440,7 +436,7 @@ class RememberMeSecurityTest(TestCase):
 
     def test_remember_me_account_lockout_handling(self):
         """Test remember me sessions during account lockout."""
-        user_session = UserSession.objects.create(
+        UserSession.objects.create(
             user=self.user,
             session=Session.objects.create(
                 session_key="lockout_test_session",
@@ -484,12 +480,11 @@ class RememberMeSecurityTest(TestCase):
         )
 
         # Test moderate geographic change (within same country)
-        is_anomaly = self.service.detect_geographic_anomaly(
-            user_session, new_ip="192.168.1.200"  # Still US IP (mock)
-        )
-
         # Remember me sessions might have higher tolerance for geographic movement
         # Implementation would consider remember me status in risk calculation
+        self.service.detect_geographic_anomaly(
+            user_session, new_ip="192.168.1.200"  # Still US IP (mock)
+        )
 
         # Test extreme geographic change
         is_extreme_anomaly = self.service.detect_geographic_anomaly(
