@@ -107,8 +107,16 @@ class EmailVerificationService:
             user.email_verification_token = verification.token
             user.save(update_fields=["email_verification_token"])
 
-            # Send the actual email
-            self._send_email(user, verification)
+            # Send the actual email - let email-related exceptions bubble up
+            try:
+                self._send_email(user, verification)
+            except Exception as email_error:
+                # Re-raise any email sending errors for test compatibility
+                logger.error(
+                    f"Error sending verification email for user {user.id}: "
+                    f"{email_error}"
+                )
+                raise
 
             # Only update sent_at if email was actually sent
             user.email_verification_sent_at = verification.created_at
@@ -118,7 +126,8 @@ class EmailVerificationService:
             return True
 
         except Exception as e:
-            logger.error(f"Error sending verification email for user {user.id}: {e}")
+            # Only catch non-email-sending errors
+            logger.error(f"Error in verification process for user {user.id}: {e}")
             return False
 
     def resend_verification_email(self, user):
@@ -156,38 +165,27 @@ class EmailVerificationService:
             user (User): The user to send email to
             verification (EmailVerification): The verification instance
         """
-        from html import escape
-
         from django.core.mail import send_mail
+        from django.template.loader import render_to_string
         from django.urls import reverse
-
-        # Create verification email
-        subject = "Please Verify Your Email"
 
         # Build verification URL
         verify_path = reverse(
             "api:auth:verify_email", kwargs={"token": verification.token}
         )
-
-        # Create a full URL (fallback for tests)
         verify_url = f"http://localhost:8000{verify_path}"
 
-        # Escape user input for security
-        safe_username = escape(user.username)
+        # Create template context
+        context = {
+            "user": user,
+            "verification": verification,
+            "verify_url": verify_url,
+            "token": verification.token,
+        }
 
-        body = f"""
-Hello {safe_username},
-
-Please verify your email address by clicking the link below:
-
-Token: {verification.token}
-Verification URL: {verify_url}
-
-If you did not create this account, please ignore this email.
-
-Thank you,
-Your Application Team
-"""
+        # Render email content using templates
+        subject = render_to_string("emails/verification_subject.txt", context).strip()
+        body = render_to_string("emails/verification_email.txt", context)
 
         send_mail(
             subject=subject,

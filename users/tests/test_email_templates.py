@@ -450,6 +450,9 @@ class EmailErrorHandlingTest(TestCase):
             email="test@example.com",
             password="TestPass123!",
         )
+        # Make sure the user can receive verification emails
+        self.user.email_verified = False  # Need to verify
+        self.user.save()
 
     def test_email_service_unavailable_handling(self):
         """Test handling when email service is unavailable."""
@@ -517,8 +520,8 @@ class EmailErrorHandlingTest(TestCase):
         """Test handling of SMTP connection errors."""
         from users.services import EmailVerificationService
 
-        with patch("smtplib.SMTP") as mock_smtp:
-            mock_smtp.side_effect = Exception("SMTP connection failed")
+        with patch("django.core.mail.send_mail") as mock_send_mail:
+            mock_send_mail.side_effect = Exception("SMTP connection failed")
 
             service = EmailVerificationService()
 
