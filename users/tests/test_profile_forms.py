@@ -74,7 +74,7 @@ class UserProfileManagementFormTest(TestCase):
         form = UserProfileManagementForm(data=form_data, instance=self.user)
         self.assertFalse(form.is_valid())
         self.assertIn("display_name", form.errors)
-        self.assertIn("already taken", form.errors["display_name"][0])
+        self.assertIn("already exists", form.errors["display_name"][0])
 
     def test_display_name_uniqueness_allows_current_user(self):
         """Test display name uniqueness allows current user's existing name."""
@@ -159,7 +159,7 @@ class UserProfileManagementFormTest(TestCase):
             "display_name": "JohnD",
             "bio": "Test bio",
             "website_url": "https://example.com",
-            "social_links": {"twitter": "https://twitter.com/johnd"},
+            "twitter_url": "https://twitter.com/johnd",
             "profile_visibility": "public",
             "show_email": True,
             "show_real_name": True,
