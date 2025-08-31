@@ -2225,7 +2225,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             reset = PasswordReset.objects.get_valid_reset_by_token(token)
             if not reset:
                 raise serializers.ValidationError(
-                    {"token": "Password reset token is invalid or has expired."}
+                    {"token": "Password reset token is invalid."}
                 )
             # Check if user is active
             if not reset.user.is_active:
@@ -2272,6 +2272,16 @@ class PasswordResetTokenValidationSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid token format.")
 
         return value
+
+    def to_representation(self, instance):
+        """Override to mask token in response."""
+        data = super().to_representation(instance)
+        if "token" in data:
+            # Mask token for security - show first 8 chars only
+            data["token"] = (
+                data["token"][:8] + "..." if len(data["token"]) > 8 else "***"
+            )
+        return data
 
 
 # Session Management serializers

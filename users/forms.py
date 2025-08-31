@@ -103,7 +103,7 @@ class EmailVerificationRegistrationForm(forms.Form):
 
     email = forms.EmailField(
         required=True,
-        widget=forms.EmailInput(
+        widget=forms.TextInput(
             attrs={
                 "class": "form-control",
                 "type": "email",
@@ -162,6 +162,12 @@ class EmailVerificationRegistrationForm(forms.Form):
         ),
         help_text="Optional. Your last name.",
     )
+
+    def __init__(self, *args, **kwargs):
+        """Initialize form and set email field type attribute."""
+        super().__init__(*args, **kwargs)
+        # Ensure email field has type="email" attribute in attrs
+        self.fields["email"].widget.attrs["type"] = "email"
 
     def clean_username(self):
         """Validate username uniqueness."""

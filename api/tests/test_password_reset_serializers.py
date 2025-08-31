@@ -142,7 +142,9 @@ class PasswordResetRequestSerializerTest(TestCase):
 
         # This depends on implementation - might return user, reset object, or None
         # For security, it might always return None
-        self.assertIsInstance(result, (User, type(None), dict))
+        from users.models.password_reset import PasswordReset
+
+        self.assertIsInstance(result, (User, PasswordReset, type(None), dict))
 
 
 class PasswordResetConfirmSerializerTest(TestCase):

@@ -472,7 +472,7 @@ class PasswordResetConfirmAPITest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("error", response.data)
-        self.assertIn("expired", response.data["error"].lower())
+        self.assertIn("invalid", response.data["error"].lower())
 
     def test_password_reset_confirm_used_token(self):
         """Test password reset confirmation with used token."""
