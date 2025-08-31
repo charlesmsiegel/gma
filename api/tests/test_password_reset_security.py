@@ -253,9 +253,19 @@ class PasswordResetTokenSecurityTest(TestCase):
         reset2 = PasswordReset.objects.create_for_user(user2)
 
         # Tokens should not be based on user ID, email, etc.
-        self.assertNotIn(str(self.user.id), reset1.token)
-        self.assertNotIn(self.user.email.split("@")[0], reset1.token)
-        self.assertNotIn(self.user.username, reset1.token)
+        # Check for longer patterns to avoid false positives on single characters
+        user_id_str = str(self.user.id)
+        email_prefix = self.user.email.split("@")[0]
+        username = self.user.username
+
+        # Only check if user ID is longer than 1 character
+        # (to avoid single digit false positives)
+        if len(user_id_str) > 1:
+            self.assertNotIn(user_id_str, reset1.token)
+
+        # Check email prefix and username (these should be longer)
+        self.assertNotIn(email_prefix, reset1.token)
+        self.assertNotIn(username, reset1.token)
 
         # Tokens should not be similar for similar usernames
         self.assertNotEqual(reset1.token, reset2.token)
