@@ -786,3 +786,29 @@ class UserPrivacySettingsForm(forms.ModelForm):
                 "Allow activity tracking for analytics and recommendations"
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        """Initialize form and store original boolean field values."""
+        super().__init__(*args, **kwargs)
+
+        # Store original boolean field values for partial updates
+        if self.instance.pk:
+            self._original_boolean_values = {
+                "show_email": self.instance.show_email,
+                "show_real_name": self.instance.show_real_name,
+                "show_last_login": self.instance.show_last_login,
+                "allow_activity_tracking": self.instance.allow_activity_tracking,
+            }
+
+    def clean(self):
+        """Handle partial updates for boolean fields."""
+        cleaned_data = super().clean()
+
+        # For partial updates, restore original values for boolean fields not provided
+        if hasattr(self, "_original_boolean_values"):
+            for field_name, original_value in self._original_boolean_values.items():
+                # If field wasn't in the form data, restore original value
+                if field_name not in self.data:
+                    cleaned_data[field_name] = original_value
+
+        return cleaned_data

@@ -419,11 +419,11 @@ class SessionSecurityService:
                 risk_score += 0.5  # Version update, low risk
                 is_version_update = True
             else:
-                risk_score += 1.5  # Different browser/device, higher risk
+                risk_score += 2.5  # Different browser/device, higher risk
 
         elif user_agent_changed:
             # Fallback if we don't have detailed agent info
-            risk_score += 1.5
+            risk_score += 2.5
 
         # Apply additional mitigation for clearly legitimate scenarios
         legitimate_scenario_discount = 0.0

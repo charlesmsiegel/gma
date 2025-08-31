@@ -752,6 +752,9 @@ class VerificationWorkflowIntegrationTest(TestCase):
 
         self.assertEqual(verify_response.status_code, status.HTTP_200_OK)
 
+        # Refresh user from database to get updated email_verified status
+        self.user.refresh_from_db()
+
         # Step 4: Try to create campaign again (should succeed)
         response = self.client.post(api_url, campaign_data, format="json")
 

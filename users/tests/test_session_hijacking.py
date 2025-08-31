@@ -85,25 +85,26 @@ class SessionHijackingDetectionTest(TestCase):
 
     def test_geographic_impossibility_detection(self):
         """Test detection of geographically impossible session hijacking."""
-        # Mock geolocation service to return different countries
+        # Mock geolocation service to return different countries based on IP
         with patch.object(self.service, "get_geolocation") as mock_geo:
-            # Original location: New York, USA
-            mock_geo.return_value = {
-                "country": "US",
-                "region": "NY",
-                "city": "New York",
-            }
-            original_location = self.service.get_geolocation(
-                self.legitimate_session.ip_address
-            )
 
-            # Hijack attempt from Moscow, Russia (impossible travel time)
-            mock_geo.return_value = {
-                "country": "RU",
-                "region": "Moscow",
-                "city": "Moscow",
-            }
-            hijack_location = self.service.get_geolocation("203.0.113.50")
+            def mock_geolocation(ip_address):
+                if ip_address == "192.168.1.100":  # legitimate session IP
+                    return {"country": "US", "region": "NY", "city": "New York"}
+                elif ip_address == "203.0.113.50":  # hijack IP
+                    return {"country": "RU", "region": "Moscow", "city": "Moscow"}
+                else:
+                    return {
+                        "country": "Unknown",
+                        "region": "Unknown",
+                        "city": "Unknown",
+                    }
+
+            mock_geo.side_effect = mock_geolocation
+
+            # Test geolocation calls
+            self.service.get_geolocation(self.legitimate_session.ip_address)
+            self.service.get_geolocation("203.0.113.50")
 
             # Detect geographic anomaly
             is_geographic_anomaly = self.service.detect_geographic_anomaly(
@@ -152,10 +153,11 @@ class SessionHijackingDetectionTest(TestCase):
 
     def test_user_agent_hijack_detection(self):
         """Test detection of hijacking via user agent changes."""
-        original_user_agent = self.legitimate_session.user_agent
-
         # Hijacker uses different browser/OS combination
-        hijacker_user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        hijacker_user_agent = (
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        )
 
         # Test suspicious activity detection
         is_suspicious = self.service.detect_suspicious_activity(

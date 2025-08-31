@@ -112,18 +112,29 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 "Social links must be a valid JSON object."
             )
 
-        # Validate each social link URL
-        for platform, url in value.items():
-            if url and not isinstance(url, str):
+        # Validate each social link
+        for platform, link_value in value.items():
+            if link_value and not isinstance(link_value, str):
                 raise serializers.ValidationError(
-                    f"Social link for {platform} must be a valid URL string."
+                    f"Social link for {platform} must be a valid string."
                 )
 
-            # Basic URL validation for non-empty values
-            if url and not (url.startswith("http://") or url.startswith("https://")):
-                raise serializers.ValidationError(
-                    f"Social link for {platform} must be a valid HTTP/HTTPS URL."
-                )
+            # Platform-specific validation
+            if link_value:
+                platform_lower = platform.lower()
+
+                # Discord allows usernames (user#1234)
+                if platform_lower == "discord":
+                    continue  # Allow any non-empty string for Discord
+
+                # For other platforms, require valid URLs
+                if not (
+                    link_value.startswith("http://")
+                    or link_value.startswith("https://")
+                ):
+                    raise serializers.ValidationError(
+                        f"Social link for {platform} must be a valid HTTP/HTTPS URL."
+                    )
 
         return value
 
