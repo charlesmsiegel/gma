@@ -414,7 +414,7 @@ class PasswordResetBruteForceProtectionTest(TestCase):
 
     def test_invalid_token_attempts_logged(self):
         """Test that invalid token attempts are logged."""
-        with patch("logging.Logger.warning") as mock_warning:
+        with patch("api.views.auth_views.logger.warning") as mock_warning:
             # Attempt with invalid token
             data = {
                 "token": "a" * 64,  # Valid format, invalid token
@@ -426,9 +426,13 @@ class PasswordResetBruteForceProtectionTest(TestCase):
 
             # Should log the attempt
             if mock_warning.called:
+                print(f"Mock warning called: {mock_warning.call_args}")
                 log_message = mock_warning.call_args[0][0].lower()
+                print(f"Log message: '{log_message}'")
                 self.assertIn("password reset", log_message)
                 self.assertIn("invalid", log_message)
+            else:
+                self.fail("No warning was logged for invalid token attempt")
 
     def test_multiple_invalid_attempts_handling(self):
         """Test handling of multiple invalid token attempts."""

@@ -613,8 +613,8 @@ def password_reset_confirm_view(request):
 
         # Log security event for invalid password reset attempts
         logger.warning(
-            "Password reset attempt with invalid token: %s",
-            token[:8] if token else "empty",
+            f"Invalid password reset attempt with token: "
+            f"{token[:8] if token else 'empty'}"
         )
 
         if "inactive" in token_error:
