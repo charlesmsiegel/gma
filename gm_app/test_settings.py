@@ -53,6 +53,9 @@ MIGRATION_MODULES = DisableMigrations()
 SECRET_KEY = "test-secret-key-for-tests-only"  # nosec
 DEBUG = False
 
+# Disable email verification for integration tests
+EMAIL_VERIFICATION_REQUIRED = False
+
 # Set login URL to our custom view
 LOGIN_URL = "users:login"
 

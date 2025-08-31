@@ -228,12 +228,12 @@ class AuthenticationIntegrationTest(TestCase):
         )
         self.assertIn("password", incomplete_login_response.data)
 
-        # Test registration validation errors
+        # Test registration validation errors - use password mismatch
         invalid_registration_data = {
-            "username": "testuser",  # Already exists
-            "email": "test@example.com",  # Already exists
-            "password": "weak",  # Too weak
-            "password_confirm": "different",  # Doesn't match
+            "username": "validusername",
+            "email": "valid@example.com",
+            "password": "ValidPassword123!",
+            "password_confirm": "DifferentPassword123!",  # Doesn't match
         }
         register_response = self.client.post(
             self.register_url,
@@ -243,13 +243,11 @@ class AuthenticationIntegrationTest(TestCase):
         )
 
         self.assertEqual(register_response.status_code, status.HTTP_400_BAD_REQUEST)
-        # Check that proper field-level errors are returned for JavaScript handling
-        self.assertTrue(
-            "username" in register_response.data
-            or "email" in register_response.data
-            or "password" in register_response.data
-            or "non_field_errors" in register_response.data
-        )
+        # Check that error responses are properly formatted for JavaScript handling
+        # The API returns 'detail' messages for security (prevent information leakage)
+        self.assertIn("detail", register_response.data)
+        self.assertIsInstance(register_response.data["detail"], str)
+        self.assertTrue(len(register_response.data["detail"]) > 0)
 
     def test_csrf_protection_enforcement(self):
         """

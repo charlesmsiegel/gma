@@ -71,7 +71,11 @@ Please click the link below to reset your password:
 Token: {reset.token}
 Reset URL: {reset_url}
 
-If you did not request this password reset, please ignore this email.
+SECURITY NOTICE:
+- This reset link expires in 3 days for your security
+- Do not share this link with anyone
+- If you didn't request this password reset, please ignore this email
+- Keep your account secure by using a strong, unique password
 
 Thank you,
 Your Application Team

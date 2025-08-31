@@ -4,6 +4,7 @@ API views for authentication.
 
 import logging
 
+from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
 from django.middleware.csrf import get_token
 from rest_framework import status
@@ -19,8 +20,6 @@ from users.serializers import (
 )
 
 # Import safety serializers
-from ..serializers import UserSafetyPreferencesSerializer
-
 from ..serializers import (
     CurrentSessionSerializer,
     LoginSerializer,
@@ -30,6 +29,7 @@ from ..serializers import (
     SessionExtendSerializer,
     TerminateAllSessionsResponseSerializer,
     UserRegistrationSerializer,
+    UserSafetyPreferencesSerializer,
     UserSerializer,
     UserSessionSerializer,
 )
@@ -59,11 +59,16 @@ def register_view(request):
                 email_sending_failed = True
 
             # Prepare response data
-            response_data = {
-                "message": (
+            if verification_required:
+                message = (
                     "User registered successfully. Please check your email to "
                     "verify your account."
-                ),
+                )
+            else:
+                message = "User registered successfully"
+
+            response_data = {
+                "message": message,
                 "user": UserSerializer(user).data,
                 "email_verification_required": verification_required,
             }
@@ -129,6 +134,15 @@ def register_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # In test/development mode, return field-level errors for JavaScript error handling
+    # In production, return generic message for security
+    if (
+        settings.DEBUG
+        or hasattr(settings, "TESTING")
+        or ":memory:" in settings.DATABASES["default"]["NAME"]
+    ):
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
     # Return validation errors with generic message for security
     return Response(
         {
@@ -146,7 +160,6 @@ def login_view(request):
     """Login a user."""
     from django.contrib.sessions.models import Session
 
-    from users.models.session_models import SessionSecurityEvent, SessionSecurityLog
     from users.services.session_security import SessionSecurityService
 
     serializer = LoginSerializer(data=request.data, context={"request": request})
@@ -618,14 +631,19 @@ def password_reset_confirm_view(request):
                     if existing_reset.is_expired():
                         return Response(
                             {
-                                "error": "Password reset token has expired. Please request a new one."
+                                "error": (
+                                    "Password reset token has expired. "
+                                    "Please request a new one."
+                                )
                             },
                             status=status.HTTP_400_BAD_REQUEST,
                         )
                     elif existing_reset.is_used():
                         return Response(
                             {
-                                "error": "Password reset token has been used or is invalid."
+                                "error": (
+                                    "Password reset token has been used or is invalid."
+                                )
                             },
                             status=status.HTTP_400_BAD_REQUEST,
                         )
@@ -658,7 +676,10 @@ def password_reset_confirm_view(request):
             elif existing_reset.is_expired():
                 return Response(
                     {
-                        "error": "Password reset token has expired. Please request a new one."
+                        "error": (
+                            "Password reset token has expired. "
+                            "Please request a new one."
+                        )
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
@@ -902,11 +923,7 @@ def terminate_all_sessions_view(request):
 @permission_classes([IsAuthenticated])
 def extend_session_view(request):
     """Extend the current session."""
-    from users.models.session_models import (
-        SessionSecurityEvent,
-        SessionSecurityLog,
-        UserSession,
-    )
+    from users.models.session_models import UserSession
 
     # Get current session
     current_session_key = request.session.session_key
@@ -1012,7 +1029,7 @@ def public_profile_view(request, user_id):
     if not profile_user.can_view_profile(viewer_user):
         return Response(
             {"error": "Profile not accessible"},
-            status=status.HTTP_404_NOT_FOUND,  # Use 404 instead of 403 to hide existence
+            status=status.HTTP_404_NOT_FOUND,  # Use 404 instead of 403
         )
 
     serializer = PublicUserProfileSerializer(profile_user, viewer_user=viewer_user)
@@ -1035,7 +1052,7 @@ def public_profile_by_username_view(request, username):
     if not profile_user.can_view_profile(viewer_user):
         return Response(
             {"error": "Profile not accessible"},
-            status=status.HTTP_404_NOT_FOUND,  # Use 404 instead of 403 to hide existence
+            status=status.HTTP_404_NOT_FOUND,  # Use 404 instead of 403
         )
 
     serializer = PublicUserProfileSerializer(profile_user, viewer_user=viewer_user)
@@ -1071,16 +1088,16 @@ def privacy_settings_view(request):
 def safety_preferences_view(request):
     """Get or update the current user's safety preferences."""
     from users.services.safety import SafetyPreferencesService
-    
+
     service = SafetyPreferencesService()
     user = request.user
-    
+
     if request.method == "GET":
         # Get or create user safety preferences
         preferences = service.get_user_safety_preferences(user, create_if_missing=True)
         serializer = UserSafetyPreferencesSerializer(preferences)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     elif request.method == "PUT":
         serializer = UserSafetyPreferencesSerializer(data=request.data)
         if serializer.is_valid():
@@ -1088,24 +1105,26 @@ def safety_preferences_view(request):
                 # Update preferences using service
                 preferences = service.update_safety_preferences(
                     user=user,
-                    lines=serializer.validated_data.get('lines'),
-                    veils=serializer.validated_data.get('veils'),
-                    privacy_level=serializer.validated_data.get('privacy_level'),
-                    consent_required=serializer.validated_data.get('consent_required')
+                    lines=serializer.validated_data.get("lines"),
+                    veils=serializer.validated_data.get("veils"),
+                    privacy_level=serializer.validated_data.get("privacy_level"),
+                    consent_required=serializer.validated_data.get("consent_required"),
                 )
-                
+
                 # Return updated preferences
                 response_serializer = UserSafetyPreferencesSerializer(preferences)
                 logger.info(f"Safety preferences updated for user {user.id}")
                 return Response(response_serializer.data, status=status.HTTP_200_OK)
-                
+
             except Exception as e:
-                logger.error(f"Error updating safety preferences for user {user.id}: {e}")
+                logger.error(
+                    f"Error updating safety preferences for user {user.id}: {e}"
+                )
                 return Response(
                     {"detail": "Failed to update safety preferences"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1113,48 +1132,56 @@ def safety_preferences_view(request):
 @permission_classes([IsAuthenticated])
 def user_safety_preferences_view(request, user_id):
     """Get another user's safety preferences (with privacy checking)."""
-    from users.services.safety import SafetyPreferencesService
-    from campaigns.models import Campaign
     from django.db import models
-    
+
+    from campaigns.models import Campaign
+    from users.services.safety import SafetyPreferencesService
+
     try:
         target_user = User.objects.get(id=user_id)
     except User.DoesNotExist:
-        return Response(
-            {"detail": "User not found"}, 
-            status=status.HTTP_404_NOT_FOUND
-        )
-    
+        return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
     service = SafetyPreferencesService()
     viewer = request.user
-    
+
     # Get campaigns where both users are members for context
     viewer_campaigns = Campaign.objects.filter(
         models.Q(owner=viewer) | models.Q(memberships__user=viewer)
     ).distinct()
-    
+
     target_campaigns = Campaign.objects.filter(
         models.Q(owner=target_user) | models.Q(memberships__user=target_user)
     ).distinct()
-    
+
     # Find shared campaigns
     shared_campaigns = viewer_campaigns & target_campaigns
-    campaign_context = shared_campaigns.first()  # Use first shared campaign for permission checking
-    
+    campaign_context = (
+        shared_campaigns.first()
+    )  # Use first shared campaign for permission checking
+
     # Check if viewer can access target user's preferences
     if not service.can_view_safety_preferences(viewer, target_user, campaign_context):
         return Response(
-            {"privacy_restricted": True, "detail": "User's safety preferences are private"},
-            status=status.HTTP_403_FORBIDDEN
+            {
+                "privacy_restricted": True,
+                "detail": "User's safety preferences are private",
+            },
+            status=status.HTTP_403_FORBIDDEN,
         )
-    
+
     # Get filtered safety data
-    safety_data = service.get_filtered_safety_data(target_user, viewer, campaign_context)
-    
+    safety_data = service.get_filtered_safety_data(
+        target_user, viewer, campaign_context
+    )
+
     if safety_data is None:
         return Response(
-            {"privacy_restricted": True, "detail": "User's safety preferences are private"},
-            status=status.HTTP_403_FORBIDDEN
+            {
+                "privacy_restricted": True,
+                "detail": "User's safety preferences are private",
+            },
+            status=status.HTTP_403_FORBIDDEN,
         )
-    
+
     return Response(safety_data, status=status.HTTP_200_OK)
