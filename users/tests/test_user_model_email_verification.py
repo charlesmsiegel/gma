@@ -404,6 +404,7 @@ class UserEmailVerificationQuerySetTest(TestCase):
             password="TestPass123!",
         )
         self.unverified_recent.generate_email_verification_token()
+        self.unverified_recent.save()
 
         # Unverified user with expired token
         self.unverified_expired = User.objects.create_user(

@@ -1,9 +1,11 @@
 import zoneinfo
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 if TYPE_CHECKING:
     from .theme import Theme
@@ -39,6 +41,34 @@ def validate_timezone(value: str) -> None:
         zoneinfo.ZoneInfo(value)
     except zoneinfo.ZoneInfoNotFoundError:
         raise ValidationError(f"'{value}' is not a valid timezone identifier.")
+
+
+class CustomUserManager(UserManager):
+    """Custom User manager with email verification methods."""
+
+    def email_verified(self):
+        """Get users with verified email addresses."""
+        return self.filter(email_verified=True)
+
+    def email_unverified(self):
+        """Get users with unverified email addresses."""
+        return self.filter(email_verified=False)
+
+    def pending_email_verification(self):
+        """Get users with pending (unexpired) email verification tokens."""
+        return self.filter(
+            email_verified=False,
+            email_verification_token__isnull=False,
+            email_verification_sent_at__gte=timezone.now() - timedelta(hours=24),
+        )
+
+    def expired_email_verification(self):
+        """Get users with expired email verification tokens."""
+        return self.filter(
+            email_verified=False,
+            email_verification_token__isnull=False,
+            email_verification_sent_at__lt=timezone.now() - timedelta(hours=24),
+        )
 
 
 class User(AbstractUser):
@@ -139,6 +169,9 @@ class User(AbstractUser):
 
     created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
     updated_at = models.DateTimeField(auto_now=True)  # type: ignore[var-annotated]
+
+    # Custom manager
+    objects = CustomUserManager()
 
     class Meta:
         db_table = "users_user"
