@@ -761,7 +761,7 @@ class PasswordResetCrossSystemIntegrationTest(TestCase):
 
         # Permissions should be preserved
         self.user.refresh_from_db()
-        self.assertTrue(self.user.has_perm("auth.change_user"))
+        self.assertTrue(self.user.has_perm("users.change_user"))
 
     def test_password_reset_with_user_groups(self):
         """Test password reset preserves user group memberships."""
