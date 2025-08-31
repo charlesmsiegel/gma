@@ -10,13 +10,12 @@ Tests cover:
 """
 
 import uuid
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
@@ -43,7 +42,7 @@ class UserSessionModelTest(TestCase):
 
         # Create Django session
         self.session = Session.objects.create(
-            session_key="test_session_key_12345",
+            session_key=f"test_session_key_{uuid.uuid4().hex[:8]}",
             session_data="encoded_session_data",
             expire_date=timezone.now() + timedelta(days=1),
         )
@@ -92,7 +91,7 @@ class UserSessionModelTest(TestCase):
             browser="Chrome",
         )
 
-        expected = f"testuser - Chrome/desktop from 192.168.1.100"
+        expected = "testuser - Chrome/desktop from 192.168.1.100"
         self.assertEqual(str(user_session), expected)
 
     def test_user_session_device_fingerprint(self):
@@ -369,7 +368,7 @@ class SessionSecurityLogModelTest(TestCase):
         )
 
         self.session = Session.objects.create(
-            session_key="test_session_key_12345",
+            session_key=f"test_session_key_{uuid.uuid4().hex[:8]}",
             session_data="encoded_session_data",
             expire_date=timezone.now() + timedelta(days=1),
         )
@@ -409,7 +408,7 @@ class SessionSecurityLogModelTest(TestCase):
             user_agent="Chrome/91.0 Desktop",
         )
 
-        expected = f"testuser - SUSPICIOUS_ACTIVITY from 10.0.0.1"
+        expected = "testuser - SUSPICIOUS_ACTIVITY from 10.0.0.1"
         self.assertEqual(str(log_entry), expected)
 
     def test_session_security_log_all_event_types(self):

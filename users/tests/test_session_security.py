@@ -12,6 +12,7 @@ Tests cover:
 - Security event correlation
 """
 
+import uuid
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
@@ -41,7 +42,7 @@ class SessionHijackingDetectionTest(TestCase):
         )
 
         self.django_session = Session.objects.create(
-            session_key="test_session_key",
+            session_key=f"test_session_key_{uuid.uuid4().hex[:8]}",
             session_data="test_data",
             expire_date=timezone.now() + timedelta(days=1),
         )
@@ -243,7 +244,7 @@ class SecurityAlertSystemTest(TestCase):
         )
 
         self.django_session = Session.objects.create(
-            session_key="test_session_key",
+            session_key=f"test_session_key_{uuid.uuid4().hex[:8]}",
             session_data="test_data",
             expire_date=timezone.now() + timedelta(days=1),
         )
