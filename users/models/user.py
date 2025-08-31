@@ -457,6 +457,16 @@ class User(AbstractUser):
 
         return self.email_verification_sent_at + timedelta(hours=24)
 
+    def clean(self):
+        """Validate model fields."""
+        super().clean()
+
+        # Validate bio field length (TextField doesn't enforce max_length by default)
+        if self.bio and len(self.bio) > 500:
+            from django.core.exceptions import ValidationError
+
+            raise ValidationError({"bio": "Bio cannot exceed 500 characters."})
+
     def save(self, *args, **kwargs):
         """Override save to handle email changes and reset verification."""
         # Check if this is an existing user with changed email
