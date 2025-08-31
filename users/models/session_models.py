@@ -294,6 +294,11 @@ class UserSession(models.Model):
         """Extend session for remember me functionality (30 days)."""
         self.extend_expiry(hours=24 * 30)  # 30 days
 
+    def save(self, *args, **kwargs):
+        """Override save to validate IP address field."""
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
 class SessionSecurityLogQuerySet(models.QuerySet):
     """Custom queryset for SessionSecurityLog model with chainable methods."""
