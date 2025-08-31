@@ -12,8 +12,8 @@ Tests cover:
 - Prevention mechanisms
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
@@ -501,6 +501,8 @@ class HijackingPreventionTest(TestCase):
                 ip_address_changed=(scenario["new_ip"] != session.ip_address),
                 user_agent_changed=(scenario["new_user_agent"] != session.user_agent),
                 session=session,
+                new_ip=scenario["new_ip"],
+                new_user_agent=scenario["new_user_agent"],
             )
 
             # Legitimate scenarios should have lower risk scores

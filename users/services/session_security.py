@@ -10,10 +10,10 @@ This service provides comprehensive session security monitoring including:
 """
 
 import hashlib
-import json
+import ipaddress
 import logging
 from datetime import timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -45,6 +45,90 @@ class SessionSecurityService:
         self.auto_terminate_threshold = getattr(
             settings, "AUTO_TERMINATE_THRESHOLD", 9.0
         )
+
+    def _are_ips_same_subnet(self, ip1: str, ip2: str, subnet_mask: int = 24) -> bool:
+        """
+        Check if two IP addresses are in the same subnet.
+
+        Args:
+            ip1: First IP address
+            ip2: Second IP address
+            subnet_mask: Subnet mask bits (default: /24)
+
+        Returns:
+            True if IPs are in same subnet, False otherwise
+        """
+        try:
+            network1 = ipaddress.ip_network(f"{ip1}/{subnet_mask}", strict=False)
+            network2 = ipaddress.ip_network(f"{ip2}/{subnet_mask}", strict=False)
+            return network1 == network2
+        except (ipaddress.AddressValueError, ValueError):
+            # If IP parsing fails, treat as different subnets (higher risk)
+            return False
+
+    def _is_mobile_tethering_change(self, old_ip: str, new_ip: str) -> bool:
+        """
+        Check if IP change appears to be mobile tethering/hotspot.
+
+        Args:
+            old_ip: Original IP address
+            new_ip: New IP address
+
+        Returns:
+            True if appears to be mobile tethering, False otherwise
+        """
+        try:
+            # Common mobile hotspot IP ranges
+            mobile_ranges = [
+                "192.168.43.0/24",  # Android hotspot default
+                "172.20.10.0/24",  # iOS hotspot default
+                "192.168.137.0/24",  # Windows hotspot default
+            ]
+
+            old_addr = ipaddress.ip_address(old_ip)
+            new_addr = ipaddress.ip_address(new_ip)
+
+            # Check if either IP is in mobile range and they're both private
+            for mobile_range in mobile_ranges:
+                network = ipaddress.ip_network(mobile_range)
+                if (
+                    (old_addr in network or new_addr in network)
+                    and old_addr.is_private
+                    and new_addr.is_private
+                ):
+                    return True
+
+            return False
+
+        except (ipaddress.AddressValueError, ValueError):
+            return False
+
+    def _is_agent_version_update(self, old_agent: str, new_agent: str) -> bool:
+        """
+        Check if user agent change appears to be just a version update.
+
+        Args:
+            old_agent: Original user agent string
+            new_agent: New user agent string
+
+        Returns:
+            True if appears to be version update, False otherwise
+        """
+        try:
+            # Simple heuristic: same browser name but different version numbers
+            # Extract browser name (before version numbers)
+            import re
+
+            # Remove version numbers for comparison
+            old_base = re.sub(r"\d+(\.\d+)*", "", old_agent)
+            new_base = re.sub(r"\d+(\.\d+)*", "", new_agent)
+
+            # If base strings are similar, it's likely a version update
+            return old_base.strip() == new_base.strip()
+
+        except Exception:
+            # If parsing fails, treat as different browser (higher risk)
+            return False
 
     def create_user_session(
         self, user: User, session: Session, ip_address: str, user_agent: str, **kwargs
@@ -275,6 +359,8 @@ class SessionSecurityService:
         ip_address_changed: bool = False,
         user_agent_changed: bool = False,
         session: Optional[UserSession] = None,
+        new_ip: Optional[str] = None,
+        new_user_agent: Optional[str] = None,
         **kwargs,
     ) -> float:
         """
@@ -285,6 +371,8 @@ class SessionSecurityService:
             ip_address_changed: Whether IP address changed
             user_agent_changed: Whether user agent changed
             session: Associated session (optional)
+            new_ip: New IP address for detailed analysis
+            new_user_agent: New user agent for detailed analysis
             **kwargs: Additional risk factors
 
         Returns:
@@ -305,12 +393,54 @@ class SessionSecurityService:
 
         risk_score += event_risk_scores.get(event_type, 3.0)
 
-        # Additional risk factors
-        if ip_address_changed:
+        # Additional risk factors with more nuanced analysis
+        is_same_subnet_change = False
+        is_version_update = False
+        is_mobile_tethering = False
+
+        if ip_address_changed and session and new_ip:
+            # Check if IP change is within same subnet (less risky)
+            if self._are_ips_same_subnet(session.ip_address, new_ip):
+                risk_score += 0.5  # Same subnet, low risk
+                is_same_subnet_change = True
+            elif self._is_mobile_tethering_change(session.ip_address, new_ip):
+                risk_score += 1.0  # Mobile tethering, medium risk
+                is_mobile_tethering = True
+            else:
+                risk_score += 2.0  # Different subnet, higher risk
+
+        elif ip_address_changed:
+            # Fallback if we don't have detailed IP info
             risk_score += 2.0
 
-        if user_agent_changed:
+        if user_agent_changed and session and new_user_agent:
+            # Check if it's just a version update (less risky)
+            if self._is_agent_version_update(session.user_agent, new_user_agent):
+                risk_score += 0.5  # Version update, low risk
+                is_version_update = True
+            else:
+                risk_score += 1.5  # Different browser/device, higher risk
+
+        elif user_agent_changed:
+            # Fallback if we don't have detailed agent info
             risk_score += 1.5
+
+        # Apply additional mitigation for clearly legitimate scenarios
+        legitimate_scenario_discount = 0.0
+        if is_same_subnet_change and not user_agent_changed:
+            # Same network, same browser - very low risk
+            legitimate_scenario_discount = 2.5
+        elif is_version_update and not ip_address_changed:
+            # Browser update, same location - very low risk
+            legitimate_scenario_discount = 2.0
+        elif is_mobile_tethering and not user_agent_changed:
+            # Mobile tethering, same browser - medium-low risk
+            legitimate_scenario_discount = 1.0
+        elif is_same_subnet_change or is_version_update:
+            # One legitimate factor - moderate discount
+            legitimate_scenario_discount = 1.5
+
+        risk_score -= legitimate_scenario_discount
 
         # Geographic risk (if session provided)
         if session:
