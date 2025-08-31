@@ -391,6 +391,38 @@ class User(AbstractUser):
         self.email_verified = True
         self.clear_email_verification_token()
 
+    def verify_email_with_token(self, token: str) -> None:
+        """
+        Verify user's email with the provided token.
+
+        Args:
+            token: The verification token to validate
+
+        Raises:
+            ValidationError: If token is invalid, expired, or missing
+        """
+        from django.core.exceptions import ValidationError
+
+        # Check if user already has email verified
+        if self.email_verified:
+            raise ValidationError("Email is already verified.")
+
+        # Check if token exists
+        if not self.email_verification_token:
+            raise ValidationError("No verification token found.")
+
+        # Check if token matches
+        if self.email_verification_token != token:
+            raise ValidationError("Invalid verification token.")
+
+        # Check if token is expired
+        if self.is_email_verification_token_expired():
+            raise ValidationError("Verification token has expired.")
+
+        # Token is valid - mark email as verified
+        self.mark_email_verified()
+        self.save()
+
     def is_email_verification_token_expired(self) -> bool:
         """
         Check if the email verification token has expired.
