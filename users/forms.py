@@ -93,6 +93,7 @@ class EmailVerificationRegistrationForm(forms.Form):
     username = forms.CharField(
         max_length=150,
         required=True,
+        label="Username",
         widget=forms.TextInput(
             attrs={"class": "form-control", "placeholder": "Enter username"}
         ),
@@ -103,6 +104,7 @@ class EmailVerificationRegistrationForm(forms.Form):
 
     email = forms.EmailField(
         required=True,
+        label="Email Address",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
@@ -116,6 +118,7 @@ class EmailVerificationRegistrationForm(forms.Form):
     password = forms.CharField(
         min_length=8,
         required=True,
+        label="Password",
         widget=forms.PasswordInput(
             attrs={"class": "form-control", "placeholder": "Enter password"}
         ),
@@ -124,6 +127,7 @@ class EmailVerificationRegistrationForm(forms.Form):
 
     password_confirm = forms.CharField(
         required=True,
+        label="Confirm Password",
         widget=forms.PasswordInput(
             attrs={"class": "form-control", "placeholder": "Confirm password"}
         ),
@@ -133,6 +137,7 @@ class EmailVerificationRegistrationForm(forms.Form):
     display_name = forms.CharField(
         max_length=100,
         required=False,
+        label="Display Name",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
@@ -145,6 +150,7 @@ class EmailVerificationRegistrationForm(forms.Form):
     first_name = forms.CharField(
         max_length=30,
         required=False,
+        label="First Name",
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
@@ -157,6 +163,7 @@ class EmailVerificationRegistrationForm(forms.Form):
     last_name = forms.CharField(
         max_length=150,
         required=False,
+        label="Last Name",
         widget=forms.TextInput(
             attrs={"class": "form-control", "placeholder": "Enter last name (optional)"}
         ),
