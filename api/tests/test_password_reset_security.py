@@ -593,7 +593,7 @@ class PasswordResetSecurityLoggingTest(TestCase):
         self.assertIn("password reset successful", log_args.lower())
         self.assertIn(str(self.user.id), log_args)
 
-    @patch("logging.Logger.warning")
+    @patch("api.views.auth_views.logger.warning")
     def test_failed_password_reset_logged(self, mock_warning):
         """Test that failed password reset attempts are logged."""
         data = {
