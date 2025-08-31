@@ -26,21 +26,38 @@ class GMPermissionLimitationsTest(TestCase):
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
         )
+        self.owner.email_verified = True
+        self.owner.save()
+
         self.gm1 = User.objects.create_user(
             username="gm1", email="gm1@test.com", password="testpass123"
         )
+        self.gm1.email_verified = True
+        self.gm1.save()
+
         self.gm2 = User.objects.create_user(
             username="gm2", email="gm2@test.com", password="testpass123"
         )
+        self.gm2.email_verified = True
+        self.gm2.save()
+
         self.player = User.objects.create_user(
             username="player", email="player@test.com", password="testpass123"
         )
+        self.player.email_verified = True
+        self.player.save()
+
         self.observer = User.objects.create_user(
             username="observer", email="observer@test.com", password="testpass123"
         )
+        self.observer.email_verified = True
+        self.observer.save()
+
         self.invitee = User.objects.create_user(
             username="invitee", email="invitee@test.com", password="testpass123"
         )
+        self.invitee.email_verified = True
+        self.invitee.save()
 
         self.campaign = Campaign.objects.create(
             name="GM Test Campaign", owner=self.owner, game_system="Test System"
