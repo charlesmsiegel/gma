@@ -23,6 +23,17 @@
     </div>
 
     {% if user.is_authenticated %}
+      <!-- Email Verification Notice -->
+      {% if show_verification_notice %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+          <i class="bi bi-envelope-exclamation me-2"></i>
+          <strong>Email Verification Required</strong>
+          Please verify your email address to create campaigns and access all features.
+          <a href="{% url 'api:auth:resend_verification' %}" class="alert-link">Resend verification email</a>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endif %}
+
       <!-- Quick Start Guide -->
       <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-warning-subtle border-0">
