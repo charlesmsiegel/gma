@@ -153,13 +153,6 @@ def accept_campaign_invitation(request, pk):
     Only the invited user can accept their own invitation.
     Requires email verification to accept invitations.
     """
-    # Check email verification first
-    if not request.user.email_verified:
-        return Response(
-            {"error": "Email verification required to accept invitations."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
     invitation, error_response = SecurityResponseHelper.safe_get_or_404(
         CampaignInvitation.objects,
         request.user,
@@ -168,6 +161,13 @@ def accept_campaign_invitation(request, pk):
     )
     if error_response:
         return error_response
+
+    # Check email verification after permission check for security
+    if not request.user.email_verified:
+        return Response(
+            {"error": "Email verification required to accept invitations."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
     try:
         membership = invitation.accept()
