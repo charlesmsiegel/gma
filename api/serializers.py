@@ -95,6 +95,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if len(value) > 254:  # RFC 5321 limit
             raise serializers.ValidationError("Email address is too long.")
 
+        # Check local and domain part lengths per RFC standards
+        if "@" in value:
+            local_part, domain_part = value.rsplit("@", 1)
+            if len(local_part) > 64:  # RFC 5321 local part limit
+                raise serializers.ValidationError("Email address is too long.")
+            if len(domain_part) > 253:  # RFC 5321 domain part limit
+                raise serializers.ValidationError("Email address is too long.")
+
         # Check uniqueness
         if User.objects.filter(email__iexact=value).exists():
             # Generic error to prevent email enumeration
