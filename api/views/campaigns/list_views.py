@@ -146,8 +146,8 @@ class CampaignListCreateAPIView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         """Set the owner to the authenticated user when creating a campaign."""
-        # Check email verification requirement
-        if not self.request.user.email_verified:
+        # Check email verification requirement (superusers bypass)
+        if not self.request.user.email_verified and not self.request.user.is_superuser:
             from rest_framework.exceptions import PermissionDenied
 
             raise PermissionDenied("Email verification required to create campaigns.")
