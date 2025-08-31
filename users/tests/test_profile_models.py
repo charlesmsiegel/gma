@@ -44,12 +44,12 @@ class UserProfileFieldsTest(TestCase):
         self.user.full_clean()  # Should not raise
 
         self.user.bio = None
-        # Django converts None to empty string for CharField
-        self.assertEqual(self.user.bio, "")
+        # TextField allows None values when blank=True
+        self.assertIsNone(self.user.bio)
 
     def test_avatar_field_optional(self):
         """Test avatar field is optional."""
-        self.assertIsNone(self.user.avatar)
+        self.assertFalse(self.user.avatar)  # ImageField is falsy when empty
         self.user.full_clean()  # Should not raise
 
     def test_website_url_validation(self):
