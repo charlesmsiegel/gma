@@ -392,7 +392,7 @@ class CampaignInvitationRestrictionTest(TestCase):
         self.client.force_authenticate(user=self.owner)
 
         invitation_data = {
-            "email": "unverified@example.com",
+            "invited_user_id": self.unverified_user.id,
             "role": "PLAYER",
             "message": "Join my campaign!",
         }

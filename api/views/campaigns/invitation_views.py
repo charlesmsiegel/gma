@@ -85,6 +85,15 @@ def send_campaign_invitation(request, campaign_id):
             )
         )
 
+    # Check if invited user has verified their email
+    if not invited_user.email_verified:
+        return APIError.create_validation_error_response(
+            {
+                "error": "Cannot invite unverified users. "
+                "User must verify their email first."
+            }
+        )
+
     # Create invitation using service
     try:
         invitation_service = InvitationService(campaign)
@@ -142,7 +151,15 @@ def accept_campaign_invitation(request, pk):
     Accept a campaign invitation.
 
     Only the invited user can accept their own invitation.
+    Requires email verification to accept invitations.
     """
+    # Check email verification first
+    if not request.user.email_verified:
+        return Response(
+            {"error": "Email verification required to accept invitations."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     invitation, error_response = SecurityResponseHelper.safe_get_or_404(
         CampaignInvitation.objects,
         request.user,
@@ -258,6 +275,15 @@ def list_user_invitations(request):
     serializer = CampaignInvitationSerializer(invitations, many=True)
     results = serializer.data
 
-    return Response(
-        {"results": results, "count": len(results), "next": None, "previous": None}
-    )
+    # Add email verification warning for unverified users
+    response_data = {
+        "results": results,
+        "count": len(results),
+        "next": None,
+        "previous": None,
+    }
+
+    if not request.user.email_verified and results:
+        response_data["warning"] = "Email verification required to accept invitations."
+
+    return Response(response_data)
