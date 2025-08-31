@@ -45,8 +45,12 @@ class SessionExpirationDetectionTest(TestCase):
 
     def create_session_with_expiry(self, expire_delta):
         """Helper to create session with specific expiry."""
+        import uuid
+
+        # Use unique session key to avoid constraint violations
+        session_key = f"test_session_{uuid.uuid4().hex[:8]}"
         django_session = Session.objects.create(
-            session_key="test_session",
+            session_key=session_key,
             session_data="test_data",
             expire_date=timezone.now() + expire_delta,
         )
