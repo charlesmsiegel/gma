@@ -754,7 +754,7 @@ class SessionSecurityService:
             f"{device_data.get('user_agent', '')}"
             f"{device_data.get('device_type', '')}"
             f"{device_data.get('browser', '')}"
-            f"{device_data.get('operating_system', '')}"
+            f"{device_data.get('os', device_data.get('operating_system', ''))}"
         )
 
         return hashlib.sha256(fingerprint_data.encode()).hexdigest()
