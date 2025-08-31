@@ -49,6 +49,18 @@ class BaseSceneAPITestCase(APITestCase):
             username="nonmember", email="nonmember@test.com", password="testpass123"
         )
 
+        # Mark all users as email verified for API tests
+        for user in [
+            self.owner,
+            self.gm,
+            self.player1,
+            self.player2,
+            self.observer,
+            self.non_member,
+        ]:
+            user.email_verified = True
+            user.save()
+
         # Create test campaign with unlimited characters
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
