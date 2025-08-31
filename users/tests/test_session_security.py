@@ -633,9 +633,9 @@ class SecurityServiceIntegrationTest(TestCase):
 
         self.assertGreater(cleaned_count, 0)
 
-        # Check session is deleted (cleanup deletes rather than deactivates)
-        with self.assertRaises(UserSession.DoesNotExist):
-            user_session.refresh_from_db()
+        # Check session is deactivated (cleanup deactivates to preserve audit records)
+        user_session.refresh_from_db()
+        self.assertFalse(user_session.is_active)
 
         # Check cleanup was logged (if implemented)
         # Note: This would depend on implementation details

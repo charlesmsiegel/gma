@@ -388,10 +388,10 @@ class DatabaseMaintenanceTest(TransactionTestCase):
                 # Should clean all expired sessions
                 self.assertEqual(cleaned_count, 20)
 
-                # Verify cleanup results - sessions should be deleted
+                # Verify cleanup results - sessions should be deactivated
                 for session in expired_sessions:
-                    with self.assertRaises(UserSession.DoesNotExist):
-                        session.refresh_from_db()
+                    session.refresh_from_db()
+                    self.assertFalse(session.is_active)
 
             except Exception as e:
                 # If anything fails, transaction should rollback
@@ -426,13 +426,13 @@ class DatabaseMaintenanceTest(TransactionTestCase):
         cleaned_count = UserSession.objects.cleanup_expired()
         self.assertEqual(cleaned_count, 1)
 
-        # Session should be deleted
-        with self.assertRaises(UserSession.DoesNotExist):
-            expired_session.refresh_from_db()
+        # Session should be deactivated to preserve audit records
+        expired_session.refresh_from_db()
+        self.assertFalse(expired_session.is_active)
 
-        # Security log should still exist (SET_NULL behavior)
+        # Security log should still exist with session reference preserved
         security_log.refresh_from_db()
-        self.assertIsNone(security_log.user_session)
+        self.assertEqual(security_log.user_session, expired_session)
 
     def test_database_index_performance(self):
         """Test database index performance during cleanup operations."""
