@@ -130,7 +130,8 @@ class PasswordStrengthValidationTest(TestCase):
         response = self.client.post(self.register_url, data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("password", response.data)
+        self.assertIn("detail", response.data)
+        self.assertIn("Password validation failed", response.data["detail"])
 
     def test_password_complexity_not_yet_enforced(self):
         """Test that password complexity requirements should be added."""
