@@ -98,13 +98,14 @@ class UserSessionManager(models.Manager):
         return self.get_queryset().expired()
 
     def cleanup_expired(self):
-        """Clean up expired sessions and delete associated UserSessions."""
-        expired_sessions = self.expired()
+        """Clean up expired sessions by deactivating them."""
+        expired_sessions = self.expired().filter(is_active=True)
         count = expired_sessions.count()
 
-        # Delete expired UserSessions
-        # This will trigger SET_NULL on related SessionSecurityLog records
-        expired_sessions.delete()
+        # Deactivate expired UserSessions instead of deleting
+        # This preserves audit records for security analysis
+        for session in expired_sessions:
+            session.deactivate()
 
         return count
 
