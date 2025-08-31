@@ -150,6 +150,10 @@ class EmailVerificationService:
             # Send the actual email
             self._send_email(user, verification)
 
+            # Only update sent_at if email was actually sent
+            user.email_verification_sent_at = verification.created_at
+            user.save(update_fields=["email_verification_sent_at"])
+
             logger.info(f"Email verification resent for user {user.id}")
             return True
 
