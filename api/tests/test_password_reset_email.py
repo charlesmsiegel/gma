@@ -383,19 +383,20 @@ class PasswordResetEmailSendingTest(TestCase):
         if "X-Auto-Response-Suppress" in headers:
             self.assertEqual(headers["X-Auto-Response-Suppress"], "All")
 
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_email_encoding(self):
         """Test that email handles special characters correctly."""
         # Create user with special characters in name
         User.objects.create_user(
             username="testüser",  # Unicode character
-            email="test@example.com",
+            email="unicode@example.com",  # Unique email to avoid setUp conflict
             password="TestPass123!",
         )
 
         from rest_framework.test import APIClient
 
         client = APIClient()
-        data = {"email": "test@example.com"}
+        data = {"email": "unicode@example.com"}
 
         response = client.post(
             reverse("api:auth:password_reset_request"), data, format="json"
