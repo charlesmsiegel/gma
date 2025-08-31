@@ -332,13 +332,15 @@ class SessionTimeoutAPITest(TestCase):
             username="testuser", email="test@example.com", password="testpass123"
         )
 
-        from rest_framework.test import APIClient
+        # Use Django's standard Client for session-related tests instead of APIClient
+        from django.test import Client
 
-        self.client = APIClient()
+        self.client = Client()
 
     def test_session_expiry_in_current_session_api(self):
         """Test current session API includes expiry information."""
-        user_session = UserSession.objects.create(
+        # Create user session for test scenario
+        UserSession.objects.create(
             user=self.user,
             session=Session.objects.create(
                 session_key="api_expiry_session",
@@ -349,28 +351,27 @@ class SessionTimeoutAPITest(TestCase):
             user_agent="Chrome/91.0 Desktop",
         )
 
-        with patch.object(self.client, "session") as mock_session:
-            mock_session.session_key = user_session.session.session_key
+        # Log in user with Django's standard Client
+        self.client.login(username="testuser", password="testpass123")
 
-            self.client.force_authenticate(user=self.user)
+        from django.urls import reverse
 
-            from django.urls import reverse
+        url = reverse("api:auth:session-current")
+        response = self.client.get(url)
 
-            url = reverse("api:auth:session-current")
-            response = self.client.get(url)
+        if response.status_code == 200:
+            response_data = response.json()
+            self.assertIn("expires_at", response_data)
+            self.assertIn("time_until_expiry", response_data)
 
-            if response.status_code == 200:
-                self.assertIn("expires_at", response.data)
-                self.assertIn("time_until_expiry", response.data)
-
-                # Check expiry information is correct
-                # expires_at = response.data["expires_at"]
-                # Parse and compare (implementation dependent)
+            # Check expiry information is correct
+            # expires_at = response_data["expires_at"]
+            # Parse and compare (implementation dependent)
 
     def test_expired_session_api_access(self):
         """Test API access with expired session returns appropriate error."""
-        # Create expired session
-        expired_user_session = UserSession.objects.create(
+        # Create expired session for test scenario
+        UserSession.objects.create(
             user=self.user,
             session=Session.objects.create(
                 session_key="expired_api_session",
@@ -381,17 +382,14 @@ class SessionTimeoutAPITest(TestCase):
             user_agent="Chrome/91.0 Desktop",
         )
 
-        with patch.object(self.client, "session") as mock_session:
-            mock_session.session_key = expired_user_session.session.session_key
+        # Don't authenticate user (simulate expired session)
+        from django.urls import reverse
 
-            # Don't authenticate user (simulate expired session)
-            from django.urls import reverse
+        url = reverse("api:auth:session-current")
+        response = self.client.get(url)
 
-            url = reverse("api:auth:session-current")
-            response = self.client.get(url)
-
-            # Should return 401 Unauthorized for expired session
-            self.assertEqual(response.status_code, 401)
+        # Should return 401 Unauthorized for expired session
+        self.assertEqual(response.status_code, 401)
 
     def test_session_extension_api_with_timeout_check(self):
         """Test session extension API with timeout validation."""
@@ -407,21 +405,19 @@ class SessionTimeoutAPITest(TestCase):
             user_agent="Chrome/91.0 Desktop",
         )
 
-        with patch.object(self.client, "session") as mock_session:
-            mock_session.session_key = user_session.session.session_key
+        # Log in user with Django's standard Client
+        self.client.login(username="testuser", password="testpass123")
 
-            self.client.force_authenticate(user=self.user)
+        from django.urls import reverse
 
-            from django.urls import reverse
+        url = reverse("api:auth:sessions-extend")
+        response = self.client.post(url, {"hours": 2})
 
-            url = reverse("api:auth:sessions-extend")
-            response = self.client.post(url, {"hours": 2})
-
-            if response.status_code == 200:
-                # Check session was extended
-                user_session.session.refresh_from_db()
-                time_until_expiry = user_session.session.expire_date - timezone.now()
-                self.assertGreater(time_until_expiry, timedelta(minutes=30))
+        if response.status_code == 200:
+            # Check session was extended
+            user_session.session.refresh_from_db()
+            time_until_expiry = user_session.session.expire_date - timezone.now()
+            self.assertGreater(time_until_expiry, timedelta(minutes=30))
 
 
 class SessionTimeoutConfigurationTest(TestCase):
