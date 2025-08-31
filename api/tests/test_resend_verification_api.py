@@ -443,9 +443,9 @@ class ResendVerificationServiceIntegrationTest(TestCase):
     def test_resend_handles_email_service_failure(self):
         """Test that resend handles email service failures gracefully."""
         with patch(
-            "users.services.EmailVerificationService.send_verification_email"
+            "users.services.EmailVerificationService.resend_verification_email"
         ) as mock_send:
-            mock_send.side_effect = Exception("Email service unavailable")
+            mock_send.return_value = False
 
             data = {"email": "test@example.com"}
             response = self.client.post(self.resend_url, data, format="json")
@@ -503,7 +503,7 @@ class ResendVerificationServiceIntegrationTest(TestCase):
     def test_resend_with_custom_template(self):
         """Test that resend uses appropriate email template."""
         with patch(
-            "users.services.EmailVerificationService.send_verification_email"
+            "users.services.EmailVerificationService.resend_verification_email"
         ) as mock_send:
             data = {"email": "test@example.com"}
             response = self.client.post(self.resend_url, data, format="json")
