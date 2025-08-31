@@ -2217,9 +2217,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         """Cross-field validation."""
         # Check password confirmation match
         if data.get("new_password") != data.get("new_password_confirm"):
-            raise serializers.ValidationError(
-                {"new_password_confirm": "Passwords do not match."}
-            )
+            raise serializers.ValidationError("Passwords do not match.")
 
         # Validate token exists and is valid
         token = data.get("token")
