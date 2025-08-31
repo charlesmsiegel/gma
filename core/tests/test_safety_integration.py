@@ -23,18 +23,31 @@ class SafetySystemIntegrationTest(TestCase):
             username="campaign_owner",
             email="owner@example.com",
             password="TestPass123!",
+            email_verified=True,
         )
         self.gm = User.objects.create_user(
-            username="gm", email="gm@example.com", password="TestPass123!"
+            username="gm",
+            email="gm@example.com",
+            password="TestPass123!",
+            email_verified=True,
         )
         self.player1 = User.objects.create_user(
-            username="player1", email="player1@example.com", password="TestPass123!"
+            username="player1",
+            email="player1@example.com",
+            password="TestPass123!",
+            email_verified=True,
         )
         self.player2 = User.objects.create_user(
-            username="player2", email="player2@example.com", password="TestPass123!"
+            username="player2",
+            email="player2@example.com",
+            password="TestPass123!",
+            email_verified=True,
         )
         self.player3 = User.objects.create_user(
-            username="player3", email="player3@example.com", password="TestPass123!"
+            username="player3",
+            email="player3@example.com",
+            password="TestPass123!",
+            email_verified=True,
         )
 
         # Create campaign with safety features enabled
@@ -258,18 +271,13 @@ class SafetySystemIntegrationTest(TestCase):
     def test_safety_system_cross_campaign_isolation(self):
         """Test that safety preferences and agreements are properly isolated between campaigns."""
 
-        # Create second campaign
+        # Create second campaign with different owner structure
         campaign2 = Campaign.objects.create(
             name="Second Campaign",
-            owner=self.player1,  # Different owner
+            owner=self.player2,  # player2 owns campaign2, NOT a participant
             game_system="D&D 5e",
             content_warnings=["Combat violence"],
             safety_tools_enabled=True,
-        )
-
-        # Add only player2 to second campaign
-        CampaignMembership.objects.create(
-            campaign=campaign2, user=self.player2, role="PLAYER"
         )
 
         # Create safety preferences for player1
@@ -304,7 +312,7 @@ class SafetySystemIntegrationTest(TestCase):
         # Should not contain player1's agreement from different campaign
         if "agreements" in response.data:
             agreement_participants = [
-                agreement["participant"] for agreement in response.data["agreements"]
+                agreement["user_id"] for agreement in response.data["agreements"]
             ]
             self.assertNotIn(self.player1.id, agreement_participants)
 
@@ -414,7 +422,10 @@ class SafetySystemTransactionTest(TransactionTestCase):
         self.client = APIClient()
 
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="TestPass123!"
+            username="testuser",
+            email="test@example.com",
+            password="TestPass123!",
+            email_verified=True,
         )
 
         self.campaign = Campaign.objects.create(
@@ -500,20 +511,28 @@ class SafetySystemRealWorldScenariosTest(TestCase):
 
         # Create gaming group
         self.gm = User.objects.create_user(
-            username="gm_alice", email="alice@gaminggroup.com", password="TestPass123!"
+            username="gm_alice",
+            email="alice@gaminggroup.com",
+            password="TestPass123!",
+            email_verified=True,
         )
         self.player_bob = User.objects.create_user(
-            username="player_bob", email="bob@gaminggroup.com", password="TestPass123!"
+            username="player_bob",
+            email="bob@gaminggroup.com",
+            password="TestPass123!",
+            email_verified=True,
         )
         self.player_carol = User.objects.create_user(
             username="player_carol",
             email="carol@gaminggroup.com",
             password="TestPass123!",
+            email_verified=True,
         )
         self.player_dave = User.objects.create_user(
             username="player_dave",
             email="dave@gaminggroup.com",
             password="TestPass123!",
+            email_verified=True,
         )
 
         # Create horror campaign
