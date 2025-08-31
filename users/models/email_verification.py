@@ -206,9 +206,17 @@ class EmailVerification(models.Model):
         self.verified_at = timezone.now()
         self.save(update_fields=["verified_at"])
 
-        # Update user's email verification status
+        # Update user's email verification status and clear token fields
         self.user.email_verified = True
-        self.user.save(update_fields=["email_verified"])
+        self.user.email_verification_token = ""
+        self.user.email_verification_sent_at = None
+        self.user.save(
+            update_fields=[
+                "email_verified",
+                "email_verification_token",
+                "email_verification_sent_at",
+            ]
+        )
 
         return True
 

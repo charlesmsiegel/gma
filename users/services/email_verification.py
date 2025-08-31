@@ -67,6 +67,14 @@ class EmailVerificationService:
             if verification.is_verified():
                 return True, verification.user, "Email address is already verified."
 
+            # Check if user is active
+            if not verification.user.is_active:
+                return (
+                    False,
+                    verification.user,
+                    "Cannot verify email for inactive user account.",
+                )
+
             # Verify the token
             success = verification.verify(token)
 
