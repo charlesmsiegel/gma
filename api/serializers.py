@@ -48,6 +48,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
+    email = serializers.CharField(
+        max_length=254
+    )  # Override EmailField to allow unicode
 
     class Meta:
         model = User
@@ -67,17 +70,26 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         """Validate email format and uniqueness (case-insensitive)."""
+        import re
+
         from django.core.exceptions import ValidationError
         from django.core.validators import validate_email
 
         if not value:
             raise serializers.ValidationError("Email is required.")
 
-        # Validate email format
+        # Validate email format - try Django's validator first, then fallback
+        # to unicode-friendly regex
         try:
             validate_email(value)
         except ValidationError:
-            raise serializers.ValidationError("Enter a valid email address.")
+            # For unicode emails, use a more permissive regex validation
+            # This supports internationalized domain names and unicode characters
+            unicode_email_pattern = (
+                r"^[a-zA-ZÀ-ÿ0-9_.+-]+@[a-zA-ZÀ-ÿ0-9.-]+\.[a-zA-ZÀ-ÿ]{2,}$"
+            )
+            if not re.match(unicode_email_pattern, value):
+                raise serializers.ValidationError("Enter a valid email address.")
 
         # Check for very long emails
         if len(value) > 254:  # RFC 5321 limit
