@@ -282,7 +282,7 @@ class User(AbstractUser):
             return False
         elif self.profile_visibility == "members":
             # Only campaign members can view
-            if not viewer_user or not viewer_user.is_authenticated:
+            if not viewer_user:
                 return False
 
             # Check if they're in any campaigns together
@@ -300,25 +300,35 @@ class User(AbstractUser):
         Returns:
             bool: Whether they share campaign membership
         """
-        if not other_user or not other_user.is_authenticated:
+        if not other_user:
             return False
 
         # Import here to avoid circular imports
-        from campaigns.models import CampaignMembership
+        from campaigns.models import Campaign, CampaignMembership
 
-        # Get campaigns where both users are members
+        # Get campaigns where self is a member (through membership) or owner
         my_campaigns = set(
             CampaignMembership.objects.filter(user=self).values_list(
                 "campaign_id", flat=True
             )
         )
+        my_owned_campaigns = set(
+            Campaign.objects.filter(owner=self).values_list("id", flat=True)
+        )
+        my_all_campaigns = my_campaigns | my_owned_campaigns
+
+        # Get campaigns where other_user is a member (through membership) or owner
         their_campaigns = set(
             CampaignMembership.objects.filter(user=other_user).values_list(
                 "campaign_id", flat=True
             )
         )
+        their_owned_campaigns = set(
+            Campaign.objects.filter(owner=other_user).values_list("id", flat=True)
+        )
+        their_all_campaigns = their_campaigns | their_owned_campaigns
 
-        return len(my_campaigns & their_campaigns) > 0
+        return len(my_all_campaigns & their_all_campaigns) > 0
 
     def get_public_profile_data(self, viewer_user=None) -> dict:
         """
