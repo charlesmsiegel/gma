@@ -480,6 +480,7 @@ class RegistrationEmailVerificationIntegrationTest(TestCase):
         verification = EmailVerification.objects.get(user=user)
         self.assertIn(verification.token, email.body)
 
+    @override_settings(EMAIL_VERIFICATION_REQUIRED=True)
     def test_registration_handles_email_sending_failure(self):
         """Test that registration handles email sending failure gracefully."""
         data = {

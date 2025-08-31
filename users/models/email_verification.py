@@ -208,7 +208,7 @@ class EmailVerification(models.Model):
 
         # Update user's email verification status and clear token fields
         self.user.email_verified = True
-        self.user.email_verification_token = ""
+        self.user.email_verification_token = ""  # nosec B105
         self.user.email_verification_sent_at = None
         self.user.save(
             update_fields=[
@@ -296,12 +296,10 @@ class EmailVerification(models.Model):
             user=user, expires_at=timezone.now() + timedelta(hours=hours)
         )
 
-        # Update user's verification fields
+        # Update user's verification token
+        # (sent_at will be set by service after successful email)
         user.email_verification_token = verification.token
-        user.email_verification_sent_at = verification.created_at
-        user.save(
-            update_fields=["email_verification_token", "email_verification_sent_at"]
-        )
+        user.save(update_fields=["email_verification_token"])
 
         return verification
 
