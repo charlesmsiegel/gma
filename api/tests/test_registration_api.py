@@ -81,6 +81,7 @@ class RegistrationAPIBasicTest(TestCase):
             user = User.objects.get(username="newuser")
             mock_send.assert_called_with(user)
 
+    @override_settings(EMAIL_VERIFICATION_REQUIRED=True)
     def test_registration_response_includes_verification_info(self):
         """Test that registration response includes email verification info."""
         data = {
