@@ -34,7 +34,11 @@ class RegisterView(CreateView):
         """Handle successful form submission."""
         response = super().form_valid(form)
         username = form.cleaned_data.get("username")
-        messages.success(self.request, f"Account created successfully for {username}!")
+        messages.success(
+            self.request,
+            f"Account created successfully for {username}! "
+            f"Please check your email to verify your account.",
+        )
         return response
 
     def get_context_data(self, **kwargs):

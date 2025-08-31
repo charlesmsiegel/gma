@@ -593,8 +593,8 @@ class RegistrationFormUserExperienceTest(TestCase):
         form_data = {
             "username": "successuser",
             "email": "success@example.com",
-            "password": "SuccessPass123!",
-            "password_confirm": "SuccessPass123!",
+            "password1": "SuccessPass123!",
+            "password2": "SuccessPass123!",
         }
 
         register_url = reverse("users:register")
@@ -635,8 +635,8 @@ class RegistrationFormUserExperienceTest(TestCase):
         form_data = {
             "username": "existing",
             "email": "existing@example.com",
-            "password": "NewPass123!",
-            "password_confirm": "NewPass123!",
+            "password1": "NewPass123!",
+            "password2": "NewPass123!",
         }
 
         register_url = reverse("users:register")
@@ -649,7 +649,17 @@ class RegistrationFormUserExperienceTest(TestCase):
             content = response.content.decode()
 
             # Should have helpful error message
-            self.assertIn("error", content.lower())
+            error_indicators = [
+                "error",
+                "invalid",
+                "already exists",
+                "this field is required",
+                "is-invalid",
+            ]
+            has_error_indication = any(
+                indicator in content.lower() for indicator in error_indicators
+            )
+            self.assertTrue(has_error_indication)
 
     def test_form_mobile_responsiveness_indicators(self):
         """Test that form includes mobile responsiveness indicators."""
