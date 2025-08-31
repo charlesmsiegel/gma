@@ -131,11 +131,11 @@ class ExpiredSessionCleanupTest(TestCase):
 
         self.assertEqual(cleaned_count, 2)  # Should clean both expired sessions
 
-        # Verify cleanup results - expired sessions should be deleted
-        with self.assertRaises(UserSession.DoesNotExist):
-            expired_remember_session.refresh_from_db()
-        with self.assertRaises(UserSession.DoesNotExist):
-            expired_regular_session.refresh_from_db()
+        # Verify cleanup results - expired sessions should be deactivated
+        expired_remember_session.refresh_from_db()
+        self.assertFalse(expired_remember_session.is_active)
+        expired_regular_session.refresh_from_db()
+        self.assertFalse(expired_regular_session.is_active)
 
         # Active session should remain
         active_remember_session.refresh_from_db()
