@@ -25,6 +25,9 @@ class CampaignCreateAPITest(TestCase):
         self.user = User.objects.create_user(
             username="testuser", email="test@example.com", password="TestPass123!"
         )
+        # Mark user as email verified for campaign creation tests
+        self.user.email_verified = True
+        self.user.save()
         self.create_url = reverse("api:campaigns:list_create")
 
     def test_create_campaign_requires_authentication(self):
