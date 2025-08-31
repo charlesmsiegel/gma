@@ -13,8 +13,8 @@ Tests cover:
 - Load balancing with session limits
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
@@ -53,12 +53,17 @@ class ConcurrentSessionLimitsTest(TestCase):
 
         self.service = SessionSecurityService()
 
-    def create_user_session(self, user, session_key_suffix="", **kwargs):
+    def create_user_session(
+        self, user, session_key_suffix="", expire_date=None, **kwargs
+    ):
         """Helper to create UserSession."""
+        if expire_date is None:
+            expire_date = timezone.now() + timedelta(days=1)
+
         django_session = Session.objects.create(
             session_key=f"session_{user.username}_{session_key_suffix}",
             session_data="test_data",
-            expire_date=timezone.now() + timedelta(days=1),
+            expire_date=expire_date,
         )
 
         defaults = {
@@ -90,12 +95,12 @@ class ConcurrentSessionLimitsTest(TestCase):
         self.assertEqual(active_count, max_sessions)
 
         # Creating one more session should trigger limit handling
-        new_session = self.create_user_session(
+        self.create_user_session(
             self.user, session_key_suffix="over_limit", ip_address="10.0.0.1"
         )
 
         # Check if limit exceeded (implementation dependent)
-        total_sessions = UserSession.objects.active().for_user(self.user).count()
+        UserSession.objects.active().for_user(self.user).count()
 
         # Implementation might either:
         # 1. Reject new session
@@ -114,29 +119,27 @@ class ConcurrentSessionLimitsTest(TestCase):
             # Create sessions up to limit
             sessions = []
             for i in range(max_sessions):
-                # Create sessions with different timestamps
-                with patch("django.utils.timezone.now") as mock_now:
-                    mock_now.return_value = timezone.now() - timedelta(
-                        hours=max_sessions - i
-                    )
+                # Create session outside mock context to avoid MagicMock issues
+                real_expire_date = timezone.now() + timedelta(days=1)
+                mock_created_at = timezone.now() - timedelta(hours=max_sessions - i)
 
-                    session = self.create_user_session(
-                        self.user,
-                        session_key_suffix=f"displacement_test_{i}",
-                        ip_address=f"192.168.1.{100 + i}",
-                    )
-                    sessions.append(session)
+                session = self.create_user_session(
+                    self.user,
+                    session_key_suffix=f"displacement_test_{i}",
+                    expire_date=real_expire_date,
+                    ip_address=f"192.168.1.{100 + i}",
+                )
+                sessions.append(session)
 
-                    # Manually set creation time
-                    UserSession.objects.filter(id=session.id).update(
-                        created_at=mock_now.return_value
-                    )
+                # Manually set creation time without mocking
+                UserSession.objects.filter(id=session.id).update(
+                    created_at=mock_created_at
+                )
 
             oldest_session = sessions[0]  # First created, oldest
-            newest_sessions = sessions[1:]  # Should remain active
 
             # Create new session that should displace oldest
-            new_session = self.create_user_session(
+            self.create_user_session(
                 self.user,
                 session_key_suffix="displacing_session",
                 ip_address="10.0.0.1",
@@ -165,7 +168,7 @@ class ConcurrentSessionLimitsTest(TestCase):
                 ip_address=f"192.168.1.{100 + i}",
             )
 
-        regular_anomaly = self.service.detect_concurrent_session_anomaly(self.user)
+        self.service.detect_concurrent_session_anomaly(self.user)
         # At limit, might not be anomaly yet
 
         # Test staff user higher limit
@@ -299,7 +302,7 @@ class ConcurrentSessionLimitsTest(TestCase):
         self.assertEqual(total_active, 6)
 
         # Both types should count toward limit
-        is_anomaly = self.service.detect_concurrent_session_anomaly(self.user)
+        self.service.detect_concurrent_session_anomaly(self.user)
         # Depends on configured limit
 
 
@@ -314,12 +317,15 @@ class SessionConflictResolutionTest(TestCase):
 
         self.service = SessionSecurityService()
 
-    def create_user_session(self, user, session_key, **kwargs):
+    def create_user_session(self, user, session_key, expire_date=None, **kwargs):
         """Helper to create UserSession."""
+        if expire_date is None:
+            expire_date = timezone.now() + timedelta(days=1)
+
         django_session = Session.objects.create(
             session_key=session_key,
             session_data="test_data",
-            expire_date=timezone.now() + timedelta(days=1),
+            expire_date=expire_date,
         )
 
         defaults = {"ip_address": "192.168.1.100", "user_agent": "Chrome/91.0 Desktop"}
@@ -354,24 +360,22 @@ class SessionConflictResolutionTest(TestCase):
 
         sessions = []
         for data in sessions_data:
-            with patch("django.utils.timezone.now") as mock_now:
-                mock_now.return_value = timezone.now() - timedelta(
-                    hours=data["hours_ago"]
-                )
+            # Create session outside mock context to avoid MagicMock issues
+            real_expire_date = timezone.now() + timedelta(days=1)
+            mock_created_at = timezone.now() - timedelta(hours=data["hours_ago"])
 
-                session = self.create_user_session(
-                    self.user,
-                    data["key"],
-                    ip_address=data["ip"],
-                    device_type=data.get("device", "desktop"),
-                    remember_me=data.get("remember", False),
-                )
-                sessions.append(session)
+            session = self.create_user_session(
+                self.user,
+                data["key"],
+                expire_date=real_expire_date,
+                ip_address=data["ip"],
+                device_type=data.get("device", "desktop"),
+                remember_me=data.get("remember", False),
+            )
+            sessions.append(session)
 
-                # Set creation time manually
-                UserSession.objects.filter(id=session.id).update(
-                    created_at=mock_now.return_value
-                )
+            # Set creation time manually without mocking
+            UserSession.objects.filter(id=session.id).update(created_at=mock_created_at)
 
         # Test different displacement strategies:
 
@@ -404,7 +408,7 @@ class SessionConflictResolutionTest(TestCase):
                 )
 
             # Attempt to create another session (would cause conflict)
-            new_session = self.create_user_session(
+            self.create_user_session(
                 self.user, "conflict_causing_session", ip_address="10.0.0.1"
             )
 
@@ -486,7 +490,7 @@ class ConcurrentSessionMonitoringTest(TestCase):
     def test_concurrent_session_anomaly_detection(self):
         """Test detection of anomalous concurrent session patterns."""
         # Normal pattern: 1-2 sessions from same location
-        normal_session1 = UserSession.objects.create(
+        _ = UserSession.objects.create(
             user=self.user,
             session=Session.objects.create(
                 session_key="normal_session_1",
@@ -498,7 +502,7 @@ class ConcurrentSessionMonitoringTest(TestCase):
             location="New York, NY",
         )
 
-        normal_session2 = UserSession.objects.create(
+        _ = UserSession.objects.create(
             user=self.user,
             session=Session.objects.create(
                 session_key="normal_session_2",
@@ -511,10 +515,10 @@ class ConcurrentSessionMonitoringTest(TestCase):
         )
 
         # Should not be anomalous
-        is_anomaly_normal = self.service.detect_concurrent_session_anomaly(self.user)
+        _ = self.service.detect_concurrent_session_anomaly(self.user)
 
         # Add suspicious session from different location
-        suspicious_session = UserSession.objects.create(
+        _ = UserSession.objects.create(
             user=self.user,
             session=Session.objects.create(
                 session_key="suspicious_session",
