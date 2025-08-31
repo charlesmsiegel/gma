@@ -47,6 +47,19 @@ class CampaignPermissionMatrixTest(TestCase):
             username="nonmember", email="nonmember@test.com", password="testpass123"
         )
 
+        # Mark all users as email verified for API tests
+        for user in [
+            self.owner,
+            self.gm1,
+            self.gm2,
+            self.player,
+            self.observer,
+            self.invitee,
+            self.non_member,
+        ]:
+            user.email_verified = True
+            user.save()
+
         # Create campaign
         self.campaign = Campaign.objects.create(
             name="Permission Test Campaign", owner=self.owner, game_system="Test System"
