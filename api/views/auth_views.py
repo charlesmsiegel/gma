@@ -104,11 +104,11 @@ def register_view(request):
 
     # Check for specific validation scenarios that should show detailed errors
     if "password" in errors:
-        if any("password" in str(error).lower() for error in errors["password"]):
-            return Response(
-                {"detail": f"Password validation failed: {errors['password'][0]}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Handle both Django password validation errors and DRF field validation errors
+        return Response(
+            {"detail": f"Password validation failed: {errors['password'][0]}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     if "email" in errors:
         # Don't leak information for generic registration failures
