@@ -797,13 +797,13 @@ class SessionSecurityService:
 
         user_agent_lower = user_agent.lower()
 
-        # Detect device type
-        if any(
+        # Detect device type - check specific devices first
+        if any(tablet in user_agent_lower for tablet in ["tablet", "ipad"]):
+            device_info["device_type"] = "tablet"
+        elif any(
             mobile in user_agent_lower for mobile in ["mobile", "android", "iphone"]
         ):
             device_info["device_type"] = "mobile"
-        elif any(tablet in user_agent_lower for tablet in ["tablet", "ipad"]):
-            device_info["device_type"] = "tablet"
 
         # Detect browser
         if "chrome" in user_agent_lower:
@@ -815,9 +815,15 @@ class SessionSecurityService:
         elif "edge" in user_agent_lower:
             device_info["browser"] = "Edge"
 
-        # Detect OS
+        # Detect OS - order matters for iOS detection
         if "windows" in user_agent_lower:
             device_info["os"] = "Windows"
+        elif (
+            "iphone" in user_agent_lower
+            or "ipad" in user_agent_lower
+            or "ipod" in user_agent_lower
+        ):
+            device_info["os"] = "iOS"
         elif "mac os" in user_agent_lower:
             device_info["os"] = "macOS"
         elif "linux" in user_agent_lower:

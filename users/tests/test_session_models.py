@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
-from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
@@ -317,7 +317,7 @@ class UserSessionModelTest(TestCase):
         )
 
         # Attempt to create another UserSession with the same session
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ValidationError):
             UserSession.objects.create(
                 user=self.other_user,
                 session=self.session,
