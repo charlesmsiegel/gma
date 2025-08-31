@@ -87,10 +87,11 @@ class ExpiredSessionCleanupTest(TestCase):
 
         self.assertEqual(cleaned_count, 3)  # Should clean 3 expired sessions
 
-        # Verify expired sessions are deleted
+        # Verify expired sessions are deactivated
         for session in expired_sessions:
-            with self.assertRaises(UserSession.DoesNotExist):
-                session.refresh_from_db()
+            session.refresh_from_db()
+            self.assertFalse(session.is_active)
+            self.assertIsNotNone(session.ended_at)
 
         # Verify active sessions remain active
         for session in active_sessions:
@@ -202,10 +203,11 @@ class ExpiredSessionCleanupTest(TestCase):
 
         self.assertEqual(cleaned_count, 5)
 
-        # Verify all sessions are deleted
+        # Verify all sessions are deactivated
         for session in sessions_to_expire:
-            with self.assertRaises(UserSession.DoesNotExist):
-                session.refresh_from_db()
+            session.refresh_from_db()
+            self.assertFalse(session.is_active)
+            self.assertIsNotNone(session.ended_at)
 
     def test_cleanup_idempotency(self):
         """Test that cleanup operations are idempotent."""
@@ -228,9 +230,10 @@ class ExpiredSessionCleanupTest(TestCase):
         self.assertEqual(second_cleanup_count, 0)
         self.assertEqual(third_cleanup_count, 0)
 
-        # Session should be deleted
-        with self.assertRaises(UserSession.DoesNotExist):
-            expired_session.refresh_from_db()
+        # Session should be deactivated
+        expired_session.refresh_from_db()
+        self.assertFalse(expired_session.is_active)
+        self.assertIsNotNone(expired_session.ended_at)
 
 
 class OrphanedSessionHandlingTest(TestCase):
