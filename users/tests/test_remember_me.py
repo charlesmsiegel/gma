@@ -267,8 +267,10 @@ class RememberMeLoginFlowTest(TestCase):
         )
 
         # Simulate time passing (browser restart)
+        # Calculate future time before mock context to avoid MagicMock issues
+        future_time = timezone.now() + timedelta(hours=8)
         with patch("django.utils.timezone.now") as mock_now:
-            mock_now.return_value = timezone.now() + timedelta(hours=8)
+            mock_now.return_value = future_time
 
             # Session should still be active
             user_session.refresh_from_db()

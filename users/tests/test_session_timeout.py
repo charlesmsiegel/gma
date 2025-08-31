@@ -306,8 +306,10 @@ class SessionTimeoutHandlingTest(TestCase):
         self.assertFalse(should_warn_1min)
 
         # Simulate time passing to 4 minutes remaining
+        # Calculate future time before mock context to avoid MagicMock issues
+        future_time = timezone.now() + timedelta(minutes=6)
         with patch("django.utils.timezone.now") as mock_now:
-            mock_now.return_value = timezone.now() + timedelta(minutes=6)
+            mock_now.return_value = future_time
 
             time_until_expiry = user_session.session.expire_date - mock_now.return_value
             should_warn_5min = time_until_expiry <= timedelta(minutes=5)
