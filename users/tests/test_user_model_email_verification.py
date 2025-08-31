@@ -255,9 +255,9 @@ class UserEmailVerificationMethodsTest(TestCase):
         self.assertFalse(self.user.is_email_verification_token_expired())
 
         # Old token should be expired
+        # Calculate future time before mock context to avoid MagicMock issues
+        future_time = timezone.now() + timedelta(hours=25)
         with patch("django.utils.timezone.now") as mock_now:
-            # Mock current time to be 25 hours in the future
-            future_time = timezone.now() + timedelta(hours=25)
             mock_now.return_value = future_time
 
             self.assertTrue(self.user.is_email_verification_token_expired())
@@ -341,8 +341,9 @@ class UserEmailVerificationSecurityTest(TestCase):
         self.user.generate_email_verification_token()
 
         # Mock time to make token expired
+        # Calculate future time before mock context to avoid MagicMock issues
+        future_time = timezone.now() + timedelta(hours=25)
         with patch("django.utils.timezone.now") as mock_now:
-            future_time = timezone.now() + timedelta(hours=25)
             mock_now.return_value = future_time
 
             # Token should be expired
