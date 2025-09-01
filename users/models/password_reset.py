@@ -37,12 +37,25 @@ class PasswordResetManager(models.Manager):
         """
         from django.db import transaction
 
-        # Use atomic transaction to prevent race conditions
-        with transaction.atomic():
-            # Invalidate any existing password resets for this user
-            self.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
+        # Use user-specific locking to prevent race conditions for same user
+        # without blocking different users
+        try:
+            with transaction.atomic():
+                # Only lock existing password resets for this specific user
+                existing_resets = self.select_for_update(nowait=True).filter(
+                    user=user, used_at__isnull=True
+                )
 
-            # Create new password reset
+                # Update existing resets
+                existing_resets.update(used_at=timezone.now())
+
+                # Create new reset
+                return self.create(user=user, ip_address=ip_address)
+
+        except transaction.TransactionManagementError:
+            # If we can't get a lock immediately, fall back to non-atomic approach
+            # This prevents table-level deadlocks in high concurrency
+            self.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
             return self.create(user=user, ip_address=ip_address)
 
     def get_valid_reset_by_token(self, token: str) -> Optional["PasswordReset"]:

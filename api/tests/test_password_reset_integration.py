@@ -586,13 +586,15 @@ class PasswordResetPerformanceIntegrationTest(TransactionTestCase):
         """Test handling of concurrent password reset requests."""
 
         def make_request(user):
+            from rest_framework import status as drf_status
+
             client = APIClient()
             data = {"email": user.email}
 
             response = client.post(
                 reverse("api:auth:password_reset_request"), data, format="json"
             )
-            return response.status_code == status.HTTP_200_OK
+            return response.status_code == drf_status.HTTP_200_OK
 
         # Make concurrent requests
         with ThreadPoolExecutor(max_workers=5) as executor:
