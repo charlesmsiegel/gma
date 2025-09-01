@@ -532,8 +532,12 @@ def password_reset_request_view(request):
             email_sending_failed = False
             if reset:
                 if ip_address:
-                    reset.ip_address = ip_address
-                    reset.save(update_fields=["ip_address"])
+                    try:
+                        reset.ip_address = ip_address
+                        reset.save(update_fields=["ip_address"])
+                    except Exception:  # nosec B110
+                        # Silently handle IP address update failures - not critical
+                        pass
 
                 service = PasswordResetService()
                 email_sent = service.send_reset_email(reset.user, reset)
