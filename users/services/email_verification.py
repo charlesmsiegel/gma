@@ -187,17 +187,19 @@ class EmailVerificationService:
             "token": verification.token,
         }
 
-        # Render email content using templates
-        subject = render_to_string("emails/verification_subject.txt", context).strip()
+        # Render email content using templates or settings
+        subject = (
+            getattr(settings, "EMAIL_VERIFICATION_SUBJECT", None)
+            or render_to_string("emails/verification_subject.txt", context).strip()
+        )
         body = render_to_string("emails/verification_email.txt", context)
 
         send_mail(
             subject=subject,
             message=body,
             from_email=(
-                settings.DEFAULT_FROM_EMAIL
-                if hasattr(settings, "DEFAULT_FROM_EMAIL")
-                else "noreply@example.com"
+                getattr(settings, "EMAIL_VERIFICATION_FROM_EMAIL", None)
+                or getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")
             ),
             recipient_list=[user.email],
             fail_silently=False,
