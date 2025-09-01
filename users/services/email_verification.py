@@ -85,6 +85,9 @@ class EmailVerificationService:
 
         except Exception as e:
             logger.error(f"Error during email verification: {e}")
+            # Re-raise database/system errors to allow proper 500 handling
+            if "Database unavailable" in str(e) or "connection" in str(e).lower():
+                raise
             return False, None, "An error occurred during verification."
 
     def send_verification_email(self, user):
