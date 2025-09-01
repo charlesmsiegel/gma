@@ -46,6 +46,18 @@ class ScenePermissionTestCase(TestCase):
             username="nonmember", email="nonmember@test.com", password="testpass123"
         )
 
+        # Verify all users' emails for API operations
+        for user in [
+            self.owner,
+            self.gm,
+            self.player1,
+            self.player2,
+            self.observer,
+            self.non_member,
+        ]:
+            user.mark_email_verified()
+            user.save()
+
         # Create test campaign
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
