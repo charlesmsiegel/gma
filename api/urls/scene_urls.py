@@ -17,13 +17,6 @@ router = DefaultRouter()
 router.register(r"", SceneViewSet, basename="scenes")
 
 urlpatterns = [
-    # Specific URL pattern for message history API expected by tests
-    # (Must come before router.urls to override router's messages route)
-    path(
-        "<int:pk>/messages/",
-        SceneViewSet.as_view({"get": "messages"}),
-        name="scene-messages",
-    ),
     # Include all ViewSet routes
     path("", include(router.urls)),
 ]
