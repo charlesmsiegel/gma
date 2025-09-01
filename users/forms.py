@@ -573,7 +573,7 @@ class UserProfileManagementForm(forms.ModelForm):
         choices=[],  # Will be populated in __init__
         widget=forms.Select(attrs={"class": "form-select"}),
         help_text="Select your timezone for accurate time displays.",
-        required=False,
+        required=True,
     )
 
     theme = forms.ChoiceField(
