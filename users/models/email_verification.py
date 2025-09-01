@@ -123,7 +123,9 @@ class EmailVerification(models.Model):
     def __str__(self):
         """String representation of the email verification."""
         status = "Verified" if self.verified_at else "Pending"
-        return f"{self.user.email} - {status} ({self.created_at.strftime('%Y-%m-%d')})"
+        return (
+            f"{self.user.username} - {status} ({self.created_at.strftime('%Y-%m-%d')})"
+        )
 
     def save(self, *args, **kwargs):
         """Override save to generate token and set expiration if not provided."""
