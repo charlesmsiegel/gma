@@ -255,11 +255,12 @@ class EmailVerificationService:
         # Build verification URL (fallback if reverse fails)
         try:
             from django.urls import reverse
+            from django.urls.exceptions import NoReverseMatch
 
             verification_path = reverse(
                 "api:auth:verify-email", kwargs={"token": verification.token}
             )
-        except Exception:
+        except NoReverseMatch:
             # Fallback URL path if reverse fails
             verification_path = f"/api/auth/verify-email/{verification.token}/"
 
