@@ -39,6 +39,11 @@ class InvitationPermissionTest(TestCase):
             username="other", email="other@test.com", password="testpass123"
         )
 
+        # Mark all users as email verified for API tests
+        for user in [self.owner, self.gm, self.player, self.invitee, self.other_user]:
+            user.email_verified = True
+            user.save()
+
         self.campaign = Campaign.objects.create(
             name="Invitation Test Campaign", owner=self.owner, game_system="Test System"
         )

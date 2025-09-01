@@ -204,6 +204,12 @@ class SceneViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """Create scene with proper permission checks."""
+        # Check email verification first
+        if not request.user.email_verified:
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("Email verification required to create scenes.")
+
         # Get campaign from the request data for permission check
         campaign_id = request.data.get("campaign")
         if campaign_id:
@@ -286,6 +292,28 @@ class SceneViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="join-scene")
+    def join_scene(self, request, pk=None):
+        """Allow user to join a scene."""
+        scene = self.get_object()
+        user = request.user
+
+        # Check email verification first
+        if not user.email_verified:
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("Email verification required to join scenes.")
+
+        # Check if user is a member of the campaign
+        user_role = scene.campaign.get_user_role(user)
+        if user_role not in ["OWNER", "GM", "PLAYER", "OBSERVER"]:
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound("Scene not found.")
+
+        # For now, return success - actual participant logic can be added later
+        return Response({"success": True, "message": "Joined scene successfully."})
 
     @action(detail=True, methods=["post"])
     def add_participant(self, request, pk=None):
@@ -496,9 +524,40 @@ class SceneViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @action(detail=True, methods=["get"])
+    @action(detail=True, methods=["get", "post"])
     def messages(self, request, pk=None):
-        """Get message history for a scene with filtering and pagination."""
+        """Get message history or send message to a scene."""
+        if request.method == "POST":
+            # Handle message sending
+            # Check email verification first
+            if not request.user.email_verified:
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied("Email verification required to send messages.")
+
+            # Get the scene
+            scene = self.get_object()
+            user = request.user
+
+            # Check if user has access to send messages in this scene
+            user_role = scene.campaign.get_user_role(user)
+            if user_role not in ["OWNER", "GM", "PLAYER"]:
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied(
+                    "You don't have permission to send messages in this scene."
+                )
+
+            # Create message using serializer (basic implementation)
+            serializer = MessageSerializer(data=request.data)
+            if serializer.is_valid():
+                # Set scene and sender
+                serializer.save(scene=scene, sender=user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # GET request - get message history
         # Validate pagination parameters
         page_size = request.query_params.get("page_size")
         if page_size is not None:
@@ -506,17 +565,21 @@ class SceneViewSet(viewsets.ModelViewSet):
                 page_size_int = int(page_size)
                 if page_size_int < 1:
                     from rest_framework.exceptions import ValidationError
-                    
-                    raise ValidationError({"page_size": ["Page size must be positive."]})
+
+                    raise ValidationError(
+                        {"page_size": ["Page size must be positive."]}
+                    )
                 if page_size_int > 100:  # Max page size from ScenePagination
                     from rest_framework.exceptions import ValidationError
-                    
-                    raise ValidationError({"page_size": ["Page size too large. Maximum is 100."]})
+
+                    raise ValidationError(
+                        {"page_size": ["Page size too large. Maximum is 100."]}
+                    )
             except (ValueError, TypeError):
                 from rest_framework.exceptions import ValidationError
-                
+
                 raise ValidationError({"page_size": ["Invalid page size format."]})
-        
+
         # Manual scene retrieval to avoid get_object() issues with complex queryset
         queryset = self.get_queryset()
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
@@ -593,8 +656,10 @@ class SceneViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(character_id=int(character_id))
             except (ValueError, TypeError):
                 from rest_framework.exceptions import ValidationError
-                
-                raise ValidationError({"character_id": ["Invalid character ID format."]})
+
+                raise ValidationError(
+                    {"character_id": ["Invalid character ID format."]}
+                )
 
         sender_id = request.query_params.get("sender_id")
         if sender_id:
@@ -602,7 +667,7 @@ class SceneViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(sender_id=int(sender_id))
             except (ValueError, TypeError):
                 from rest_framework.exceptions import ValidationError
-                
+
                 raise ValidationError({"sender_id": ["Invalid sender ID format."]})
 
         # Date range filtering - support both 'since'/'until' and 'date_from'/'date_to'
@@ -617,7 +682,7 @@ class SceneViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(created_at__gte=since_datetime)
             except (ValueError, TypeError):
                 from rest_framework.exceptions import ValidationError
-                
+
                 raise ValidationError({"date_from": ["Invalid date format."]})
 
         until = request.query_params.get("until") or request.query_params.get("date_to")
@@ -629,7 +694,7 @@ class SceneViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(created_at__lte=until_datetime)
             except (ValueError, TypeError):
                 from rest_framework.exceptions import ValidationError
-                
+
                 raise ValidationError({"date_to": ["Invalid date format."]})
 
         # Apply distinct to avoid duplicates from joins

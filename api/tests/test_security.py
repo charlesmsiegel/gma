@@ -27,8 +27,8 @@ class RateLimitingTest(TestCase):
         self.user = User.objects.create_user(
             username="testuser", email="test@example.com", password="TestPass123!"
         )
-        self.login_url = reverse("api:api_login")
-        self.register_url = reverse("api:api_register")
+        self.login_url = reverse("api:auth:api_login")
+        self.register_url = reverse("api:auth:api_register")
         # Clear any existing cache
         cache.clear()
 
@@ -117,7 +117,7 @@ class PasswordStrengthValidationTest(TestCase):
     def setUp(self):
         """Set up test client."""
         self.client = APIClient()
-        self.register_url = reverse("api:api_register")
+        self.register_url = reverse("api:auth:api_register")
 
     def test_password_minimum_length_enforced(self):
         """Test that minimum password length is enforced."""
@@ -130,7 +130,8 @@ class PasswordStrengthValidationTest(TestCase):
         response = self.client.post(self.register_url, data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("password", response.data)
+        self.assertIn("detail", response.data)
+        self.assertIn("Password validation failed", response.data["detail"])
 
     def test_password_complexity_not_yet_enforced(self):
         """Test that password complexity requirements should be added."""
@@ -222,8 +223,8 @@ class ErrorInformationLeakageTest(TestCase):
         self.existing_user = User.objects.create_user(
             username="existing", email="existing@example.com", password="Test123!"
         )
-        self.register_url = reverse("api:api_register")
-        self.login_url = reverse("api:api_login")
+        self.register_url = reverse("api:auth:api_register")
+        self.login_url = reverse("api:auth:api_login")
 
     def test_registration_username_enumeration_protection(self):
         """Test that registration errors don't reveal existing usernames."""
@@ -303,8 +304,8 @@ class CSRFTokenHandlingTest(TestCase):
     def setUp(self):
         """Set up test client."""
         self.client = APIClient()
-        self.csrf_url = reverse("api:api_csrf_token")
-        self.login_url = reverse("api:api_login")
+        self.csrf_url = reverse("api:auth:api_csrf_token")
+        self.login_url = reverse("api:auth:api_login")
 
     def test_csrf_token_endpoint_returns_token(self):
         """Test that CSRF endpoint returns a valid token."""
@@ -367,8 +368,16 @@ class CSRFTokenHandlingTest(TestCase):
         self.assertTrue(response2.status_code < 500)  # Should not be server error
 
         # Both requests should be handled properly (not crash)
-        self.assertIsNotNone(response.data)
-        self.assertIsNotNone(response2.data)
+        # Check if response has .data attribute (DRF Response) or .content (Django HttpResponse)  # noqa: E501
+        if hasattr(response, "data"):
+            self.assertIsNotNone(response.data)
+        else:
+            self.assertIsNotNone(response.content)
+
+        if hasattr(response2, "data"):
+            self.assertIsNotNone(response2.data)
+        else:
+            self.assertIsNotNone(response2.content)
 
     @override_settings(CSRF_COOKIE_AGE=10)  # 10 seconds for testing
     def test_csrf_token_expiration_handling(self):
@@ -443,7 +452,7 @@ class GlobalAPIErrorHandlingTest(TestCase):
     def setUp(self):
         """Set up test client."""
         self.client = APIClient()
-        self.protected_url = reverse("api:api_user_info")
+        self.protected_url = reverse("api:auth:api_user_info")
 
     def test_401_error_returned_for_unauthenticated_requests(self):
         """Test that our custom exception handler returns 401 for
@@ -464,14 +473,14 @@ class GlobalAPIErrorHandlingTest(TestCase):
             (self.protected_url, "GET", None, status.HTTP_401_UNAUTHORIZED),
             # Invalid login
             (
-                reverse("api:api_login"),
+                reverse("api:auth:api_login"),
                 "POST",
                 {"username": "wrong", "password": "wrong"},
                 status.HTTP_400_BAD_REQUEST,
             ),
             # Invalid registration
             (
-                reverse("api:api_register"),
+                reverse("api:auth:api_register"),
                 "POST",
                 {"username": "test", "password": "short"},
                 status.HTTP_400_BAD_REQUEST,

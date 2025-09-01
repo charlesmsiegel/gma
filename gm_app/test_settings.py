@@ -1,5 +1,6 @@
 """Test settings for Django project using SQLite."""
 
+import os
 import warnings
 
 from .settings import *  # noqa: F403,F401
@@ -53,6 +54,9 @@ MIGRATION_MODULES = DisableMigrations()
 SECRET_KEY = "test-secret-key-for-tests-only"  # nosec
 DEBUG = False
 
+# Disable email verification for integration tests
+EMAIL_VERIFICATION_REQUIRED = False
+
 # Set login URL to our custom view
 LOGIN_URL = "users:login"
 
@@ -65,7 +69,7 @@ PASSWORD_HASHERS = [
 # Disable logging during tests
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": False,
+    "disable_existing_loggers": True,
     "handlers": {
         "null": {
             "class": "logging.NullHandler",
@@ -73,6 +77,38 @@ LOGGING = {
     },
     "root": {
         "handlers": ["null"],
-        "level": "WARNING",
+        "level": "CRITICAL",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["null"],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
+        "django.db": {
+            "handlers": ["null"],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
     },
 }
+
+# Suppress test output
+SILENCED_SYSTEM_CHECKS = [
+    "admin.E406",  # Suppress admin check warnings
+    "models.W042",  # Suppress auto field warnings
+]
+
+# Email settings for cleaner test runs
+EMAIL_BACKEND = "core.test_backends.QuietEmailBackend"
+DEFAULT_FROM_EMAIL = "test@example.com"
+
+# Additional suppression for test output
+
+# Suppress Django warnings during tests
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
+
+# Suppress Django management command verbosity
+if "test" in os.sys.argv:
+    os.environ["DJANGO_SUPPRESS_IMPORT_DIAGNOSTICS"] = "1"

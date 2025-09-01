@@ -49,6 +49,18 @@ class BaseSceneAPITestCase(APITestCase):
             username="nonmember", email="nonmember@test.com", password="testpass123"
         )
 
+        # Mark all users as email verified for API tests
+        for user in [
+            self.owner,
+            self.gm,
+            self.player1,
+            self.player2,
+            self.observer,
+            self.non_member,
+        ]:
+            user.email_verified = True
+            user.save()
+
         # Create test campaign with unlimited characters
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
@@ -114,9 +126,13 @@ class BaseSceneAPITestCase(APITestCase):
         )
 
         # API URLs
-        self.list_url = reverse("api:scenes-list")
-        self.detail_url1 = reverse("api:scenes-detail", kwargs={"pk": self.scene1.pk})
-        self.detail_url2 = reverse("api:scenes-detail", kwargs={"pk": self.scene2.pk})
+        self.list_url = reverse("api:scenes:scenes-list")
+        self.detail_url1 = reverse(
+            "api:scenes:scenes-detail", kwargs={"pk": self.scene1.pk}
+        )
+        self.detail_url2 = reverse(
+            "api:scenes:scenes-detail", kwargs={"pk": self.scene2.pk}
+        )
 
 
 class SceneListAPITest(BaseSceneAPITestCase):
@@ -477,7 +493,7 @@ class SceneDetailAPITest(BaseSceneAPITestCase):
         """Test detail for nonexistent scene."""
         self.client.force_authenticate(user=self.player1)
 
-        url = reverse("api:scenes-detail", kwargs={"pk": 99999})
+        url = reverse("api:scenes:scenes-detail", kwargs={"pk": 99999})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -621,7 +637,9 @@ class SceneUpdateAPITest(BaseSceneAPITestCase):
 
         # Use the dedicated add_participant endpoint instead of general update
         # Avoids serializer complexity and uses working participant API
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -664,7 +682,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
 
     def test_add_participant_requires_authentication(self):
         """Test that adding participants requires authentication."""
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -677,7 +697,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         """Test adding participant as GM."""
         self.client.force_authenticate(user=self.gm)
 
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -700,7 +722,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         """Test adding participant as campaign owner."""
         self.client.force_authenticate(user=self.owner)
 
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -721,7 +745,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
 
         self.client.force_authenticate(user=self.player1)
 
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -734,7 +760,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         """Test that players cannot add others' characters."""
         self.client.force_authenticate(user=self.player1)
 
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -747,7 +775,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         """Test that observers cannot add participants."""
         self.client.force_authenticate(user=self.observer)
 
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -760,7 +790,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         """Test that non-members cannot add participants."""
         self.client.force_authenticate(user=self.non_member)
 
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -773,7 +805,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         """Test adding participant with invalid character."""
         self.client.force_authenticate(user=self.gm)
 
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url, data=json.dumps({"character": 99999}), content_type="application/json"
@@ -796,7 +830,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
 
         self.client.force_authenticate(user=self.gm)
 
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -809,7 +845,9 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         """Test adding character that's already participating."""
         self.client.force_authenticate(user=self.gm)
 
-        url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene1.pk})
+        url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene1.pk}
+        )
 
         response = self.client.post(
             url,
@@ -827,7 +865,7 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         self.client.force_authenticate(user=self.gm)
 
         url = reverse(
-            "api:scenes-remove-participant",
+            "api:scenes:scenes-remove-participant",
             kwargs={"pk": self.scene1.pk, "character_id": self.character1.pk},
         )
 
@@ -847,7 +885,7 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         self.client.force_authenticate(user=self.player1)
 
         url = reverse(
-            "api:scenes-remove-participant",
+            "api:scenes:scenes-remove-participant",
             kwargs={"pk": self.scene1.pk, "character_id": self.character1.pk},
         )
 
@@ -859,7 +897,7 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         self.client.force_authenticate(user=self.player1)
 
         url = reverse(
-            "api:scenes-remove-participant",
+            "api:scenes:scenes-remove-participant",
             kwargs={"pk": self.scene1.pk, "character_id": self.character2.pk},
         )
 
@@ -871,7 +909,7 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         self.client.force_authenticate(user=self.gm)
 
         url = reverse(
-            "api:scenes-remove-participant",
+            "api:scenes:scenes-remove-participant",
             kwargs={"pk": self.scene1.pk, "character_id": self.gm_character.pk},
         )
 
@@ -883,7 +921,7 @@ class SceneParticipantManagementAPITest(BaseSceneAPITestCase):
         self.client.force_authenticate(user=self.gm)
 
         url = reverse(
-            "api:scenes-remove-participant",
+            "api:scenes:scenes-remove-participant",
             kwargs={"pk": self.scene1.pk, "character_id": 99999},
         )
 

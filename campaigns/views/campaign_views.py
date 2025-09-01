@@ -96,6 +96,11 @@ class CampaignListView(ListView):
         # Add current role filter to context
         context["current_role_filter"] = self.request.GET.get("role", "")
 
+        # Add email verification status for template
+        if self.request.user.is_authenticated:
+            context["email_verified"] = self.request.user.email_verified
+            context["show_verification_notice"] = not self.request.user.email_verified
+
         return context
 
 

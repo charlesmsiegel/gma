@@ -28,9 +28,16 @@ class CampaignCreationIntegrationTest(TestCase):
         self.user1 = User.objects.create_user(
             username="user1", email="user1@example.com", password="TestPass123!"
         )
+        # Set email verified for API campaign creation
+        self.user1.email_verified = True
+        self.user1.save()
+
         self.user2 = User.objects.create_user(
             username="user2", email="user2@example.com", password="TestPass123!"
         )
+        # Set email verified for API campaign creation
+        self.user2.email_verified = True
+        self.user2.save()
 
     def test_web_to_api_campaign_creation_consistency(self):
         """Test that web and API campaign creation produce consistent results."""

@@ -265,3 +265,27 @@ REST_FRAMEWORK = {
 CSRF_TRUSTED_ORIGINS: list[str] = [
     # Add production domain when deploying
 ]
+
+# Email configuration for Issue #135 - User Registration with Email Verification
+# For development, use console backend to display emails in the console
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    # For production, configure proper SMTP settings
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+
+# Email verification settings
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@gamemaster.local")
+SITE_NAME = "Game Master Application"
+
+# Email verification token expiration (in hours)
+EMAIL_VERIFICATION_EXPIRE_HOURS = 24
+
+# For testing purposes, allow locmem backend to be used
+if os.getenv("EMAIL_BACKEND") == "locmem":
+    EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"

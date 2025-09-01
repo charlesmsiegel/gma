@@ -1,0 +1,12 @@
+Hello {{ user.username }},
+
+Please verify your email address by clicking the link below:
+
+{{ verification_url }}
+
+This verification link will expire in {{ expiry_hours }} hours.
+
+If you did not create this account, please ignore this email.
+
+Thank you,
+{{ site_name }} Team

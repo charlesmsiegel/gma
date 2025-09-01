@@ -32,9 +32,14 @@ class ExpiredInvitationTest(TestCase):
         self.owner = User.objects.create_user(
             username="owner", email="owner@test.com", password="testpass123"
         )
+        self.owner.email_verified = True
+        self.owner.save()
+
         self.invitee = User.objects.create_user(
             username="invitee", email="invitee@test.com", password="testpass123"
         )
+        self.invitee.email_verified = True
+        self.invitee.save()
 
         self.campaign = Campaign.objects.create(
             name="Expiry Test Campaign", owner=self.owner, game_system="Test System"

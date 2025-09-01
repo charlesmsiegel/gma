@@ -84,13 +84,13 @@ class MessageHistoryAPITestCase(TestCase):
 
     def test_message_history_url_exists(self):
         """Test that message history URL pattern exists."""
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         expected_url = f"/api/scenes/{self.scene.id}/messages/"
         self.assertEqual(url, expected_url)
 
     def test_get_messages_unauthenticated(self):
         """Test getting messages without authentication."""
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -98,7 +98,7 @@ class MessageHistoryAPITestCase(TestCase):
     def test_get_messages_non_participant(self):
         """Test getting messages as non-participant."""
         self.client.force_authenticate(user=self.non_member)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -106,7 +106,7 @@ class MessageHistoryAPITestCase(TestCase):
     def test_get_messages_invalid_scene(self):
         """Test getting messages for non-existent scene."""
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": 99999})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": 99999})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -114,7 +114,7 @@ class MessageHistoryAPITestCase(TestCase):
     def test_get_messages_empty_scene(self):
         """Test getting messages from scene with no messages."""
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -144,7 +144,7 @@ class MessageHistoryAPITestCase(TestCase):
             messages.append(message)
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -195,7 +195,7 @@ class MessageHistoryAPITestCase(TestCase):
                 )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -219,7 +219,7 @@ class MessageHistoryAPITestCase(TestCase):
             )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -268,7 +268,7 @@ class MessageHistoryAPITestCase(TestCase):
         )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
 
         # Filter by PUBLIC messages
         response = self.client.get(url, {"message_type": "PUBLIC"})
@@ -318,7 +318,7 @@ class MessageHistoryAPITestCase(TestCase):
             )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
 
         # Filter by date_from
         date_from = (base_time - timedelta(hours=1)).isoformat()
@@ -368,7 +368,7 @@ class MessageHistoryAPITestCase(TestCase):
         )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
 
         # Filter by character1
         response = self.client.get(url, {"character_id": self.character1.id})
@@ -412,7 +412,7 @@ class MessageHistoryAPITestCase(TestCase):
         )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
 
         # Filter by user1
         response = self.client.get(url, {"sender_id": self.user1.id})
@@ -448,7 +448,7 @@ class MessageHistoryAPITestCase(TestCase):
             message_type="PUBLIC",
         )
 
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
 
         # User1 (sender) should see both messages
         self.client.force_authenticate(user=self.user1)
@@ -496,7 +496,7 @@ class MessageHistoryAPITestCase(TestCase):
         )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
 
         # Search for "fox"
         response = self.client.get(url, {"search": "fox"})
@@ -529,7 +529,7 @@ class MessageHistoryAPITestCase(TestCase):
             )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
 
         # Monitor database queries
         with self.assertNumQueries(8):  # Optimized with select_related/prefetch_related
@@ -554,7 +554,7 @@ class MessageHistoryAPITestCase(TestCase):
             message_type="PUBLIC",
         )
 
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
 
         # Player participant should access
         self.client.force_authenticate(user=self.user1)
@@ -585,7 +585,7 @@ class MessageHistoryAPITestCase(TestCase):
         )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -632,7 +632,7 @@ class MessageHistoryAPITestCase(TestCase):
         )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
 
         # Invalid date format
         response = self.client.get(url, {"date_from": "invalid-date"})
@@ -662,7 +662,7 @@ class MessageHistoryAPITestCase(TestCase):
         )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         self.client.get(url)
 
         # Check for rate limiting headers (if implemented)
@@ -680,7 +680,7 @@ class MessageHistoryAPITestCase(TestCase):
         )
 
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.get(url)
 
         # Check for caching headers
@@ -692,18 +692,29 @@ class MessageHistoryAPITestCase(TestCase):
         # - ETag
         # - Last-Modified
 
-    def test_post_not_allowed(self):
-        """Test that POST requests are not allowed on message history endpoint."""
-        self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
-        response = self.client.post(url, {"content": "New message"})
+    def test_post_message_sending(self):
+        """Test that POST requests can send messages when user is verified."""
+        # Mark user email as verified to enable message sending
+        self.user1.mark_email_verified()
+        self.user1.save()
 
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.client.force_authenticate(user=self.user1)
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
+        response = self.client.post(
+            url,
+            {
+                "content": "Test message",
+                "message_type": "OOC",
+                "character": self.character1.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_put_not_allowed(self):
         """Test that PUT requests are not allowed on message history endpoint."""
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.put(url, {"content": "Updated message"})
 
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -711,7 +722,7 @@ class MessageHistoryAPITestCase(TestCase):
     def test_delete_not_allowed(self):
         """Test that DELETE requests are not allowed on message history endpoint."""
         self.client.force_authenticate(user=self.user1)
-        url = reverse("api:scene-messages", kwargs={"pk": self.scene.id})
+        url = reverse("api:scenes:scenes-messages", kwargs={"pk": self.scene.id})
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)

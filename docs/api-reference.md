@@ -9,16 +9,17 @@
 5. [Membership API](#membership-api)
 6. [Invitation API](#invitation-api)
 7. [User API](#user-api)
-8. [Character API](#character-api)
-9. [Location API](#location-api)
-10. [Item API](#item-api)
-11. [Prerequisite API](#prerequisite-api)
-12. [Scene API](#scene-api)
-13. [Scene Message History API](#scene-message-history-api)
-14. [WebSocket Chat API](#websocket-chat-api)
-15. [Source Reference API](#source-reference-api)
-16. [Data Models](#data-models)
-17. [Testing the API](#testing-the-api)
+8. [Session Management API](#session-management-api)
+9. [Character API](#character-api)
+10. [Location API](#location-api)
+11. [Item API](#item-api)
+12. [Prerequisite API](#prerequisite-api)
+13. [Scene API](#scene-api)
+14. [Scene Message History API](#scene-message-history-api)
+15. [WebSocket Chat API](#websocket-chat-api)
+16. [Source Reference API](#source-reference-api)
+17. [Data Models](#data-models)
+18. [Testing the API](#testing-the-api)
 
 ## Overview
 
@@ -731,6 +732,191 @@ Update user profile information.
   "email": "johnsmith@example.com"
 }
 ```
+
+## Session Management API
+
+The Session Management API provides comprehensive user session tracking, security monitoring, and session lifecycle management capabilities. This API enables monitoring of user sessions across devices, detection of suspicious activity, and secure session termination.
+
+### List User Sessions
+
+**GET** `/api/auth/sessions/`
+
+Get all active sessions for the authenticated user.
+
+**Success Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "device_type": "desktop",
+    "browser": "Chrome",
+    "operating_system": "Windows",
+    "location": "San Francisco, CA",
+    "ip_address": "192.168.1.100",
+    "is_active": true,
+    "remember_me": false,
+    "created_at": "2024-01-15T10:30:00Z",
+    "last_activity": "2024-01-15T15:45:00Z",
+    "current_session": true
+  },
+  {
+    "id": 2,
+    "device_type": "mobile",
+    "browser": "Safari",
+    "operating_system": "iOS",
+    "location": "New York, NY",
+    "ip_address": "203.0.113.45",
+    "is_active": true,
+    "remember_me": true,
+    "created_at": "2024-01-14T08:15:00Z",
+    "last_activity": "2024-01-15T12:20:00Z",
+    "current_session": false
+  }
+]
+```
+
+### Get Current Session
+
+**GET** `/api/auth/session/current/`
+
+Get detailed information about the current session including recent security events.
+
+**Success Response (200):**
+```json
+{
+  "id": 1,
+  "device_type": "desktop",
+  "browser": "Chrome/120.0",
+  "operating_system": "Windows 11",
+  "location": "San Francisco, CA",
+  "ip_address": "192.168.1.100",
+  "device_fingerprint": "a1b2c3d4e5f6...",
+  "is_active": true,
+  "remember_me": false,
+  "created_at": "2024-01-15T10:30:00Z",
+  "last_activity": "2024-01-15T15:45:00Z",
+  "session_expires": "2024-01-15T22:30:00Z",
+  "recent_security_events": [
+    {
+      "event_type": "login_success",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "ip_address": "192.168.1.100",
+      "details": {}
+    }
+  ]
+}
+```
+
+### Terminate Session
+
+**DELETE** `/api/auth/sessions/{session_id}/`
+
+Terminate a specific user session. Users can only terminate their own sessions.
+
+**Path Parameters:**
+- `session_id` (integer): ID of the session to terminate
+
+**Success Response (204):**
+No content returned on successful termination.
+
+**Error Responses:**
+
+**404 Not Found:**
+```json
+{
+  "error": "Session not found or access denied"
+}
+```
+
+### Terminate All Sessions
+
+**POST** `/api/auth/sessions/all/`
+
+Terminate all sessions except the current one.
+
+**Success Response (200):**
+```json
+{
+  "terminated_sessions": 3,
+  "message": "All other sessions terminated successfully"
+}
+```
+
+### Extend Session
+
+**POST** `/api/auth/sessions/extend/`
+
+Extend the current session expiry time.
+
+**Request Body:**
+```json
+{
+  "hours": 24
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "Session extended successfully",
+  "new_expiry": "2024-01-16T22:30:00Z",
+  "extended_by_hours": 24
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request:**
+```json
+{
+  "error": "Invalid extension period. Must be between 1 and 720 hours"
+}
+```
+
+### Session Security Features
+
+The Session Management API includes comprehensive security monitoring:
+
+#### Device Tracking
+- **Device Fingerprinting**: Unique device identification based on browser, OS, and hardware characteristics
+- **Location Detection**: Geographic location tracking based on IP address
+- **Browser Analysis**: Detailed browser and operating system identification
+
+#### Security Monitoring
+- **IP Address Changes**: Detection and logging of IP address changes within sessions
+- **User Agent Changes**: Monitoring for significant browser/device changes
+- **Concurrent Session Limits**: Automatic enforcement of maximum concurrent sessions per user
+- **Geographic Anomalies**: Detection of impossible travel patterns
+- **Session Hijacking Protection**: Risk scoring and automatic session termination
+
+#### Audit Logging
+All session security events are logged with the following event types:
+- `login_success` - Successful user login
+- `login_failed` - Failed login attempt
+- `logout` - User logout
+- `session_hijack_attempt` - Suspected session hijacking
+- `suspicious_activity` - General suspicious activity
+- `ip_address_changed` - IP address change detected
+- `user_agent_changed` - User agent string changed
+- `session_extended` - Session expiry extended
+- `session_terminated` - Session manually terminated
+- `concurrent_session_limit` - Too many concurrent sessions
+- `password_changed` - Password changed (invalidates sessions)
+- `account_locked` - Account locked due to security
+
+#### Risk Assessment
+The system calculates risk scores (0.0-10.0) based on:
+- Event type severity
+- Geographic location changes
+- Device fingerprint mismatches
+- Time-based access patterns
+- Concurrent session patterns
+
+Risk thresholds:
+- **Low Risk (0.0-3.9)**: Normal activity, no action taken
+- **Medium Risk (4.0-6.9)**: Increased monitoring, possible alerts
+- **High Risk (7.0-8.9)**: Security alert sent to user
+- **Critical Risk (9.0+)**: Automatic session termination
 
 ## Character API
 

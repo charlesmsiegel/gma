@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import QuerySet
 
-from .models import Campaign, CampaignInvitation, CampaignMembership
+from ..models import Campaign, CampaignInvitation, CampaignMembership
 
 # Use AbstractUser for typing - our User model extends this
 

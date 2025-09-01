@@ -46,6 +46,18 @@ class ScenePermissionTestCase(TestCase):
             username="nonmember", email="nonmember@test.com", password="testpass123"
         )
 
+        # Verify all users' emails for API operations
+        for user in [
+            self.owner,
+            self.gm,
+            self.player1,
+            self.player2,
+            self.observer,
+            self.non_member,
+        ]:
+            user.mark_email_verified()
+            user.save()
+
         # Create test campaign
         self.campaign = Campaign.objects.create(
             name="Test Campaign",
@@ -408,11 +420,11 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
     def test_api_authentication_required(self):
         """Test that all API endpoints require authentication."""
         endpoints = [
-            reverse("api:scenes-list"),
-            reverse("api:scenes-detail", kwargs={"pk": self.scene.pk}),
-            reverse("api:scenes-add-participant", kwargs={"pk": self.scene.pk}),
+            reverse("api:scenes:scenes-list"),
+            reverse("api:scenes:scenes-detail", kwargs={"pk": self.scene.pk}),
+            reverse("api:scenes:scenes-add-participant", kwargs={"pk": self.scene.pk}),
             reverse(
-                "api:scenes-remove-participant",
+                "api:scenes:scenes-remove-participant",
                 kwargs={"pk": self.scene.pk, "character_id": self.character1.pk},
             ),
         ]
@@ -427,7 +439,7 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
 
     def test_api_scene_list_permissions(self):
         """Test API scene list permissions."""
-        url = reverse("api:scenes-list")
+        url = reverse("api:scenes:scenes-list")
 
         # Campaign members can list scenes
         for user in [self.owner, self.gm, self.player1, self.observer]:
@@ -446,7 +458,7 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
 
     def test_api_scene_create_permissions(self):
         """Test API scene creation permissions."""
-        url = reverse("api:scenes-list")
+        url = reverse("api:scenes:scenes-list")
         scene_data = {
             "name": "API Test Scene",
             "description": "Created via API",
@@ -482,7 +494,7 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
 
     def test_api_scene_update_permissions(self):
         """Test API scene update permissions."""
-        url = reverse("api:scenes-detail", kwargs={"pk": self.scene.pk})
+        url = reverse("api:scenes:scenes-detail", kwargs={"pk": self.scene.pk})
         update_data = {"name": "Updated Scene Name"}
 
         # Owner and GM can update
@@ -512,9 +524,11 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
 
     def test_api_participant_management_permissions(self):
         """Test API participant management permissions."""
-        add_url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene.pk})
+        add_url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene.pk}
+        )
         remove_url = reverse(
-            "api:scenes-remove-participant",
+            "api:scenes:scenes-remove-participant",
             kwargs={"pk": self.scene.pk, "character_id": self.character1.pk},
         )
 
@@ -545,7 +559,9 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
             game_system="Test System",
         )
 
-        add_url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene.pk})
+        add_url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene.pk}
+        )
 
         self.client.force_authenticate(user=self.player1)
 
@@ -559,7 +575,7 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
 
         # Can remove own character
         remove_url = reverse(
-            "api:scenes-remove-participant",
+            "api:scenes:scenes-remove-participant",
             kwargs={"pk": self.scene.pk, "character_id": self.character1.pk},
         )
         response = self.client.delete(remove_url)
@@ -568,7 +584,7 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
         # Cannot remove other player's character (add character2 first)
         self.scene.participants.add(self.character2)
         remove_url2 = reverse(
-            "api:scenes-remove-participant",
+            "api:scenes:scenes-remove-participant",
             kwargs={"pk": self.scene.pk, "character_id": self.character2.pk},
         )
         response = self.client.delete(remove_url2)
@@ -592,7 +608,9 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
 
         self.client.force_authenticate(user=self.owner)
 
-        add_url = reverse("api:scenes-add-participant", kwargs={"pk": self.scene.pk})
+        add_url = reverse(
+            "api:scenes:scenes-add-participant", kwargs={"pk": self.scene.pk}
+        )
 
         # Should not be able to add character from different campaign
         response = self.client.post(add_url, {"character": other_character.pk})
@@ -603,7 +621,7 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
         self.client.force_authenticate(user=self.player1)
 
         # Try to create scene as player
-        url = reverse("api:scenes-list")
+        url = reverse("api:scenes:scenes-list")
         response = self.client.post(url, {"name": "Test", "campaign": self.campaign.pk})
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -617,10 +635,14 @@ class SceneAPIPermissionTest(ScenePermissionTestCase, APITestCase):
         self.client.force_authenticate(user=self.non_member)
 
         endpoints_and_methods = [
-            (reverse("api:scenes-list"), "get", {"campaign": self.campaign.pk}),
-            (reverse("api:scenes-detail", kwargs={"pk": self.scene.pk}), "get", {}),
+            (reverse("api:scenes:scenes-list"), "get", {"campaign": self.campaign.pk}),
             (
-                reverse("api:scenes-detail", kwargs={"pk": self.scene.pk}),
+                reverse("api:scenes:scenes-detail", kwargs={"pk": self.scene.pk}),
+                "get",
+                {},
+            ),
+            (
+                reverse("api:scenes:scenes-detail", kwargs={"pk": self.scene.pk}),
                 "patch",
                 {"name": "Test"},
             ),

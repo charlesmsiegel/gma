@@ -10,6 +10,8 @@ from rest_framework.routers import DefaultRouter
 
 from api.views.scene_views import SceneViewSet
 
+app_name = "scenes"
+
 # Create router for scene viewset
 router = DefaultRouter()
 router.register(r"", SceneViewSet, basename="scenes")
@@ -17,10 +19,4 @@ router.register(r"", SceneViewSet, basename="scenes")
 urlpatterns = [
     # Include all ViewSet routes
     path("", include(router.urls)),
-    # Specific URL pattern for message history API expected by tests
-    path(
-        "<int:pk>/messages/",
-        SceneViewSet.as_view({"get": "messages"}),
-        name="scene-messages",
-    ),
 ]

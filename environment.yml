@@ -63,6 +63,8 @@ dependencies:
     - djangorestframework-stubs
     # Security
     - bleach  # HTML sanitization for XSS prevention
+    # Image processing
+    - pillow  # Required for ImageField support
     # Testing
     - factory-boy
     - faker

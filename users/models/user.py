@@ -1,9 +1,11 @@
 import zoneinfo
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 if TYPE_CHECKING:
     from .theme import Theme
@@ -39,6 +41,34 @@ def validate_timezone(value: str) -> None:
         zoneinfo.ZoneInfo(value)
     except zoneinfo.ZoneInfoNotFoundError:
         raise ValidationError(f"'{value}' is not a valid timezone identifier.")
+
+
+class CustomUserManager(UserManager):
+    """Custom User manager with email verification methods."""
+
+    def email_verified(self):
+        """Get users with verified email addresses."""
+        return self.filter(email_verified=True)
+
+    def email_unverified(self):
+        """Get users with unverified email addresses."""
+        return self.filter(email_verified=False)
+
+    def pending_email_verification(self):
+        """Get users with pending (unexpired) email verification tokens."""
+        return self.filter(
+            email_verified=False,
+            email_verification_token__isnull=False,
+            email_verification_sent_at__gte=timezone.now() - timedelta(hours=24),
+        )
+
+    def expired_email_verification(self):
+        """Get users with expired email verification tokens."""
+        return self.filter(
+            email_verified=False,
+            email_verification_token__isnull=False,
+            email_verification_sent_at__lt=timezone.now() - timedelta(hours=24),
+        )
 
 
 class User(AbstractUser):
@@ -80,8 +110,68 @@ class User(AbstractUser):
     notification_preferences = models.JSONField(
         default=dict, blank=True, help_text="User notification preferences"
     )
+
+    # Profile fields for Issue #137: User Profile Management
+    bio = models.TextField(
+        max_length=500,
+        blank=True,
+        help_text="A brief description about yourself (max 500 characters)",
+    )  # type: ignore[var-annotated]
+    avatar = models.ImageField(
+        upload_to="avatars/", blank=True, null=True, help_text="Profile picture"
+    )  # type: ignore[var-annotated]
+    website_url = models.URLField(
+        blank=True, help_text="Your personal website or portfolio"
+    )  # type: ignore[var-annotated]
+    social_links = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Social media links (Twitter, Discord, etc.)",
+    )  # type: ignore[var-annotated]
+
+    # Privacy settings for Issue #137
+    profile_visibility = models.CharField(
+        max_length=20,
+        choices=[
+            ("public", "Public - Visible to everyone"),
+            ("members", "Campaign Members - Visible to users in your campaigns"),
+            ("private", "Private - Only visible to you"),
+        ],
+        default="members",
+        help_text="Who can view your profile information",
+    )  # type: ignore[var-annotated]
+    show_email = models.BooleanField(
+        default=False,
+        help_text="Whether to show your email address in your public profile",
+    )  # type: ignore[var-annotated]
+    show_real_name = models.BooleanField(
+        default=True,
+        help_text="Whether to show your first and last name in your public profile",
+    )  # type: ignore[var-annotated]
+    allow_activity_tracking = models.BooleanField(
+        default=True,
+        help_text="Whether to allow activity tracking for analytics and recommendations",  # noqa: E501
+    )  # type: ignore[var-annotated]
+    show_last_login = models.BooleanField(
+        default=False, help_text="Whether to show when you were last online"
+    )  # type: ignore[var-annotated]
+
+    # Email verification fields for Issue #135
+    email_verified = models.BooleanField(
+        default=False, help_text="Whether the user's email address has been verified"
+    )  # type: ignore[var-annotated]
+    email_verification_token = models.CharField(
+        max_length=64, blank=True, help_text="Current email verification token"
+    )  # type: ignore[var-annotated]
+    email_verification_sent_at = models.DateTimeField(
+        null=True, blank=True, help_text="When the last email verification was sent"
+    )  # type: ignore[var-annotated]
+
     created_at = models.DateTimeField(auto_now_add=True)  # type: ignore[var-annotated]
     updated_at = models.DateTimeField(auto_now=True)  # type: ignore[var-annotated]
+
+    # Custom manager
+    objects = CustomUserManager()
 
     class Meta:
         db_table = "users_user"
@@ -148,3 +238,257 @@ class User(AbstractUser):
         except Exception:
             # During migrations or if Theme model doesn't exist yet
             return None
+
+    def get_full_display_name(self) -> str:
+        """
+        Get the user's full display name based on privacy settings.
+
+        Returns display_name if available, otherwise first_name + last_name
+        if show_real_name is True, otherwise just username.
+        """
+        if self.display_name:
+            return self.display_name
+
+        if self.show_real_name and (self.first_name or self.last_name):
+            full_name = f"{self.first_name} {self.last_name}".strip()
+            return full_name or self.username
+
+        return self.username
+
+    def get_avatar_url(self) -> str | None:
+        """Get the avatar URL if avatar exists."""
+        if self.avatar:
+            return self.avatar.url
+        return None
+
+    def can_view_profile(self, viewer_user=None) -> bool:
+        """
+        Check if a user can view this user's profile based on privacy settings.
+
+        Args:
+            viewer_user: The user trying to view the profile (None for anonymous)
+
+        Returns:
+            bool: Whether the profile can be viewed
+        """
+        # Users can always view their own profile
+        if viewer_user and viewer_user.id == self.id:
+            return True
+
+        # Check profile visibility setting
+        if self.profile_visibility == "public":
+            return True
+        elif self.profile_visibility == "private":
+            return False
+        elif self.profile_visibility == "members":
+            # Only campaign members can view
+            if not viewer_user:
+                return False
+
+            # Check if they're in any campaigns together
+            return self.are_campaign_members(viewer_user)
+
+        return False
+
+    def are_campaign_members(self, other_user) -> bool:
+        """
+        Check if this user and another user are in any campaigns together.
+
+        Args:
+            other_user: The other user to check
+
+        Returns:
+            bool: Whether they share campaign membership
+        """
+        if not other_user:
+            return False
+
+        # Import here to avoid circular imports
+        from campaigns.models import Campaign, CampaignMembership
+
+        # Get campaigns where self is a member (through membership) or owner
+        my_campaigns = set(
+            CampaignMembership.objects.filter(user=self).values_list(
+                "campaign_id", flat=True
+            )
+        )
+        my_owned_campaigns = set(
+            Campaign.objects.filter(owner=self).values_list("id", flat=True)
+        )
+        my_all_campaigns = my_campaigns | my_owned_campaigns
+
+        # Get campaigns where other_user is a member (through membership) or owner
+        their_campaigns = set(
+            CampaignMembership.objects.filter(user=other_user).values_list(
+                "campaign_id", flat=True
+            )
+        )
+        their_owned_campaigns = set(
+            Campaign.objects.filter(owner=other_user).values_list("id", flat=True)
+        )
+        their_all_campaigns = their_campaigns | their_owned_campaigns
+
+        return len(my_all_campaigns & their_all_campaigns) > 0
+
+    def get_public_profile_data(self, viewer_user=None) -> dict:
+        """
+        Get profile data that can be shown to a specific viewer based on privacy settings.
+
+        Args:
+            viewer_user: The user viewing the profile
+
+        Returns:
+            dict: Profile data filtered by privacy settings  # noqa: E501
+        """
+        if not self.can_view_profile(viewer_user):
+            # Return minimal public data
+            return {
+                "username": self.username,
+                "display_name": self.get_display_name(),
+                "profile_visible": False,
+            }
+
+        data = {
+            "id": self.id,
+            "username": self.username,
+            "display_name": self.get_full_display_name(),
+            "bio": self.bio,
+            "avatar_url": self.get_avatar_url(),
+            "website_url": self.website_url,
+            "social_links": self.social_links,
+            "date_joined": self.date_joined,
+            "profile_visible": True,
+        }
+
+        # Add email if allowed
+        if self.show_email:
+            data["email"] = self.email
+
+        # Add real name if allowed
+        if self.show_real_name:
+            data["first_name"] = self.first_name
+            data["last_name"] = self.last_name
+
+        # Add last login if allowed
+        if self.show_last_login:
+            data["last_login"] = self.last_login
+
+        return data
+
+    # Email verification methods
+    def generate_email_verification_token(self) -> str:
+        """
+        Generate a new email verification token for the user.
+
+        Returns:
+            str: The generated token
+        """
+        import secrets
+
+        from django.utils import timezone
+
+        self.email_verification_token = secrets.token_urlsafe(32)
+        self.email_verification_sent_at = timezone.now()
+        return self.email_verification_token
+
+    def clear_email_verification_token(self) -> None:
+        """Clear the email verification token."""
+        self.email_verification_token = ""  # nosec B105
+        self.email_verification_sent_at = None
+
+    def mark_email_verified(self) -> None:
+        """Mark the user's email as verified and clear the token."""
+        self.email_verified = True
+        self.clear_email_verification_token()
+
+    def verify_email_with_token(self, token: str) -> None:
+        """
+        Verify user's email with the provided token.
+
+        Args:
+            token: The verification token to validate
+
+        Raises:
+            ValidationError: If token is invalid, expired, or missing
+        """
+        from django.core.exceptions import ValidationError
+
+        # Check if user already has email verified
+        if self.email_verified:
+            raise ValidationError("Email is already verified.")
+
+        # Check if token exists
+        if not self.email_verification_token:
+            raise ValidationError("No verification token found.")
+
+        # Check if token matches
+        if self.email_verification_token != token:
+            raise ValidationError("Invalid verification token.")
+
+        # Check if token is expired
+        if self.is_email_verification_token_expired():
+            raise ValidationError("Verification token has expired.")
+
+        # Token is valid - mark email as verified
+        self.mark_email_verified()
+        self.save()
+
+    def is_email_verification_token_expired(self) -> bool:
+        """
+        Check if the email verification token has expired.
+
+        Returns:
+            bool: True if token exists and is expired, False if no token or token is still valid  # noqa: E501
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        # If no token exists, it's not expired (it's just not set)
+        if not self.email_verification_token or not self.email_verification_sent_at:
+            return False
+
+        # Token expires after 24 hours
+        expiry_time = self.email_verification_sent_at + timedelta(hours=24)
+        current_time = timezone.now()
+        return current_time > expiry_time
+
+    def get_email_verification_expiry(self):
+        """
+        Get the expiry time for the current email verification token.
+
+        Returns:
+            datetime or None: The expiry time, or None if no token
+        """
+        from datetime import timedelta
+
+        if not self.email_verification_sent_at:
+            return None
+
+        return self.email_verification_sent_at + timedelta(hours=24)
+
+    def clean(self):
+        """Validate model fields."""
+        super().clean()
+
+        # Validate bio field length (TextField doesn't enforce max_length by default)
+        if self.bio and len(self.bio) > 500:
+            from django.core.exceptions import ValidationError
+
+            raise ValidationError({"bio": "Bio cannot exceed 500 characters."})
+
+    def save(self, *args, **kwargs):
+        """Override save to handle email changes and reset verification."""
+        # Check if this is an existing user with changed email
+        if self.pk:
+            try:
+                old_user = User.objects.get(pk=self.pk)
+                if old_user.email != self.email:
+                    # Email changed - reset verification
+                    self.email_verified = False
+                    self.clear_email_verification_token()
+            except User.DoesNotExist:
+                # This shouldn't happen, but handle it gracefully
+                pass
+
+        super().save(*args, **kwargs)

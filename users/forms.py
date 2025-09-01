@@ -14,7 +14,9 @@ Security Notes:
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
 User = get_user_model()
 
@@ -77,6 +79,187 @@ class CustomUserCreationForm(UserCreationForm):
         user.display_name = display_name if display_name else None
         if commit:
             user.save()
+        return user
+
+
+class EmailVerificationRegistrationForm(forms.Form):
+    """
+    Registration form with email verification integration for Issue #135.
+
+    This form handles user registration with email verification,
+    creating both the user and the email verification record.
+    """
+
+    username = forms.CharField(
+        max_length=150,
+        required=True,
+        label="Username",
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Enter username"}
+        ),
+        help_text=(
+            "Required. 150 characters or fewer. Unique username for your account."
+        ),
+    )
+
+    email = forms.EmailField(
+        required=True,
+        label="Email Address",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "type": "email",
+                "placeholder": "Enter email address",
+            }
+        ),
+        help_text="Required. Enter a valid email address for verification.",
+    )
+
+    password = forms.CharField(
+        min_length=8,
+        required=True,
+        label="Password",
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "placeholder": "Enter password"}
+        ),
+        help_text="Required. Your password must contain at least 8 characters.",
+    )
+
+    password_confirm = forms.CharField(
+        required=True,
+        label="Confirm Password",
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "placeholder": "Confirm password"}
+        ),
+        help_text="Required. Enter the same password as above for verification.",
+    )
+
+    display_name = forms.CharField(
+        max_length=100,
+        required=False,
+        label="Display Name",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Enter display name (optional)",
+            }
+        ),
+        help_text="Optional. A display name for your profile.",
+    )
+
+    first_name = forms.CharField(
+        max_length=30,
+        required=False,
+        label="First Name",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Enter first name (optional)",
+            }
+        ),
+        help_text="Optional. Your first name.",
+    )
+
+    last_name = forms.CharField(
+        max_length=150,
+        required=False,
+        label="Last Name",
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Enter last name (optional)"}
+        ),
+        help_text="Optional. Your last name.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        """Initialize form and set email field type attribute."""
+        super().__init__(*args, **kwargs)
+        # Ensure email field has type="email" attribute in attrs
+        self.fields["email"].widget.attrs["type"] = "email"
+
+    def clean_username(self):
+        """Validate username uniqueness."""
+        username = self.cleaned_data.get("username")
+        if username and User.objects.filter(username=username).exists():
+            raise ValidationError("A user with this username already exists.")
+        return username
+
+    def clean_email(self):
+        """Validate email uniqueness (case-insensitive)."""
+        email = self.cleaned_data.get("email")
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise ValidationError("A user with this email already exists.")
+        return email.lower() if email else email
+
+    def clean_password(self):
+        """Validate password using Django's password validators."""
+        password = self.cleaned_data.get("password")
+        if password:
+            try:
+                validate_password(password)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+        return password
+
+    def clean(self):
+        """Validate password confirmation."""
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password")
+        password_confirm = cleaned_data.get("password_confirm")
+
+        if password and password_confirm and password != password_confirm:
+            raise ValidationError("Passwords do not match.")
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        """
+        Create user and email verification record.
+
+        Returns:
+            User: The created user instance
+        """
+        from users.models import EmailVerification
+        from users.services import EmailVerificationService
+
+        if not commit:
+            raise ValueError("EmailVerificationRegistrationForm must be committed")
+
+        username = self.cleaned_data["username"]
+        email = self.cleaned_data["email"]
+        password = self.cleaned_data["password"]
+        display_name = self.cleaned_data.get("display_name")
+        first_name = self.cleaned_data.get("first_name", "")
+        last_name = self.cleaned_data.get("last_name", "")
+
+        with transaction.atomic():
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+
+            # Set display_name to None if empty (for unique constraint)
+            user.display_name = display_name if display_name else None
+            user.email_verified = False  # Start unverified
+            user.save()
+
+            # Create email verification record
+            verification = EmailVerification.create_for_user(user)
+
+            # Update user's verification token field
+            user.email_verification_token = verification.token
+            user.email_verification_sent_at = verification.created_at
+            user.save(
+                update_fields=["email_verification_token", "email_verification_sent_at"]
+            )
+
+            # Send verification email
+            service = EmailVerificationService()
+            service.send_verification_email(user)
+
         return user
 
 
@@ -278,3 +461,357 @@ class UserProfileForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+
+class UserProfileManagementForm(forms.ModelForm):
+    """
+    Enhanced form for comprehensive user profile management (Issue #137).
+
+    This form handles all profile fields including bio, avatar, privacy settings,
+    and social links with proper validation and security considerations.
+    """
+
+    bio = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 4,
+                "placeholder": "Tell others about yourself...",
+                "maxlength": 500,
+            }
+        ),
+        max_length=500,
+        required=False,
+        help_text="A brief description about yourself (max 500 characters)",
+    )
+
+    avatar = forms.ImageField(
+        widget=forms.ClearableFileInput(
+            attrs={"class": "form-control", "accept": "image/*"}
+        ),
+        required=False,
+        help_text="Profile picture (JPG, PNG, GIF - max 5MB)",
+    )
+
+    website_url = forms.URLField(
+        widget=forms.URLInput(
+            attrs={"class": "form-control", "placeholder": "https://your-website.com"}
+        ),
+        required=False,
+        help_text="Your personal website or portfolio",
+    )
+
+    # Social links as individual fields for better UX
+    twitter_url = forms.URLField(
+        widget=forms.URLInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "https://twitter.com/yourusername",
+            }
+        ),
+        required=False,
+        help_text="Your Twitter profile URL",
+    )
+
+    discord_username = forms.CharField(
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "username#1234"}
+        ),
+        max_length=50,
+        required=False,
+        help_text="Your Discord username (e.g., username#1234)",
+    )
+
+    github_url = forms.URLField(
+        widget=forms.URLInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "https://github.com/yourusername",
+            }
+        ),
+        required=False,
+        help_text="Your GitHub profile URL",
+    )
+
+    # Privacy settings
+    profile_visibility = forms.ChoiceField(
+        choices=[
+            ("public", "Public - Visible to everyone"),
+            ("members", "Campaign Members - Visible to users in your campaigns"),
+            ("private", "Private - Only visible to you"),
+        ],
+        widget=forms.Select(attrs={"class": "form-select"}),
+        help_text="Who can view your profile information",
+        required=False,
+    )
+
+    show_email = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        required=False,
+        help_text="Show your email address in your public profile",
+    )
+
+    show_real_name = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        required=False,
+        help_text="Show your first and last name in your public profile",
+    )
+
+    show_last_login = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        required=False,
+        help_text="Show when you were last online",
+    )
+
+    allow_activity_tracking = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        required=False,
+        help_text="Allow activity tracking for analytics and recommendations",
+    )
+
+    timezone = forms.ChoiceField(
+        choices=[],  # Will be populated in __init__
+        widget=forms.Select(attrs={"class": "form-select"}),
+        help_text="Select your timezone for accurate time displays.",
+        required=False,
+    )
+
+    theme = forms.ChoiceField(
+        choices=User.THEME_CHOICES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        help_text="Choose your preferred theme for the interface",
+        required=False,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "display_name",
+            "timezone",
+            "theme",
+            "bio",
+            "avatar",
+            "website_url",
+            "profile_visibility",
+            "show_email",
+            "show_real_name",
+            "show_last_login",
+            "allow_activity_tracking",
+        ]
+        widgets = {
+            "display_name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Optional display name"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        """Initialize form and populate social links from JSONField."""
+        super().__init__(*args, **kwargs)
+
+        # Set initial values for social links if they exist
+        if self.instance and self.instance.social_links:
+            social_links = self.instance.social_links
+            self.fields["twitter_url"].initial = social_links.get("twitter", "")
+            self.fields["discord_username"].initial = social_links.get("discord", "")
+            self.fields["github_url"].initial = social_links.get("github", "")
+
+        # Set show_real_name default to True for new users
+        if not self.instance.pk:
+            self.fields["show_real_name"].initial = True
+            self.fields["allow_activity_tracking"].initial = True
+            self.fields["profile_visibility"].initial = "members"
+
+        # Common timezone choices - using Django-compatible timezone names
+        timezone_choices = [
+            ("UTC", "UTC"),
+            ("America/New_York", "America/New_York"),
+            ("America/Chicago", "America/Chicago"),
+            ("America/Denver", "America/Denver"),
+            ("America/Los_Angeles", "America/Los_Angeles"),
+            ("Europe/London", "Europe/London"),
+            ("Europe/Paris", "Europe/Paris"),
+            ("Europe/Berlin", "Europe/Berlin"),
+            ("Asia/Tokyo", "Asia/Tokyo"),
+            ("Asia/Shanghai", "Asia/Shanghai"),
+            ("Australia/Sydney", "Australia/Sydney"),
+        ]
+        self.fields["timezone"].choices = timezone_choices
+
+        # Set initial value for theme field from current user
+        if self.instance and hasattr(self.instance, "theme"):
+            self.fields["theme"].initial = self.instance.theme
+
+    def clean_avatar(self):
+        """Validate avatar file size and type."""
+        avatar = self.cleaned_data.get("avatar")
+        if avatar:
+            # Check file size (5MB limit)
+            if avatar.size > 5 * 1024 * 1024:
+                raise ValidationError("Avatar file size must be less than 5MB.")
+
+            # Check file type
+            allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+            if avatar.content_type not in allowed_types:
+                raise ValidationError("Avatar must be a JPG, PNG, GIF, or WebP image.")
+
+        return avatar
+
+    def clean_display_name(self):
+        """Validate display_name uniqueness (case-insensitive, excluding self)."""
+        display_name = self.cleaned_data.get("display_name")
+
+        # Convert empty string to None for database unique constraint
+        if not display_name:
+            return None
+
+        # Check for uniqueness, excluding current user
+        queryset = User.objects.filter(display_name__iexact=display_name)
+        if self.instance and self.instance.pk:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise ValidationError("A user with this display name already exists.")
+
+        return display_name
+
+    def clean_discord_username(self):
+        """Validate Discord username format."""
+        discord = self.cleaned_data.get("discord_username")
+        if discord:
+            # Basic validation for Discord username format
+            if "#" not in discord:
+                raise ValidationError(
+                    "Discord username should include the discriminator "
+                    "(e.g., username#1234)"
+                )
+            username, discriminator = discord.rsplit("#", 1)
+            if not discriminator.isdigit() or len(discriminator) != 4:
+                raise ValidationError(
+                    "Discord discriminator should be a 4-digit number"
+                )
+        return discord
+
+    def clean_theme(self):
+        """Validate theme field, allowing None but not empty string."""
+        theme = self.cleaned_data.get("theme")
+
+        # If theme field is missing from form data entirely, that's OK
+        if "theme" not in self.data:
+            return None
+
+        # If an empty string is explicitly provided, that's invalid
+        if theme == "":
+            raise ValidationError(
+                "Select a valid choice. That choice is not one of the "
+                "available choices."
+            )
+
+        # None is also invalid if explicitly provided in form data
+        if theme is None and "theme" in self.data:
+            raise ValidationError(
+                "Select a valid choice. That choice is not one of the "
+                "available choices."
+            )
+
+        return theme
+
+    def clean_timezone(self):
+        """Validate timezone using the model validator."""
+        timezone = self.cleaned_data.get("timezone")
+        if timezone:
+            # Use the model's timezone validator
+            from .models.user import validate_timezone
+
+            try:
+                validate_timezone(timezone)
+            except ValidationError as e:
+                # Re-raise the validation error with proper message handling
+                raise ValidationError(str(e))
+        else:
+            # Use model default when timezone is empty
+            timezone = "UTC"
+        return timezone
+
+    def save(self, commit=True):
+        """Save the form with social links JSON data."""
+        user = super().save(commit=False)
+
+        # Build social_links JSON from individual form fields (not in Meta.fields)
+        social_links = {}
+        if self.cleaned_data.get("twitter_url"):
+            social_links["twitter"] = self.cleaned_data["twitter_url"]
+        if self.cleaned_data.get("discord_username"):
+            social_links["discord"] = self.cleaned_data["discord_username"]
+        if self.cleaned_data.get("github_url"):
+            social_links["github"] = self.cleaned_data["github_url"]
+
+        user.social_links = social_links
+
+        if commit:
+            user.save()
+        return user
+
+
+class UserPrivacySettingsForm(forms.ModelForm):
+    """
+    Simplified form focused only on privacy settings (Issue #137).
+
+    This form can be used separately for privacy-only updates or in
+    combination with other profile forms.
+    """
+
+    class Meta:
+        model = User
+        fields = [
+            "profile_visibility",
+            "show_email",
+            "show_real_name",
+            "show_last_login",
+            "allow_activity_tracking",
+        ]
+        widgets = {
+            "profile_visibility": forms.Select(attrs={"class": "form-select"}),
+            "show_email": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "show_real_name": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "show_last_login": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "allow_activity_tracking": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+        }
+        help_texts = {
+            "profile_visibility": "Who can view your profile information",
+            "show_email": "Show your email address in your public profile",
+            "show_real_name": "Show your first and last name in your public profile",
+            "show_last_login": "Show when you were last online",
+            "allow_activity_tracking": (
+                "Allow activity tracking for analytics and recommendations"
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        """Initialize form and store original boolean field values."""
+        super().__init__(*args, **kwargs)
+
+        # Store original boolean field values for partial updates
+        if self.instance.pk:
+            self._original_boolean_values = {
+                "show_email": self.instance.show_email,
+                "show_real_name": self.instance.show_real_name,
+                "show_last_login": self.instance.show_last_login,
+                "allow_activity_tracking": self.instance.allow_activity_tracking,
+            }
+
+    def clean(self):
+        """Handle partial updates for boolean fields."""
+        cleaned_data = super().clean()
+
+        # For partial updates, restore original values for boolean fields not provided
+        if hasattr(self, "_original_boolean_values"):
+            for field_name, original_value in self._original_boolean_values.items():
+                # If field wasn't in the form data, restore original value
+                if field_name not in self.data:
+                    cleaned_data[field_name] = original_value
+
+        return cleaned_data
