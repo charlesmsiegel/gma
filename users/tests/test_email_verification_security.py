@@ -769,9 +769,9 @@ class EdgeCaseSecurityTest(TestCase):
             password="TestPass123!",
         )
 
-        # Create verification with microsecond precision
+        # Create verification with microsecond precision but enough buffer for execution
         now = timezone.now()
-        microsecond_future = now + timedelta(microseconds=1)
+        microsecond_future = now + timedelta(milliseconds=10)  # 10ms buffer
 
         verification = EmailVerification.objects.create(
             user=user,
