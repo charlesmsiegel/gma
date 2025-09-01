@@ -35,11 +35,15 @@ class PasswordResetManager(models.Manager):
         Returns:
             PasswordReset: The created password reset instance
         """
-        # Invalidate any existing password resets for this user
-        self.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
+        from django.db import transaction
 
-        # Create new password reset
-        return self.create(user=user, ip_address=ip_address)
+        # Use atomic transaction to prevent race conditions
+        with transaction.atomic():
+            # Invalidate any existing password resets for this user
+            self.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
+
+            # Create new password reset
+            return self.create(user=user, ip_address=ip_address)
 
     def get_valid_reset_by_token(self, token: str) -> Optional["PasswordReset"]:
         """

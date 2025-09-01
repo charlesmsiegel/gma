@@ -576,6 +576,9 @@ class PasswordResetPerformanceIntegrationTest(TransactionTestCase):
                 email=f"user{i}@example.com",
                 password="TestPass123!",
             )
+            # Mark email as verified for password reset functionality
+            user.mark_email_verified()
+            user.save()
             self.users.append(user)
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.dummy.EmailBackend")
