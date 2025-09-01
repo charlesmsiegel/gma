@@ -17,6 +17,7 @@ from django.contrib.auth.views import (
 )
 from django.contrib.auth.views import PasswordResetDoneView as BasePasswordResetDoneView
 from django.contrib.auth.views import PasswordResetView as BasePasswordResetView
+from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 
@@ -32,14 +33,42 @@ class RegisterView(CreateView):
 
     def form_valid(self, form):
         """Handle successful form submission."""
-        response = super().form_valid(form)
         username = form.cleaned_data.get("username")
+
+        # Handle AJAX requests with JSON response
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            # Save the form to create the user
+            self.object = form.save()
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "message": f"Account created successfully for {username}! Please check your email to verify your account.",
+                    "redirect_url": str(self.get_success_url()),
+                },
+                content_type="application/json",
+            )
+
+        # Standard HTML response
+        response = super().form_valid(form)
         messages.success(
             self.request,
             f"Account created successfully for {username}! "
             f"Please check your email to verify your account.",
         )
         return response
+
+    def form_invalid(self, form):
+        """Handle invalid form submission."""
+        # Handle AJAX requests with JSON error response
+        if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {"success": False, "errors": form.errors},
+                content_type="application/json",
+            )
+
+        # Standard HTML response
+        return super().form_invalid(form)
 
     def get_context_data(self, **kwargs):
         """Add context data for template."""

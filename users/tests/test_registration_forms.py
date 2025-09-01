@@ -12,7 +12,7 @@ Tests the frontend registration form for Issue #135:
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -368,7 +368,7 @@ class RegistrationFormJavaScriptIntegrationTest(TestCase):
 
     def setUp(self):
         """Set up test data."""
-        self.client = APIClient()
+        self.client = Client()
 
     def test_form_includes_validation_javascript(self):
         """Test that registration form includes client-side validation."""
@@ -445,8 +445,8 @@ class RegistrationFormJavaScriptIntegrationTest(TestCase):
         form_data = {
             "username": "ajaxuser",
             "email": "ajax@example.com",
-            "password": "AjaxPass123!",
-            "password_confirm": "AjaxPass123!",
+            "password1": "AjaxPass123!",
+            "password2": "AjaxPass123!",
         }
 
         register_url = reverse("users:register")

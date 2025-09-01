@@ -689,8 +689,8 @@ class SafetySystemRealWorldScenariosTest(TestCase):
             hint at questionable research without graphic details.
 
             They discover evidence of a researcher's mysterious disappearance, but the
-            details fade to black. The unusual transformations are described in 
-            abstract cosmic terms - emphasizing the strangeness and impossibility 
+            details fade to black. The unusual transformations are described in
+            abstract cosmic terms - emphasizing the strangeness and impossibility
             rather than physical details.
             """,
             "campaign_id": self.horror_campaign.id,

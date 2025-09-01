@@ -2458,10 +2458,10 @@ class UserSafetyPreferencesSerializer(serializers.ModelSerializer):
     def _sanitize_string_list(self, value, field_name):
         """Sanitize a list of strings to prevent XSS attacks."""
         import bleach
-        
+
         if not isinstance(value, list):
             raise serializers.ValidationError(f"{field_name} must be a list")
-        
+
         sanitized_list = []
         for item in value:
             if isinstance(item, str):
@@ -2470,7 +2470,7 @@ class UserSafetyPreferencesSerializer(serializers.ModelSerializer):
                 sanitized_list.append(sanitized_item)
             else:
                 sanitized_list.append(item)
-        
+
         return sanitized_list
 
     def validate_lines(self, value):
@@ -2492,10 +2492,10 @@ class CampaignSafetySerializer(serializers.ModelSerializer):
     def validate_content_warnings(self, value):
         """Validate and sanitize content warnings field."""
         import bleach
-        
+
         if not isinstance(value, list):
             raise serializers.ValidationError("Content warnings must be a list.")
-        
+
         # Sanitize each content warning
         sanitized_warnings = []
         for warning in value:
@@ -2505,7 +2505,7 @@ class CampaignSafetySerializer(serializers.ModelSerializer):
                 sanitized_warnings.append(sanitized_warning)
             else:
                 sanitized_warnings.append(warning)
-        
+
         return sanitized_warnings
 
 

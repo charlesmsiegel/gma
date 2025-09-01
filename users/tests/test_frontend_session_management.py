@@ -713,6 +713,7 @@ class AccessibilityComplianceTest(TestCase):
                 "aria-modal": "true",
                 "aria-labelledby": "timeout-title",
                 "aria-describedby": "timeout-message",
+                "aria-live": "assertive",  # Critical session timeout announcements
             },
         }
 
