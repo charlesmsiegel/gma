@@ -917,5 +917,5 @@ class SessionSecurityService:
             loc["country"] for loc in locations if loc and loc["country"] != "Unknown"
         )
 
-        # If more than 2 different countries, flag as impossible travel
-        return len(countries) > 2
+        # If 2 or more different countries, flag as impossible travel
+        return len(countries) >= 2

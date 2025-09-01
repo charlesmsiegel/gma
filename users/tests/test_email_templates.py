@@ -487,6 +487,7 @@ class EmailErrorHandlingTest(TestCase):
             # Should be a reasonable exception
             self.assertIsInstance(e, (ValidationError, ValueError))
 
+    @override_settings(EMAIL_VERIFICATION_SUBJECT=None)  # Force template usage
     def test_template_missing_handling(self):
         """Test handling when email templates are missing."""
         from users.services import EmailVerificationService
@@ -496,7 +497,7 @@ class EmailErrorHandlingTest(TestCase):
 
             service = EmailVerificationService()
 
-            # Should handle missing template gracefully
+            # Should propagate TemplateDoesNotExist when templates are missing
             with self.assertRaises(TemplateDoesNotExist):
                 service.send_verification_email(self.user)
 
