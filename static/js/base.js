@@ -162,6 +162,13 @@ class ThemeManager {
     }
 
     applySystemTheme(isDark) {
+        // Check if current theme already matches the desired mode
+        const currentThemeObj = this.availableThemes.find(theme => theme.name === this.currentTheme);
+        if (currentThemeObj && currentThemeObj.isDark === isDark) {
+            // Current theme already matches system preference, no need to change
+            return;
+        }
+
         const appropriateTheme = this.findThemeByDarkMode(isDark);
         if (appropriateTheme) {
             this.switchTheme(appropriateTheme.name);
@@ -169,9 +176,8 @@ class ThemeManager {
     }
 
     findThemeByDarkMode(isDark) {
-        return this.availableThemes.find(theme =>
-            theme.isDark === isDark && theme.name !== this.currentTheme
-        ) || this.availableThemes.find(theme => theme.isDark === isDark);
+        // Find any theme that matches the dark/light mode preference
+        return this.availableThemes.find(theme => theme.isDark === isDark);
     }
 
     initializeThemePreviewCards() {

@@ -37,9 +37,16 @@ def theme_context(request: HttpRequest) -> Dict[str, Any]:
     theme_name = request.user.get_theme_name()
     theme_object = request.user.get_theme_object()
 
-    # Validate theme name against legacy choices for backward compatibility
-    valid_themes = [choice[0] for choice in User.THEME_CHOICES]
-    if theme_name not in valid_themes:
+    # Validate theme name against active themes
+    available_themes = _get_available_themes()
+    active_theme_names = [theme.name for theme in available_themes]
+
+    # If no Theme objects exist (like in tests), fallback to legacy validation
+    if not available_themes:
+        valid_themes = [choice[0] for choice in User.THEME_CHOICES]
+        if theme_name not in valid_themes:
+            theme_name = "light"
+    elif theme_name not in active_theme_names:
         theme_name = "light"
 
     return {
