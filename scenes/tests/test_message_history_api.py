@@ -694,6 +694,10 @@ class MessageHistoryAPITestCase(TestCase):
 
     def test_post_not_allowed(self):
         """Test that POST requests are not allowed on message history endpoint."""
+        # Mark user email as verified to avoid 403 due to email verification
+        self.user1.mark_email_verified()
+        self.user1.save()
+
         self.client.force_authenticate(user=self.user1)
         url = reverse("api:scenes:scene-messages", kwargs={"pk": self.scene.id})
         response = self.client.post(url, {"content": "New message"})
