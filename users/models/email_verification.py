@@ -173,7 +173,7 @@ class EmailVerification(models.Model):
         Returns:
             bool: True if expired, False if still valid
         """
-        return timezone.now() > self.expires_at
+        return timezone.now() >= self.expires_at
 
     def is_verified(self):
         """
