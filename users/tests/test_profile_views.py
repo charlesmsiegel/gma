@@ -164,8 +164,8 @@ class UserProfileEditViewTest(TestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.timezone, "America/New_York")
 
-    def test_profile_edit_empty_timezone(self):
-        """Test profile edit fails with empty timezone."""
+    def test_profile_edit_empty_timezone_uses_default(self):
+        """Test profile edit with empty timezone uses model default."""
         self.client.login(username="testuser", password="TestPass123!")
         data = {
             "display_name": "Test User",
@@ -173,11 +173,10 @@ class UserProfileEditViewTest(TestCase):
         }
         response = self.client.post(reverse("users:profile_edit"), data)
 
-        self.assertEqual(response.status_code, 200)  # Form redisplayed with errors
-        self.assertContains(response, "This field is required")
-        # User data should not be changed
+        self.assertEqual(response.status_code, 302)  # Successful redirect
+        # User data should be updated with default timezone
         self.user.refresh_from_db()
-        self.assertEqual(self.user.timezone, "America/New_York")
+        self.assertEqual(self.user.timezone, "UTC")  # Model default
 
     def test_profile_edit_display_name_uniqueness_validation(self):
         """Test display_name uniqueness validation."""

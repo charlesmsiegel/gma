@@ -573,7 +573,7 @@ class UserProfileManagementForm(forms.ModelForm):
         choices=[],  # Will be populated in __init__
         widget=forms.Select(attrs={"class": "form-select"}),
         help_text="Select your timezone for accurate time displays.",
-        required=True,
+        required=False,
     )
 
     theme = forms.ChoiceField(
@@ -729,6 +729,9 @@ class UserProfileManagementForm(forms.ModelForm):
             except ValidationError as e:
                 # Re-raise the validation error with proper message handling
                 raise ValidationError(str(e))
+        else:
+            # Use model default when timezone is empty
+            timezone = "UTC"
         return timezone
 
     def save(self, commit=True):
