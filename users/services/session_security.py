@@ -252,8 +252,9 @@ class SessionSecurityService:
         """
         active_sessions = UserSession.objects.active().for_user(user)
 
-        # Check total number of sessions
-        if active_sessions.count() > self.max_concurrent_sessions:
+        # Check total number of sessions (get setting dynamically for test override)
+        max_sessions = getattr(settings, "MAX_CONCURRENT_SESSIONS", 5)
+        if active_sessions.count() > max_sessions:
             return True
 
         # Check for sessions from widely different locations
