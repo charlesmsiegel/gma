@@ -208,9 +208,24 @@ class CharacterCreateView(LoginRequiredMixin, CreateView):
     template_name = "characters/character_create.html"
 
     def get_form_kwargs(self):
-        """Pass the current user to the form."""
+        """Pass the current user and initial campaign to the form."""
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
+
+        # If accessed with campaign_slug, set initial campaign
+        campaign_slug = self.kwargs.get("campaign_slug")
+        if campaign_slug:
+            try:
+                from campaigns.models import Campaign
+
+                campaign = Campaign.objects.get(slug=campaign_slug, is_active=True)
+                # Check if user has access to this campaign
+                user_role = campaign.get_user_role(self.request.user)
+                if user_role in ["OWNER", "GM", "PLAYER"]:
+                    kwargs["initial_campaign"] = campaign
+            except Campaign.DoesNotExist:
+                pass  # Campaign not found, proceed without pre-selection
+
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -245,14 +260,22 @@ class CharacterCreateView(LoginRequiredMixin, CreateView):
         for campaign in user_campaigns:
             limit = campaign.max_characters_per_player
             current_count = campaign.user_character_count
+            user_role = campaign.get_user_role(self.request.user)
+
+            # OWNER and GM roles are exempt from character limits
+            is_exempt_role = user_role in ["OWNER", "GM"]
+            at_limit = limit > 0 and current_count >= limit and not is_exempt_role
+            can_create = limit == 0 or current_count < limit or is_exempt_role
 
             campaigns_info.append(
                 {
                     "campaign": campaign,
                     "current_count": current_count,
                     "limit": limit,
-                    "at_limit": limit > 0 and current_count >= limit,
-                    "can_create": limit == 0 or current_count < limit,
+                    "at_limit": at_limit,
+                    "can_create": can_create,
+                    "is_exempt_role": is_exempt_role,
+                    "user_role": user_role,
                 }
             )
 
@@ -262,6 +285,9 @@ class CharacterCreateView(LoginRequiredMixin, CreateView):
                 "campaigns_info": campaigns_info,
                 "has_available_campaigns": any(
                     info["can_create"] for info in campaigns_info
+                ),
+                "user_has_exempt_roles": any(
+                    info["is_exempt_role"] for info in campaigns_info
                 ),
             }
         )

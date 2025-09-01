@@ -42,12 +42,20 @@ class CharacterCreateForm(forms.ModelForm):
             "campaign": "Select a campaign where you have at least PLAYER role",
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, initial_campaign=None, **kwargs):
         """Initialize form with user-specific campaign filtering."""
         if user is None:
             raise TypeError("CharacterCreateForm requires 'user' parameter")
 
         self.user = user
+        self.initial_campaign = initial_campaign
+
+        # If initial_campaign is provided, set it as initial data
+        if initial_campaign and "initial" not in kwargs:
+            kwargs["initial"] = {"campaign": initial_campaign}
+        elif initial_campaign and "initial" in kwargs:
+            kwargs["initial"]["campaign"] = initial_campaign
+
         super().__init__(*args, **kwargs)
 
         # Filter campaigns to only show those where user has PLAYER+ role
@@ -106,7 +114,8 @@ class CharacterCreateForm(forms.ModelForm):
             )
 
         # Check character limit for this user in this campaign
-        if campaign.max_characters_per_player > 0:  # 0 means unlimited
+        # OWNER and GM roles are exempt from character limits
+        if campaign.max_characters_per_player > 0 and user_role not in ["OWNER", "GM"]:
             existing_count = Character.objects.filter(
                 campaign=campaign, player_owner=self.user
             ).count()

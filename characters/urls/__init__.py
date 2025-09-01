@@ -26,6 +26,12 @@ urlpatterns: List[URLPattern] = [
         CharacterCreateView.as_view(),
         name="create",
     ),
+    # Campaign-specific character creation
+    path(
+        "create/campaign/<slug:campaign_slug>/",
+        CharacterCreateView.as_view(),
+        name="create_for_campaign",
+    ),
     # Character detail
     path(
         "<int:pk>/",

@@ -82,6 +82,7 @@ class CampaignSettingsTestMixin:
             "is_public": False,
             "allow_observer_join": False,
             "allow_player_join": False,
+            "max_characters_per_player": 1,
         }
         data.update(overrides)
         return data

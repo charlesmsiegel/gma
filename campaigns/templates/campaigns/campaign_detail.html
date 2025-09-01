@@ -127,7 +127,7 @@
                     <div class="d-grid gap-2">
                       <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
                          class="btn btn-primary">Characters</a>
-                      <a href="{% url 'characters:create' %}"
+                      <a href="{% url 'characters:create_for_campaign' campaign_slug=campaign.slug %}"
                          class="btn btn-outline-primary btn-sm">Create New</a>
                     </div>
                   </div>
@@ -177,7 +177,7 @@
                     <div class="d-grid gap-2">
                       <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
                          class="btn btn-primary">My Characters</a>
-                      <a href="{% url 'characters:create' %}"
+                      <a href="{% url 'characters:create_for_campaign' campaign_slug=campaign.slug %}"
                          class="btn btn-outline-primary btn-sm">Create Character</a>
                     </div>
                   </div>

@@ -66,6 +66,16 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"❌ Failed to run migrations: {e}"))
                 sys.exit(1)
 
+            # Populate themes
+            self.stdout.write("Populating themes...")
+            try:
+                call_command("populate_themes")
+                self.stdout.write(self.style.SUCCESS("  ✅ Themes populated"))
+            except Exception as e:
+                self.stdout.write(
+                    self.style.WARNING(f"⚠️  Failed to populate themes: {e}")
+                )
+
             # Create superuser if requested
             if create_superuser:
                 try:

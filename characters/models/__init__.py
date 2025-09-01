@@ -501,10 +501,13 @@ class Character(
                 )
 
         # Validate max characters per player limit
+        # OWNER and GM roles are exempt from character limits
         if self.campaign and self.player_owner:
             max_chars = self.campaign.max_characters_per_player
             if max_chars > 0:  # 0 means unlimited
-                self._validate_character_limit(max_chars)
+                user_role = self.campaign.get_user_role(self.player_owner)
+                if user_role not in ["OWNER", "GM"]:
+                    self._validate_character_limit(max_chars)
 
     @transaction.atomic
     def _validate_character_limit(self, max_chars: int) -> None:

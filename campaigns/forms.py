@@ -109,6 +109,7 @@ class CampaignSettingsForm(forms.ModelForm):
             "is_public",
             "allow_observer_join",
             "allow_player_join",
+            "max_characters_per_player",
         ]
         widgets = {
             "name": forms.TextInput(
@@ -141,18 +142,31 @@ class CampaignSettingsForm(forms.ModelForm):
             "allow_player_join": forms.CheckboxInput(
                 attrs={"class": "form-check-input"}
             ),
+            "max_characters_per_player": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0",
+                    "max": "10",
+                    "placeholder": "0 = unlimited",
+                }
+            ),
         }
         labels = {
             "is_active": "Campaign is active",
             "is_public": "Campaign is public (visible to non-members)",
             "allow_observer_join": "Anyone can join as observer",
             "allow_player_join": "Anyone can join as player",
+            "max_characters_per_player": "Maximum characters per player",
         }
         help_texts = {
             "is_active": "Inactive campaigns are hidden from lists",
             "is_public": "Public campaigns are visible to all users",
             "allow_observer_join": "Observers can view but not participate",
             "allow_player_join": "Players can participate in scenes",
+            "max_characters_per_player": (
+                "Maximum number of characters each PLAYER can have (0 = unlimited). "
+                "OWNER and GM roles are exempt from this limit."
+            ),
         }
 
 

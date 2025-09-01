@@ -465,6 +465,36 @@ a:hover {
     color: var(--theme-nav-link-active) !important;
 }
 
+/* Ensure header stays on one line */
+.main-header .navbar-collapse {
+    flex-wrap: nowrap !important;
+}
+
+.main-header nav {
+    white-space: nowrap !important;
+    overflow: visible !important;
+}
+
+.main-header .d-flex {
+    flex-wrap: nowrap !important;
+}
+
+/* Responsive adjustments for very small screens */
+@media (max-width: 576px) {
+    .main-header .d-none.d-md-inline {
+        display: none !important;
+    }
+
+    .main-header .btn-sm {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+    }
+
+    .main-header .me-2 {
+        margin-right: 0.25rem !important;
+    }
+}
+
 /* Ensure all text elements use theme colors, but respect utility classes */
 h1:not(.text-white):not(.text-light):not(.text-dark):not(.text-primary):not(.text-secondary):not(.text-success):not(.text-danger):not(.text-warning):not(.text-info),
 h2:not(.text-white):not(.text-light):not(.text-dark):not(.text-primary):not(.text-secondary):not(.text-success):not(.text-danger):not(.text-warning):not(.text-info),
