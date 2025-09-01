@@ -2455,17 +2455,31 @@ class UserSafetyPreferencesSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def validate_lines(self, value):
-        """Validate lines field."""
+    def _sanitize_string_list(self, value, field_name):
+        """Sanitize a list of strings to prevent XSS attacks."""
+        import bleach
+        
         if not isinstance(value, list):
-            raise serializers.ValidationError("Lines must be a list.")
-        return value
+            raise serializers.ValidationError(f"{field_name} must be a list")
+        
+        sanitized_list = []
+        for item in value:
+            if isinstance(item, str):
+                # Remove all HTML tags for safety preferences
+                sanitized_item = bleach.clean(item, tags=[], strip=True)
+                sanitized_list.append(sanitized_item)
+            else:
+                sanitized_list.append(item)
+        
+        return sanitized_list
+
+    def validate_lines(self, value):
+        """Validate and sanitize lines field."""
+        return self._sanitize_string_list(value, "lines")
 
     def validate_veils(self, value):
-        """Validate veils field."""
-        if not isinstance(value, list):
-            raise serializers.ValidationError("Veils must be a list.")
-        return value
+        """Validate and sanitize veils field."""
+        return self._sanitize_string_list(value, "veils")
 
 
 class CampaignSafetySerializer(serializers.ModelSerializer):
@@ -2476,10 +2490,23 @@ class CampaignSafetySerializer(serializers.ModelSerializer):
         fields = ["content_warnings", "safety_tools_enabled"]
 
     def validate_content_warnings(self, value):
-        """Validate content warnings field."""
+        """Validate and sanitize content warnings field."""
+        import bleach
+        
         if not isinstance(value, list):
             raise serializers.ValidationError("Content warnings must be a list.")
-        return value
+        
+        # Sanitize each content warning
+        sanitized_warnings = []
+        for warning in value:
+            if isinstance(warning, str):
+                # Remove HTML tags from content warnings
+                sanitized_warning = bleach.clean(warning, tags=[], strip=True)
+                sanitized_warnings.append(sanitized_warning)
+            else:
+                sanitized_warnings.append(warning)
+        
+        return sanitized_warnings
 
 
 class CampaignSafetyAgreementSerializer(serializers.ModelSerializer):

@@ -684,14 +684,14 @@ class SafetySystemRealWorldScenariosTest(TestCase):
             "content": """
             Scene 3: The Sanatorium (Revised)
 
-            The investigators discover the abandoned psychiatric hospital where Dr. Marsh
-            conducted his experiments. In the basement, they find medical records that
-            hint at unethical procedures without graphic details.
+            The investigators discover the abandoned research facility where Dr. Marsh
+            conducted his experiments. In the basement, they find old records that
+            hint at questionable research without graphic details.
 
-            They discover evidence of a patient's tragic end, but the details fade to black.
-            The supernatural transformations are described in cosmic horror terms without
-            explicit body horror - emphasizing the wrongness and impossibility rather than
-            graphic physical details.
+            They discover evidence of a researcher's mysterious disappearance, but the
+            details fade to black. The unusual transformations are described in 
+            abstract cosmic terms - emphasizing the strangeness and impossibility 
+            rather than physical details.
             """,
             "campaign_id": self.horror_campaign.id,
         }

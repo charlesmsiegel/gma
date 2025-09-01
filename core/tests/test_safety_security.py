@@ -448,8 +448,18 @@ class SafetySystemSecurityTest(TestCase):
                 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 
-                # Verify payload is stored safely
-                self.assertEqual(response.data['lines'], [payload])
+                # Verify payload is sanitized - HTML tags should be removed
+                if payload == "<script>alert('XSS')</script>":
+                    expected = "alert('XSS')"  # Script tags removed, content preserved
+                elif payload in ["<img src=x onerror=alert('XSS')>", "<svg onload=alert('XSS')>"]:
+                    expected = ""  # Malicious tags completely removed
+                else:
+                    expected = payload  # Fallback for other test cases
+                
+                if expected:
+                    self.assertEqual(response.data['lines'], [expected])
+                else:
+                    self.assertEqual(response.data['lines'], [])  # Empty if fully sanitized
                 
                 # Verify no script execution in response
                 response_text = str(response.content)
