@@ -436,9 +436,7 @@ class PasswordResetBruteForceProtectionTest(TestCase):
 
             # Should log the attempt
             if mock_warning.called:
-                print(f"Mock warning called: {mock_warning.call_args}")
                 log_message = mock_warning.call_args[0][0].lower()
-                print(f"Log message: '{log_message}'")
                 self.assertIn("password reset", log_message)
                 self.assertIn("invalid", log_message)
             else:

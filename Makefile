@@ -136,7 +136,7 @@ health-check: start-postgres start-redis
 
 test:
 	@echo "Running all tests..."
-	@$(GMA_ENV_PATH)/bin/python manage.py test --settings=gm_app.test_settings --verbosity=0 2>/dev/null || $(GMA_ENV_PATH)/bin/python manage.py test --settings=gm_app.test_settings --verbosity=1
+	$(GMA_ENV_PATH)/bin/python manage.py test --settings=gm_app.test_settings --verbosity=1
 
 test-coverage:
 	@echo "Running tests with coverage..."
