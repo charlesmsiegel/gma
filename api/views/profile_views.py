@@ -61,7 +61,20 @@ def theme_update_view(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Update user theme
+        # Update user theme using the new theme system
+        from users.models.theme import UserThemePreference
+
+        # Get or create the user's theme preference
+        theme_preference, created = UserThemePreference.objects.get_or_create(
+            user=request.user, defaults={"current_theme": theme}
+        )
+
+        # Update the current theme if it already exists
+        if not created:
+            theme_preference.current_theme = theme
+            theme_preference.save(update_fields=["current_theme", "updated_at"])
+
+        # Also update the legacy field for backward compatibility
         request.user.theme = theme_name
         request.user.save(update_fields=["theme"])
 

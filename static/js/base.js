@@ -65,26 +65,65 @@ class ThemeManager {
 
     createThemeOption(theme) {
         const col = document.createElement('div');
-        col.className = 'col-6 col-lg-4';
+        col.className = 'col-6 col-lg-4 mb-3';
 
         const isCurrentTheme = theme.name === this.currentTheme;
 
         col.innerHTML = `
-            <div class="card theme-card h-100 ${isCurrentTheme ? 'border-primary' : ''}"
-                 style="cursor: pointer;"
+            <div class="card theme-card h-100 shadow-sm ${isCurrentTheme ? 'border-primary border-2' : 'border-0'}"
+                 style="cursor: pointer; transition: all 0.2s ease;"
                  onclick="themeManager.switchTheme('${theme.name}')"
                  data-theme="${theme.name}">
-                <div class="card-body p-2 text-center">
-                    <div class="theme-preview mb-2"
-                         style="height: 30px; background: linear-gradient(45deg, ${theme.backgroundColor}, ${theme.primaryColor}); border-radius: 4px;"></div>
-                    <div class="d-flex align-items-center justify-content-between">
-                        <small class="fw-semibold">${theme.displayName}</small>
-                        ${theme.isDark ? '<i class="bi bi-moon"></i>' : '<i class="bi bi-sun"></i>'}
+                <div class="card-body p-3">
+                    <!-- Theme Preview -->
+                    <div class="theme-preview mb-3 position-relative overflow-hidden"
+                         style="height: 60px; background: ${theme.backgroundColor}; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+                        <!-- Primary color accent -->
+                        <div class="position-absolute top-0 start-0 w-25 h-100"
+                             style="background: ${theme.primaryColor}; opacity: 0.9;"></div>
+                        <!-- Simulated content -->
+                        <div class="position-absolute top-50 start-50 translate-middle">
+                            <div class="d-flex align-items-center gap-1">
+                                <div style="width: 8px; height: 8px; background: ${theme.primaryColor}; border-radius: 50%; opacity: 0.7;"></div>
+                                <div style="width: 16px; height: 2px; background: ${theme.primaryColor}; opacity: 0.5;"></div>
+                            </div>
+                        </div>
+                        ${theme.isDark ?
+                            '<div class="position-absolute top-1 end-1"><i class="bi bi-moon text-white" style="font-size: 0.7rem; opacity: 0.7;"></i></div>' :
+                            '<div class="position-absolute top-1 end-1"><i class="bi bi-sun" style="font-size: 0.7rem; opacity: 0.7; color: #ffc107;"></i></div>'
+                        }
+                        ${theme.isHighContrast ?
+                            '<div class="position-absolute bottom-1 end-1"><i class="bi bi-eye" style="font-size: 0.6rem; opacity: 0.8; color: ' + theme.primaryColor + ';"></i></div>' :
+                            ''
+                        }
                     </div>
-                    ${isCurrentTheme ? '<small class="text-primary"><i class="bi bi-check-circle"></i> Current</small>' : ''}
+
+                    <!-- Theme Info -->
+                    <div class="text-center">
+                        <div class="fw-semibold small mb-1">${theme.displayName}</div>
+                        ${isCurrentTheme ?
+                            '<div class="badge bg-primary"><i class="bi bi-check-circle me-1"></i>Current</div>' :
+                            '<div class="text-muted" style="font-size: 0.75rem;">' +
+                                (theme.description || 'Click to apply') +
+                            '</div>'
+                        }
+                    </div>
                 </div>
             </div>
         `;
+
+        // Add hover effects
+        const card = col.querySelector('.theme-card');
+        card.addEventListener('mouseenter', () => {
+            if (!isCurrentTheme) {
+                card.style.transform = 'translateY(-2px)';
+                card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            }
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'translateY(0)';
+            card.style.boxShadow = '';
+        });
 
         return col;
     }

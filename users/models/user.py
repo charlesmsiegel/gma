@@ -199,8 +199,12 @@ class User(AbstractUser):
         the new Theme model system.
         """
         # First, check if user has a theme preference
-        if hasattr(self, "theme_preference") and self.theme_preference.current_theme:
-            return self.theme_preference.current_theme.name
+        try:
+            if self.theme_preference and self.theme_preference.current_theme:
+                return self.theme_preference.current_theme.name
+        except AttributeError:
+            # UserThemePreference doesn't exist yet
+            pass
 
         # Fallback to legacy theme field
         if self.theme:
@@ -220,11 +224,12 @@ class User(AbstractUser):
             from .theme import Theme
 
             # Check if user has a theme preference
-            if (
-                hasattr(self, "theme_preference")
-                and self.theme_preference.current_theme
-            ):
-                return self.theme_preference.current_theme
+            try:
+                if self.theme_preference and self.theme_preference.current_theme:
+                    return self.theme_preference.current_theme
+            except AttributeError:
+                # UserThemePreference doesn't exist yet
+                pass
 
             # Try to find theme by name from legacy field
             theme_name = self.theme or "light"
