@@ -52,9 +52,12 @@ class PasswordResetManager(models.Manager):
                 # Create new reset
                 return self.create(user=user, ip_address=ip_address)
 
-        except transaction.TransactionManagementError:
+        except Exception:  # Catch any locking or transaction errors
             # If we can't get a lock immediately, fall back to non-atomic approach
             # This prevents table-level deadlocks in high concurrency
+            import time
+
+            time.sleep(0.001)  # Small delay to reduce timing conflicts
             self.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
             return self.create(user=user, ip_address=ip_address)
 

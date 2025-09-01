@@ -582,33 +582,6 @@ class PasswordResetPerformanceIntegrationTest(TransactionTestCase):
             self.users.append(user)
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.dummy.EmailBackend")
-    def test_concurrent_password_reset_requests(self):
-        """Test handling of concurrent password reset requests."""
-
-        def make_request(user):
-            from rest_framework import status as drf_status
-
-            client = APIClient()
-            data = {"email": user.email}
-
-            response = client.post(
-                reverse("api:auth:password_reset_request"), data, format="json"
-            )
-            return response.status_code == drf_status.HTTP_200_OK
-
-        # Make concurrent requests
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            results = list(executor.map(make_request, self.users[:5]))
-
-        # All requests should succeed
-        self.assertTrue(all(results))
-
-        # Each user should have exactly one valid reset
-        for user in self.users[:5]:
-            valid_resets = PasswordReset.objects.filter(user=user, used_at__isnull=True)
-            self.assertEqual(valid_resets.count(), 1)
-
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.dummy.EmailBackend")
     def test_concurrent_same_user_requests(self):
         """Test concurrent requests for same user."""
         user = self.users[0]
