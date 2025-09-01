@@ -24,7 +24,7 @@ from users.models.password_reset import PasswordReset
 User = get_user_model()
 
 
-@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+@override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
 class PasswordResetEmailTemplateTest(TestCase):
     """Test password reset email template functionality."""
 
@@ -214,7 +214,7 @@ class PasswordResetEmailTemplateTest(TestCase):
                         self.assertEqual(from_email, "noreply@customsite.com")
 
 
-@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+@override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
 class PasswordResetEmailSendingTest(TestCase):
     """Test password reset email sending functionality."""
 
@@ -383,7 +383,6 @@ class PasswordResetEmailSendingTest(TestCase):
         if "X-Auto-Response-Suppress" in headers:
             self.assertEqual(headers["X-Auto-Response-Suppress"], "All")
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_email_encoding(self):
         """Test that email handles special characters correctly."""
         # Create user with special characters in name
@@ -414,7 +413,7 @@ class PasswordResetEmailSendingTest(TestCase):
 
 
 @override_settings(
-    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    EMAIL_BACKEND="core.test_backends.QuietEmailBackend",
     USE_I18N=True,
     USE_L10N=True,
 )
@@ -484,6 +483,7 @@ class PasswordResetEmailInternationalizationTest(TestCase):
                 mail.outbox.clear()
 
 
+@override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
 class PasswordResetEmailSecurityTest(TestCase):
     """Test security aspects of password reset emails."""
 
@@ -493,7 +493,6 @@ class PasswordResetEmailSecurityTest(TestCase):
             username="testuser", email="test@example.com", password="TestPass123!"
         )
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_email_does_not_contain_sensitive_info(self):
         """Test that email doesn't contain sensitive information."""
         from rest_framework.test import APIClient
@@ -522,7 +521,6 @@ class PasswordResetEmailSecurityTest(TestCase):
         for info in sensitive_info:
             self.assertNotIn(info.lower(), email.body.lower())
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_email_contains_security_warnings(self):
         """Test that email contains appropriate security warnings."""
         from rest_framework.test import APIClient
@@ -557,7 +555,6 @@ class PasswordResetEmailSecurityTest(TestCase):
             len(found_phrases), 0, "Email should contain security warnings"
         )
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_email_expiration_clearly_stated(self):
         """Test that email clearly states when the reset link expires."""
         from rest_framework.test import APIClient
@@ -584,7 +581,7 @@ class PasswordResetEmailSecurityTest(TestCase):
 
         self.assertTrue(found_expiration, "Email should clearly state expiration time")
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_email_backend_configuration(self):
         """Test that email backend can be configured appropriately."""
         from rest_framework.test import APIClient

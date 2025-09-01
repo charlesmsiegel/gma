@@ -454,7 +454,7 @@ class RegistrationEmailVerificationIntegrationTest(TestCase):
         self.assertGreaterEqual(verification.expires_at, expected_min_expiry)
         self.assertLessEqual(verification.expires_at, expected_max_expiry)
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_registration_sends_email_with_verification_link(self):
         """Test that registration sends email with verification link."""
         data = {

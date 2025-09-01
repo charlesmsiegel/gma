@@ -28,7 +28,7 @@ from users.models.password_reset import PasswordReset
 User = get_user_model()
 
 
-@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+@override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
 class PasswordResetWorkflowIntegrationTest(TestCase):
     """Test complete password reset workflows."""
 
@@ -289,7 +289,7 @@ class PasswordResetAuthenticationIntegrationTest(TestCase):
             username="testuser", email="test@example.com", password="OldPassword123!"
         )
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_password_reset_integration_with_login(self):
         """Test password reset integrates properly with login system."""
         # First, verify old password works
@@ -337,7 +337,7 @@ class PasswordResetAuthenticationIntegrationTest(TestCase):
         )
         self.assertEqual(login_response_new.status_code, status.HTTP_200_OK)
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_password_reset_with_active_session(self):
         """Test password reset behavior with active user session."""
         # Login user first
@@ -419,7 +419,7 @@ class PasswordResetErrorRecoveryTest(TestCase):
             username="testuser", email="test@example.com", password="OldPassword123!"
         )
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_recovery_from_expired_token(self):
         """Test recovery when token expires before use."""
         # Request password reset
@@ -767,7 +767,7 @@ class PasswordResetCrossSystemIntegrationTest(TestCase):
         self.user.refresh_from_db()
         self.assertIn(group, self.user.groups.all())
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_password_reset_email_integration_with_settings(self):
         """Test password reset email integration with Django settings."""
         # Test with various email settings

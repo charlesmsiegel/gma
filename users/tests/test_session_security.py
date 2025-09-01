@@ -256,7 +256,7 @@ class SecurityAlertSystemTest(TestCase):
             user_agent="Chrome/91.0 Desktop",
         )
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_send_security_alert_email(self):
         """Test sending security alert emails to users."""
         service = SessionSecurityService()

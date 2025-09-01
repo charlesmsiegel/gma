@@ -100,7 +100,7 @@ SILENCED_SYSTEM_CHECKS = [
 ]
 
 # Email settings for cleaner test runs
-EMAIL_BACKEND = "django.core.mail.backends.dummy.DummyEmailBackend"
+EMAIL_BACKEND = "core.test_backends.QuietEmailBackend"
 DEFAULT_FROM_EMAIL = "test@example.com"
 
 # Additional suppression for test output

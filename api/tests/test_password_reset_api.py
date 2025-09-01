@@ -680,7 +680,7 @@ class PasswordResetSecurityTest(TestCase):
                 self.assertIn("password reset", log_args.lower())
 
 
-@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+@override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
 class PasswordResetEmailTest(TestCase):
     """Test password reset email functionality."""
 
@@ -770,7 +770,7 @@ class PasswordResetIntegrationTest(TestCase):
             username="testuser", email="test@example.com", password="OldPassword123!"
         )
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_complete_password_reset_workflow(self):
         """Test complete password reset workflow from request to confirmation."""
         # Step 1: Request password reset

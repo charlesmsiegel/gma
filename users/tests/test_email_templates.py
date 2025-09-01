@@ -233,7 +233,7 @@ class EmailSendingIntegrationTest(TestCase):
             password="TestPass123!",
         )
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_verification_email_sending_basic(self):
         """Test basic verification email sending."""
         from users.services import EmailVerificationService
@@ -248,7 +248,7 @@ class EmailSendingIntegrationTest(TestCase):
         self.assertEqual(email.to, [self.user.email])
         self.assertIn("verify", email.subject.lower())
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_verification_email_contains_valid_link(self):
         """Test that verification email contains valid verification link."""
         from users.services import EmailVerificationService
@@ -270,7 +270,7 @@ class EmailSendingIntegrationTest(TestCase):
         # Should contain verification token
         self.assertIn(verification.token, email_content)
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_verification_email_multipart_format(self):
         """Test that verification email is sent in multipart format."""
         from users.services import EmailVerificationService
@@ -295,7 +295,7 @@ class EmailSendingIntegrationTest(TestCase):
             if html_content:
                 self.assertIn(email.to[0], html_content)
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_verification_email_headers(self):
         """Test that verification email has appropriate headers."""
         from users.services import EmailVerificationService
@@ -314,7 +314,7 @@ class EmailSendingIntegrationTest(TestCase):
         # Check that from email is properly set
         self.assertNotEqual(email.from_email, "")
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_verification_email_subject_customization(self):
         """Test that verification email subject can be customized."""
         from users.services import EmailVerificationService
@@ -330,7 +330,7 @@ class EmailSendingIntegrationTest(TestCase):
             self.assertIn("Verify", email.subject)
 
     @override_settings(
-        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        EMAIL_BACKEND="core.test_backends.QuietEmailBackend",
         EMAIL_VERIFICATION_FROM_EMAIL="custom@example.com",
     )
     def test_verification_email_from_address_customization(self):

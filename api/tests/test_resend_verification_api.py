@@ -107,7 +107,7 @@ class ResendVerificationAPIBasicTest(TestCase):
         # Should still work for the correct user
         self.assertTrue(EmailVerification.objects.filter(user=self.user).exists())
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    @override_settings(EMAIL_BACKEND="core.test_backends.QuietEmailBackend")
     def test_resend_sends_email(self):
         """Test that resend actually sends verification email."""
         data = {"email": "test@example.com"}
