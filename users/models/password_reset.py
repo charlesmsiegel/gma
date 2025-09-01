@@ -35,23 +35,11 @@ class PasswordResetManager(models.Manager):
         Returns:
             PasswordReset: The created password reset instance
         """
-        from django.db import transaction
+        # Invalidate any existing password resets for this user
+        self.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
 
-        # Use atomic transaction to prevent race conditions
-        with transaction.atomic():
-            # Invalidate any existing password resets for this user
-            # Use select_for_update to lock the rows we're about to modify
-            existing_resets = list(
-                self.select_for_update().filter(user=user, used_at__isnull=True)
-            )
-
-            # Mark them as used
-            for reset in existing_resets:
-                reset.used_at = timezone.now()
-                reset.save(update_fields=["used_at"])
-
-            # Create new password reset
-            return self.create(user=user, ip_address=ip_address)
+        # Create new password reset
+        return self.create(user=user, ip_address=ip_address)
 
     def get_valid_reset_by_token(self, token: str) -> Optional["PasswordReset"]:
         """
