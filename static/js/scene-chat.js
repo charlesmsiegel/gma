@@ -171,8 +171,11 @@ class SceneChatUI {
     async loadUserData() {
         try {
             const response = await fetch('/api/profile/current-user/', {
+                method: 'GET',
+                credentials: 'include', // Include cookies for session auth
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.getCSRFToken()
                 }
             });
 
@@ -181,6 +184,7 @@ class SceneChatUI {
             }
 
             this.currentUser = await response.json();
+            console.log('Current user loaded:', this.currentUser);
         } catch (error) {
             console.error('Failed to load user data:', error);
             // Continue without user data for now
@@ -193,8 +197,11 @@ class SceneChatUI {
     async loadCharacters() {
         try {
             const response = await fetch(`/api/scenes/${this.sceneId}/`, {
+                method: 'GET',
+                credentials: 'include', // Include cookies for session auth
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.getCSRFToken()
                 }
             });
 
@@ -204,6 +211,10 @@ class SceneChatUI {
 
             const sceneData = await response.json();
             this.characters = sceneData.participants || [];
+            
+            console.log('Scene data loaded:', sceneData);
+            console.log('Characters found:', this.characters);
+            console.log('Current user:', this.currentUser);
 
             this.updateCharacterSelect();
         } catch (error) {
@@ -218,11 +229,15 @@ class SceneChatUI {
     updateCharacterSelect() {
         this.characterSelect.innerHTML = '<option value="">Select Character...</option>';
 
-        // Add user's characters
+        // Add user's characters - note: currentUser has nested structure { user: {...} }
+        const userId = this.currentUser && this.currentUser.user ? this.currentUser.user.id : null;
         const userCharacters = this.characters.filter(char =>
-            this.currentUser && char.player_owner &&
-            char.player_owner.id === this.currentUser.id
+            userId && char.player_owner && char.player_owner.id === userId
         );
+        
+        console.log('Filtered user characters:', userCharacters);
+        console.log('User ID comparison:', userId, 
+                    'vs character owners:', this.characters.map(c => c.player_owner ? c.player_owner.id : 'no owner'));
 
         userCharacters.forEach(character => {
             const option = document.createElement('option');
@@ -238,7 +253,11 @@ class SceneChatUI {
             this.selectedCharacter = userCharacters[0];
         }
 
+        // Enable/disable character select based on availability
         this.characterSelect.disabled = userCharacters.length === 0;
+        
+        // Update send button state
+        this.updateSendButtonState();
     }
 
     /**
@@ -249,8 +268,11 @@ class SceneChatUI {
 
         try {
             const response = await fetch(`/api/scenes/${this.sceneId}/messages/?limit=50`, {
+                method: 'GET',
+                credentials: 'include', // Include cookies for session auth
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.getCSRFToken()
                 }
             });
 
@@ -286,6 +308,7 @@ class SceneChatUI {
 
         this.websocket.setOnStatusChange((status) => {
             this.updateConnectionStatus(status);
+            this.updateSendButtonState();
         });
 
         this.websocket.setOnError((error) => {
@@ -312,9 +335,10 @@ class SceneChatUI {
             }
         });
 
-        // Character count
+        // Character count and send button state
         this.messageInput.addEventListener('input', () => {
             this.updateCharacterCount();
+            this.updateSendButtonState();
         });
 
         // Message type change
@@ -352,6 +376,8 @@ class SceneChatUI {
             this.characterSelect.closest('.col-md-4').classList.add('d-none');
             this.recipientSelect.closest('.col-md-4').classList.add('d-none');
         }
+        
+        this.updateSendButtonState();
     }
 
     /**
@@ -360,6 +386,31 @@ class SceneChatUI {
     onCharacterChange() {
         const characterId = this.characterSelect.value;
         this.selectedCharacter = this.characters.find(c => c.id == characterId) || null;
+        this.updateSendButtonState();
+    }
+    
+    /**
+     * Update send button state based on current conditions
+     */
+    updateSendButtonState() {
+        let canSend = true;
+        
+        // Check if message input has content
+        const hasContent = this.messageInput && this.messageInput.value.trim().length > 0;
+        
+        // Check character requirements based on message type
+        if (this.messageType === 'PUBLIC' && !this.selectedCharacter) {
+            canSend = false;
+        }
+        
+        if (this.messageType === 'PRIVATE' && (!this.selectedCharacter || !this.recipientSelect.value)) {
+            canSend = false;
+        }
+        
+        // Check if WebSocket is connected
+        const isConnected = this.websocket && this.websocket.getStatus() === 'connected';
+        
+        this.sendButton.disabled = !canSend || !hasContent || !isConnected;
     }
 
     /**
@@ -369,10 +420,11 @@ class SceneChatUI {
         this.recipientSelect.innerHTML = '<option value="">Select Recipient...</option>';
 
         // Add all other users in the scene
+        const userId = this.currentUser && this.currentUser.user ? this.currentUser.user.id : null;
         const otherUsers = new Set();
         this.characters.forEach(character => {
             if (character.player_owner &&
-                (!this.currentUser || character.player_owner.id !== this.currentUser.id)) {
+                (!userId || character.player_owner.id !== userId)) {
                 otherUsers.add(JSON.stringify({
                     id: character.player_owner.id,
                     username: character.player_owner.username
@@ -699,6 +751,46 @@ class SceneChatUI {
             setTimeout(() => {
                 errorAlert.classList.add('d-none');
             }, 5000);
+        }
+    }
+
+    /**
+     * Get CSRF token from page
+     */
+    getCSRFToken() {
+        // Try to get from meta tag first
+        const metaToken = document.querySelector('meta[name="csrf-token"]');
+        if (metaToken) {
+            return metaToken.getAttribute('content');
+        }
+
+        // Try to get from cookie
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrftoken') {
+                return value;
+            }
+        }
+
+        // Try to get from form
+        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfInput) {
+            return csrfInput.value;
+        }
+
+        return null;
+    }
+
+    /**
+     * Refresh character list (public method)
+     */
+    async refreshCharacters() {
+        try {
+            await this.loadCharacters();
+            console.log('Character list refreshed');
+        } catch (error) {
+            console.error('Failed to refresh characters:', error);
         }
     }
 

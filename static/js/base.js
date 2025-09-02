@@ -64,68 +64,114 @@ class ThemeManager {
     }
 
     createThemeOption(theme) {
-        const col = document.createElement('div');
-        col.className = 'col-6 col-lg-4 mb-3';
+        const div = document.createElement('div');
+        div.className = 'col-12 mb-1';
 
         const isCurrentTheme = theme.name === this.currentTheme;
+        
+        // Calculate text color based on theme background
+        const textColor = this.getContrastColor(theme.backgroundColor);
+        const mutedTextColor = this.getMutedTextColor(theme.backgroundColor);
 
-        col.innerHTML = `
-            <div class="card theme-card h-100 shadow-sm ${isCurrentTheme ? 'border-primary border-2' : 'border-0'}"
+        div.innerHTML = `
+            <div class="d-flex align-items-center p-2 rounded theme-option ${isCurrentTheme ? 'bg-primary bg-opacity-10 border border-primary' : ''}"
                  style="cursor: pointer; transition: all 0.2s ease;"
                  onclick="themeManager.switchTheme('${theme.name}')"
                  data-theme="${theme.name}">
-                <div class="card-body p-3">
-                    <!-- Theme Preview -->
-                    <div class="theme-preview mb-3 position-relative overflow-hidden"
-                         style="height: 60px; background: ${theme.backgroundColor}; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-                        <!-- Primary color accent -->
-                        <div class="position-absolute top-0 start-0 w-25 h-100"
-                             style="background: ${theme.primaryColor}; opacity: 0.9;"></div>
-                        <!-- Simulated content -->
-                        <div class="position-absolute top-50 start-50 translate-middle">
-                            <div class="d-flex align-items-center gap-1">
-                                <div style="width: 8px; height: 8px; background: ${theme.primaryColor}; border-radius: 50%; opacity: 0.7;"></div>
-                                <div style="width: 16px; height: 2px; background: ${theme.primaryColor}; opacity: 0.5;"></div>
-                            </div>
-                        </div>
-                        ${theme.isDark ?
-                            '<div class="position-absolute top-1 end-1"><i class="bi bi-moon text-white" style="font-size: 0.7rem; opacity: 0.7;"></i></div>' :
-                            '<div class="position-absolute top-1 end-1"><i class="bi bi-sun" style="font-size: 0.7rem; opacity: 0.7; color: #ffc107;"></i></div>'
+                
+                <!-- Color Preview -->
+                <div class="d-flex me-3">
+                    <div class="rounded-circle me-1" 
+                         style="width: 16px; height: 16px; background: ${theme.primaryColor}; border: 2px solid rgba(128,128,128,0.3);"></div>
+                    <div class="rounded-circle" 
+                         style="width: 16px; height: 16px; background: ${theme.backgroundColor}; border: 2px solid rgba(128,128,128,0.3);"></div>
+                </div>
+                
+                <!-- Theme Info -->
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center">
+                        <span class="fw-semibold me-2" style="color: ${textColor};">${theme.displayName}</span>
+                        ${theme.isDark ? 
+                            `<i class="bi bi-moon me-1" style="font-size: 0.8rem; color: ${mutedTextColor};"></i>` : 
+                            `<i class="bi bi-sun me-1" style="font-size: 0.8rem; color: #ffc107;"></i>`
                         }
-                        ${theme.isHighContrast ?
-                            '<div class="position-absolute bottom-1 end-1"><i class="bi bi-eye" style="font-size: 0.6rem; opacity: 0.8; color: ' + theme.primaryColor + ';"></i></div>' :
+                        ${theme.isHighContrast ? 
+                            `<i class="bi bi-eye" style="font-size: 0.8rem; color: ${theme.primaryColor};" title="High Contrast"></i>` : 
                             ''
                         }
                     </div>
-
-                    <!-- Theme Info -->
-                    <div class="text-center">
-                        <div class="fw-semibold small mb-1">${theme.displayName}</div>
-                        ${isCurrentTheme ?
-                            '<div class="badge bg-primary"><i class="bi bi-check-circle me-1"></i>Current</div>' :
-                            '<div class="text-muted" style="font-size: 0.75rem;">' +
-                                (theme.description || 'Click to apply') +
-                            '</div>'
-                        }
-                    </div>
+                    <small style="color: ${mutedTextColor};">${theme.category}</small>
                 </div>
+                
+                <!-- Current Indicator -->
+                ${isCurrentTheme ? 
+                    '<i class="bi bi-check-circle-fill text-primary ms-2"></i>' : 
+                    `<i class="bi bi-circle ms-2" style="opacity: 0.5; color: ${mutedTextColor};"></i>`
+                }
             </div>
         `;
 
         // Add hover effects
-        const card = col.querySelector('.theme-card');
-        card.addEventListener('mouseenter', () => {
+        const option = div.querySelector('.theme-option');
+        option.addEventListener('mouseenter', () => {
             if (!isCurrentTheme) {
-                card.style.transform = 'translateY(-2px)';
-                card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                option.classList.add('bg-light');
+                option.style.backgroundColor = this.getLightenedColor(theme.backgroundColor, 0.1);
             }
         });
-        card.addEventListener('mouseleave', () => {
-            card.style.transform = 'translateY(0)';
-            card.style.boxShadow = '';
+
+        option.addEventListener('mouseleave', () => {
+            if (!isCurrentTheme) {
+                option.classList.remove('bg-light');
+                option.style.backgroundColor = '';
+            }
         });
 
-        return col;
+        return div;
+    }
+
+    // Helper function to calculate contrast color (black or white) based on background
+    getContrastColor(hexColor) {
+        // Convert hex to RGB
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
+        
+        // Calculate luminance using standard formula
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Return white for dark backgrounds, black for light backgrounds
+        return luminance > 0.5 ? '#000000' : '#ffffff';
+    }
+
+    // Helper function to get muted text color
+    getMutedTextColor(hexColor) {
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
+        
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Return lighter gray for dark backgrounds, darker gray for light backgrounds
+        return luminance > 0.5 ? '#666666' : '#cccccc';
+    }
+
+    // Helper function to lighten/darken a color for hover effects
+    getLightenedColor(hexColor, factor) {
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
+        
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Lighten dark colors, darken light colors
+        const adjustment = luminance > 0.5 ? -20 : 20;
+        
+        const newR = Math.max(0, Math.min(255, r + adjustment));
+        const newG = Math.max(0, Math.min(255, g + adjustment));
+        const newB = Math.max(0, Math.min(255, b + adjustment));
+        
+        return `rgb(${newR}, ${newG}, ${newB})`;
     }
 
     initializeSystemThemeDetection() {
@@ -154,8 +200,10 @@ class ThemeManager {
                 }
             });
 
-            // Apply system theme if auto-switch is enabled
-            if (autoSwitchEnabled) {
+            // Only apply system theme on page load if user is NOT authenticated
+            // or if they haven't explicitly chosen a theme
+            // This prevents overriding explicit user theme choices
+            if (autoSwitchEnabled && !this.isAuthenticated) {
                 this.applySystemTheme(darkModeQuery.matches);
             }
         }

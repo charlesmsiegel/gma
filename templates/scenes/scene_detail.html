@@ -160,10 +160,22 @@
                     aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <!-- This will be populated by AJAX when Issue 38 is implemented -->
-            <p class="text-muted">
-              Participant management will be available when Issue 38 is implemented.
-            </p>
+            <div id="add-participant-error" class="alert alert-danger d-none"></div>
+            <div id="add-participant-success" class="alert alert-success d-none"></div>
+            
+            <form id="addParticipantForm">
+              <div class="mb-3">
+                <label for="characterSelect" class="form-label">Select Character</label>
+                <select class="form-select" id="characterSelect" required>
+                  <option value="">Choose a character...</option>
+                </select>
+                <div class="form-text">Only characters from this campaign can participate in scenes.</div>
+              </div>
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Participant</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -184,10 +196,24 @@
                     aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <!-- This will be populated by AJAX when Issue 40 is implemented -->
-            <p class="text-muted">
-              Status management will be available when Issue 40 is implemented.
-            </p>
+            <div id="change-status-error" class="alert alert-danger d-none"></div>
+            <div id="change-status-success" class="alert alert-success d-none"></div>
+            
+            <form id="changeStatusForm">
+              <div class="mb-3">
+                <label for="statusSelect" class="form-label">Scene Status</label>
+                <select class="form-select" id="statusSelect" required>
+                  <option value="PENDING" {% if scene.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                  <option value="ACTIVE" {% if scene.status == 'ACTIVE' %}selected{% endif %}>Active</option>
+                  <option value="CLOSED" {% if scene.status == 'CLOSED' %}selected{% endif %}>Closed</option>
+                </select>
+                <div class="form-text">Change the current status of this scene.</div>
+              </div>
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Status</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -209,12 +235,236 @@
 
             // Make it available globally for debugging
             window.sceneChatUI = sceneChatUI;
+            
+            // Initialize participant management
+            initializeParticipantManagement();
         });
+        
+        function getCSRFToken() {
+            // Try to get from meta tag first
+            const metaToken = document.querySelector('meta[name="csrf-token"]');
+            if (metaToken) {
+                return metaToken.getAttribute('content');
+            }
+            
+            // Try to get from cookie
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+            
+            // Try to get from form
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfInput) {
+                return csrfInput.value;
+            }
+            
+            return null;
+        }
+        
+        function showAlert(containerId, message, type = 'danger') {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.textContent = message;
+                container.className = `alert alert-${type}`;
+                setTimeout(() => {
+                    container.className = `alert alert-${type} d-none`;
+                }, 5000);
+            }
+        }
+        
+        async function initializeParticipantManagement() {
+            // Load characters for the add participant modal
+            await loadAvailableCharacters();
+            
+            // Set up form handlers
+            const addParticipantForm = document.getElementById('addParticipantForm');
+            if (addParticipantForm) {
+                addParticipantForm.addEventListener('submit', handleAddParticipant);
+            }
+            
+            const changeStatusForm = document.getElementById('changeStatusForm');
+            if (changeStatusForm) {
+                changeStatusForm.addEventListener('submit', handleChangeStatus);
+            }
+        }
+        
+        async function loadAvailableCharacters() {
+            try {
+                // Load both characters and current scene participants
+                const [charactersResponse, sceneResponse] = await Promise.all([
+                    fetch('/api/characters/?campaign={{ scene.campaign.id }}', {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCSRFToken()
+                        }
+                    }),
+                    fetch('/api/scenes/{{ scene.id }}/', {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCSRFToken()
+                        }
+                    })
+                ]);
+                
+                if (charactersResponse.ok && sceneResponse.ok) {
+                    const charactersData = await charactersResponse.json();
+                    const sceneData = await sceneResponse.json();
+                    const characterSelect = document.getElementById('characterSelect');
+                    
+                    // Get IDs of characters already participating
+                    const participantIds = new Set(sceneData.participants.map(p => p.id));
+                    
+                    // Clear existing options except the first one
+                    characterSelect.innerHTML = '<option value="">Choose a character...</option>';
+                    
+                    // Filter out characters that are already participants
+                    const availableCharacters = charactersData.results.filter(character => 
+                        !participantIds.has(character.id)
+                    );
+                    
+                    if (availableCharacters.length === 0) {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'No characters available to add';
+                        option.disabled = true;
+                        characterSelect.appendChild(option);
+                    } else {
+                        // Add available character options
+                        availableCharacters.forEach(character => {
+                            const option = document.createElement('option');
+                            option.value = character.id;
+                            option.textContent = character.name;
+                            characterSelect.appendChild(option);
+                        });
+                    }
+                } else {
+                    showAlert('add-participant-error', 'Failed to load characters');
+                }
+            } catch (error) {
+                console.error('Error loading characters:', error);
+                showAlert('add-participant-error', 'Error loading characters');
+            }
+        }
+        
+        async function handleAddParticipant(event) {
+            event.preventDefault();
+            
+            const characterId = document.getElementById('characterSelect').value;
+            if (!characterId) {
+                showAlert('add-participant-error', 'Please select a character');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/scenes/{{ scene.id }}/add_participant/', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        character_id: parseInt(characterId)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showAlert('add-participant-success', data.message, 'success');
+                    // Refresh character list in chat
+                    if (window.sceneChatUI) {
+                        window.sceneChatUI.refreshCharacters();
+                    }
+                    // Refresh available characters in the modal (remove newly added character)
+                    await loadAvailableCharacters();
+                    // Clear the form
+                    document.getElementById('characterSelect').value = '';
+                    // Reload page after short delay to show updated participants list
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showAlert('add-participant-error', data.message || 'Failed to add participant');
+                }
+            } catch (error) {
+                console.error('Error adding participant:', error);
+                showAlert('add-participant-error', 'Error adding participant');
+            }
+        }
+        
+        async function handleChangeStatus(event) {
+            event.preventDefault();
+            
+            const newStatus = document.getElementById('statusSelect').value;
+            
+            try {
+                const response = await fetch('/api/scenes/{{ scene.id }}/', {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        status: newStatus
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert('change-status-success', 'Status updated successfully', 'success');
+                    // Reload page after short delay to show updated status
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showAlert('change-status-error', data.message || 'Failed to update status');
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+                showAlert('change-status-error', 'Error updating status');
+            }
+        }
 
-        function removeParticipant(participantId) {
-            // This will be implemented in Issue 38
-            console.log('Remove participant:', participantId);
-            alert('Participant removal will be available when Issue 38 is implemented.');
+        async function removeParticipant(participantId) {
+            if (!confirm('Are you sure you want to remove this participant from the scene?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/scenes/{{ scene.id }}/participants/${participantId}/`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Reload page to show updated participants
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Failed to remove participant');
+                }
+            } catch (error) {
+                console.error('Error removing participant:', error);
+                alert('Error removing participant');
+            }
         }
   </script>
 {% endblock %}

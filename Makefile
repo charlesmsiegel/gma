@@ -30,8 +30,8 @@ help:
 	@echo "  clean          - Alias for stop-all"
 
 runserver: start-postgres start-redis migrate
-	@echo "Starting Django development server on port 8080..."
-	$(GMA_ENV_PATH)/bin/python manage.py runserver 0.0.0.0:8080
+	@echo "Starting Django development server with WebSocket support on port 8080..."
+	$(GMA_ENV_PATH)/bin/daphne -b 0.0.0.0 -p 8080 gm_app.asgi:application
 
 runserver-django: runserver
 

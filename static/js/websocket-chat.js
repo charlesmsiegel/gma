@@ -103,9 +103,13 @@ class SceneChatWebSocket {
             const data = JSON.parse(event.data);
 
             switch (data.type) {
+                case 'chat.message':
                 case 'chat_message':
                     if (this.onMessage) {
-                        this.onMessage(data.message);
+                        // Pass the message data (for 'chat.message' from server)
+                        // or the whole data object (for backwards compatibility)
+                        const messageData = data.message_type ? data : data.message;
+                        this.onMessage(messageData);
                     }
                     break;
 
@@ -164,27 +168,10 @@ class SceneChatWebSocket {
             throw new Error('Rate limit exceeded. Please slow down.');
         }
 
-        // Get CSRF token
-        const csrfToken = this.getCSRFToken();
-        if (!csrfToken) {
-            // Attempt to reload page to get fresh CSRF token
-            console.warn('CSRF token not found, attempting to reload page for fresh token');
-            if (this.options.onCSRFError) {
-                this.options.onCSRFError();
-            } else {
-                // Default fallback - show user-friendly error
-                alert('Security token expired. Please refresh the page and try again.');
-            }
-            throw new Error('CSRF token not found - page refresh required');
-        }
-
-        // Prepare message with CSRF token
+        // Prepare message (WebSocket uses session auth, no CSRF needed)
         const message = {
             type: 'chat_message',
-            message: {
-                ...messageData,
-                csrfmiddlewaretoken: csrfToken
-            }
+            message: messageData
         };
 
         try {
@@ -366,6 +353,20 @@ class SceneChatWebSocket {
      */
     setOnError(callback) {
         this.onError = callback;
+    }
+
+    /**
+     * Set rate limit update callback
+     */
+    setOnRateLimitUpdate(callback) {
+        this.onRateLimitUpdate = callback;
+    }
+
+    /**
+     * Get current connection status
+     */
+    getStatus() {
+        return this.isConnected ? 'connected' : 'disconnected';
     }
 }
 
