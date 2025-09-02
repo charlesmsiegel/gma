@@ -68,7 +68,7 @@ class ThemeManager {
         div.className = 'col-12 mb-1';
 
         const isCurrentTheme = theme.name === this.currentTheme;
-        
+
         // Calculate text color based on theme background
         const textColor = this.getContrastColor(theme.backgroundColor);
         const mutedTextColor = this.getMutedTextColor(theme.backgroundColor);
@@ -78,34 +78,34 @@ class ThemeManager {
                  style="cursor: pointer; transition: all 0.2s ease;"
                  onclick="themeManager.switchTheme('${theme.name}')"
                  data-theme="${theme.name}">
-                
+
                 <!-- Color Preview -->
                 <div class="d-flex me-3">
-                    <div class="rounded-circle me-1" 
+                    <div class="rounded-circle me-1"
                          style="width: 16px; height: 16px; background: ${theme.primaryColor}; border: 2px solid rgba(128,128,128,0.3);"></div>
-                    <div class="rounded-circle" 
+                    <div class="rounded-circle"
                          style="width: 16px; height: 16px; background: ${theme.backgroundColor}; border: 2px solid rgba(128,128,128,0.3);"></div>
                 </div>
-                
+
                 <!-- Theme Info -->
                 <div class="flex-grow-1">
                     <div class="d-flex align-items-center">
                         <span class="fw-semibold me-2" style="color: ${textColor};">${theme.displayName}</span>
-                        ${theme.isDark ? 
-                            `<i class="bi bi-moon me-1" style="font-size: 0.8rem; color: ${mutedTextColor};"></i>` : 
+                        ${theme.isDark ?
+                            `<i class="bi bi-moon me-1" style="font-size: 0.8rem; color: ${mutedTextColor};"></i>` :
                             `<i class="bi bi-sun me-1" style="font-size: 0.8rem; color: #ffc107;"></i>`
                         }
-                        ${theme.isHighContrast ? 
-                            `<i class="bi bi-eye" style="font-size: 0.8rem; color: ${theme.primaryColor};" title="High Contrast"></i>` : 
+                        ${theme.isHighContrast ?
+                            `<i class="bi bi-eye" style="font-size: 0.8rem; color: ${theme.primaryColor};" title="High Contrast"></i>` :
                             ''
                         }
                     </div>
                     <small style="color: ${mutedTextColor};">${theme.category}</small>
                 </div>
-                
+
                 <!-- Current Indicator -->
-                ${isCurrentTheme ? 
-                    '<i class="bi bi-check-circle-fill text-primary ms-2"></i>' : 
+                ${isCurrentTheme ?
+                    '<i class="bi bi-check-circle-fill text-primary ms-2"></i>' :
                     `<i class="bi bi-circle ms-2" style="opacity: 0.5; color: ${mutedTextColor};"></i>`
                 }
             </div>
@@ -136,10 +136,10 @@ class ThemeManager {
         const r = parseInt(hexColor.slice(1, 3), 16);
         const g = parseInt(hexColor.slice(3, 5), 16);
         const b = parseInt(hexColor.slice(5, 7), 16);
-        
+
         // Calculate luminance using standard formula
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        
+
         // Return white for dark backgrounds, black for light backgrounds
         return luminance > 0.5 ? '#000000' : '#ffffff';
     }
@@ -149,9 +149,9 @@ class ThemeManager {
         const r = parseInt(hexColor.slice(1, 3), 16);
         const g = parseInt(hexColor.slice(3, 5), 16);
         const b = parseInt(hexColor.slice(5, 7), 16);
-        
+
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        
+
         // Return lighter gray for dark backgrounds, darker gray for light backgrounds
         return luminance > 0.5 ? '#666666' : '#cccccc';
     }
@@ -161,16 +161,16 @@ class ThemeManager {
         const r = parseInt(hexColor.slice(1, 3), 16);
         const g = parseInt(hexColor.slice(3, 5), 16);
         const b = parseInt(hexColor.slice(5, 7), 16);
-        
+
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        
+
         // Lighten dark colors, darken light colors
         const adjustment = luminance > 0.5 ? -20 : 20;
-        
+
         const newR = Math.max(0, Math.min(255, r + adjustment));
         const newG = Math.max(0, Math.min(255, g + adjustment));
         const newB = Math.max(0, Math.min(255, b + adjustment));
-        
+
         return `rgb(${newR}, ${newG}, ${newB})`;
     }
 

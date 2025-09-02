@@ -162,7 +162,7 @@
           <div class="modal-body">
             <div id="add-participant-error" class="alert alert-danger d-none"></div>
             <div id="add-participant-success" class="alert alert-success d-none"></div>
-            
+
             <form id="addParticipantForm">
               <div class="mb-3">
                 <label for="characterSelect" class="form-label">Select Character</label>
@@ -198,7 +198,7 @@
           <div class="modal-body">
             <div id="change-status-error" class="alert alert-danger d-none"></div>
             <div id="change-status-success" class="alert alert-success d-none"></div>
-            
+
             <form id="changeStatusForm">
               <div class="mb-3">
                 <label for="statusSelect" class="form-label">Scene Status</label>
@@ -235,18 +235,18 @@
 
             // Make it available globally for debugging
             window.sceneChatUI = sceneChatUI;
-            
+
             // Initialize participant management
             initializeParticipantManagement();
         });
-        
+
         function getCSRFToken() {
             // Try to get from meta tag first
             const metaToken = document.querySelector('meta[name="csrf-token"]');
             if (metaToken) {
                 return metaToken.getAttribute('content');
             }
-            
+
             // Try to get from cookie
             const cookies = document.cookie.split(';');
             for (let cookie of cookies) {
@@ -255,16 +255,16 @@
                     return value;
                 }
             }
-            
+
             // Try to get from form
             const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
             if (csrfInput) {
                 return csrfInput.value;
             }
-            
+
             return null;
         }
-        
+
         function showAlert(containerId, message, type = 'danger') {
             const container = document.getElementById(containerId);
             if (container) {
@@ -275,23 +275,23 @@
                 }, 5000);
             }
         }
-        
+
         async function initializeParticipantManagement() {
             // Load characters for the add participant modal
             await loadAvailableCharacters();
-            
+
             // Set up form handlers
             const addParticipantForm = document.getElementById('addParticipantForm');
             if (addParticipantForm) {
                 addParticipantForm.addEventListener('submit', handleAddParticipant);
             }
-            
+
             const changeStatusForm = document.getElementById('changeStatusForm');
             if (changeStatusForm) {
                 changeStatusForm.addEventListener('submit', handleChangeStatus);
             }
         }
-        
+
         async function loadAvailableCharacters() {
             try {
                 // Load both characters and current scene participants
@@ -313,23 +313,23 @@
                         }
                     })
                 ]);
-                
+
                 if (charactersResponse.ok && sceneResponse.ok) {
                     const charactersData = await charactersResponse.json();
                     const sceneData = await sceneResponse.json();
                     const characterSelect = document.getElementById('characterSelect');
-                    
+
                     // Get IDs of characters already participating
                     const participantIds = new Set(sceneData.participants.map(p => p.id));
-                    
+
                     // Clear existing options except the first one
                     characterSelect.innerHTML = '<option value="">Choose a character...</option>';
-                    
+
                     // Filter out characters that are already participants
-                    const availableCharacters = charactersData.results.filter(character => 
+                    const availableCharacters = charactersData.results.filter(character =>
                         !participantIds.has(character.id)
                     );
-                    
+
                     if (availableCharacters.length === 0) {
                         const option = document.createElement('option');
                         option.value = '';
@@ -353,16 +353,16 @@
                 showAlert('add-participant-error', 'Error loading characters');
             }
         }
-        
+
         async function handleAddParticipant(event) {
             event.preventDefault();
-            
+
             const characterId = document.getElementById('characterSelect').value;
             if (!characterId) {
                 showAlert('add-participant-error', 'Please select a character');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/scenes/{{ scene.id }}/add_participant/', {
                     method: 'POST',
@@ -376,9 +376,9 @@
                         character_id: parseInt(characterId)
                     })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     showAlert('add-participant-success', data.message, 'success');
                     // Refresh character list in chat
@@ -401,12 +401,12 @@
                 showAlert('add-participant-error', 'Error adding participant');
             }
         }
-        
+
         async function handleChangeStatus(event) {
             event.preventDefault();
-            
+
             const newStatus = document.getElementById('statusSelect').value;
-            
+
             try {
                 const response = await fetch('/api/scenes/{{ scene.id }}/', {
                     method: 'PATCH',
@@ -420,9 +420,9 @@
                         status: newStatus
                     })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     showAlert('change-status-success', 'Status updated successfully', 'success');
                     // Reload page after short delay to show updated status
@@ -442,7 +442,7 @@
             if (!confirm('Are you sure you want to remove this participant from the scene?')) {
                 return;
             }
-            
+
             try {
                 const response = await fetch(`/api/scenes/{{ scene.id }}/participants/${participantId}/`, {
                     method: 'DELETE',
@@ -452,9 +452,9 @@
                         'X-CSRFToken': getCSRFToken()
                     }
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     // Reload page to show updated participants
                     window.location.reload();

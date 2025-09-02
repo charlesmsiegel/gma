@@ -211,7 +211,7 @@ class SceneChatUI {
 
             const sceneData = await response.json();
             this.characters = sceneData.participants || [];
-            
+
             console.log('Scene data loaded:', sceneData);
             console.log('Characters found:', this.characters);
             console.log('Current user:', this.currentUser);
@@ -234,9 +234,9 @@ class SceneChatUI {
         const userCharacters = this.characters.filter(char =>
             userId && char.player_owner && char.player_owner.id === userId
         );
-        
+
         console.log('Filtered user characters:', userCharacters);
-        console.log('User ID comparison:', userId, 
+        console.log('User ID comparison:', userId,
                     'vs character owners:', this.characters.map(c => c.player_owner ? c.player_owner.id : 'no owner'));
 
         userCharacters.forEach(character => {
@@ -255,7 +255,7 @@ class SceneChatUI {
 
         // Enable/disable character select based on availability
         this.characterSelect.disabled = userCharacters.length === 0;
-        
+
         // Update send button state
         this.updateSendButtonState();
     }
@@ -376,7 +376,7 @@ class SceneChatUI {
             this.characterSelect.closest('.col-md-4').classList.add('d-none');
             this.recipientSelect.closest('.col-md-4').classList.add('d-none');
         }
-        
+
         this.updateSendButtonState();
     }
 
@@ -388,28 +388,28 @@ class SceneChatUI {
         this.selectedCharacter = this.characters.find(c => c.id == characterId) || null;
         this.updateSendButtonState();
     }
-    
+
     /**
      * Update send button state based on current conditions
      */
     updateSendButtonState() {
         let canSend = true;
-        
+
         // Check if message input has content
         const hasContent = this.messageInput && this.messageInput.value.trim().length > 0;
-        
+
         // Check character requirements based on message type
         if (this.messageType === 'PUBLIC' && !this.selectedCharacter) {
             canSend = false;
         }
-        
+
         if (this.messageType === 'PRIVATE' && (!this.selectedCharacter || !this.recipientSelect.value)) {
             canSend = false;
         }
-        
+
         // Check if WebSocket is connected
         const isConnected = this.websocket && this.websocket.getStatus() === 'connected';
-        
+
         this.sendButton.disabled = !canSend || !hasContent || !isConnected;
     }
 

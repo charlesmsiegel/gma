@@ -12,8 +12,8 @@ import os
 from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
-from django.core.asgi import get_asgi_application
 from django.conf import settings
+from django.core.asgi import get_asgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gm_app.settings")
 
@@ -27,6 +27,7 @@ from core import routing  # noqa: E402
 # For development, add static file serving
 if settings.DEBUG:
     from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
+
     django_asgi_app = ASGIStaticFilesHandler(django_asgi_app)
 
 application = ProtocolTypeRouter(
