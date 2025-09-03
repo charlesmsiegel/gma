@@ -1,5 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ campaign.name }} - {{ block.super }}{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet"
+        href="{% static 'campaigns/css/campaign_detail.css' %}">
+{% endblock %}
 {% block content %}
   <div class="container py-4">
     <!-- Breadcrumb Navigation -->
@@ -115,108 +120,68 @@
           </h4>
         </div>
         <div class="card-body">
-          <div class="row g-3 management-grid">
+          <div class="management-cards">
             {% if user_role == "OWNER" or user_role == "GM" %}
               <!-- Full management access for owners and GMs -->
-              <div class="col-md-6 col-lg-3">
-                <div class="card h-100 border-primary management-card characters-card">
-                  <div class="card-body text-center">
-                    <div class="fs-1 mb-3 card-icon">👥</div>
-                    <h5 class="card-title">Manage Characters</h5>
-                    <p class="card-text small text-muted">Manage player and NPC characters</p>
-                    <div class="d-grid gap-2">
-                      <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
-                         class="btn btn-primary">Characters</a>
-                      <a href="{% url 'characters:create_for_campaign' campaign_slug=campaign.slug %}"
-                         class="btn btn-outline-primary btn-sm">Create New</a>
-                    </div>
-                  </div>
-                </div>
+              <div class="management-card characters-card">
+                <div class="card-icon">👥</div>
+                <h4>Manage Characters</h4>
+                <p>Manage player and NPC characters</p>
+                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                   class="btn btn-primary">Characters</a>
               </div>
-              <div class="col-md-6 col-lg-3">
-                <div class="card h-100 border-success management-card scenes-card">
-                  <div class="card-body text-center">
-                    <div class="fs-1 mb-3 card-icon">🎭</div>
-                    <h5 class="card-title">Manage Scenes</h5>
-                    <p class="card-text small text-muted">Create and manage campaign scenes</p>
-                    <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
-                       class="btn btn-primary">Scenes</a>
-                  </div>
-                </div>
+              <div class="management-card scenes-card">
+                <div class="card-icon">🎭</div>
+                <h4>Manage Scenes</h4>
+                <p>Create and manage campaign scenes</p>
+                <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
+                   class="btn btn-primary">Scenes</a>
               </div>
-              <div class="col-md-6 col-lg-3">
-                <div class="card h-100 border-warning management-card locations-card">
-                  <div class="card-body text-center">
-                    <div class="fs-1 mb-3 card-icon">🗺️</div>
-                    <h5 class="card-title">Manage Locations</h5>
-                    <p class="card-text small text-muted">Organize campaign locations and maps</p>
-                    <a href="{% url 'campaigns:campaign_locations' slug=campaign.slug %}"
-                       class="btn btn-primary">Locations</a>
-                  </div>
-                </div>
+              <div class="management-card locations-card">
+                <div class="card-icon">🗺️</div>
+                <h4>Manage Locations</h4>
+                <p>Organize campaign locations and maps</p>
+                <a href="{% url 'campaigns:campaign_locations' slug=campaign.slug %}"
+                   class="btn btn-primary">Locations</a>
               </div>
-              <div class="col-md-6 col-lg-3">
-                <div class="card h-100 border-danger management-card items-card">
-                  <div class="card-body text-center">
-                    <div class="fs-1 mb-3 card-icon">⚔️</div>
-                    <h5 class="card-title">Manage Items</h5>
-                    <p class="card-text small text-muted">Track items, equipment, and treasures</p>
-                    <a href="{% url 'campaigns:campaign_items' slug=campaign.slug %}"
-                       class="btn btn-primary">Items</a>
-                  </div>
-                </div>
+              <div class="management-card items-card">
+                <div class="card-icon">⚔️</div>
+                <h4>Manage Items</h4>
+                <p>Track items, equipment, and treasures</p>
+                <a href="{% url 'campaigns:campaign_items' slug=campaign.slug %}"
+                   class="btn btn-primary">Items</a>
               </div>
             {% elif user_role == "PLAYER" %}
               <!-- Limited access for players -->
-              <div class="col-md-6">
-                <div class="card h-100 border-primary management-card">
-                  <div class="card-body text-center">
-                    <div class="fs-1 mb-3">👤</div>
-                    <h5 class="card-title">My Characters</h5>
-                    <p class="card-text small text-muted">View and manage your characters</p>
-                    <div class="d-grid gap-2">
-                      <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
-                         class="btn btn-primary">My Characters</a>
-                      <a href="{% url 'characters:create_for_campaign' campaign_slug=campaign.slug %}"
-                         class="btn btn-outline-primary btn-sm">Create Character</a>
-                    </div>
-                  </div>
-                </div>
+              <div class="management-card">
+                <div class="card-icon">👤</div>
+                <h4>My Characters</h4>
+                <p>View and manage your characters</p>
+                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                   class="btn btn-primary">My Characters</a>
               </div>
-              <div class="col-md-6">
-                <div class="card h-100 border-success management-card">
-                  <div class="card-body text-center">
-                    <div class="fs-1 mb-3">🎭</div>
-                    <h5 class="card-title">Campaign Scenes</h5>
-                    <p class="card-text small text-muted">Browse and participate in scenes</p>
-                    <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
-                       class="btn btn-primary">View Scenes</a>
-                  </div>
-                </div>
+              <div class="management-card">
+                <div class="card-icon">🎭</div>
+                <h4>Campaign Scenes</h4>
+                <p>Browse and participate in scenes</p>
+                <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
+                   class="btn btn-primary">View Scenes</a>
               </div>
             {% elif user_role == "OBSERVER" %}
               <!-- Read-only access for observers -->
-              <div class="col-md-6">
-                <div class="card h-100 border-info management-card">
-                  <div class="card-body text-center">
-                    <div class="fs-1 mb-3">👥</div>
-                    <h5 class="card-title">View Characters</h5>
-                    <p class="card-text small text-muted">Browse campaign characters and stories</p>
-                    <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
-                       class="btn btn-primary">View Characters</a>
-                  </div>
-                </div>
+              <div class="management-card">
+                <div class="card-icon">👥</div>
+                <h4>View Characters</h4>
+                <p>Browse campaign characters and stories</p>
+                <a href="{% url 'campaigns:campaign_characters' slug=campaign.slug %}"
+                   class="btn btn-primary">View Characters</a>
               </div>
-              <div class="col-md-6">
-                <div class="card h-100 border-info management-card">
-                  <div class="card-body text-center">
-                    <div class="fs-1 mb-3">🎭</div>
-                    <h5 class="card-title">View Scenes</h5>
-                    <p class="card-text small text-muted">Follow along with scenes and story</p>
-                    <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
-                       class="btn btn-primary">View Scenes</a>
-                  </div>
-                </div>
+              <div class="management-card">
+                <div class="card-icon">🎭</div>
+                <h4>View Scenes</h4>
+                <p>Follow along with scenes and story</p>
+                <a href="{% url 'campaigns:campaign_scenes' slug=campaign.slug %}"
+                   class="btn btn-primary">View Scenes</a>
               </div>
             {% endif %}
           </div>
