@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block extra_css %}
-<style>
+  <style>
 .form-container {
     max-width: 800px;
     margin: 0 auto;
@@ -11,7 +11,7 @@
     content: " *";
     color: #dc3545;
 }
-</style>
+  </style>
 {% endblock %}
 {% block content %}
   <div class="container">
@@ -22,12 +22,11 @@
           <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
         </li>
         <li class="breadcrumb-item">
-          <a href="{% url 'items:campaign_items' campaign_slug=campaign.slug %}">Items</a>
+          <a href="{% url 'items:campaign_items' slug=campaign.slug %}">Items</a>
         </li>
         <li class="breadcrumb-item active" aria-current="page">{{ form_action }} Item</li>
       </ol>
     </nav>
-
     <!-- Page Header -->
     <div class="form-container">
       <div class="card">
@@ -39,20 +38,15 @@
           <!-- Form -->
           <form method="post" novalidate>
             {% csrf_token %}
-            
             <!-- Form Errors -->
             {% if form.non_field_errors %}
               <div class="alert alert-danger" role="alert">
-                {% for error in form.non_field_errors %}
-                  <div>{{ error }}</div>
-                {% endfor %}
+                {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
               </div>
             {% endif %}
-
             <!-- Basic Information -->
             <fieldset class="mb-4">
               <legend class="h5 border-bottom pb-2 mb-3">Basic Information</legend>
-              
               <!-- Name Field -->
               <div class="mb-3">
                 <label for="{{ form.name.id_for_label }}" class="form-label required-field">
@@ -64,83 +58,64 @@
                 {% endif %}
                 {% if form.name.errors %}
                   <div class="text-danger">
-                    {% for error in form.name.errors %}
-                      <small>{{ error }}</small>
-                    {% endfor %}
+                    {% for error in form.name.errors %}<small>{{ error }}</small>{% endfor %}
                   </div>
                 {% endif %}
               </div>
-
               <!-- Description Field -->
               <div class="mb-3">
-                <label for="{{ form.description.id_for_label }}" class="form-label">
-                  Description
-                </label>
+                <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
                 {{ form.description }}
                 {% if form.description.help_text %}
                   <div class="form-text">{{ form.description.help_text }}</div>
                 {% endif %}
                 {% if form.description.errors %}
                   <div class="text-danger">
-                    {% for error in form.description.errors %}
-                      <small>{{ error }}</small>
-                    {% endfor %}
+                    {% for error in form.description.errors %}<small>{{ error }}</small>{% endfor %}
                   </div>
                 {% endif %}
               </div>
-
               <!-- Quantity Field -->
               <div class="mb-3">
-                <label for="{{ form.quantity.id_for_label }}" class="form-label required-field">
-                  Quantity
-                </label>
+                <label for="{{ form.quantity.id_for_label }}"
+                       class="form-label required-field">Quantity</label>
                 {{ form.quantity }}
                 {% if form.quantity.help_text %}
                   <div class="form-text">{{ form.quantity.help_text }}</div>
                 {% endif %}
                 {% if form.quantity.errors %}
                   <div class="text-danger">
-                    {% for error in form.quantity.errors %}
-                      <small>{{ error }}</small>
-                    {% endfor %}
+                    {% for error in form.quantity.errors %}<small>{{ error }}</small>{% endfor %}
                   </div>
                 {% endif %}
               </div>
             </fieldset>
-
             <!-- Ownership Information -->
             <fieldset class="mb-4">
               <legend class="h5 border-bottom pb-2 mb-3">Ownership</legend>
-              
               <!-- Owner Field -->
               <div class="mb-3">
-                <label for="{{ form.owner.id_for_label }}" class="form-label">
-                  Owner
-                </label>
+                <label for="{{ form.owner.id_for_label }}" class="form-label">Owner</label>
                 {{ form.owner }}
                 {% if form.owner.help_text %}
                   <div class="form-text">{{ form.owner.help_text }}</div>
                 {% endif %}
                 {% if form.owner.errors %}
                   <div class="text-danger">
-                    {% for error in form.owner.errors %}
-                      <small>{{ error }}</small>
-                    {% endfor %}
+                    {% for error in form.owner.errors %}<small>{{ error }}</small>{% endfor %}
                   </div>
                 {% endif %}
               </div>
             </fieldset>
-
             <!-- Required Fields Notice -->
             <div class="mb-4">
               <small class="text-muted">
                 <span class="text-danger">*</span> Required fields
               </small>
             </div>
-
             <!-- Form Actions -->
             <div class="d-flex justify-content-end gap-2">
-              <a href="{% if object %}{% url 'items:detail' campaign_slug=campaign.slug item_id=object.id %}{% else %}{% url 'items:campaign_items' campaign_slug=campaign.slug %}{% endif %}" 
+              <a href="{% if object %}{% url 'items:detail' slug=campaign.slug item_id=object.id %}{% else %}{% url 'items:campaign_items' slug=campaign.slug %}{% endif %}"
                  class="btn btn-secondary">
                 <i class="bi bi-x-circle"></i> Cancel
               </a>

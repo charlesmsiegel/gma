@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block extra_css %}
-<style>
+  <style>
 .detail-card {
     border: none;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
@@ -22,7 +22,7 @@
     background-color: #f8f9fa;
     border-left: 4px solid #6c757d;
 }
-</style>
+  </style>
 {% endblock %}
 {% block content %}
   <div class="container">
@@ -33,12 +33,11 @@
           <a href="{% url 'campaigns:detail' slug=campaign.slug %}">{{ campaign.name }}</a>
         </li>
         <li class="breadcrumb-item">
-          <a href="{% url 'items:campaign_items' campaign_slug=campaign.slug %}">Items</a>
+          <a href="{% url 'items:campaign_items' slug=campaign.slug %}">Items</a>
         </li>
         <li class="breadcrumb-item active" aria-current="page">{{ item.name }}</li>
       </ol>
     </nav>
-
     <div class="row">
       <!-- Main Content -->
       <div class="col-lg-8">
@@ -53,13 +52,13 @@
             {% if can_edit or can_delete %}
               <div class="btn-group" role="group" aria-label="Item actions">
                 {% if can_edit %}
-                  <a href="{% url 'items:edit' campaign_slug=campaign.slug item_id=item.id %}" 
+                  <a href="{% url 'items:edit' slug=campaign.slug item_id=item.id %}"
                      class="btn btn-outline-primary btn-sm">
                     <i class="bi bi-pencil"></i> Edit
                   </a>
                 {% endif %}
                 {% if can_delete %}
-                  <a href="{% url 'items:delete' campaign_slug=campaign.slug item_id=item.id %}" 
+                  <a href="{% url 'items:delete' slug=campaign.slug item_id=item.id %}"
                      class="btn btn-outline-danger btn-sm">
                     <i class="bi bi-trash"></i> Delete
                   </a>
@@ -67,7 +66,6 @@
               </div>
             {% endif %}
           </div>
-          
           <div class="card-body">
             <!-- Description -->
             {% if item.description %}
@@ -81,7 +79,6 @@
                 <div class="detail-value text-muted">No description provided</div>
               </div>
             {% endif %}
-
             <!-- Basic Details -->
             <div class="row mb-4">
               <div class="col-sm-6">
@@ -91,17 +88,14 @@
               <div class="col-sm-6">
                 <div class="detail-label mb-1">Campaign</div>
                 <div class="detail-value">
-                  <a href="{% url 'campaigns:detail' slug=campaign.slug %}" 
-                     class="text-decoration-none">
-                    {{ campaign.name }}
-                  </a>
+                  <a href="{% url 'campaigns:detail' slug=campaign.slug %}"
+                     class="text-decoration-none">{{ campaign.name }}</a>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
       <!-- Sidebar -->
       <div class="col-lg-4">
         <!-- Ownership Information -->
@@ -133,7 +127,6 @@
                 {% endif %}
               </div>
             </div>
-
             {% if item.last_transferred_at %}
               <div class="mb-3">
                 <div class="detail-label mb-1">Last Transferred</div>
@@ -144,7 +137,6 @@
             {% endif %}
           </div>
         </div>
-
         <!-- Audit Information -->
         <div class="card detail-card audit-info">
           <div class="card-header">
@@ -158,30 +150,31 @@
               <div class="detail-value small">
                 {{ item.created_at|date:"M j, Y" }} at {{ item.created_at|time:"g:i A" }}
                 {% if item.created_by %}
-                  <br>by {{ item.created_by.username }}
+                  <br>
+                  by {{ item.created_by.username }}
                 {% endif %}
               </div>
             </div>
-
             {% if item.updated_at and item.updated_at != item.created_at %}
               <div class="mb-3">
                 <div class="detail-label mb-1">Last Updated</div>
                 <div class="detail-value small">
                   {{ item.updated_at|date:"M j, Y" }} at {{ item.updated_at|time:"g:i A" }}
                   {% if item.modified_by %}
-                    <br>by {{ item.modified_by.username }}
+                    <br>
+                    by {{ item.modified_by.username }}
                   {% endif %}
                 </div>
               </div>
             {% endif %}
-
             {% if item.is_deleted %}
               <div class="mb-3">
                 <div class="detail-label mb-1">Deleted</div>
                 <div class="detail-value small text-danger">
                   {{ item.deleted_at|date:"M j, Y" }} at {{ item.deleted_at|time:"g:i A" }}
                   {% if item.deleted_by %}
-                    <br>by {{ item.deleted_by.username }}
+                    <br>
+                    by {{ item.deleted_by.username }}
                   {% endif %}
                 </div>
               </div>
@@ -190,26 +183,24 @@
         </div>
       </div>
     </div>
-
     <!-- Action Buttons -->
     <div class="d-flex justify-content-between align-items-center mt-4">
       <div>
-        <a href="{% url 'items:campaign_items' campaign_slug=campaign.slug %}" 
+        <a href="{% url 'items:campaign_items' slug=campaign.slug %}"
            class="btn btn-outline-secondary">
           <i class="bi bi-arrow-left"></i> Back to Items
         </a>
       </div>
-      
       {% if can_edit or can_delete %}
         <div class="btn-group" role="group" aria-label="Item actions">
           {% if can_edit %}
-            <a href="{% url 'items:edit' campaign_slug=campaign.slug item_id=item.id %}" 
+            <a href="{% url 'items:edit' slug=campaign.slug item_id=item.id %}"
                class="btn btn-primary">
               <i class="bi bi-pencil"></i> Edit Item
             </a>
           {% endif %}
           {% if can_delete %}
-            <a href="{% url 'items:delete' campaign_slug=campaign.slug item_id=item.id %}" 
+            <a href="{% url 'items:delete' slug=campaign.slug item_id=item.id %}"
                class="btn btn-outline-danger">
               <i class="bi bi-trash"></i> Delete Item
             </a>

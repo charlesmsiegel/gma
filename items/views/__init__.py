@@ -32,7 +32,7 @@ class CampaignItemsMixin:
         if hasattr(self, "_campaign"):
             return self._campaign
 
-        campaign_slug = self.kwargs.get("campaign_slug")
+        campaign_slug = self.kwargs.get("slug") or self.kwargs.get("campaign_slug")
         if not campaign_slug:
             raise Http404("Campaign not found")
 
@@ -172,7 +172,7 @@ class ItemCreateView(CampaignItemsMixin, CreateView):
         return reverse(
             "items:detail",
             kwargs={
-                "campaign_slug": self.get_campaign().slug,
+                "slug": self.get_campaign().slug,
                 "item_id": self.object.id,
             },
         )
@@ -279,7 +279,7 @@ class ItemEditView(CampaignItemsMixin, UpdateView):
         return reverse(
             "items:detail",
             kwargs={
-                "campaign_slug": self.get_campaign().slug,
+                "slug": self.get_campaign().slug,
                 "item_id": self.object.id,
             },
         )
@@ -347,7 +347,7 @@ class ItemDeleteView(CampaignItemsMixin, DeleteView):
     def get_success_url(self):
         """Redirect to item list after deletion."""
         return reverse(
-            "items:campaign_items", kwargs={"campaign_slug": self.get_campaign().slug}
+            "campaigns:campaign_items", kwargs={"slug": self.get_campaign().slug}
         )
 
     def get_context_data(self, **kwargs):
