@@ -204,3 +204,29 @@
 [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: var(--theme-text-muted);
 }
+
+/* Dark theme specific badge fixes */
+[data-theme="dark"] .badge.bg-warning.text-dark,
+[data-theme="dark"] .badge.bg-warning {
+  color: var(--theme-dark) !important;
+  background-color: var(--theme-warning) !important;
+}
+
+/* Theme dropdown improvements */
+[data-theme="dark"] .dropdown-menu .theme-option {
+  border: 1px solid transparent;
+  margin-bottom: 2px;
+}
+
+[data-theme="dark"] .dropdown-menu .theme-option:hover {
+  background-color: var(--theme-bg-hover) !important;
+  border-color: var(--theme-border-color);
+}
+
+[data-theme="dark"] .dropdown-header {
+  color: var(--theme-text-primary) !important;
+}
+
+[data-theme="dark"] .dropdown-menu .small {
+  color: var(--theme-text-muted) !important;
+}

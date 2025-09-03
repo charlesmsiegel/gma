@@ -130,6 +130,11 @@ class SceneChatConsumer(AsyncWebsocketConsumer):
             character_id = message_data.get("character")
             recipients = message_data.get("recipients", [])
 
+            # Check scene status - prevent messaging in closed scenes
+            if self.scene.status == "CLOSED":
+                await self.send_error("Cannot send messages to a closed scene")
+                return
+
             # Enhanced validation
             if not content:
                 await self.send_error("Message content cannot be empty")

@@ -23,6 +23,8 @@ class SceneChatUI {
             autoScroll: true,
             showTimestamps: true,
             showCharacterAvatars: false, // Future feature
+            sceneStatus: 'ACTIVE',
+            isReadOnly: false,
             ...options
         };
 
@@ -64,8 +66,14 @@ class SceneChatUI {
             await this.loadUserData();
             await this.loadCharacters();
             await this.loadMessageHistory();
-            this.setupWebSocket();
-            this.setupEventListeners();
+
+            if (!this.options.isReadOnly) {
+                this.setupWebSocket();
+                this.setupEventListeners();
+            } else {
+                // For read-only mode, just update connection status
+                this.updateConnectionStatus('read_only');
+            }
 
             console.log('Scene chat UI initialized successfully');
         } catch (error) {
@@ -83,25 +91,17 @@ class SceneChatUI {
             throw new Error(`Container element '${this.containerId}' not found`);
         }
 
-        this.container.innerHTML = `
-            <div class="scene-chat">
-                <div class="chat-header">
-                    <h5 class="mb-0">Scene Chat</h5>
-                    <div class="connection-status" id="connection-status">
-                        <span class="status-indicator disconnected"></span>
-                        <span class="status-text">Connecting...</span>
-                    </div>
-                </div>
-
-                <div class="chat-messages" id="chat-messages">
-                    <div class="loading-indicator d-none">
-                        <div class="spinner-border spinner-border-sm" role="status">
-                            <span class="visually-hidden">Loading...</span>
+        const chatInputSection = this.options.isReadOnly ? `
+                <div class="chat-read-only alert alert-info mb-0">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-lock-fill me-2"></i>
+                        <div>
+                            <strong>Scene Closed</strong><br>
+                            <small>This scene is closed. You can read the chat history but cannot send new messages.</small>
                         </div>
-                        <span class="ms-2">Loading messages...</span>
                     </div>
                 </div>
-
+        ` : `
                 <div class="chat-input">
                     <div class="input-controls mb-2">
                         <div class="row g-2">
@@ -147,6 +147,28 @@ class SceneChatUI {
                         </small>
                     </div>
                 </div>
+        `;
+
+        this.container.innerHTML = `
+            <div class="scene-chat">
+                <div class="chat-header">
+                    <h5 class="mb-0">Scene Chat</h5>
+                    <div class="connection-status" id="connection-status">
+                        <span class="status-indicator disconnected"></span>
+                        <span class="status-text">${this.options.isReadOnly ? 'Read Only' : 'Connecting...'}</span>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chat-messages">
+                    <div class="loading-indicator d-none">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span class="ms-2">Loading messages...</span>
+                    </div>
+                </div>
+
+                ${chatInputSection}
 
                 <div class="alert alert-danger d-none" id="chat-error" role="alert">
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -216,10 +238,16 @@ class SceneChatUI {
             console.log('Characters found:', this.characters);
             console.log('Current user:', this.currentUser);
 
-            this.updateCharacterSelect();
+            // Only update character select if not in read-only mode
+            if (!this.options.isReadOnly) {
+                this.updateCharacterSelect();
+            }
         } catch (error) {
             console.error('Failed to load characters:', error);
-            this.showError('Failed to load characters');
+            // Only show error if not in read-only mode since character selection isn't needed
+            if (!this.options.isReadOnly) {
+                this.showError('Failed to load characters');
+            }
         }
     }
 
@@ -227,6 +255,11 @@ class SceneChatUI {
      * Update character select dropdown
      */
     updateCharacterSelect() {
+        // Don't try to update character select in read-only mode
+        if (this.options.isReadOnly || !this.characterSelect) {
+            return;
+        }
+
         this.characterSelect.innerHTML = '<option value="">Select Character...</option>';
 
         // Add user's characters - note: currentUser has nested structure { user: {...} }
@@ -322,39 +355,45 @@ class SceneChatUI {
      * Setup event listeners
      */
     setupEventListeners() {
-        // Send button click
-        this.sendButton.addEventListener('click', () => {
-            this.sendMessage();
-        });
-
-        // Enter key to send (Shift+Enter for new line)
-        this.messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
+        // Only set up event listeners if elements exist (not in read-only mode)
+        if (this.sendButton) {
+            this.sendButton.addEventListener('click', () => {
                 this.sendMessage();
-            }
-        });
+            });
+        }
 
-        // Character count and send button state
-        this.messageInput.addEventListener('input', () => {
-            this.updateCharacterCount();
-            this.updateSendButtonState();
-        });
+        if (this.messageInput) {
+            // Enter key to send (Shift+Enter for new line)
+            this.messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            });
 
-        // Message type change
-        this.messageTypeSelect.addEventListener('change', () => {
-            this.onMessageTypeChange();
-        });
+            // Character count and send button state
+            this.messageInput.addEventListener('input', () => {
+                this.updateCharacterCount();
+                this.updateSendButtonState();
+            });
 
-        // Character selection
-        this.characterSelect.addEventListener('change', () => {
-            this.onCharacterChange();
-        });
+            // Auto-resize textarea
+            this.messageInput.addEventListener('input', () => {
+                this.autoResizeTextarea();
+            });
+        }
 
-        // Auto-resize textarea
-        this.messageInput.addEventListener('input', () => {
-            this.autoResizeTextarea();
-        });
+        if (this.messageTypeSelect) {
+            this.messageTypeSelect.addEventListener('change', () => {
+                this.onMessageTypeChange();
+            });
+        }
+
+        if (this.characterSelect) {
+            this.characterSelect.addEventListener('change', () => {
+                this.onCharacterChange();
+            });
+        }
     }
 
     /**
@@ -393,6 +432,11 @@ class SceneChatUI {
      * Update send button state based on current conditions
      */
     updateSendButtonState() {
+        // Don't update send button in read-only mode
+        if (this.options.isReadOnly || !this.sendButton) {
+            return;
+        }
+
         let canSend = true;
 
         // Check if message input has content
@@ -638,6 +682,10 @@ class SceneChatUI {
                 break;
             case 'disconnected':
                 text.textContent = 'Disconnected';
+                break;
+            case 'read_only':
+                text.textContent = 'Read Only';
+                indicator.className = 'status-indicator read-only';
                 break;
         }
 

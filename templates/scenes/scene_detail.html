@@ -162,14 +162,15 @@
           <div class="modal-body">
             <div id="add-participant-error" class="alert alert-danger d-none"></div>
             <div id="add-participant-success" class="alert alert-success d-none"></div>
-
             <form id="addParticipantForm">
               <div class="mb-3">
                 <label for="characterSelect" class="form-label">Select Character</label>
                 <select class="form-select" id="characterSelect" required>
                   <option value="">Choose a character...</option>
                 </select>
-                <div class="form-text">Only characters from this campaign can participate in scenes.</div>
+                <div class="form-text">
+                  Only characters from this campaign can participate in scenes.
+                </div>
               </div>
               <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -198,14 +199,19 @@
           <div class="modal-body">
             <div id="change-status-error" class="alert alert-danger d-none"></div>
             <div id="change-status-success" class="alert alert-success d-none"></div>
-
             <form id="changeStatusForm">
               <div class="mb-3">
                 <label for="statusSelect" class="form-label">Scene Status</label>
                 <select class="form-select" id="statusSelect" required>
-                  <option value="PENDING" {% if scene.status == 'PENDING' %}selected{% endif %}>Pending</option>
-                  <option value="ACTIVE" {% if scene.status == 'ACTIVE' %}selected{% endif %}>Active</option>
-                  <option value="CLOSED" {% if scene.status == 'CLOSED' %}selected{% endif %}>Closed</option>
+                  <option value="PENDING" {% if scene.status == 'PENDING' %}selected{% endif %}>
+                    Pending
+                  </option>
+                  <option value="ACTIVE" {% if scene.status == 'ACTIVE' %}selected{% endif %}>
+                    Active
+                  </option>
+                  <option value="CLOSED" {% if scene.status == 'CLOSED' %}selected{% endif %}>
+                    Closed
+                  </option>
                 </select>
                 <div class="form-text">Change the current status of this scene.</div>
               </div>
@@ -230,7 +236,9 @@
                 maxMessageHistory: 100,
                 markdownEnabled: true,
                 autoScroll: true,
-                showTimestamps: true
+                showTimestamps: true,
+                sceneStatus: '{{ scene.status }}',
+                isReadOnly: {% if scene.status == 'CLOSED' %}true{% else %}false{% endif %}
             });
 
             // Make it available globally for debugging

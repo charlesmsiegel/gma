@@ -539,6 +539,12 @@ class SceneViewSet(viewsets.ModelViewSet):
             scene = self.get_object()
             user = request.user
 
+            # Check if scene is closed
+            if scene.status == "CLOSED":
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied("Cannot send messages to a closed scene.")
+
             # Check if user has access to send messages in this scene
             user_role = scene.campaign.get_user_role(user)
             if user_role not in ["OWNER", "GM", "PLAYER"]:

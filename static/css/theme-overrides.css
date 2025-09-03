@@ -546,3 +546,11 @@ p, span, div, li, td, th {
 [data-theme="cyberpunk"] .btn-close {
     filter: invert(1);
 }
+
+/* Fix text-dark class for dark themes */
+[data-theme="dark"] .text-dark,
+[data-theme="midnight"] .text-dark,
+[data-theme="gothic"] .text-dark,
+[data-theme="cyberpunk"] .text-dark {
+    color: var(--theme-dark) !important;
+}
